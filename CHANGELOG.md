@@ -1,3 +1,15 @@
+# v0.0.21 (Wed Aug 27 2025)
+
+#### 🐛 Bug Fix
+
+- Create Deepsource.toml [#5](https://github.com/newt-foundation/newton-sdk-private/pull/5) ([@Magic-Brandan](https://github.com/Magic-Brandan))
+
+#### Authors: 1
+
+- [@Magic-Brandan](https://github.com/Magic-Brandan)
+
+---
+
 # v0.0.20 (Wed Aug 27 2025)
 
 #### ⚠️ Pushed to `master`
