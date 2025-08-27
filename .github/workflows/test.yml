@@ -1,0 +1,56 @@
+name: Tests
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run style/security checks & tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Audit Prod Dependencies
+        run: pnpm audit --prod || exit 0
+
+      # - name: Unit Tests
+      #   run: pnpm test

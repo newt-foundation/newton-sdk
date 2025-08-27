@@ -1,0 +1,61 @@
+name: Publish Canary
+
+on:
+  pull_request:
+    branches:
+      - master
+  merge_group:
+    types: [checks_requested]
+
+env:
+  CI: true
+  GH_TOKEN: ${{ secrets.SVC_GIT_FG_TOKEN }}
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  # NPM_CONFIG_PROVENANCE: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish Canary
+    if: "!contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci')"
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.SVC_GIT_FG_TOKEN }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Library Build
+        run: pnpm build
+
+      - name: Create Canary Release
+        run: pnpm auto shipit -vv --base-branch ${{ github.head_ref || github.ref_name }}
