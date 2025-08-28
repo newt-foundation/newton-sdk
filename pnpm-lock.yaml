@@ -85,8 +85,8 @@ importers:
         specifier: ^7.1.3
         version: 7.1.3(rollup@4.49.0)
       rollup-plugin-tsc-alias:
-        specifier: ^1.1.2
-        version: 1.1.2(rollup@4.49.0)
+        specifier: ^1.1.4
+        version: 1.1.4(rollup@4.49.0)
       rollup-plugin-typescript2:
         specifier: ^0.36.0
         version: 0.36.0(rollup@4.49.0)(typescript@5.5.4)
@@ -1327,6 +1327,10 @@ packages:
     resolution: {integrity: sha512-oX2ruAFQwf/Orj8m737Y5adxDQO0LAB7/S5MnxCdTNDd4p6BsyIVsv9JQsATbTSq8KHRpLwIHbVlUNatxd+1Ow==}
     engines: {node: '>=8.6.0'}
 
+  fast-glob@3.3.3:
+    resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
+    engines: {node: '>=8.6.0'}
+
   fast-json-parse@1.0.3:
     resolution: {integrity: sha512-FRWsaZRWEJ1ESVNbDWmsAlqDk96gPQezzLghafp5J4GUKjbCz3OkAHuZs5TuPEtkbVQERysLp9xv6c24fBm8Aw==}
 
@@ -1444,6 +1448,9 @@ packages:
   get-symbol-description@1.0.2:
     resolution: {integrity: sha512-g0QYk1dZBxGwk+Ngc+ltRH2IBp2f7zBkBMBJZCDerh6EhlhSR6+9irMCuT/09zD6qkarHUSn529sK/yL4S27mg==}
     engines: {node: '>= 0.4'}
+
+  get-tsconfig@4.10.1:
+    resolution: {integrity: sha512-auHyJ4AgMz7vgS8Hp3N6HXSmlMdUyhSUrfBF16w153rxtLIEOE+HGqaBppczZvnHLqQJfiHotCYpNhl0lUROFQ==}
 
   get-tsconfig@4.8.0:
     resolution: {integrity: sha512-Pgba6TExTZ0FJAn1qkJAjIeKoDJ3CsI2ChuLohJnZl/tTU8MVrq3b+2t5UOPfRa4RMsorClBjJALkJUMjG1PAw==}
@@ -2422,8 +2429,8 @@ packages:
     peerDependencies:
       rollup: ^3.0.0 || ^4.0.0
 
-  rollup-plugin-tsc-alias@1.1.2:
-    resolution: {integrity: sha512-4WBISEJ8fDMX7SM9XgfZUPYaCCiFefvCH6xdRj0/+ydDBPZz4F2rtlfp1YDcekjez4NKwa8SSeM6UNTVs3YaeA==}
+  rollup-plugin-tsc-alias@1.1.4:
+    resolution: {integrity: sha512-XfoYBpkxV3C8hv1plWbLJC1oXmOFheoOL20KhQ7LMJf5LyvGSxL2xE81ezuYfcZfWuqFTn/SfiORyaiV4qS6+A==}
     peerDependencies:
       rollup: '> 2.0'
 
@@ -2705,8 +2712,9 @@ packages:
     peerDependencies:
       typescript: '>=2.7'
 
-  tsc-alias@1.8.10:
-    resolution: {integrity: sha512-Ibv4KAWfFkFdKJxnWfVtdOmB0Zi1RJVxcbPGiCDsFpCQSsmpWyuzHG3rQyI5YkobWwxFPEyQfu1hdo4qLG2zPw==}
+  tsc-alias@1.8.16:
+    resolution: {integrity: sha512-QjCyu55NFyRSBAl6+MTFwplpFcnm2Pq01rR/uxfqJoLMm6X3O14KEGtaSDZpJYaE1bJBGDjD0eSuiIWPe2T58g==}
+    engines: {node: '>=16.20.2'}
     hasBin: true
 
   tsconfig-paths@3.15.0:
@@ -4405,6 +4413,14 @@ snapshots:
       merge2: 1.4.1
       micromatch: 4.0.8
 
+  fast-glob@3.3.3:
+    dependencies:
+      '@nodelib/fs.stat': 2.0.5
+      '@nodelib/fs.walk': 1.2.8
+      glob-parent: 5.1.2
+      merge2: 1.4.1
+      micromatch: 4.0.8
+
   fast-json-parse@1.0.3: {}
 
   fast-json-stable-stringify@2.1.0: {}
@@ -4528,6 +4544,10 @@ snapshots:
       es-errors: 1.3.0
       get-intrinsic: 1.2.4
 
+  get-tsconfig@4.10.1:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+
   get-tsconfig@4.8.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
@@ -4600,7 +4620,7 @@ snapshots:
     dependencies:
       array-union: 2.1.0
       dir-glob: 3.0.1
-      fast-glob: 3.3.2
+      fast-glob: 3.3.3
       ignore: 5.3.2
       merge2: 1.4.1
       slash: 3.0.0
@@ -5476,10 +5496,10 @@ snapshots:
     dependencies:
       rollup: 4.49.0
 
-  rollup-plugin-tsc-alias@1.1.2(rollup@4.49.0):
+  rollup-plugin-tsc-alias@1.1.4(rollup@4.49.0):
     dependencies:
       rollup: 4.49.0
-      tsc-alias: 1.8.10
+      tsc-alias: 1.8.16
 
   rollup-plugin-typescript2@0.36.0(rollup@4.49.0)(typescript@5.5.4):
     dependencies:
@@ -5812,10 +5832,11 @@ snapshots:
       typescript: 5.5.4
       yn: 3.1.1
 
-  tsc-alias@1.8.10:
+  tsc-alias@1.8.16:
     dependencies:
       chokidar: 3.6.0
       commander: 9.5.0
+      get-tsconfig: 4.10.1
       globby: 11.1.0
       mylas: 2.1.13
       normalize-path: 3.0.0
