@@ -1,3 +1,15 @@
+# v0.0.23 (Thu Aug 28 2025)
+
+#### 🐛 Bug Fix
+
+- Rename Deepsource.toml to .deepsource.toml [#8](https://github.com/newt-foundation/newton-sdk-private/pull/8) ([@Magic-Brandan](https://github.com/Magic-Brandan))
+
+#### Authors: 1
+
+- [@Magic-Brandan](https://github.com/Magic-Brandan)
+
+---
+
 # v0.0.22 (Thu Aug 28 2025)
 
 #### 🐛 Bug Fix
