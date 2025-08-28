@@ -1,6 +1,6 @@
 {
   "name": "@magicnewton/newton-sdk-private",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "Passwordless authentication for the web.",
   "author": "Magic Labs <team@magic.link> (https://magic.link/)",
   "private": false,
