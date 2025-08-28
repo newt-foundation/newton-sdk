@@ -1,3 +1,15 @@
+# v0.0.22 (Thu Aug 28 2025)
+
+#### 🐛 Bug Fix
+
+- [CHORE](deps-dev): Bump rollup-plugin-tsc-alias from 1.1.2 to 1.1.4 [#1](https://github.com/newt-foundation/newton-sdk-private/pull/1) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+#### Authors: 1
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+
+---
+
 # v0.0.21 (Wed Aug 27 2025)
 
 #### 🐛 Bug Fix
