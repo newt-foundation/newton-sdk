@@ -1,5 +1,5 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Account, Address, ParseAccount, PublicClient, RpcSchema, Transport } from 'viem';
+import { Address, PublicClient } from 'viem';
 import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './utils/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
@@ -30,15 +30,8 @@ import {
   setPolicy,
 } from './modules/policy';
 
-export type ViemPublicClient = PublicClient<
-  Transport,
-  any,
-  ParseAccount<Account | Address | undefined>,
-  RpcSchema | undefined
->;
-
-const newtonPublicActions = () => (publicClient: ViemPublicClient) => {
-  if (publicClient.chain.id !== mainnet.id && publicClient.chain.id !== sepolia.id) {
+const newtonPublicActions = () => (publicClient: PublicClient) => {
+  if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
     );

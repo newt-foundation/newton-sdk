@@ -1,22 +1,29 @@
-import { ViemPublicClient } from '@core/index';
 import { Address, Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/utils/task';
 import { PublicClient } from 'viem';
 
-const computeTaskId = (publicClient: ViemPublicClient, args: { client: Address; intent: Intent }): TaskId => {
+// const TESTNET_AVS_API = 'https://testnet.avs.api';
+// const MAINNET_AVS_API = 'https://avs.api';
+
+/* interface ChainLike {
+  id: number;
+  testnet?: boolean;
+}*/
+
+const computeTaskId = (publicClient: PublicClient, args: { client: Address; intent: Intent }): TaskId => {
   console.log('computeTaskId args: ', args, publicClient);
   throw new Error('Newton SDK: computeTaskId Not implemented');
 };
 const submitEvaluationRequest = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: SubmitEvaluationParams,
 ): Promise<{ ok: true; taskId: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> => {
   console.log('submitEvaluationRequest args: ', args, publicClient);
   throw new Error('Newton SDK: submitEvaluationRequest Not implemented');
 };
 const waitForTaskCreated = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: {
     taskId: TaskId;
     client?: PublicClient; // optionally specify WS-enabled client
@@ -28,7 +35,7 @@ const waitForTaskCreated = (
   throw new Error('Newton SDK: waitForTaskCreated Not implemented');
 };
 const waitForTaskResponded = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: {
     taskId: TaskId;
     client?: PublicClient;
@@ -40,7 +47,7 @@ const waitForTaskResponded = (
   throw new Error('Newton SDK: waitForTaskResponded Not implemented');
 };
 const onTaskEvents = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: {
     taskId: TaskId;
     onCreated?: (e: TaskCreated) => void;
@@ -52,11 +59,11 @@ const onTaskEvents = (
   console.log('onTaskEvents args: ', args, publicClient);
   throw new Error('Newton SDK: onTaskEvents Not implemented');
 };
-const getTaskResponseHash = (publicClient: ViemPublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
+const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
   console.log('getTaskResponseHash args: ', args, publicClient);
   throw new Error('Newton SDK: getTaskResponseHash Not implemented');
 };
-const getTaskStatus = (publicClient: ViemPublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
+const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
   console.log('getTaskStatus args: ', args, publicClient);
   throw new Error('Newton SDK: getTaskStatus Not implemented');
 };
