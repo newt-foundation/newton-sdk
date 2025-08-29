@@ -1,3 +1,15 @@
+# v0.0.24 (Fri Aug 29 2025)
+
+#### 🐛 Bug Fix
+
+- Repo Naming [#10](https://github.com/newt-foundation/newton-sdk-private/pull/10) ([@jmac-magic](https://github.com/jmac-magic))
+
+#### Authors: 1
+
+- [@jmac-magic](https://github.com/jmac-magic)
+
+---
+
 # v0.0.23 (Thu Aug 28 2025)
 
 #### 🐛 Bug Fix
