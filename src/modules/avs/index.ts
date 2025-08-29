@@ -1,26 +1,41 @@
-import { Address, Hex } from '@core/types';
+import { AVS_METHODS, MAINNET_AVS_API, TESTNET_AVS_API } from '@core/const';
+import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/utils/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
+import { createJsonRpcRequestPayload } from '@core/utils/json-rpc';
 import { PublicClient } from 'viem';
 
-// const TESTNET_AVS_API = 'https://testnet.avs.api';
-// const MAINNET_AVS_API = 'https://avs.api';
+interface PendingTaskBuilder {
+  getTaskId: () => Promise<TaskId>;
+  waitForTaskCreated: () => Promise<TaskCreated>;
+  waitForTaskResponded: () => Promise<TaskResponded>;
+}
 
-/* interface ChainLike {
-  id: number;
-  testnet?: boolean;
-}*/
-
-const computeTaskId = (publicClient: PublicClient, args: { client: Address; intent: Intent }): TaskId => {
-  console.log('computeTaskId args: ', args, publicClient);
-  throw new Error('Newton SDK: computeTaskId Not implemented');
-};
-const submitEvaluationRequest = (
+const submitEvaluationRequest = async (
   publicClient: PublicClient,
   args: SubmitEvaluationParams,
-): Promise<{ ok: true; taskId: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> => {
-  console.log('submitEvaluationRequest args: ', args, publicClient);
-  throw new Error('Newton SDK: submitEvaluationRequest Not implemented');
+): Promise<
+  ({ ok: true; taskRequestId: string; txHash?: Hex } & PendingTaskBuilder) | { ok: false; error: NewtonError }
+> => {
+  const endpoint = publicClient?.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
+  const body = createJsonRpcRequestPayload(AVS_METHODS.createTask, args);
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) {
+    return { ok: false, error: data.error };
+  }
+  return {
+    ok: true,
+    taskRequestId: data.result.task_request_id,
+    txHash: data.result.txHash,
+    getTaskId: () => Promise.resolve(data.result.task_id),
+    waitForTaskCreated: () => Promise.resolve(data.result.task_id),
+    waitForTaskResponded: () => Promise.resolve(data.result.task_id),
+  };
 };
 const waitForTaskCreated = (
   publicClient: PublicClient,
@@ -68,7 +83,6 @@ const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Pr
   throw new Error('Newton SDK: getTaskStatus Not implemented');
 };
 export {
-  computeTaskId,
   submitEvaluationRequest,
   waitForTaskCreated,
   waitForTaskResponded,

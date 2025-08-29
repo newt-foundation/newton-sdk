@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, PublicClient } from 'viem';
-import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './utils/task';
+import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
