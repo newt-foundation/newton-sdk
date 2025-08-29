@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/magiclabs/newton-sdk-private.git"
+    "url": "git+https://github.com/newt-foundation/newton-sdk-private.git"
   },
   "license": "MIT",
   "homepage": "https://magic.link",
