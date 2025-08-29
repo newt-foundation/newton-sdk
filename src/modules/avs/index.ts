@@ -11,32 +11,6 @@ interface PendingTaskBuilder {
   waitForTaskResponded: () => Promise<TaskResponded>;
 }
 
-const submitEvaluationRequest = async (
-  publicClient: PublicClient,
-  args: SubmitEvaluationParams,
-): Promise<
-  ({ ok: true; taskRequestId: string; txHash?: Hex } & PendingTaskBuilder) | { ok: false; error: NewtonError }
-> => {
-  const endpoint = publicClient?.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
-  const body = createJsonRpcRequestPayload(AVS_METHODS.createTask, args);
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.error) {
-    return { ok: false, error: data.error };
-  }
-  return {
-    ok: true,
-    taskRequestId: data.result.task_request_id,
-    txHash: data.result.txHash,
-    getTaskId: () => Promise.resolve(data.result.task_id),
-    waitForTaskCreated: () => Promise.resolve(data.result.task_id),
-    waitForTaskResponded: () => Promise.resolve(data.result.task_id),
-  };
-};
 const waitForTaskCreated = (
   publicClient: PublicClient,
   args: {
@@ -81,6 +55,33 @@ const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId 
 const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
   console.log('getTaskStatus args: ', args, publicClient);
   throw new Error('Newton SDK: getTaskStatus Not implemented');
+};
+
+const submitEvaluationRequest = async (
+  publicClient: PublicClient,
+  args: SubmitEvaluationParams,
+): Promise<
+  ({ ok: true; taskRequestId: string; txHash?: Hex } & PendingTaskBuilder) | { ok: false; error: NewtonError }
+> => {
+  const endpoint = publicClient?.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
+  const body = createJsonRpcRequestPayload(AVS_METHODS.createTask, args);
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) {
+    return { ok: false, error: data.error };
+  }
+  return {
+    ok: true,
+    taskRequestId: data.result.task_request_id,
+    txHash: data.result.txHash,
+    getTaskId: () => Promise.resolve(data.result.task_id),
+    waitForTaskCreated: () => Promise.resolve(data.result.task_id),
+    waitForTaskResponded: () => Promise.resolve(data.result.task_id),
+  };
 };
 export {
   submitEvaluationRequest,
