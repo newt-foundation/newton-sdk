@@ -27,7 +27,7 @@ interface WaitForTaskIdResult {
 interface PendingTaskBuilder {
   getTaskId: () => Promise<WaitForTaskIdResult>;
   waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
-  waitForTaskResponded: () => Promise<TaskResponded>;
+  waitForTaskResponded: () => Promise<WaitForTaskIdResult>;
 }
 
 const getTaskId = async (
@@ -54,7 +54,7 @@ const getTaskId = async (
   });
   const data = await res.json();
   if (data.error) {
-    throw new Error(`Newton SDK: getTaskId failed: ${data.error.message}`);
+    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${data.error.message}`);
   }
   // this assumes no need for a polling mechanism for now.
   return data.result as WaitForTaskIdResult;
@@ -84,22 +84,39 @@ const waitForTaskCreated = async (
   });
   const data = await res.json();
   if (data.error) {
-    throw new Error(`Newton SDK: getTaskId failed: ${data.error.message}`);
+    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${data.error.message}`);
   }
   // this assumes no need for a polling mechanism for now.
   return data.result as WaitForTaskIdResult;
 };
-const waitForTaskResponded = (
+const waitForTaskResponded = async (
   publicClient: PublicClient,
   args: {
-    taskId: TaskId;
-    client?: PublicClient;
-    timeoutMs?: number; // may be short (< 1s) in fast paths
+    taskRequestId: string;
+    client?: PublicClient; // optionally specify WS-enabled client
+    timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
-): Promise<TaskResponded> => {
-  console.log('waitForTaskResponded args: ', args, publicClient);
-  throw new Error('Newton SDK: waitForTaskResponded Not implemented');
+): Promise<WaitForTaskIdResult> => {
+  const endpoint = publicClient.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
+
+  const body = createJsonRpcRequestPayload(AVS_METHODS.waitForTaskId, {
+    task_request_id: args.taskRequestId,
+    timeout_secs: args.timeoutMs ?? 60,
+  });
+
+  // Question: This endpoint blocks until the task is completed or the timeout is reached -> do you mean until the task is created?
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) {
+    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${data.error.message}`);
+  }
+  // this assumes no need for a polling mechanism for now.
+  return data.result as WaitForTaskIdResult;
 };
 const onTaskEvents = (
   publicClient: PublicClient,
@@ -144,7 +161,7 @@ const submitEvaluationRequest = async (
     taskRequestId: createTaskResult.task_request_id,
     getTaskId: () => getTaskId(publicClient, { taskRequestId: createTaskResult.task_request_id }),
     waitForTaskCreated: () => waitForTaskCreated(publicClient, { taskRequestId: createTaskResult.task_request_id }),
-    waitForTaskResponded: () => Promise.resolve({} as any),
+    waitForTaskResponded: () => waitForTaskResponded(publicClient, { taskRequestId: createTaskResult.task_request_id }),
   };
 };
 export {
