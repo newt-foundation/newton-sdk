@@ -11,10 +11,10 @@ export interface Intent {
 }
 
 export interface SubmitEvaluationParams {
-  policy_client: Address;
+  policyClient: Address;
   intent: Intent;
-  quorum_number: number[];
-  quorum_threshold_percentage: number;
+  quorumNumber: number[];
+  quorumThresholdPercentage: number;
   timeout: number;
 }
 

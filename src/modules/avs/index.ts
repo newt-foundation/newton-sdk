@@ -1,8 +1,8 @@
-import { AVS_METHODS, MAINNET_AVS_API, TESTNET_AVS_API } from '@core/const';
+import { AVS_METHODS } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
-import { createJsonRpcRequestPayload } from '@core/utils/json-rpc';
+import { AvsHttpService } from '@core/utils/https';
 import { PublicClient } from 'viem';
 
 interface CreateTaskResult {
@@ -40,24 +40,17 @@ const waitForTaskCreated = async (
     abortSignal?: AbortSignal;
   },
 ): Promise<WaitForTaskIdResult> => {
-  const endpoint = publicClient.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
-
-  const body = createJsonRpcRequestPayload(AVS_METHODS.waitForTaskId, {
+  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
+  const res = await avsHttpService.Post(AVS_METHODS.waitForTaskId, {
     task_request_id: args.taskRequestId,
-    timeout_secs: args.timeoutMs ?? 60,
+    timeout_ms: args.timeoutMs ?? 30_000,
   });
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.error) {
-    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${data.error.message}`);
+  if (res.error) {
+    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${res.error.message}`);
   }
   // this assumes no need for a polling mechanism for now.
-  return data.result as WaitForTaskIdResult;
+  return res.result as WaitForTaskIdResult;
 };
 const waitForTaskResponded = async (
   publicClient: PublicClient,
@@ -97,18 +90,17 @@ const submitEvaluationRequest = async (
   publicClient: PublicClient,
   args: SubmitEvaluationParams,
 ): Promise<({ ok: true; taskId?: string } & PendingTaskBuilder) | { ok: false; error: NewtonError }> => {
-  const endpoint = publicClient?.chain?.testnet ? TESTNET_AVS_API : MAINNET_AVS_API;
-  const body = createJsonRpcRequestPayload(AVS_METHODS.createTask, args);
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
+  const res = await avsHttpService.Post(AVS_METHODS.createTask, {
+    policy_client: args.policyClient,
+    intent: args.intent,
+    quorum_number: args.quorumNumber,
+    quorum_threshold_percentage: args.quorumThresholdPercentage,
+    timeout: args.timeout,
   });
-  const data = await res.json();
-  if (data.error) {
-    return { ok: false, error: data.error };
-  }
-  const createTaskResult = data.result as CreateTaskResult;
+  if (res.error) return { ok: false, error: res.error };
+
+  const createTaskResult = res.result as CreateTaskResult;
   return {
     ok: true,
     taskId: 'NotImplemented',
