@@ -1,4 +1,3 @@
-import { ViemPublicClient } from '@core/index';
 import { Address } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import {
@@ -10,9 +9,10 @@ import {
   SetPolicyInput,
   SetPolicyResult,
 } from '@core/types/policy';
+import { PublicClient } from 'viem';
 
 const precomputePolicyId = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: {
     policyContract: Address;
     policyData?: Address[];
@@ -25,32 +25,29 @@ const precomputePolicyId = (
 };
 
 const setPolicy = (
-  publicClient: ViemPublicClient,
+  publicClient: PublicClient,
   args: SetPolicyInput,
 ): Promise<SetPolicyResult | { ok: false; error: NewtonError }> => {
   console.log('setPolicy args: ', args, publicClient);
   throw new Error('Newton SDK: setPolicy Not implemented');
 };
 
-const getPolicy = (publicClient: ViemPublicClient, args: { client: Address }): Promise<PolicyInfo | null> => {
+const getPolicy = (publicClient: PublicClient, args: { client: Address }): Promise<PolicyInfo | null> => {
   console.log('getPolicy args: ', args, publicClient);
   throw new Error('Newton SDK: getPolicy Not implemented');
 };
 
-const getPolicyCodeUri = (
-  publicClient: ViemPublicClient,
-  args: { policyContract: Address },
-): Promise<PolicyCodeInfo> => {
+const getPolicyCodeUri = (publicClient: PublicClient, args: { policyContract: Address }): Promise<PolicyCodeInfo> => {
   console.log('getPolicyCodeUri args: ', args, publicClient);
   throw new Error('Newton SDK: getPolicyCodeUri Not implemented');
 };
 
-const getPolicyDataRefs = (publicClient: ViemPublicClient, args: { policyContract: Address }): Promise<Address[]> => {
+const getPolicyDataRefs = (publicClient: PublicClient, args: { policyContract: Address }): Promise<Address[]> => {
   console.log('getPolicyDataRefs args: ', args, publicClient);
   throw new Error('Newton SDK: getPolicyDataRefs Not implemented');
 };
 
-const getPolicyDataInfo = (publicClient: ViemPublicClient, args: { policyData: Address }): Promise<PolicyDataInfo> => {
+const getPolicyDataInfo = (publicClient: PublicClient, args: { policyData: Address }): Promise<PolicyDataInfo> => {
   console.log('getPolicyDataInfo args: ', args, publicClient);
   throw new Error('Newton SDK: getPolicyDataInfo Not implemented');
 };
