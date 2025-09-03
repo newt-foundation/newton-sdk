@@ -1,5 +1,5 @@
-export type Address = `0x${string}`;
-export type Hex = `0x${string}`;
+import { Address, Hex } from './generic';
+
 export type PolicyId = string;
 
 export interface PolicyParamsJson {

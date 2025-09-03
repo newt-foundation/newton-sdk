@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Account, Address, ParseAccount, PublicClient, RpcSchema, Transport } from 'viem';
-import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './utils/task';
+import { Address, PublicClient } from 'viem';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
@@ -13,12 +13,12 @@ import {
   SetPolicyResult,
 } from './types/policy';
 import {
-  computeTaskId,
   getTaskResponseHash,
   getTaskStatus,
   onTaskEvents,
   submitEvaluationRequest,
   waitForTaskCreated,
+  WaitForTaskIdResult,
   waitForTaskResponded,
 } from './modules/avs';
 import {
@@ -30,34 +30,24 @@ import {
   setPolicy,
 } from './modules/policy';
 
-export type ViemPublicClient = PublicClient<
-  Transport,
-  any,
-  ParseAccount<Account | Address | undefined>,
-  RpcSchema | undefined
->;
-
-const newtonPublicActions = () => (publicClient: ViemPublicClient) => {
-  if (publicClient.chain.id !== mainnet.id && publicClient.chain.id !== sepolia.id) {
+const newtonPublicActions = () => (publicClient: PublicClient) => {
+  if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
     );
   }
   return {
-    // policy module functions
-    computeTaskId: (args: { client: Address; intent: Intent }): TaskId => computeTaskId(publicClient, args),
-
     submitEvaluationRequest: (
       args: SubmitEvaluationParams,
-    ): Promise<{ ok: true; taskId: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
+    ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
       submitEvaluationRequest(publicClient, args),
 
     waitForTaskCreated: (args: {
-      taskId: TaskId;
+      taskRequestId: string;
       client?: PublicClient; // optionally specify WS-enabled client
       timeoutMs?: number; // default e.g., 30_000
       abortSignal?: AbortSignal;
-    }): Promise<TaskCreated> => waitForTaskCreated(publicClient, args),
+    }): Promise<WaitForTaskIdResult> => waitForTaskCreated(publicClient, args, {}),
 
     waitForTaskResponded: (args: {
       taskId: TaskId;
