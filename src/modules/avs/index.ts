@@ -26,9 +26,14 @@ interface WaitForTaskIdResult {
 }
 
 interface PendingTaskBuilder {
+  readonly taskId?: string; // getter-backed
   getTaskRequestId: () => string;
   waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
   waitForTaskResponded: () => Promise<WaitForTaskIdResult>;
+}
+
+interface TaskIdRef {
+  taskId?: string;
 }
 
 const waitForTaskCreated = async (
@@ -39,6 +44,7 @@ const waitForTaskCreated = async (
     timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
+  taskIdRef: TaskIdRef,
 ): Promise<WaitForTaskIdResult> => {
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
   const res = await avsHttpService.Post(AVS_METHODS.waitForTaskId, {
@@ -49,18 +55,22 @@ const waitForTaskCreated = async (
   if (res.error) {
     throw new Error(`Newton SDK: newton_waitForTaskId failed: ${res.error.message}`);
   }
+  taskIdRef.taskId = res.result.task_id;
   // this assumes no need for a polling mechanism for now.
   return res.result as WaitForTaskIdResult;
 };
 const waitForTaskResponded = async (
   publicClient: PublicClient,
   args: {
-    taskId: string;
+    taskId?: string;
     client?: PublicClient; // optionally specify WS-enabled client
     timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
 ): Promise<WaitForTaskIdResult> => {
+  if (!args.taskId) {
+    throw new Error('waitForTaskResponded: taskId is required');
+  }
   console.log(publicClient, args);
   throw new Error('waitForTaskResponded: Not Implemented');
 };
@@ -86,11 +96,14 @@ const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Pr
   throw new Error('Newton SDK: getTaskStatus Not implemented');
 };
 
-const submitEvaluationRequest = async (
+async function submitEvaluationRequest(
   publicClient: PublicClient,
   args: SubmitEvaluationParams,
-): Promise<({ ok: true; taskId?: string } & PendingTaskBuilder) | { ok: false; error: NewtonError }> => {
+): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
+  const taskIdRef: TaskIdRef = {};
+
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
+
   const res = await avsHttpService.Post(AVS_METHODS.createTask, {
     policy_client: args.policyClient,
     intent: args.intent,
@@ -101,14 +114,45 @@ const submitEvaluationRequest = async (
   if (res.error) return { ok: false, error: res.error };
 
   const createTaskResult = res.result as CreateTaskResult;
-  return {
-    ok: true,
-    taskId: 'NotImplemented',
-    getTaskRequestId: () => createTaskResult.task_request_id,
-    waitForTaskCreated: () => waitForTaskCreated(publicClient, { taskRequestId: createTaskResult.task_request_id }),
-    waitForTaskResponded: () => waitForTaskResponded(publicClient, { taskId: 'NotImplemented' }),
+
+  let createdSingleton: Promise<WaitForTaskIdResult> | null = null;
+  const ensureCreated = () => {
+    if (!createdSingleton) {
+      createdSingleton = (async () => {
+        const created = await waitForTaskCreated(
+          publicClient,
+          { taskRequestId: createTaskResult.task_request_id },
+          taskIdRef,
+        );
+        if (!taskIdRef.taskId) throw new Error('Task ID not set after creation.');
+        return created;
+      })();
+    }
+    return createdSingleton;
   };
-};
+
+  const builder: { ok: true } & PendingTaskBuilder = {
+    ok: true as const,
+
+    // live view of the ref
+    get taskId() {
+      return taskIdRef.taskId;
+    },
+
+    getTaskRequestId: () => createTaskResult.task_request_id,
+
+    // return the taskId so callers can capture it if they want
+    waitForTaskCreated: async () => ensureCreated(),
+
+    // safe: will await creation if caller forgot
+    waitForTaskResponded: async () => {
+      const taskId = taskIdRef.taskId ?? (await ensureCreated())?.result?.task_id;
+      return waitForTaskResponded(publicClient, { taskId });
+    },
+  };
+
+  return builder;
+}
 export {
   submitEvaluationRequest,
   waitForTaskCreated,
