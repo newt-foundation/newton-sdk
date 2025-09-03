@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, PublicClient } from 'viem';
-import { Intent, SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './types/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
@@ -13,12 +13,12 @@ import {
   SetPolicyResult,
 } from './types/policy';
 import {
-  computeTaskId,
   getTaskResponseHash,
   getTaskStatus,
   onTaskEvents,
   submitEvaluationRequest,
   waitForTaskCreated,
+  WaitForTaskIdResult,
   waitForTaskResponded,
 } from './modules/avs';
 import {
@@ -37,20 +37,17 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
     );
   }
   return {
-    // policy module functions
-    computeTaskId: (args: { client: Address; intent: Intent }): TaskId => computeTaskId(publicClient, args),
-
     submitEvaluationRequest: (
       args: SubmitEvaluationParams,
-    ): Promise<{ ok: true; taskId: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
+    ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
       submitEvaluationRequest(publicClient, args),
 
     waitForTaskCreated: (args: {
-      taskId: TaskId;
+      taskRequestId: string;
       client?: PublicClient; // optionally specify WS-enabled client
       timeoutMs?: number; // default e.g., 30_000
       abortSignal?: AbortSignal;
-    }): Promise<TaskCreated> => waitForTaskCreated(publicClient, args),
+    }): Promise<WaitForTaskIdResult> => waitForTaskCreated(publicClient, args, {}),
 
     waitForTaskResponded: (args: {
       taskId: TaskId;

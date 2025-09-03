@@ -13,7 +13,7 @@ interface CreateTaskResult {
 
 // This is the status of task CREATION, not completion.
 // When status === Completed, you'll get a result
-interface WaitForTaskIdResult {
+export interface WaitForTaskIdResult {
   task_request_id: string;
   task_request: any;
   status: 'Queued' | 'Processing' | 'Completed' | 'Failed';
@@ -29,7 +29,7 @@ interface PendingTaskBuilder {
   readonly taskId?: string; // getter-backed
   getTaskRequestId: () => string;
   waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
-  waitForTaskResponded: () => Promise<WaitForTaskIdResult>;
+  waitForTaskResponded: () => Promise<TaskResponded>;
 }
 
 interface TaskIdRef {
@@ -67,7 +67,7 @@ const waitForTaskResponded = async (
     timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
-): Promise<WaitForTaskIdResult> => {
+): Promise<TaskResponded> => {
   if (!args.taskId) {
     throw new Error('waitForTaskResponded: taskId is required');
   }
