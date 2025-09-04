@@ -82,8 +82,10 @@ const waitForTaskResponded = async (
   const fromBlockParam = defaultFromBlock;
 
   if (fromBlockParam !== undefined) {
-    const past = await publicClient.getLogs({
-      address: '0xcontractAddress', // TODO: fill this in once available
+    const past = await publicClient.getContractEvents({
+      address: '0xcontractAddress',
+      abi: newtonAbi,
+      eventName: 'TaskResponded',
       fromBlock: fromBlockParam,
       toBlock: 'latest',
     });
