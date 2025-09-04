@@ -29,6 +29,7 @@ import {
   precomputePolicyId,
   setPolicy,
 } from './modules/policy';
+import { TaskRespondedLog } from './abi';
 
 const newtonPublicActions = () => (publicClient: PublicClient) => {
   if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
@@ -54,7 +55,7 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
       client?: PublicClient;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
-    }): Promise<TaskResponded> => waitForTaskResponded(publicClient, args),
+    }): Promise<TaskRespondedLog | undefined> => waitForTaskResponded(publicClient, args),
 
     onTaskEvents: (args: {
       taskId: TaskId;
