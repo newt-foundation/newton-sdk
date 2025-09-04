@@ -59,6 +59,23 @@ export const newtonAbi = [
       },
     ],
   },
+  {
+    type: 'function',
+    name: 'taskStatus',
+    stateMutability: 'view',
+    inputs: [
+      {
+        name: 'taskId',
+        type: 'bytes32',
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+  },
 ] as const;
 
 export type TaskRespondedLog = Log & {

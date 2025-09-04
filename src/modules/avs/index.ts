@@ -2,7 +2,7 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { AVS_CONTRACT_ADDRESS, AVS_METHODS, TEST_AVS_CONTRACT_ADDRESS } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { padHex, PublicClient } from 'viem';
 
@@ -142,6 +142,25 @@ const waitForTaskResponded = async (
     });
   });
 };
+
+const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
+  return publicClient.readContract({
+    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+    abi: newtonAbi,
+    functionName: 'taskResponseHash',
+    args: [args.taskId],
+  });
+};
+
+const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex> => {
+  return publicClient.readContract({
+    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+    abi: newtonAbi,
+    functionName: 'taskStatus',
+    args: [args.taskId],
+  });
+};
+
 const onTaskEvents = (
   publicClient: PublicClient,
   args: {
@@ -154,18 +173,6 @@ const onTaskEvents = (
 ): void => {
   console.log('onTaskEvents args: ', args, publicClient);
   throw new Error('Newton SDK: onTaskEvents Not implemented');
-};
-const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
-  return publicClient.readContract({
-    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
-    abi: newtonAbi,
-    functionName: 'taskResponseHash',
-    args: [args.taskId],
-  });
-};
-const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
-  console.log('getTaskStatus args: ', args, publicClient);
-  throw new Error('Newton SDK: getTaskStatus Not implemented');
 };
 
 async function submitEvaluationRequest(

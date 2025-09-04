@@ -28,7 +28,4 @@ export interface TaskResponded {
   bar: string;
 }
 
-export interface TaskStatus {
-  foo: string;
-  bar: string;
-}
+export type TaskStatus = Hex;
