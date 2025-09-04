@@ -82,8 +82,8 @@ importers:
         specifier: ^6.1.1
         version: 6.1.1(esbuild@0.23.1)(rollup@4.49.0)
       rollup-plugin-node-externals:
-        specifier: ^7.1.3
-        version: 7.1.3(rollup@4.49.0)
+        specifier: ^8.1.0
+        version: 8.1.0(rollup@4.49.0)
       rollup-plugin-tsc-alias:
         specifier: ^1.1.4
         version: 1.1.4(rollup@4.49.0)
@@ -2625,11 +2625,11 @@ packages:
       esbuild: '>=0.18.0'
       rollup: ^1.20.0 || ^2.0.0 || ^3.0.0 || ^4.0.0
 
-  rollup-plugin-node-externals@7.1.3:
-    resolution: {integrity: sha512-RM+7tJAejAoRsCf93TptTSdqUhRA8S78DleihMiu54Kac+uLkd9VIegLPhGnaW3ehZTXh56+R301mFH6j2A7vw==}
+  rollup-plugin-node-externals@8.1.0:
+    resolution: {integrity: sha512-0D3S0E0Dl1V3Q6Cywnc7wt88VAfOB9AC5QHwVdgvP1vByRHW2wnEXoK0x3VYZzJ/EmGsR5Uix5HUmMJNG+hz2Q==}
     engines: {node: '>= 21 || ^20.6.0 || ^18.19.0'}
     peerDependencies:
-      rollup: ^3.0.0 || ^4.0.0
+      rollup: ^4.0.0
 
   rollup-plugin-tsc-alias@1.1.4:
     resolution: {integrity: sha512-XfoYBpkxV3C8hv1plWbLJC1oXmOFheoOL20KhQ7LMJf5LyvGSxL2xE81ezuYfcZfWuqFTn/SfiORyaiV4qS6+A==}
@@ -6099,7 +6099,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  rollup-plugin-node-externals@7.1.3(rollup@4.49.0):
+  rollup-plugin-node-externals@8.1.0(rollup@4.49.0):
     dependencies:
       rollup: 4.49.0
 
