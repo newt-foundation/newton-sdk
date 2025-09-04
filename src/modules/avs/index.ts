@@ -1,5 +1,5 @@
 import { newtonAbi, TaskRespondedLog } from '@core/abi';
-import { AVS_CONTRACT_ADDRESS, AVS_METHODS, TEST_AVS_CONTRACT_ADDRESS } from '@core/const';
+import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded } from '@core/types/task';
@@ -83,7 +83,7 @@ const waitForTaskResponded = async (
 
   if (fromBlockParam !== undefined) {
     const past = await publicClient.getContractEvents({
-      address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+      address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
       abi: newtonAbi,
       eventName: 'TaskResponded',
       fromBlock: fromBlockParam,
@@ -122,7 +122,7 @@ const waitForTaskResponded = async (
     }
 
     unsub = publicClient.watchContractEvent({
-      address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+      address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
       abi: newtonAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
@@ -145,7 +145,7 @@ const waitForTaskResponded = async (
 
 const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
   return publicClient.readContract({
-    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
     abi: newtonAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
@@ -154,7 +154,7 @@ const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId 
 
 const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex> => {
   return publicClient.readContract({
-    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
     abi: newtonAbi,
     functionName: 'taskStatus',
     args: [args.taskId],
