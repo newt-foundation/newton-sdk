@@ -147,9 +147,9 @@ const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId 
   return publicClient.readContract({
     address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
     abi: newtonAbi,
-    functionName: 'taskResponseHash',
+    functionName: 'allTaskHashes',
     args: [args.taskId],
-  });
+  }) as Promise<Hex | null>;
 };
 
 const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex> => {
@@ -158,7 +158,7 @@ const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Pr
     abi: newtonAbi,
     functionName: 'taskStatus',
     args: [args.taskId],
-  });
+  }) as Promise<Hex>;
 };
 
 const onTaskEvents = (
