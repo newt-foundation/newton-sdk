@@ -35,6 +35,7 @@ interface PendingTaskBuilder {
 
 interface TaskIdRef {
   taskId?: TaskId;
+  taskRequestedAtBlock?: bigint;
 }
 
 const waitForTaskCreated = async (
@@ -68,6 +69,7 @@ const waitForTaskResponded = async (
     timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
+  taskRequestedAtBlock?: bigint,
 ): Promise<TaskRespondedLog | undefined> => {
   if (!args.taskId) {
     throw new Error('Newton SDK: waitForTaskResponded requires taskId');
@@ -76,10 +78,8 @@ const waitForTaskResponded = async (
   const targetTaskId = padHex(args.taskId, { size: 32 });
 
   // 1) Check historical logs first (best-effort from the recent safe block).
-  // Choose a sensible default 'fromBlock' if not supplied.
-  // You might maintain a per-chain “deployment start block” in your app.
-  const defaultFromBlock: bigint | undefined = undefined; // set if you know it
-  const fromBlockParam = defaultFromBlock;
+  const defaultFromBlock: bigint | undefined = undefined;
+  const fromBlockParam = taskRequestedAtBlock ?? defaultFromBlock;
 
   if (fromBlockParam !== undefined) {
     const past = await publicClient.getContractEvents({
@@ -179,7 +179,8 @@ async function submitEvaluationRequest(
   publicClient: PublicClient,
   args: SubmitEvaluationParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
-  const taskIdRef: TaskIdRef = {};
+  const taskRequestedAtBlock = await publicClient.getBlockNumber();
+  const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
@@ -228,7 +229,7 @@ async function submitEvaluationRequest(
     // safe: will await creation if caller forgot
     waitForTaskResponded: async () => {
       const taskId = taskIdRef.taskId ?? (await ensureCreated())?.result?.task_id;
-      return waitForTaskResponded(publicClient, { taskId });
+      return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
     },
   };
 
