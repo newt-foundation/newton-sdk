@@ -6,3 +6,6 @@ export const AVS_METHODS = {
   waitForTaskId: 'newton_waitForTaskId',
   createTaskAndWait: 'newton_createTaskAndWait',
 };
+
+export const TEST_AVS_CONTRACT_ADDRESS = '0xAvsTestContractAddress';
+export const AVS_CONTRACT_ADDRESS = '0xAvsContractAddress';

@@ -1,5 +1,5 @@
 import { newtonAbi, TaskRespondedLog } from '@core/abi';
-import { AVS_METHODS } from '@core/const';
+import { AVS_CONTRACT_ADDRESS, AVS_METHODS, TEST_AVS_CONTRACT_ADDRESS } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
@@ -83,7 +83,7 @@ const waitForTaskResponded = async (
 
   if (fromBlockParam !== undefined) {
     const past = await publicClient.getContractEvents({
-      address: '0xcontractAddress',
+      address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
       abi: newtonAbi,
       eventName: 'TaskResponded',
       fromBlock: fromBlockParam,
@@ -122,7 +122,7 @@ const waitForTaskResponded = async (
     }
 
     unsub = publicClient.watchContractEvent({
-      address: '0xcontractAddress',
+      address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
       abi: newtonAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
