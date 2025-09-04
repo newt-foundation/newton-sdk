@@ -1,6 +1,6 @@
 import { Address, Hex } from './generic';
 
-export type TaskId = string;
+export type TaskId = Hex;
 export interface Intent {
   sender: Address;
   target: Address;

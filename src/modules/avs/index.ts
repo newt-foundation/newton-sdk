@@ -1,9 +1,10 @@
+import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { AVS_METHODS } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { PublicClient } from 'viem';
+import { padHex, PublicClient } from 'viem';
 
 interface CreateTaskResult {
   receipt: any;
@@ -16,24 +17,24 @@ interface CreateTaskResult {
 export interface WaitForTaskIdResult {
   task_request_id: string;
   task_request: any;
-  status: 'Queued' | 'Processing' | 'Completed' | 'Failed';
-  result?: {
-    task_id?: Hex;
-    tx_hash?: Hex;
+  status: 'Completed' | 'Failed';
+  result: {
+    task_id: Hex;
+    tx_hash: Hex;
   };
   error?: unknown;
   processing_time_ms?: number;
 }
 
 interface PendingTaskBuilder {
-  readonly taskId?: string; // getter-backed
-  getTaskRequestId: () => string;
+  readonly taskRequestId: string;
+  readonly taskId?: TaskId;
   waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
-  waitForTaskResponded: () => Promise<TaskResponded>;
+  waitForTaskResponded: () => Promise<TaskRespondedLog | undefined>;
 }
 
 interface TaskIdRef {
-  taskId?: string;
+  taskId?: TaskId;
 }
 
 const waitForTaskCreated = async (
@@ -62,17 +63,82 @@ const waitForTaskCreated = async (
 const waitForTaskResponded = async (
   publicClient: PublicClient,
   args: {
-    taskId?: string;
+    taskId?: Hex;
     client?: PublicClient; // optionally specify WS-enabled client
     timeoutMs?: number; // default e.g., 30_000
     abortSignal?: AbortSignal;
   },
-): Promise<TaskResponded> => {
+): Promise<TaskRespondedLog | undefined> => {
   if (!args.taskId) {
-    throw new Error('waitForTaskResponded: taskId is required');
+    throw new Error('Newton SDK: waitForTaskResponded requires taskId');
   }
-  console.log(publicClient, args);
-  throw new Error('waitForTaskResponded: Not Implemented');
+  // Ensure 32-byte hex (0x + 64 nibbles) for reliable equality checks.
+  const targetTaskId = padHex(args.taskId, { size: 32 });
+
+  // 1) Check historical logs first (best-effort from the recent safe block).
+  // Choose a sensible default 'fromBlock' if not supplied.
+  // You might maintain a per-chain “deployment start block” in your app.
+  const defaultFromBlock: bigint | undefined = undefined; // set if you know it
+  const fromBlockParam = defaultFromBlock;
+
+  if (fromBlockParam !== undefined) {
+    const past = await publicClient.getLogs({
+      address: '0xcontractAddress', // TODO: fill this in once available
+      fromBlock: fromBlockParam,
+      toBlock: 'latest',
+    });
+
+    const match = (past as TaskRespondedLog[]).find(
+      log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
+    );
+    if (match) return match;
+  }
+
+  // 2) If not found, subscribe and resolve on first match.
+  return new Promise<TaskRespondedLog | undefined>((resolve, reject) => {
+    let unsub: (() => void) | undefined = undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = (err?: unknown) => {
+      unsub?.();
+      if (timeoutId) clearTimeout(timeoutId);
+      if (err) reject(err);
+    };
+
+    if (args.timeoutMs && args.timeoutMs > 0) {
+      timeoutId = setTimeout(() => cleanup(new Error('waitForTaskResponded: timeout')), args.timeoutMs);
+    }
+
+    if (args.abortSignal) {
+      if (args.abortSignal.aborted) {
+        cleanup(new Error('waitForTaskResponded: aborted'));
+        return;
+      }
+      args.abortSignal.addEventListener('abort', () => cleanup(new Error('waitForTaskResponded: aborted')), {
+        once: true,
+      });
+    }
+
+    unsub = publicClient.watchContractEvent({
+      address: '0xcontractAddress',
+      abi: newtonAbi,
+      eventName: 'TaskResponded',
+      onLogs: logs => {
+        for (const log of logs as TaskRespondedLog[]) {
+          const id = padHex(log.args.taskResponse.taskId, { size: 32 });
+          if (id === targetTaskId) {
+            const res = log;
+            cleanup(); // unsub + clear timers
+            resolve(res);
+            return;
+          }
+        }
+      },
+      onError: err => {
+        cleanup(err);
+      },
+    });
+  });
 };
 const onTaskEvents = (
   publicClient: PublicClient,
@@ -139,7 +205,9 @@ async function submitEvaluationRequest(
       return taskIdRef.taskId;
     },
 
-    getTaskRequestId: () => createTaskResult.task_request_id,
+    get taskRequestId() {
+      return createTaskResult.task_request_id;
+    },
 
     // return the taskId so callers can capture it if they want
     waitForTaskCreated: async () => ensureCreated(),
