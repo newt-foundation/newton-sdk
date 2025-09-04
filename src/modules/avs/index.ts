@@ -2,7 +2,7 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded } from '@core/types/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { padHex, PublicClient } from 'viem';
 
@@ -152,13 +152,52 @@ const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId 
   }) as Promise<Hex | null>;
 };
 
-const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex> => {
-  return publicClient.readContract({
-    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
+  const taskManagerAddress = publicClient.chain?.testnet
+    ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
+    : MAINNET_NEWTON_PROVER_TASK_MANAGER;
+
+  const allTaskHashes = await publicClient.readContract({
+    address: taskManagerAddress,
     abi: newtonAbi,
-    functionName: 'taskStatus',
+    functionName: 'allTaskHashes',
     args: [args.taskId],
-  }) as Promise<Hex>;
+  });
+  if (!allTaskHashes) {
+    throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
+  }
+
+  const isAttestationSpent = (await publicClient.readContract({
+    address: taskManagerAddress,
+    abi: newtonAbi,
+    functionName: 'attestationsSpent',
+    args: [args.taskId],
+  })) as boolean | undefined;
+  if (isAttestationSpent) {
+    return 'TaskUsed';
+  }
+
+  const isTaskChallenged = (await publicClient.readContract({
+    address: taskManagerAddress,
+    abi: newtonAbi,
+    functionName: 'taskSuccesfullyChallenged',
+    args: [args.taskId],
+  })) as boolean | undefined;
+  if (isTaskChallenged) {
+    return 'TaskChallenged';
+  }
+
+  const allTaskResponses = await publicClient.readContract({
+    address: taskManagerAddress,
+    abi: newtonAbi,
+    functionName: 'allTaskResponses',
+    args: [args.taskId],
+  });
+  if (allTaskResponses) {
+    return 'TaskResponded';
+  }
+
+  return 'Unknown';
 };
 
 const onTaskEvents = (

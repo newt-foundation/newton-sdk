@@ -28,4 +28,4 @@ export interface TaskResponded {
   bar: string;
 }
 
-export type TaskStatus = Hex;
+export type TaskStatus = 'TaskUsed' | 'TaskChallenged' | 'TaskResponded' | 'Unknown';
