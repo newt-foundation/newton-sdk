@@ -156,8 +156,12 @@ const onTaskEvents = (
   throw new Error('Newton SDK: onTaskEvents Not implemented');
 };
 const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
-  console.log('getTaskResponseHash args: ', args, publicClient);
-  throw new Error('Newton SDK: getTaskResponseHash Not implemented');
+  return publicClient.readContract({
+    address: publicClient.chain?.testnet ? TEST_AVS_CONTRACT_ADDRESS : AVS_CONTRACT_ADDRESS,
+    abi: newtonAbi,
+    functionName: 'taskResponseHash',
+    args: [args.taskId],
+  });
 };
 const getTaskStatus = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
   console.log('getTaskStatus args: ', args, publicClient);
