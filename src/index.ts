@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, PublicClient } from 'viem';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from './types/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
@@ -54,12 +54,12 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
       client?: PublicClient;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
-    }): Promise<TaskResponded> => waitForTaskResponded(publicClient, args),
+    }): Promise<TaskResponse | undefined> => waitForTaskResponded(publicClient, args),
 
     onTaskEvents: (args: {
       taskId: TaskId;
       onCreated?: (e: TaskCreated) => void;
-      onResponded?: (e: TaskResponded) => void;
+      onResponded?: (e: TaskResponse) => void;
       onError?: (err: unknown) => void;
       client?: PublicClient;
     }): void => onTaskEvents(publicClient, args),
