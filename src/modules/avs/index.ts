@@ -197,7 +197,7 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
     return 'TaskResponded';
   }
 
-  return 'Unknown';
+  return 'TaskCreated';
 };
 
 const onTaskEvents = (
