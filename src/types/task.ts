@@ -23,9 +23,20 @@ export interface TaskCreated {
   bar: string;
 }
 
-export interface TaskResponded {
-  foo: string;
-  bar: string;
+export interface TaskResponse {
+  taskId: Hex;
+  policyClient: Address;
+  policyId: Hex;
+  policyAddress: Address;
+  intent: {
+    from: Address;
+    to: Address;
+    value: bigint;
+    data: Hex;
+    chainId: bigint;
+    functionSignature: Hex;
+  };
+  evaluationResult: Hex;
 }
 
 export type TaskStatus = 'TaskUsed' | 'TaskChallenged' | 'TaskResponded' | 'TaskCreated';

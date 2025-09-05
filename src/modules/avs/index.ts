@@ -2,7 +2,7 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient } from 'viem';
 
@@ -30,7 +30,7 @@ interface PendingTaskBuilder {
   readonly taskRequestId: string;
   readonly taskId?: TaskId;
   waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
-  waitForTaskResponded: () => Promise<TaskRespondedLog | undefined>;
+  waitForTaskResponded: () => Promise<TaskResponse | undefined>;
 }
 
 interface TaskIdRef {
@@ -70,7 +70,7 @@ const waitForTaskResponded = async (
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
-): Promise<TaskRespondedLog | undefined> => {
+): Promise<TaskResponse | undefined> => {
   if (!args.taskId) {
     throw new Error('Newton SDK: waitForTaskResponded requires taskId');
   }
@@ -93,11 +93,11 @@ const waitForTaskResponded = async (
     const match = (past as TaskRespondedLog[]).find(
       log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
     );
-    if (match) return match;
+    if (match) return match.args.taskResponse;
   }
 
   // 2) If not found, subscribe and resolve on first match.
-  return new Promise<TaskRespondedLog | undefined>((resolve, reject) => {
+  return new Promise<TaskResponse | undefined>((resolve, reject) => {
     let unsub: (() => void) | undefined = undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -129,7 +129,7 @@ const waitForTaskResponded = async (
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
-            const res = log;
+            const res = log.args.taskResponse;
             cleanup(); // unsub + clear timers
             resolve(res);
             return;
@@ -200,7 +200,7 @@ const onTaskEvents = (
   args: {
     taskId: TaskId;
     onCreated?: (e: TaskCreated) => void;
-    onResponded?: (e: TaskResponded) => void;
+    onResponded?: (e: TaskResponse) => void;
     onError?: (err: unknown) => void;
     client?: PublicClient;
   },
