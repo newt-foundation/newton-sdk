@@ -163,7 +163,7 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
     functionName: 'allTaskHashes',
     args: [args.taskId],
   })) as Hex;
-  const doesTaskIdExist = !!hexToBigInt(allTaskHashes);
+  const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
   if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
   const isAttestationSpent = (await publicClient.readContract({
