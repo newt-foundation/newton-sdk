@@ -1,3 +1,22 @@
+# v0.0.25 (Fri Sep 05 2025)
+
+#### 🐛 Bug Fix
+
+- implement wait for task responded [#13](https://github.com/newt-foundation/newton-sdk-private/pull/13) ([@Dizigen](https://github.com/Dizigen))
+- implement avs module methods [#9](https://github.com/newt-foundation/newton-sdk-private/pull/9) ([@Dizigen](https://github.com/Dizigen))
+
+#### 🔩 Dependency Updates
+
+- [CHORE](deps-dev): Bump rollup-plugin-node-externals from 7.1.3 to 8.1.0 [#3](https://github.com/newt-foundation/newton-sdk-private/pull/3) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- [CHORE](deps-dev): Bump eslint-plugin-react from 7.35.2 to 7.37.5 [#2](https://github.com/newt-foundation/newton-sdk-private/pull/2) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+#### Authors: 2
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.24 (Fri Aug 29 2025)
 
 #### 🐛 Bug Fix
