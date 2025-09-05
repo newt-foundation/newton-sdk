@@ -4,7 +4,7 @@ import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponded, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { padHex, PublicClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient } from 'viem';
 
 interface CreateTaskResult {
   receipt: any;
@@ -157,45 +157,40 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
     ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
     : MAINNET_NEWTON_PROVER_TASK_MANAGER;
 
-  const allTaskHashes = await publicClient.readContract({
+  const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
-  });
-  if (!allTaskHashes) {
-    throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
-  }
+  })) as Hex;
+  const doesTaskIdExist = !!hexToBigInt(allTaskHashes);
+  if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
   const isAttestationSpent = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
     functionName: 'attestationsSpent',
     args: [args.taskId],
-  })) as boolean | undefined;
-  if (isAttestationSpent) {
-    return 'TaskUsed';
-  }
+  })) as boolean;
+  if (isAttestationSpent) return 'TaskUsed';
 
   const isTaskChallenged = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
     functionName: 'taskSuccesfullyChallenged',
     args: [args.taskId],
-  })) as boolean | undefined;
-  if (isTaskChallenged) {
-    return 'TaskChallenged';
-  }
+  })) as boolean;
+  if (isTaskChallenged) return 'TaskChallenged';
 
-  const allTaskResponses = await publicClient.readContract({
+  const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
     functionName: 'allTaskResponses',
     args: [args.taskId],
-  });
-  if (allTaskResponses) {
-    return 'TaskResponded';
-  }
+  })) as Hex;
+  const isTaskResponded = !!hexToBigInt(allTaskResponses);
+
+  if (isTaskResponded) return 'TaskResponded';
 
   return 'TaskCreated';
 };
