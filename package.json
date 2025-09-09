@@ -93,7 +93,7 @@
   "dependencies": {
     "eventemitter3": "^4.0.4",
     "jose": "^6.0.13",
-    "viem": "^2.35.1"
+    "viem": "^2.37.5"
   },
   "externals": {
     "exclude": [
