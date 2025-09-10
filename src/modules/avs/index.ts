@@ -204,7 +204,7 @@ async function submitEvaluationRequest(
     types: createTaskParamsTypes,
     primaryType: 'CreateTaskParams',
     message: {
-      policy_client: requestBody.policy_client,
+      policy_client: args.policyClient,
       intent: {
         from: args.intent.from,
         to: args.intent.to,
