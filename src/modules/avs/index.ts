@@ -6,10 +6,16 @@ import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from '@core/
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient } from 'viem';
 
-interface CreateTaskResult {
-  receipt: any;
-  task_request_id: Hex;
-  timestamp: number;
+interface CreateTaskAndWaitResult {
+  task_request_id: string;
+  task_request: any;
+  status: 'Completed' | 'Failed';
+  result: {
+    task_id: Hex;
+    tx_hash: Hex;
+  };
+  error?: unknown;
+  processing_time_ms?: number;
 }
 
 // This is the status of task CREATION, not completion.
@@ -27,9 +33,7 @@ export interface WaitForTaskIdResult {
 }
 
 interface PendingTaskBuilder {
-  readonly taskRequestId: string;
   readonly taskId?: TaskId;
-  waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
   waitForTaskResponded: () => Promise<TaskResponse | undefined>;
 }
 
@@ -207,7 +211,7 @@ async function submitEvaluationRequest(
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTask, {
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, {
     policy_client: args.policyClient,
     intent: args.intent,
     quorum_number: args.quorumNumber,
@@ -216,23 +220,8 @@ async function submitEvaluationRequest(
   });
   if (res.error) return { ok: false, error: res.error };
 
-  const createTaskResult = res.result as CreateTaskResult;
-
-  let createdSingleton: Promise<WaitForTaskIdResult> | null = null;
-  const ensureCreated = () => {
-    if (!createdSingleton) {
-      createdSingleton = (async () => {
-        const created = await waitForTaskCreated(
-          publicClient,
-          { taskRequestId: createTaskResult.task_request_id },
-          taskIdRef,
-        );
-        if (!taskIdRef.taskId) throw new Error('Task ID not set after creation.');
-        return created;
-      })();
-    }
-    return createdSingleton;
-  };
+  const createTaskResult = res.result as CreateTaskAndWaitResult;
+  taskIdRef.taskId = createTaskResult.result.task_id;
 
   const builder: { ok: true } & PendingTaskBuilder = {
     ok: true as const,
@@ -242,16 +231,9 @@ async function submitEvaluationRequest(
       return taskIdRef.taskId;
     },
 
-    get taskRequestId() {
-      return createTaskResult.task_request_id;
-    },
-
-    // return the taskId so callers can capture it if they want
-    waitForTaskCreated: async () => ensureCreated(),
-
     // safe: will await creation if caller forgot
     waitForTaskResponded: async () => {
-      const taskId = taskIdRef.taskId ?? (await ensureCreated())?.result?.task_id;
+      const taskId = taskIdRef.taskId;
       return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
     },
   };
