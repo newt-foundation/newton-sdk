@@ -9,7 +9,7 @@ import {
   SetPolicyInput,
   SetPolicyResult,
 } from '@core/types/policy';
-import { PublicClient } from 'viem';
+import { PublicClient, WalletClient } from 'viem';
 
 const precomputePolicyId = (
   publicClient: PublicClient,
@@ -26,9 +26,10 @@ const precomputePolicyId = (
 
 const setPolicy = (
   publicClient: PublicClient,
+  walletClient: WalletClient,
   args: SetPolicyInput,
 ): Promise<SetPolicyResult | { ok: false; error: NewtonError }> => {
-  console.log('setPolicy args: ', args, publicClient);
+  console.log('setPolicy args: ', args, publicClient, walletClient);
   throw new Error('Newton SDK: setPolicy Not implemented');
 };
 

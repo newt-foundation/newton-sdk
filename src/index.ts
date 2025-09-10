@@ -37,6 +37,20 @@ const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient
         walletClient,
         args,
       ),
+
+    setPolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
+      setPolicy(
+        publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
+        walletClient,
+        args,
+      ),
+
+    replacePolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
+      setPolicy(
+        publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
+        walletClient,
+        args,
+      ),
   };
 };
 
@@ -63,12 +77,6 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
       params: PolicyParamsJson;
       client: Address;
     }): PolicyId => precomputePolicyId(publicClient, args),
-
-    setPolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
-      setPolicy(publicClient, args),
-
-    replacePolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
-      setPolicy(publicClient, args),
 
     getPolicy: (args: { client: Address }): Promise<PolicyInfo | null> => getPolicy(publicClient, args),
 
