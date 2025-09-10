@@ -54,7 +54,7 @@ const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient
   };
 };
 
-const newtonPublicActions = () => (publicClient: PublicClient) => {
+const newtonPublicClientActions = () => (publicClient: PublicClient) => {
   if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
@@ -90,4 +90,4 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
   };
 };
 
-export { newtonPublicActions, newtonWalletClientActions };
+export { newtonPublicClientActions, newtonWalletClientActions };
