@@ -12,14 +12,7 @@ import {
   SetPolicyInput,
   SetPolicyResult,
 } from './types/policy';
-import {
-  getTaskResponseHash,
-  getTaskStatus,
-  submitEvaluationRequest,
-  waitForTaskCreated,
-  WaitForTaskIdResult,
-  waitForTaskResponded,
-} from './modules/avs';
+import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
 import {
   getPolicy,
   getPolicyCodeUri,
@@ -54,16 +47,8 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
     );
   }
   return {
-    waitForTaskCreated: (args: {
-      taskRequestId: string;
-      client?: PublicClient; // optionally specify WS-enabled client
-      timeoutMs?: number; // default e.g., 30_000
-      abortSignal?: AbortSignal;
-    }): Promise<WaitForTaskIdResult> => waitForTaskCreated(publicClient, args, {}),
-
     waitForTaskResponded: (args: {
       taskId: TaskId;
-      client?: PublicClient;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
     }): Promise<TaskResponse | undefined> => waitForTaskResponded(publicClient, args),

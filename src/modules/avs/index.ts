@@ -28,35 +28,11 @@ interface TaskIdRef {
   taskRequestedAtBlock?: bigint;
 }
 
-const waitForTaskCreated = async (
-  publicClient: PublicClient,
-  args: {
-    taskRequestId: string;
-    client?: PublicClient; // optionally specify WS-enabled client
-    timeoutMs?: number; // default e.g., 30_000
-    abortSignal?: AbortSignal;
-  },
-  taskIdRef: TaskIdRef,
-): Promise<WaitForTaskIdResult> => {
-  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
-  const res = await avsHttpService.Post(AVS_METHODS.waitForTaskId, {
-    task_request_id: args.taskRequestId,
-    timeout_ms: args.timeoutMs ?? 30_000,
-  });
-
-  if (res.error) {
-    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${res.error.message}`);
-  }
-  taskIdRef.taskId = res.result.task_id;
-  // this assumes no need for a polling mechanism for now.
-  return res.result as WaitForTaskIdResult;
-};
 const waitForTaskResponded = async (
   publicClient: PublicClient,
   args: {
     taskId?: Hex;
-    client?: PublicClient; // optionally specify WS-enabled client
-    timeoutMs?: number; // default e.g., 30_000
+    timeoutMs?: number;
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
@@ -240,4 +216,4 @@ async function submitEvaluationRequest(
 
   return builder;
 }
-export { submitEvaluationRequest, waitForTaskCreated, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
+export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
