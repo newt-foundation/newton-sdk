@@ -4,7 +4,7 @@ import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient, WalletClient } from 'viem';
 
 interface CreateTaskAndWaitResult {
   task_request_id: string;
@@ -204,20 +204,35 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
 
 async function submitEvaluationRequest(
   publicClient: PublicClient,
+  walletClient: WalletClient,
   args: SubmitEvaluationParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
+  if (walletClient.account === undefined) {
+    throw new Error('Newton SDK: No account found in walletClient for newtonWalletClientActions');
+  }
+
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, {
-    policy_client: args.policyClient,
-    intent: args.intent,
-    quorum_number: args.quorumNumber,
-    quorum_threshold_percentage: args.quorumThresholdPercentage,
-    timeout: args.timeout,
+  // dummy message to validate address
+  const authorizationMessage = await walletClient.signMessage({
+    message: 'Evaluation Request',
+    account: walletClient.account,
   });
+
+  const res = await avsHttpService.Post(
+    AVS_METHODS.createTaskAndWait,
+    {
+      policy_client: args.policyClient,
+      intent: args.intent,
+      quorum_number: args.quorumNumber,
+      quorum_threshold_percentage: args.quorumThresholdPercentage,
+      timeout: args.timeout,
+    },
+    authorizationMessage,
+  );
   if (res.error) return { ok: false, error: res.error };
 
   const createTaskResult = res.result as CreateTaskAndWaitResult;
@@ -231,7 +246,6 @@ async function submitEvaluationRequest(
       return taskIdRef.taskId;
     },
 
-    // safe: will await creation if caller forgot
     waitForTaskResponded: async () => {
       const taskId = taskIdRef.taskId;
       return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
