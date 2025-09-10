@@ -8,12 +8,13 @@ export class AvsHttpService {
     this.baseUrl = testMode ? TESTNET_AVS_API : MAINNET_AVS_API;
   }
 
-  async Post(method: string, args: unknown) {
+  async Post(method: string, args: unknown, authorization?: string) {
     const body = createJsonRpcRequestPayload(method, args);
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(authorization ? { Authorization: `Bearer ${authorization}` } : {}),
       },
       body: JSON.stringify(body),
     });

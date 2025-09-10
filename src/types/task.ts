@@ -1,27 +1,37 @@
 import { Address, Hex } from './generic';
 
 export type TaskId = Hex;
-export interface Intent {
-  sender: Address;
-  target: Address;
+
+export interface NewtonIntent {
+  from: Address;
+  to: Address;
   value: string;
   data: Hex;
-  abi: Hex;
-  chain_id: number;
+  chainId: number;
+  functionSignature: Hex;
 }
 
-export interface SubmitEvaluationParams {
+export interface CreateTaskParams {
   policyClient: Address;
-  intent: Intent;
-  quorumNumber: number[];
-  quorumThresholdPercentage: number;
+  intent: NewtonIntent;
   timeout: number;
 }
 
-export interface TaskCreated {
-  foo: string;
-  bar: string;
-}
+export const createTaskParamsTypes = {
+  CreateTaskParams: [
+    { name: 'policy_client', type: 'address' },
+    { name: 'intent', type: 'Intent' },
+    { name: 'timeout', type: 'uint256' },
+  ],
+  Intent: [
+    { name: 'from', type: 'address' },
+    { name: 'to', type: 'address' },
+    { name: 'value', type: 'uint256' },
+    { name: 'data', type: 'bytes' },
+    { name: 'chain_id', type: 'uint256' },
+    { name: 'function_signature', type: 'bytes4' },
+  ],
+} as const;
 
 export interface TaskResponse {
   taskId: Hex;

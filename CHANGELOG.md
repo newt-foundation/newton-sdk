@@ -1,3 +1,15 @@
+# v0.1.0 (Wed Sep 10 2025)
+
+#### 🚀 Enhancement
+
+- cleanup punted functions [#18](https://github.com/newt-foundation/newton-sdk-private/pull/18) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.25 (Fri Sep 05 2025)
 
 #### 🐛 Bug Fix

@@ -2,18 +2,10 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { CreateTaskParams, TaskId, TaskResponse, TaskStatus, createTaskParamsTypes } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient, TypedDataDomain, WalletClient } from 'viem';
 
-interface CreateTaskResult {
-  receipt: any;
-  task_request_id: Hex;
-  timestamp: number;
-}
-
-// This is the status of task CREATION, not completion.
-// When status === Completed, you'll get a result
 export interface WaitForTaskIdResult {
   task_request_id: string;
   task_request: any;
@@ -27,9 +19,7 @@ export interface WaitForTaskIdResult {
 }
 
 interface PendingTaskBuilder {
-  readonly taskRequestId: string;
   readonly taskId?: TaskId;
-  waitForTaskCreated: () => Promise<WaitForTaskIdResult>;
   waitForTaskResponded: () => Promise<TaskResponse | undefined>;
 }
 
@@ -38,35 +28,11 @@ interface TaskIdRef {
   taskRequestedAtBlock?: bigint;
 }
 
-const waitForTaskCreated = async (
-  publicClient: PublicClient,
-  args: {
-    taskRequestId: string;
-    client?: PublicClient; // optionally specify WS-enabled client
-    timeoutMs?: number; // default e.g., 30_000
-    abortSignal?: AbortSignal;
-  },
-  taskIdRef: TaskIdRef,
-): Promise<WaitForTaskIdResult> => {
-  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
-  const res = await avsHttpService.Post(AVS_METHODS.waitForTaskId, {
-    task_request_id: args.taskRequestId,
-    timeout_ms: args.timeoutMs ?? 30_000,
-  });
-
-  if (res.error) {
-    throw new Error(`Newton SDK: newton_waitForTaskId failed: ${res.error.message}`);
-  }
-  taskIdRef.taskId = res.result.task_id;
-  // this assumes no need for a polling mechanism for now.
-  return res.result as WaitForTaskIdResult;
-};
 const waitForTaskResponded = async (
   publicClient: PublicClient,
   args: {
     taskId?: Hex;
-    client?: PublicClient; // optionally specify WS-enabled client
-    timeoutMs?: number; // default e.g., 30_000
+    timeoutMs?: number;
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
@@ -182,6 +148,9 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
   })) as boolean;
   if (isTaskChallenged) return 'TaskChallenged';
 
+  // TODO: check if task is expired,
+  // within attestation field if there is a block number for expires at block, compare it against the current block
+  // task response metadata is emitted, so check contract events.
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
@@ -195,55 +164,64 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
   return 'TaskCreated';
 };
 
-const onTaskEvents = (
-  publicClient: PublicClient,
-  args: {
-    taskId: TaskId;
-    onCreated?: (e: TaskCreated) => void;
-    onResponded?: (e: TaskResponse) => void;
-    onError?: (err: unknown) => void;
-    client?: PublicClient;
-  },
-): void => {
-  console.log('onTaskEvents args: ', args, publicClient);
-  throw new Error('Newton SDK: onTaskEvents Not implemented');
-};
-
 async function submitEvaluationRequest(
   publicClient: PublicClient,
-  args: SubmitEvaluationParams,
+  walletClient: WalletClient,
+  args: CreateTaskParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
+  if (walletClient.account === undefined) {
+    throw new Error('Newton SDK: No account found in walletClient for newtonWalletClientActions');
+  }
+
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTask, {
+  const domain: TypedDataDomain = {
+    name: 'Newton Policy',
+    version: '1',
+    chainId: Number(args.intent.chainId),
+    verifyingContract: args.policyClient,
+  };
+
+  const requestBody = {
     policy_client: args.policyClient,
-    intent: args.intent,
-    quorum_number: args.quorumNumber,
-    quorum_threshold_percentage: args.quorumThresholdPercentage,
+    intent: {
+      from: args.intent.from,
+      to: args.intent.to,
+      value: args.intent.value,
+      data: args.intent.data,
+      chain_id: args.intent.chainId,
+      function_signature: args.intent.functionSignature,
+    },
     timeout: args.timeout,
+  };
+
+  const authorizationMessage = await walletClient.signTypedData({
+    account: walletClient.account,
+    domain,
+    types: createTaskParamsTypes,
+    primaryType: 'CreateTaskParams',
+    message: {
+      policy_client: args.policyClient,
+      intent: {
+        from: args.intent.from,
+        to: args.intent.to,
+        data: args.intent.data,
+        function_signature: args.intent.functionSignature,
+        value: BigInt(args.intent.value),
+        chain_id: BigInt(args.intent.chainId),
+      },
+      timeout: BigInt(args.timeout),
+    },
   });
+
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, requestBody, authorizationMessage);
   if (res.error) return { ok: false, error: res.error };
 
-  const createTaskResult = res.result as CreateTaskResult;
-
-  let createdSingleton: Promise<WaitForTaskIdResult> | null = null;
-  const ensureCreated = () => {
-    if (!createdSingleton) {
-      createdSingleton = (async () => {
-        const created = await waitForTaskCreated(
-          publicClient,
-          { taskRequestId: createTaskResult.task_request_id },
-          taskIdRef,
-        );
-        if (!taskIdRef.taskId) throw new Error('Task ID not set after creation.');
-        return created;
-      })();
-    }
-    return createdSingleton;
-  };
+  const createTaskResult = res.result as WaitForTaskIdResult;
+  taskIdRef.taskId = createTaskResult.result.task_id;
 
   const builder: { ok: true } & PendingTaskBuilder = {
     ok: true as const,
@@ -253,27 +231,12 @@ async function submitEvaluationRequest(
       return taskIdRef.taskId;
     },
 
-    get taskRequestId() {
-      return createTaskResult.task_request_id;
-    },
-
-    // return the taskId so callers can capture it if they want
-    waitForTaskCreated: async () => ensureCreated(),
-
-    // safe: will await creation if caller forgot
     waitForTaskResponded: async () => {
-      const taskId = taskIdRef.taskId ?? (await ensureCreated())?.result?.task_id;
+      const taskId = taskIdRef.taskId;
       return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
     },
   };
 
   return builder;
 }
-export {
-  submitEvaluationRequest,
-  waitForTaskCreated,
-  waitForTaskResponded,
-  onTaskEvents,
-  getTaskResponseHash,
-  getTaskStatus,
-};
+export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
