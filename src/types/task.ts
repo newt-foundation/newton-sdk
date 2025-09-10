@@ -18,11 +18,6 @@ export interface SubmitEvaluationParams {
   timeout: number;
 }
 
-export interface TaskCreated {
-  foo: string;
-  bar: string;
-}
-
 export interface TaskResponse {
   taskId: Hex;
   policyClient: Address;

@@ -2,7 +2,7 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient } from 'viem';
 
@@ -182,6 +182,9 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
   })) as boolean;
   if (isTaskChallenged) return 'TaskChallenged';
 
+  // TODO: check if task is expired,
+  // within attestation field if there is a block number for expires at block, compare it against the current block
+  // task response metadata is emitted, so check contract events.
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: newtonAbi,
@@ -193,20 +196,6 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
   if (isTaskResponded) return 'TaskResponded';
 
   return 'TaskCreated';
-};
-
-const onTaskEvents = (
-  publicClient: PublicClient,
-  args: {
-    taskId: TaskId;
-    onCreated?: (e: TaskCreated) => void;
-    onResponded?: (e: TaskResponse) => void;
-    onError?: (err: unknown) => void;
-    client?: PublicClient;
-  },
-): void => {
-  console.log('onTaskEvents args: ', args, publicClient);
-  throw new Error('Newton SDK: onTaskEvents Not implemented');
 };
 
 async function submitEvaluationRequest(
@@ -269,11 +258,4 @@ async function submitEvaluationRequest(
 
   return builder;
 }
-export {
-  submitEvaluationRequest,
-  waitForTaskCreated,
-  waitForTaskResponded,
-  onTaskEvents,
-  getTaskResponseHash,
-  getTaskStatus,
-};
+export { submitEvaluationRequest, waitForTaskCreated, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
