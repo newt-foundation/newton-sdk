@@ -6,20 +6,6 @@ import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from '@core/
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient, WalletClient } from 'viem';
 
-interface CreateTaskAndWaitResult {
-  task_request_id: string;
-  task_request: any;
-  status: 'Completed' | 'Failed';
-  result: {
-    task_id: Hex;
-    tx_hash: Hex;
-  };
-  error?: unknown;
-  processing_time_ms?: number;
-}
-
-// This is the status of task CREATION, not completion.
-// When status === Completed, you'll get a result
 export interface WaitForTaskIdResult {
   task_request_id: string;
   task_request: any;
@@ -235,7 +221,7 @@ async function submitEvaluationRequest(
   );
   if (res.error) return { ok: false, error: res.error };
 
-  const createTaskResult = res.result as CreateTaskAndWaitResult;
+  const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;
 
   const builder: { ok: true } & PendingTaskBuilder = {
