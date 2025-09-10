@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, PublicClient } from 'viem';
-import { SubmitEvaluationParams, TaskCreated, TaskId, TaskResponse, TaskStatus } from './types/task';
+import { Address, createPublicClient, http, PublicClient, WalletClient } from 'viem';
+import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
@@ -12,15 +12,7 @@ import {
   SetPolicyInput,
   SetPolicyResult,
 } from './types/policy';
-import {
-  getTaskResponseHash,
-  getTaskStatus,
-  onTaskEvents,
-  submitEvaluationRequest,
-  waitForTaskCreated,
-  WaitForTaskIdResult,
-  waitForTaskResponded,
-} from './modules/avs';
+import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
 import {
   getPolicy,
   getPolicyCodeUri,
@@ -30,39 +22,50 @@ import {
   setPolicy,
 } from './modules/policy';
 
-const newtonPublicActions = () => (publicClient: PublicClient) => {
+const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient: WalletClient) => {
+  if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
+    throw new Error(
+      'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
+    );
+  }
+  return {
+    submitEvaluationRequest: (
+      args: CreateTaskParams,
+    ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
+      submitEvaluationRequest(
+        publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
+        walletClient,
+        args,
+      ),
+
+    setPolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
+      setPolicy(
+        publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
+        walletClient,
+        args,
+      ),
+
+    replacePolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
+      setPolicy(
+        publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
+        walletClient,
+        args,
+      ),
+  };
+};
+
+const newtonPublicClientActions = () => (publicClient: PublicClient) => {
   if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
     );
   }
   return {
-    submitEvaluationRequest: (
-      args: SubmitEvaluationParams,
-    ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
-      submitEvaluationRequest(publicClient, args),
-
-    waitForTaskCreated: (args: {
-      taskRequestId: string;
-      client?: PublicClient; // optionally specify WS-enabled client
-      timeoutMs?: number; // default e.g., 30_000
-      abortSignal?: AbortSignal;
-    }): Promise<WaitForTaskIdResult> => waitForTaskCreated(publicClient, args, {}),
-
     waitForTaskResponded: (args: {
       taskId: TaskId;
-      client?: PublicClient;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
     }): Promise<TaskResponse | undefined> => waitForTaskResponded(publicClient, args),
-
-    onTaskEvents: (args: {
-      taskId: TaskId;
-      onCreated?: (e: TaskCreated) => void;
-      onResponded?: (e: TaskResponse) => void;
-      onError?: (err: unknown) => void;
-      client?: PublicClient;
-    }): void => onTaskEvents(publicClient, args),
 
     getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> => getTaskResponseHash(publicClient, args),
 
@@ -74,12 +77,6 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
       params: PolicyParamsJson;
       client: Address;
     }): PolicyId => precomputePolicyId(publicClient, args),
-
-    setPolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
-      setPolicy(publicClient, args),
-
-    replacePolicy: (args: SetPolicyInput): Promise<SetPolicyResult | { ok: false; error: NewtonError }> =>
-      setPolicy(publicClient, args),
 
     getPolicy: (args: { client: Address }): Promise<PolicyInfo | null> => getPolicy(publicClient, args),
 
@@ -93,4 +90,4 @@ const newtonPublicActions = () => (publicClient: PublicClient) => {
   };
 };
 
-export { newtonPublicActions };
+export { newtonPublicClientActions, newtonWalletClientActions };
