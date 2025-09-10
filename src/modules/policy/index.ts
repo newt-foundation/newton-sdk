@@ -376,6 +376,7 @@ const transferOwnership = async (walletClient: WalletClient, args: { newOwner: A
 };
 
 export const policyWriteFunctions = {
+  // On-chain write functions
   setPolicy,
   initialize,
   renounceOwnership,
@@ -383,6 +384,7 @@ export const policyWriteFunctions = {
 };
 
 export const policyReadFunctions = {
+  // On-chain read functions
   policyUri,
   getPolicyData,
   getPolicyUri,
@@ -397,6 +399,8 @@ export const policyReadFunctions = {
   schemaUri,
   clientToPolicyId,
   policyData,
+  // Off-chain functions
+  precomputePolicyId,
 };
 
 export const policyFunctions = {
@@ -404,6 +408,4 @@ export const policyFunctions = {
   ...policyReadFunctions,
   // On-chain write functions
   ...policyWriteFunctions,
-  // SDK only function
-  precomputePolicyId,
 };
