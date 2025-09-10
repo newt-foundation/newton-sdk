@@ -2,9 +2,9 @@ import { newtonAbi, TaskRespondedLog } from '@core/abi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
-import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { CreateTaskParams, TaskId, TaskResponse, TaskStatus, createTaskParamsTypes } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient, WalletClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient, TypedDataDomain, WalletClient } from 'viem';
 
 export interface WaitForTaskIdResult {
   task_request_id: string;
@@ -167,7 +167,7 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
 async function submitEvaluationRequest(
   publicClient: PublicClient,
   walletClient: WalletClient,
-  args: SubmitEvaluationParams,
+  args: CreateTaskParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
   if (walletClient.account === undefined) {
     throw new Error('Newton SDK: No account found in walletClient for newtonWalletClientActions');
@@ -178,23 +178,46 @@ async function submitEvaluationRequest(
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
-  // dummy message to validate address
-  const authorizationMessage = await walletClient.signMessage({
-    message: 'Evaluation Request',
+  const domain: TypedDataDomain = {
+    name: 'Newton Policy',
+    version: '1',
+    chainId: Number(args.intent.chainId),
+    verifyingContract: args.policyClient,
+  };
+
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: {
+      from: args.intent.from,
+      to: args.intent.to,
+      value: args.intent.value,
+      data: args.intent.data,
+      chain_id: args.intent.chainId,
+      function_signature: args.intent.functionSignature,
+    },
+    timeout: args.timeout,
+  };
+
+  const authorizationMessage = await walletClient.signTypedData({
     account: walletClient.account,
+    domain,
+    types: createTaskParamsTypes,
+    primaryType: 'CreateTaskParams',
+    message: {
+      policy_client: requestBody.policy_client,
+      intent: {
+        from: args.intent.from,
+        to: args.intent.to,
+        data: args.intent.data,
+        function_signature: args.intent.functionSignature,
+        value: BigInt(args.intent.value),
+        chain_id: BigInt(args.intent.chainId),
+      },
+      timeout: BigInt(args.timeout),
+    },
   });
 
-  const res = await avsHttpService.Post(
-    AVS_METHODS.createTaskAndWait,
-    {
-      policy_client: args.policyClient,
-      intent: args.intent,
-      quorum_number: args.quorumNumber,
-      quorum_threshold_percentage: args.quorumThresholdPercentage,
-      timeout: args.timeout,
-    },
-    authorizationMessage,
-  );
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, requestBody, authorizationMessage);
   if (res.error) return { ok: false, error: res.error };
 
   const createTaskResult = res.result as WaitForTaskIdResult;

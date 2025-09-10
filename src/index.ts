@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, createPublicClient, http, PublicClient, WalletClient } from 'viem';
-import { SubmitEvaluationParams, TaskId, TaskResponse, TaskStatus } from './types/task';
+import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import {
@@ -30,7 +30,7 @@ const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient
   }
   return {
     submitEvaluationRequest: (
-      args: SubmitEvaluationParams,
+      args: CreateTaskParams,
     ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
       submitEvaluationRequest(
         publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
