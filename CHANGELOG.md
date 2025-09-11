@@ -1,3 +1,16 @@
+# v0.2.0 (Thu Sep 11 2025)
+
+#### 🚀 Enhancement
+
+- feat: implement policy module [#19](https://github.com/newt-foundation/newton-sdk-private/pull/19) ([@khaledmagic](https://github.com/khaledmagic) [@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.1.0 (Wed Sep 10 2025)
 
 #### 🚀 Enhancement
