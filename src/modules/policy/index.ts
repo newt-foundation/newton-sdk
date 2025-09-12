@@ -3,7 +3,8 @@ import { Address } from '@core/types';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
 import { PublicClient, WalletClient, keccak256, encodePacked } from 'viem';
 
-const POLICY_CONTRACT_ADDRESS = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;
+// const POLICY_CONTRACT_ADDRESS = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;
+const POLICY_CONTRACT_ADDRESS = '0x570C668d9aC78e3E2e297819e6ae2A6FD43a40B9' as Address;
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async (publicClient: PublicClient): Promise<string> => {
