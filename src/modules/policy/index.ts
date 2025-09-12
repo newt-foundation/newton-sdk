@@ -2,15 +2,23 @@ import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { Address } from '@core/types';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
 import { PublicClient, WalletClient, keccak256, encodePacked } from 'viem';
+import { sepolia } from 'viem/chains';
 
 // const POLICY_CONTRACT_ADDRESS = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;
-const POLICY_CONTRACT_ADDRESS = '0x570C668d9aC78e3E2e297819e6ae2A6FD43a40B9' as Address;
+const POLICY_CONTRACT_ADDRESS_TESTNET = '0x570C668d9aC78e3E2e297819e6ae2A6FD43a40B9' as Address;
+const POLICY_CONTRACT_ADDRESS_MAINNET = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;
+const getPolicyContractAddress = (chainId?: number) => {
+  if (chainId === sepolia.id) {
+    return POLICY_CONTRACT_ADDRESS_TESTNET;
+  }
+  return POLICY_CONTRACT_ADDRESS_MAINNET;
+};
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id ?? 0),
       abi: NewtonPolicyAbi,
       functionName: 'policyUri',
     });
@@ -25,7 +33,7 @@ const policyUri = async (publicClient: PublicClient): Promise<string> => {
 const getPolicyData = async (publicClient: PublicClient): Promise<Address[]> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getPolicyData',
     });
@@ -40,7 +48,7 @@ const getPolicyData = async (publicClient: PublicClient): Promise<Address[]> => 
 const getPolicyUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getPolicyUri',
     });
@@ -55,7 +63,7 @@ const getPolicyUri = async (publicClient: PublicClient): Promise<string> => {
 const getSchemaUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getSchemaUri',
     });
@@ -70,7 +78,7 @@ const getSchemaUri = async (publicClient: PublicClient): Promise<string> => {
 const getEntrypoint = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getEntrypoint',
     });
@@ -85,7 +93,7 @@ const getEntrypoint = async (publicClient: PublicClient): Promise<string> => {
 const getPolicyId = async (publicClient: PublicClient, client: Address): Promise<`0x${string}`> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getPolicyId',
       args: [client],
@@ -104,7 +112,7 @@ const getPolicyConfig = async (
 ): Promise<{ policyParams: `0x${string}`; expireAfter: number }> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'getPolicyConfig',
       args: [policyId],
@@ -120,7 +128,7 @@ const getPolicyConfig = async (
 const supportsInterface = async (publicClient: PublicClient, interfaceId: `0x${string}`): Promise<boolean> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'supportsInterface',
       args: [interfaceId],
@@ -136,7 +144,7 @@ const supportsInterface = async (publicClient: PublicClient, interfaceId: `0x${s
 const owner = async (publicClient: PublicClient): Promise<Address> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'owner',
     });
@@ -149,7 +157,7 @@ const owner = async (publicClient: PublicClient): Promise<Address> => {
 const factory = async (publicClient: PublicClient): Promise<Address> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'factory',
     });
@@ -162,7 +170,7 @@ const factory = async (publicClient: PublicClient): Promise<Address> => {
 const entrypoint = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'entrypoint',
     });
@@ -177,7 +185,7 @@ const entrypoint = async (publicClient: PublicClient): Promise<string> => {
 const schemaUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'schemaUri',
     });
@@ -192,7 +200,7 @@ const schemaUri = async (publicClient: PublicClient): Promise<string> => {
 const clientToPolicyId = async (publicClient: PublicClient, client: Address): Promise<`0x${string}`> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'clientToPolicyId',
       args: [client],
@@ -208,7 +216,7 @@ const clientToPolicyId = async (publicClient: PublicClient, client: Address): Pr
 const policyData = async (publicClient: PublicClient, index: number): Promise<Address> => {
   try {
     const result = await publicClient.readContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(publicClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'policyData',
       args: [BigInt(index)],
@@ -278,7 +286,7 @@ const setPolicy = async (
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(walletClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'setPolicy',
       args: [args.policyConfig],
@@ -308,7 +316,7 @@ const initialize = async (
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(walletClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'initialize',
       args: [args.factory, args.entrypoint, args.policyUri, args.schemaUri, args.policyData],
@@ -329,7 +337,7 @@ const renounceOwnership = async (walletClient: WalletClient): Promise<`0x${strin
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(walletClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'renounceOwnership',
       chain: walletClient.chain,
@@ -351,7 +359,7 @@ const transferOwnership = async (walletClient: WalletClient, args: { newOwner: A
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
-      address: POLICY_CONTRACT_ADDRESS,
+      address: getPolicyContractAddress(walletClient.chain?.id),
       abi: NewtonPolicyAbi,
       functionName: 'transferOwnership',
       args: [args.newOwner],
