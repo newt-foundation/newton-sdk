@@ -1,3 +1,15 @@
+# v0.2.1 (Fri Sep 12 2025)
+
+#### 🐛 Bug Fix
+
+- fix: fix policy and abis [#20](https://github.com/newt-foundation/newton-sdk-private/pull/20) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.2.0 (Thu Sep 11 2025)
 
 #### 🚀 Enhancement
