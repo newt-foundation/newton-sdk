@@ -1,4 +1,4 @@
-import { newtonAbi, TaskRespondedLog } from '@core/abi';
+import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
@@ -50,7 +50,7 @@ const waitForTaskResponded = async (
   if (fromBlockParam !== undefined) {
     const past = await publicClient.getContractEvents({
       address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-      abi: newtonAbi,
+      abi: NewtonAbi,
       eventName: 'TaskResponded',
       fromBlock: fromBlockParam,
       toBlock: 'latest',
@@ -89,7 +89,7 @@ const waitForTaskResponded = async (
 
     unsub = publicClient.watchContractEvent({
       address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-      abi: newtonAbi,
+      abi: NewtonAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
         for (const log of logs as TaskRespondedLog[]) {
@@ -112,7 +112,7 @@ const waitForTaskResponded = async (
 const getTaskResponseHash = (publicClient: Client, args: { taskId: TaskId }): Promise<Hex | null> => {
   return publicClient.readContract({
     address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-    abi: newtonAbi,
+    abi: NewtonAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
   }) as Promise<Hex | null>;
@@ -125,7 +125,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: newtonAbi,
+    abi: NewtonAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
   })) as Hex;
@@ -134,7 +134,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 
   const isAttestationSpent = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: newtonAbi,
+    abi: NewtonAbi,
     functionName: 'attestationsSpent',
     args: [args.taskId],
   })) as boolean;
@@ -142,7 +142,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 
   const isTaskChallenged = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: newtonAbi,
+    abi: NewtonAbi,
     functionName: 'taskSuccesfullyChallenged',
     args: [args.taskId],
   })) as boolean;
@@ -153,7 +153,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   // task response metadata is emitted, so check contract events.
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: newtonAbi,
+    abi: NewtonAbi,
     functionName: 'allTaskResponses',
     args: [args.taskId],
   })) as Hex;

@@ -1,6 +1,6 @@
 import type { Address, Hex, Log } from 'viem';
 
-export const newtonAbi = [
+export const NewtonAbi = [
   {
     inputs: [
       { internalType: 'contract ISlashingRegistryCoordinator', name: '_slashingRegistryCoordinator', type: 'address' },
