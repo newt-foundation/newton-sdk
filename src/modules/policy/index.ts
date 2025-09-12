@@ -1,25 +1,7 @@
+import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { Address } from '@core/types';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, parseAbi, keccak256, encodePacked } from 'viem';
-
-// Real contract ABI from the actual deployed contract
-const POLICY_CONTRACT_ABI = parseAbi([
-  'function policyUri() view returns (string)',
-  'function getPolicyData() view returns (address[])',
-  'function getPolicyUri() view returns (string)',
-  'function getSchemaUri() view returns (string)',
-  'function getEntrypoint() view returns (string)',
-  'function getPolicyId(address client) view returns (bytes32)',
-  'function getPolicyConfig(bytes32 policyId) view returns (tuple(bytes policyParams, uint32 expireAfter))',
-  'function setPolicy(tuple(bytes policyParams, uint32 expireAfter) policyConfig) returns (bytes32)',
-  'function supportsInterface(bytes4 interfaceId) view returns (bool)',
-  'function owner() view returns (address)',
-  'function factory() view returns (address)',
-  'function entrypoint() view returns (string)',
-  'function schemaUri() view returns (string)',
-  'function clientToPolicyId(address) view returns (bytes32)',
-  'function policyData(uint256) view returns (address)',
-]);
+import { PublicClient, WalletClient, keccak256, encodePacked } from 'viem';
 
 const POLICY_CONTRACT_ADDRESS = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;
 
@@ -28,7 +10,7 @@ const policyUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'policyUri',
     });
     return result as string;
@@ -43,7 +25,7 @@ const getPolicyData = async (publicClient: PublicClient): Promise<Address[]> => 
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getPolicyData',
     });
     return result as Address[];
@@ -58,7 +40,7 @@ const getPolicyUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getPolicyUri',
     });
     return result as string;
@@ -73,7 +55,7 @@ const getSchemaUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getSchemaUri',
     });
     return result as string;
@@ -88,7 +70,7 @@ const getEntrypoint = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getEntrypoint',
     });
     return result as string;
@@ -103,7 +85,7 @@ const getPolicyId = async (publicClient: PublicClient, client: Address): Promise
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getPolicyId',
       args: [client],
     });
@@ -122,7 +104,7 @@ const getPolicyConfig = async (
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'getPolicyConfig',
       args: [policyId],
     });
@@ -138,7 +120,7 @@ const supportsInterface = async (publicClient: PublicClient, interfaceId: `0x${s
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'supportsInterface',
       args: [interfaceId],
     });
@@ -154,7 +136,7 @@ const owner = async (publicClient: PublicClient): Promise<Address> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'owner',
     });
     return result as Address;
@@ -167,7 +149,7 @@ const factory = async (publicClient: PublicClient): Promise<Address> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'factory',
     });
     return result as Address;
@@ -180,7 +162,7 @@ const entrypoint = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'entrypoint',
     });
     return result as string;
@@ -195,7 +177,7 @@ const schemaUri = async (publicClient: PublicClient): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'schemaUri',
     });
     return result as string;
@@ -210,7 +192,7 @@ const clientToPolicyId = async (publicClient: PublicClient, client: Address): Pr
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'clientToPolicyId',
       args: [client],
     });
@@ -226,9 +208,9 @@ const policyData = async (publicClient: PublicClient, index: number): Promise<Ad
   try {
     const result = await publicClient.readContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'policyData',
-      args: [index],
+      args: [BigInt(index)],
     });
     return result as Address;
   } catch (error) {
@@ -296,7 +278,7 @@ const setPolicy = async (
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'setPolicy',
       args: [args.policyConfig],
       chain: walletClient.chain,
@@ -326,7 +308,7 @@ const initialize = async (
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'initialize',
       args: [args.factory, args.entrypoint, args.policyUri, args.schemaUri, args.policyData],
       chain: walletClient.chain,
@@ -347,7 +329,7 @@ const renounceOwnership = async (walletClient: WalletClient): Promise<`0x${strin
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'renounceOwnership',
       chain: walletClient.chain,
       account,
@@ -369,7 +351,7 @@ const transferOwnership = async (walletClient: WalletClient, args: { newOwner: A
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
-      abi: POLICY_CONTRACT_ABI,
+      abi: NewtonPolicyAbi,
       functionName: 'transferOwnership',
       args: [args.newOwner],
       chain: walletClient.chain,

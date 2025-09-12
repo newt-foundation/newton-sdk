@@ -1,12 +1,12 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, createPublicClient, http, PublicClient, WalletClient } from 'viem';
+import { Address, createPublicClient, http } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
 import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
-const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient: WalletClient) => {
+const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) => {
   if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
@@ -41,7 +41,7 @@ const newtonWalletClientActions = (publicClient?: PublicClient) => (walletClient
   };
 };
 
-const newtonPublicClientActions = () => (publicClient: PublicClient) => {
+const newtonPublicClientActions = () => (publicClient: any) => {
   if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
