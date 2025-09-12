@@ -4,7 +4,7 @@ import { Hex } from '@core/types';
 import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus, createTaskParamsTypes } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient, TypedDataDomain, WalletClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient as Client, TypedDataDomain, WalletClient } from 'viem';
 
 export interface WaitForTaskIdResult {
   task_request_id: string;
@@ -29,7 +29,7 @@ interface TaskIdRef {
 }
 
 const waitForTaskResponded = async (
-  publicClient: PublicClient,
+  publicClient: Client,
   args: {
     taskId?: Hex;
     timeoutMs?: number;
@@ -109,7 +109,7 @@ const waitForTaskResponded = async (
   });
 };
 
-const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId }): Promise<Hex | null> => {
+const getTaskResponseHash = (publicClient: Client, args: { taskId: TaskId }): Promise<Hex | null> => {
   return publicClient.readContract({
     address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
     abi: newtonAbi,
@@ -118,7 +118,7 @@ const getTaskResponseHash = (publicClient: PublicClient, args: { taskId: TaskId 
   }) as Promise<Hex | null>;
 };
 
-const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId }): Promise<TaskStatus> => {
+const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Promise<TaskStatus> => {
   const taskManagerAddress = publicClient.chain?.testnet
     ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
     : MAINNET_NEWTON_PROVER_TASK_MANAGER;
@@ -165,7 +165,7 @@ const getTaskStatus = async (publicClient: PublicClient, args: { taskId: TaskId 
 };
 
 async function submitEvaluationRequest(
-  publicClient: PublicClient,
+  publicClient: Client,
   walletClient: WalletClient,
   args: CreateTaskParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
