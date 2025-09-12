@@ -169,10 +169,6 @@ async function submitEvaluationRequest(
   walletClient: WalletClient,
   args: CreateTaskParams,
 ): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
-  if (walletClient.account === undefined) {
-    throw new Error('Newton SDK: No account found in walletClient for newtonWalletClientActions');
-  }
-
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
@@ -198,8 +194,9 @@ async function submitEvaluationRequest(
     timeout: args.timeout,
   };
 
+  const account = walletClient.account ?? (await walletClient.getAddresses())[0];
   const authorizationMessage = await walletClient.signTypedData({
-    account: walletClient.account,
+    account,
     domain,
     types: createTaskParamsTypes,
     primaryType: 'CreateTaskParams',

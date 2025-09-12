@@ -271,16 +271,18 @@ const setPolicy = async (
   },
 ): Promise<`0x${string}`> => {
   try {
-    if (!walletClient.chain || !walletClient.account) {
+    if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
+
+    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
       abi: NewtonPolicyAbi,
       functionName: 'setPolicy',
       args: [args.policyConfig],
       chain: walletClient.chain,
-      account: walletClient.account,
+      account,
     });
     return hash;
   } catch (error) {
@@ -299,16 +301,18 @@ const initialize = async (
   },
 ): Promise<`0x${string}`> => {
   try {
-    if (!walletClient.chain || !walletClient.account) {
+    if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
+
+    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
       abi: NewtonPolicyAbi,
       functionName: 'initialize',
       args: [args.factory, args.entrypoint, args.policyUri, args.schemaUri, args.policyData],
       chain: walletClient.chain,
-      account: walletClient.account,
+      account,
     });
     return hash;
   } catch (error) {
@@ -318,15 +322,17 @@ const initialize = async (
 
 const renounceOwnership = async (walletClient: WalletClient): Promise<`0x${string}`> => {
   try {
-    if (!walletClient.chain || !walletClient.account) {
+    if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
+
+    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
       abi: NewtonPolicyAbi,
       functionName: 'renounceOwnership',
       chain: walletClient.chain,
-      account: walletClient.account,
+      account,
     });
     return hash;
   } catch (error) {
@@ -338,16 +344,18 @@ const renounceOwnership = async (walletClient: WalletClient): Promise<`0x${strin
 
 const transferOwnership = async (walletClient: WalletClient, args: { newOwner: Address }): Promise<`0x${string}`> => {
   try {
-    if (!walletClient.chain || !walletClient.account) {
+    if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
+
+    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: POLICY_CONTRACT_ADDRESS,
       abi: NewtonPolicyAbi,
       functionName: 'transferOwnership',
       args: [args.newOwner],
       chain: walletClient.chain,
-      account: walletClient.account,
+      account,
     });
     return hash;
   } catch (error) {
@@ -358,6 +366,7 @@ const transferOwnership = async (walletClient: WalletClient, args: { newOwner: A
 };
 
 export const policyWriteFunctions = {
+  // On-chain write functions
   setPolicy,
   initialize,
   renounceOwnership,
@@ -365,6 +374,7 @@ export const policyWriteFunctions = {
 };
 
 export const policyReadFunctions = {
+  // On-chain read functions
   policyUri,
   getPolicyData,
   getPolicyUri,
@@ -379,6 +389,8 @@ export const policyReadFunctions = {
   schemaUri,
   clientToPolicyId,
   policyData,
+  // Off-chain functions
+  precomputePolicyId,
 };
 
 export const policyFunctions = {
@@ -386,6 +398,4 @@ export const policyFunctions = {
   ...policyReadFunctions,
   // On-chain write functions
   ...policyWriteFunctions,
-  // SDK only function
-  precomputePolicyId,
 };

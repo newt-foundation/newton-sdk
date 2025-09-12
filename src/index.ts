@@ -3,7 +3,6 @@ import { Address, createPublicClient, http } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
-// Removed unused policy types - using direct function calls instead
 import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
