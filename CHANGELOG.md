@@ -1,3 +1,15 @@
+# v0.2.4 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- update function signature abi typing [#23](https://github.com/newt-foundation/newton-sdk-private/pull/23) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.3 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
