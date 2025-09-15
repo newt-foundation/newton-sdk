@@ -1,3 +1,15 @@
+# v0.2.5 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- pass an args array for submitEvalRequest [#24](https://github.com/newt-foundation/newton-sdk-private/pull/24) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.4 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
