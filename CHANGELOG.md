@@ -1,3 +1,15 @@
+# v0.2.7 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- throw the error instead of returning the error object [#26](https://github.com/newt-foundation/newton-sdk-private/pull/26) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.6 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
