@@ -1,3 +1,15 @@
+# v0.2.6 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix the returned error typing for submit eval request [#25](https://github.com/newt-foundation/newton-sdk-private/pull/25) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.5 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
