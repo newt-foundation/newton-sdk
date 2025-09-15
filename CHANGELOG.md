@@ -1,3 +1,15 @@
+# v0.2.3 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix: attach intent signature to request itself [#22](https://github.com/newt-foundation/newton-sdk-private/pull/22) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.2 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
