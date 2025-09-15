@@ -181,21 +181,8 @@ async function submitEvaluationRequest(
     verifyingContract: args.policyClient,
   };
 
-  const requestBody = {
-    policy_client: args.policyClient,
-    intent: {
-      from: args.intent.from,
-      to: args.intent.to,
-      value: args.intent.value,
-      data: args.intent.data,
-      chain_id: args.intent.chainId,
-      function_signature: args.intent.functionSignature,
-    },
-    timeout: args.timeout,
-  };
-
   const account = walletClient.account ?? (await walletClient.getAddresses())[0];
-  const authorizationMessage = await walletClient.signTypedData({
+  const signature = await walletClient.signTypedData({
     account,
     domain,
     types: createTaskParamsTypes,
@@ -214,7 +201,21 @@ async function submitEvaluationRequest(
     },
   });
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, requestBody, authorizationMessage);
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: {
+      from: args.intent.from,
+      to: args.intent.to,
+      value: args.intent.value,
+      data: args.intent.data,
+      chain_id: args.intent.chainId,
+      function_signature: args.intent.functionSignature,
+    },
+    timeout: args.timeout,
+    signature,
+  };
+
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, requestBody, signature);
   if (res.error) return { ok: false, error: res.error };
 
   const createTaskResult = res.result as WaitForTaskIdResult;
