@@ -1,3 +1,15 @@
+# v0.2.2 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix: add testnet-mainnet bifurcation of policy address + fallbacks [#21](https://github.com/newt-foundation/newton-sdk-private/pull/21) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.2.1 (Fri Sep 12 2025)
 
 #### 🐛 Bug Fix
