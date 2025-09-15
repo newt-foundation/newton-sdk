@@ -18,7 +18,7 @@ export interface WaitForTaskIdResult {
   processing_time_ms?: number;
 }
 
-interface PendingTaskBuilder {
+export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
   waitForTaskResponded: () => Promise<TaskResponse | undefined>;
 }
@@ -168,7 +168,7 @@ async function submitEvaluationRequest(
   publicClient: Client,
   walletClient: WalletClient,
   args: CreateTaskParams,
-): Promise<({ ok: true } & PendingTaskBuilder) | { ok: false; error: NewtonError }> {
+): Promise<{ result?: unknown; error?: NewtonError } & PendingTaskBuilder> {
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
@@ -216,7 +216,7 @@ async function submitEvaluationRequest(
   };
 
   const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], signature);
-  if (res.error) return { ok: false, error: res.error };
+  if (res.error) return res.error;
 
   const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;
