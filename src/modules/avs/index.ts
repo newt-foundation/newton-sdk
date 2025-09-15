@@ -215,7 +215,7 @@ async function submitEvaluationRequest(
     signature,
   };
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, requestBody, signature);
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], signature);
   if (res.error) return { ok: false, error: res.error };
 
   const createTaskResult = res.result as WaitForTaskIdResult;
