@@ -3,7 +3,13 @@ import { Address, createPublicClient, http } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import { Hex } from './types';
 import { NewtonError } from './types/core/sdk-exceptions';
-import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
+import {
+  getTaskResponseHash,
+  getTaskStatus,
+  PendingTaskBuilder,
+  submitEvaluationRequest,
+  waitForTaskResponded,
+} from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
 const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) => {
@@ -15,7 +21,7 @@ const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) =>
   return {
     submitEvaluationRequest: (
       args: CreateTaskParams,
-    ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
+    ): Promise<{ result?: unknown; error?: NewtonError } & PendingTaskBuilder> =>
       submitEvaluationRequest(
         publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
         walletClient,

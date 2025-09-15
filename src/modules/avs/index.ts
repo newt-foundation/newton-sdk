@@ -18,7 +18,7 @@ export interface WaitForTaskIdResult {
   processing_time_ms?: number;
 }
 
-interface PendingTaskBuilder {
+export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
   waitForTaskResponded: () => Promise<TaskResponse | undefined>;
 }
