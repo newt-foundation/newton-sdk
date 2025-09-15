@@ -29,7 +29,7 @@ export const createTaskParamsTypes = {
     { name: 'value', type: 'uint256' },
     { name: 'data', type: 'bytes' },
     { name: 'chain_id', type: 'uint256' },
-    { name: 'function_signature', type: 'bytes4' },
+    { name: 'function_signature', type: 'bytes' },
   ],
 } as const;
 
