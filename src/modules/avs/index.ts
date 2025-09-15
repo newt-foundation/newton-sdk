@@ -1,7 +1,6 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { Hex } from '@core/types';
-import { NewtonError } from '@core/types/core/sdk-exceptions';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus, createTaskParamsTypes } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient as Client, TypedDataDomain, WalletClient } from 'viem';
@@ -168,7 +167,7 @@ async function submitEvaluationRequest(
   publicClient: Client,
   walletClient: WalletClient,
   args: CreateTaskParams,
-): Promise<{ result?: unknown; error?: NewtonError } & PendingTaskBuilder> {
+): Promise<{ result: unknown } & PendingTaskBuilder> {
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
@@ -216,7 +215,7 @@ async function submitEvaluationRequest(
   };
 
   const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], signature);
-  if (res.error) return res.error;
+  if (res.error) throw res.error;
 
   const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;
@@ -235,6 +234,6 @@ async function submitEvaluationRequest(
     },
   };
 
-  return builder;
+  return { result: res.result, ...builder };
 }
 export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
