@@ -1,7 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
-import { Address } from '@core/types';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address } from 'viem';
 import { sepolia } from 'viem/chains';
 
 // const POLICY_CONTRACT_ADDRESS = '0x7a236e79cf68957fe26451783061663ab2cf9a73' as Address;

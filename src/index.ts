@@ -1,7 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, createPublicClient, http } from 'viem';
+import { Address, createPublicClient, Hex, http } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
-import { Hex } from './types';
 import {
   getTaskResponseHash,
   getTaskStatus,

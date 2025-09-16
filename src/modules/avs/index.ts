@@ -1,9 +1,8 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
-import { Hex } from '@core/types';
-import { CreateTaskParams, TaskId, TaskResponse, TaskStatus, createTaskParamsTypes } from '@core/types/task';
+import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient as Client, TypedDataDomain, WalletClient } from 'viem';
+import { hexToBigInt, padHex, PublicClient as Client, WalletClient, keccak256, encodePacked, Hex } from 'viem';
 
 export interface WaitForTaskIdResult {
   task_request_id: string;
@@ -173,32 +172,42 @@ async function submitEvaluationRequest(
 
   const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
 
-  const domain: TypedDataDomain = {
-    name: 'Newton Policy',
-    version: '1',
-    chainId: Number(args.intent.chainId),
-    verifyingContract: args.policyClient,
-  };
+  const account = walletClient.account;
 
-  const account = walletClient.account ?? (await walletClient.getAddresses())[0];
-  const signature = await walletClient.signTypedData({
-    account,
-    domain,
-    types: createTaskParamsTypes,
-    primaryType: 'CreateTaskParams',
-    message: {
-      policy_client: args.policyClient,
-      intent: {
-        from: args.intent.from,
-        to: args.intent.to,
-        data: args.intent.data,
-        function_signature: args.intent.functionSignature,
-        value: BigInt(args.intent.value),
-        chain_id: BigInt(args.intent.chainId),
-      },
-      timeout: BigInt(args.timeout),
-    },
-  });
+  if (!account || !account.sign) {
+    throw new Error('Newton SDK: walletClient must have a local account to sign the request');
+  }
+
+  const hash = keccak256(
+    encodePacked(
+      [
+        'address', // policyClient
+        'address', // intent.from
+        'address', // intent.to
+        'uint256', // intent.value
+        'bytes', // intent.data
+        'uint256', // intent.chainId
+        'bytes', // intent.functionSignature
+        'bytes', // quorumNumber
+        'uint32', // quorumThresholdPercentage
+        'uint64', // timeout
+      ],
+      [
+        args.policyClient,
+        args.intent.from,
+        args.intent.to,
+        BigInt(args.intent.value),
+        args.intent.data,
+        BigInt(args.intent.chainId), // intent.chainId
+        args.intent.functionSignature, // intent.functionSignature
+        '0x', // quorumNumber
+        0, // quorumThresholdPercentage
+        BigInt(args.timeout), // timeout
+      ],
+    ),
+  );
+
+  const signature = await account.sign({ hash });
 
   const requestBody = {
     policy_client: args.policyClient,

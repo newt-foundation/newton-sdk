@@ -1,4 +1,4 @@
-import { Address, Hex } from './generic';
+import { Address, Hex } from 'viem';
 
 export type TaskId = Hex;
 
@@ -16,22 +16,6 @@ export interface CreateTaskParams {
   intent: NewtonIntent;
   timeout: number;
 }
-
-export const createTaskParamsTypes = {
-  CreateTaskParams: [
-    { name: 'policy_client', type: 'address' },
-    { name: 'intent', type: 'Intent' },
-    { name: 'timeout', type: 'uint256' },
-  ],
-  Intent: [
-    { name: 'from', type: 'address' },
-    { name: 'to', type: 'address' },
-    { name: 'value', type: 'uint256' },
-    { name: 'data', type: 'bytes' },
-    { name: 'chain_id', type: 'uint256' },
-    { name: 'function_signature', type: 'bytes' },
-  ],
-} as const;
 
 export interface TaskResponse {
   taskId: Hex;
