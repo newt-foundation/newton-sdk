@@ -1,3 +1,15 @@
+# v0.2.8 (Tue Sep 16 2025)
+
+#### 🐛 Bug Fix
+
+- Dh fix submit task signature [#27](https://github.com/newt-foundation/newton-sdk-private/pull/27) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.7 (Mon Sep 15 2025)
 
 #### 🐛 Bug Fix
