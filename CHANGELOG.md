@@ -1,3 +1,111 @@
+# v0.2.9 (Tue Sep 16 2025)
+
+#### 🐛 Bug Fix
+
+- add missing request params for submit task [#29](https://github.com/newt-foundation/newton-sdk-private/pull/29) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.8 (Tue Sep 16 2025)
+
+#### 🐛 Bug Fix
+
+- Dh fix submit task signature [#27](https://github.com/newt-foundation/newton-sdk-private/pull/27) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.7 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- throw the error instead of returning the error object [#26](https://github.com/newt-foundation/newton-sdk-private/pull/26) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.6 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix the returned error typing for submit eval request [#25](https://github.com/newt-foundation/newton-sdk-private/pull/25) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.5 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- pass an args array for submitEvalRequest [#24](https://github.com/newt-foundation/newton-sdk-private/pull/24) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.4 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- update function signature abi typing [#23](https://github.com/newt-foundation/newton-sdk-private/pull/23) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.3 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix: attach intent signature to request itself [#22](https://github.com/newt-foundation/newton-sdk-private/pull/22) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.2 (Mon Sep 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix: add testnet-mainnet bifurcation of policy address + fallbacks [#21](https://github.com/newt-foundation/newton-sdk-private/pull/21) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
+# v0.2.1 (Fri Sep 12 2025)
+
+#### 🐛 Bug Fix
+
+- fix: fix policy and abis [#20](https://github.com/newt-foundation/newton-sdk-private/pull/20) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.2.0 (Thu Sep 11 2025)
 
 #### 🚀 Enhancement

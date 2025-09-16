@@ -1,9 +1,13 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, createPublicClient, http } from 'viem';
+import { Address, createPublicClient, Hex, http } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
-import { Hex } from './types';
-import { NewtonError } from './types/core/sdk-exceptions';
-import { getTaskResponseHash, getTaskStatus, submitEvaluationRequest, waitForTaskResponded } from './modules/avs';
+import {
+  getTaskResponseHash,
+  getTaskStatus,
+  PendingTaskBuilder,
+  submitEvaluationRequest,
+  waitForTaskResponded,
+} from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
 const newtonWalletClientActions =
@@ -28,9 +32,7 @@ const newtonWalletClientActions =
     }
 
     return {
-      submitEvaluationRequest: (
-        args: CreateTaskParams,
-      ): Promise<{ ok: true; taskId?: TaskId; txHash?: Hex } | { ok: false; error: NewtonError }> =>
+      submitEvaluationRequest: (args: CreateTaskParams): Promise<{ result: unknown } & PendingTaskBuilder> =>
         submitEvaluationRequest(
           publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
           walletClient,

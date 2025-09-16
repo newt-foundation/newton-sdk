@@ -1,7 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
-import { Address } from '@core/types';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async ({

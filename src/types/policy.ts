@@ -1,4 +1,4 @@
-import { Address, Hex } from './generic';
+import { Address, Hex } from 'viem';
 
 export type PolicyId = string;
 
