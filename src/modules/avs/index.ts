@@ -1,6 +1,7 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
 import { hexToBigInt, padHex, PublicClient as Client, WalletClient, keccak256, encodePacked, Hex } from 'viem';
 
@@ -200,8 +201,8 @@ async function submitEvaluationRequest(
         args.intent.data,
         BigInt(args.intent.chainId), // intent.chainId
         args.intent.functionSignature, // intent.functionSignature
-        '0x', // quorumNumber
-        0, // quorumThresholdPercentage
+        args.quorumNumber ? normalizeBytes(args.quorumNumber) : '0x', // quorumNumber
+        args.quorumThresholdPercentage ?? 0, // quorumThresholdPercentage
         BigInt(args.timeout), // timeout
       ],
     ),

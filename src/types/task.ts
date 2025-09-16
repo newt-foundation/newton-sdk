@@ -14,7 +14,9 @@ export interface NewtonIntent {
 export interface CreateTaskParams {
   policyClient: Address;
   intent: NewtonIntent;
-  timeout: number;
+  quorumNumber?: Hex | Uint8Array;
+  quorumThresholdPercentage?: number;
+  timeout: number; // in seconds
 }
 
 export interface TaskResponse {
