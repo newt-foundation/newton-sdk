@@ -199,11 +199,11 @@ async function submitEvaluationRequest(
         args.intent.to,
         BigInt(args.intent.value),
         args.intent.data,
-        BigInt(args.intent.chainId), // intent.chainId
-        args.intent.functionSignature, // intent.functionSignature
-        args.quorumNumber ? normalizeBytes(args.quorumNumber) : '0x', // quorumNumber
-        args.quorumThresholdPercentage ?? 0, // quorumThresholdPercentage
-        BigInt(args.timeout), // timeout
+        BigInt(args.intent.chainId),
+        args.intent.functionSignature,
+        args.quorumNumber ? normalizeBytes(args.quorumNumber) : '0x',
+        args.quorumThresholdPercentage ?? 0,
+        BigInt(args.timeout),
       ],
     ),
   );
@@ -220,6 +220,8 @@ async function submitEvaluationRequest(
       chain_id: args.intent.chainId,
       function_signature: args.intent.functionSignature,
     },
+    quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
+    quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     timeout: args.timeout,
     signature,
   };
