@@ -1,3 +1,15 @@
+# v0.2.11 (Wed Sep 17 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update task manager contract address [#32](https://github.com/newt-foundation/newton-sdk-private/pull/32) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.10 (Wed Sep 17 2025)
 
 #### 🐛 Bug Fix
