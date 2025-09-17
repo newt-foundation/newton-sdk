@@ -1,3 +1,15 @@
+# v0.2.12 (Wed Sep 17 2025)
+
+#### 🐛 Bug Fix
+
+- fix: updates various function typings and signatures [#33](https://github.com/newt-foundation/newton-sdk-private/pull/33) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.11 (Wed Sep 17 2025)
 
 #### 🐛 Bug Fix
