@@ -167,7 +167,7 @@ async function submitEvaluationRequest(
   publicClient: Client,
   walletClient: WalletClient,
   args: CreateTaskParams,
-): Promise<{ result: unknown } & PendingTaskBuilder> {
+): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const taskRequestedAtBlock = await publicClient.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
@@ -232,9 +232,7 @@ async function submitEvaluationRequest(
   const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;
 
-  const builder: { ok: true } & PendingTaskBuilder = {
-    ok: true as const,
-
+  const builder: PendingTaskBuilder = {
     // live view of the ref
     get taskId() {
       return taskIdRef.taskId;
@@ -246,6 +244,6 @@ async function submitEvaluationRequest(
     },
   };
 
-  return { result: res.result, ...builder };
+  return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
 }
 export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };

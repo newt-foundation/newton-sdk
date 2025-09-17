@@ -17,7 +17,9 @@ const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) =>
     );
   }
   return {
-    submitEvaluationRequest: (args: CreateTaskParams): Promise<{ result: unknown } & PendingTaskBuilder> =>
+    submitEvaluationRequest: (
+      args: CreateTaskParams,
+    ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
       submitEvaluationRequest(
         publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
         walletClient,
