@@ -5,9 +5,9 @@ export type TaskId = Hex;
 export interface NewtonIntent {
   from: Address;
   to: Address;
-  value: string;
+  value: Hex | bigint;
   data: Hex;
-  chainId: number;
+  chainId: Hex | number;
   functionSignature: Hex;
 }
 

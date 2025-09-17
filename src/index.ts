@@ -1,5 +1,5 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, createPublicClient, Hex, http } from 'viem';
+import { Address, Hex } from 'viem';
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import {
   getTaskResponseHash,
@@ -10,7 +10,7 @@ import {
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
-const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) => {
+const newtonWalletClientActions = () => (walletClient: any) => {
   if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
     throw new Error(
       'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
@@ -20,15 +20,7 @@ const newtonWalletClientActions = (publicClient?: any) => (walletClient: any) =>
     submitEvaluationRequest: (
       args: CreateTaskParams,
     ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-      submitEvaluationRequest(
-        publicClient ??
-          createPublicClient({
-            chain: walletClient.chain,
-            transport: walletClient?.transport.type !== 'custom' ? walletClient?.transport : http(),
-          }),
-        walletClient,
-        args,
-      ),
+      submitEvaluationRequest(walletClient, args),
 
     // Policy write functions
     setPolicy: (args: { policyConfig: { policyParams: `0x${string}`; expireAfter: number } }): Promise<`0x${string}`> =>
