@@ -3,7 +3,19 @@ import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_
 import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient as Client, WalletClient, keccak256, encodePacked, Hex } from 'viem';
+import {
+  hexToBigInt,
+  padHex,
+  PublicClient as Client,
+  WalletClient,
+  keccak256,
+  encodePacked,
+  Hex,
+  publicActions,
+  PublicClient,
+  toHex,
+} from 'viem';
+import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
   task_request_id: string;
@@ -19,13 +31,18 @@ export interface WaitForTaskIdResult {
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
-  waitForTaskResponded: () => Promise<TaskResponse | undefined>;
+  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponse | undefined>;
 }
 
 interface TaskIdRef {
   taskId?: TaskId;
   taskRequestedAtBlock?: bigint;
 }
+
+const SafeFromBlock: Record<number, bigint> = {
+  [sepolia.id]: BigInt(9223883),
+  [mainnet.id]: BigInt(23385048),
+} as const;
 
 const waitForTaskResponded = async (
   publicClient: Client,
@@ -43,23 +60,21 @@ const waitForTaskResponded = async (
   const targetTaskId = padHex(args.taskId, { size: 32 });
 
   // 1) Check historical logs first (best-effort from the recent safe block).
-  const defaultFromBlock: bigint | undefined = undefined;
+  const defaultFromBlock = SafeFromBlock[publicClient.chain?.id ?? 1];
   const fromBlockParam = taskRequestedAtBlock ?? defaultFromBlock;
 
-  if (fromBlockParam !== undefined) {
-    const past = await publicClient.getContractEvents({
-      address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-      abi: NewtonAbi,
-      eventName: 'TaskResponded',
-      fromBlock: fromBlockParam,
-      toBlock: 'latest',
-    });
+  const past = await publicClient.getContractEvents({
+    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    abi: NewtonAbi,
+    eventName: 'TaskResponded',
+    fromBlock: fromBlockParam,
+    toBlock: 'latest',
+  });
 
-    const match = (past as TaskRespondedLog[]).find(
-      log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
-    );
-    if (match) return match.args.taskResponse;
-  }
+  const match = (past as TaskRespondedLog[]).find(
+    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
+  );
+  if (match) return match.args.taskResponse;
 
   // 2) If not found, subscribe and resolve on first match.
   return new Promise<TaskResponse | undefined>((resolve, reject) => {
@@ -164,14 +179,14 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 };
 
 async function submitEvaluationRequest(
-  publicClient: Client,
   walletClient: WalletClient,
   args: CreateTaskParams,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
-  const taskRequestedAtBlock = await publicClient.getBlockNumber();
+  const walletWithPublic = walletClient.extend(publicActions);
+  const taskRequestedAtBlock = await walletWithPublic.getBlockNumber();
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
 
-  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
+  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet);
 
   const account = walletClient.account;
 
@@ -197,7 +212,7 @@ async function submitEvaluationRequest(
         args.policyClient,
         args.intent.from,
         args.intent.to,
-        BigInt(args.intent.value),
+        typeof args.intent.value === 'bigint' ? args.intent.value : BigInt(args.intent.value),
         args.intent.data,
         BigInt(args.intent.chainId),
         args.intent.functionSignature,
@@ -215,9 +230,9 @@ async function submitEvaluationRequest(
     intent: {
       from: args.intent.from,
       to: args.intent.to,
-      value: args.intent.value,
+      value: typeof args.intent.value === 'bigint' ? toHex(args.intent.value) : args.intent.value,
       data: args.intent.data,
-      chain_id: args.intent.chainId,
+      chain_id: typeof args.intent.chainId === 'number' ? toHex(args.intent.chainId) : args.intent.chainId,
       function_signature: args.intent.functionSignature,
     },
     quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
@@ -238,9 +253,13 @@ async function submitEvaluationRequest(
       return taskIdRef.taskId;
     },
 
-    waitForTaskResponded: async () => {
+    waitForTaskResponded: async ({ timeoutMs }: { timeoutMs?: number }) => {
       const taskId = taskIdRef.taskId;
-      return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
+      return waitForTaskResponded(
+        walletWithPublic as PublicClient,
+        { taskId, timeoutMs },
+        taskIdRef.taskRequestedAtBlock,
+      );
     },
   };
 
