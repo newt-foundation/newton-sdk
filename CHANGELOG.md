@@ -1,3 +1,15 @@
+# v0.2.14 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- fix: fix submit task request object casing [#35](https://github.com/newt-foundation/newton-sdk-private/pull/35) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.13 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
