@@ -1,6 +1,6 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
 import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
@@ -22,7 +22,7 @@ export interface WaitForTaskIdResult {
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
-  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponse>;
+  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponseResult>;
 }
 
 interface TaskIdRef {
@@ -43,7 +43,7 @@ const waitForTaskResponded = async (
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
-): Promise<TaskResponse> => {
+): Promise<TaskResponseResult> => {
   if (!args.taskId) {
     throw new Error('Newton SDK: waitForTaskResponded requires taskId');
   }
@@ -68,7 +68,7 @@ const waitForTaskResponded = async (
   if (match) return convertLogToTaskResponse(match);
 
   // 2) If not found, subscribe and resolve on first match.
-  return new Promise<TaskResponse>((resolve, reject) => {
+  return new Promise<TaskResponseResult>((resolve, reject) => {
     let unsub: (() => void) | undefined = undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 

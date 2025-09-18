@@ -46,7 +46,7 @@ export interface ResponseIntent {
   functionSignature: Hex;
 }
 
-export interface TaskResponse {
+interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
   policyId: Hex;
@@ -60,6 +60,17 @@ export interface TaskResponse {
     functionSignature: Hex;
   };
   evaluationResult: Hex;
+}
+
+interface TaskResponseMetadata {
+  taskResponsedBlock: number;
+  responseExpireBlock: number;
+  hashOfNonSigners: Hex;
+}
+
+export interface TaskResponseResult {
+  taskResponse: TaskResponse;
+  taskResponseMetadata: TaskResponseMetadata;
   attestation: Hex;
 }
 

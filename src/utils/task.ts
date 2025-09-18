@@ -1,8 +1,9 @@
-import { NormalizedIntent, TaskResponse } from '@core/types/task';
+import { NormalizedIntent, TaskResponseResult } from '@core/types/task';
 import { encodePacked, Hex, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
 import { normalizeBytes } from './bytes';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
+import { getAttestation } from './attestation';
 
 export const getEvaluationRequestHash = (args: {
   policyClient: `0x${string}`;
@@ -46,8 +47,8 @@ export const getEvaluationRequestHash = (args: {
   return hash;
 };
 
-export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponse {
-  return {
+export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseResult {
+  const taskResponse = {
     ...log.args.taskResponse,
     intent: {
       ...log.args.taskResponse.intent,
@@ -56,5 +57,25 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponse {
       chainId: BigInt(log.args.taskResponse.intent.chainId),
     },
     attestation: '0x' as Hex,
+  };
+
+  const taskResponseMetadata = {
+    taskResponsedBlock: Number(log.args.taskResponseMetadata.taskResponsedBlock),
+    responseExpireBlock: Number(log.args.taskResponseMetadata.responseExpireBlock),
+    hashOfNonSigners: log.args.taskResponseMetadata.hashOfNonSigners,
+  };
+
+  const attestation = getAttestation({
+    taskId: taskResponse.taskId,
+    policyId: taskResponse.policyId,
+    policyClient: taskResponse.policyClient,
+    intent: taskResponse.intent,
+    expiration: taskResponseMetadata.responseExpireBlock,
+  }) as Hex;
+
+  return {
+    taskResponse,
+    taskResponseMetadata,
+    attestation,
   };
 }

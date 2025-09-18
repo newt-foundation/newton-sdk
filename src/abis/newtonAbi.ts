@@ -1052,8 +1052,8 @@ export type TaskRespondedLog = Log & {
       evaluationResult: Hex;
     };
     taskResponseMetadata: {
-      taskResponsedBlock: number;
-      responseExpireBlock: number;
+      taskResponsedBlock: string;
+      responseExpireBlock: string;
       hashOfNonSigners: Hex;
     };
   };

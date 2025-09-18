@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from './types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
@@ -53,7 +53,7 @@ const newtonPublicClientActions = () => (publicClient: any) => {
       taskId: TaskId;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
-    }): Promise<TaskResponse> => waitForTaskResponded(publicClient, args),
+    }): Promise<TaskResponseResult> => waitForTaskResponded(publicClient, args),
 
     getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> => getTaskResponseHash(publicClient, args),
 
