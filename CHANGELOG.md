@@ -1,3 +1,15 @@
+# v0.2.13 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- refactor: simplify task submission impl [#34](https://github.com/newt-foundation/newton-sdk-private/pull/34) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.12 (Wed Sep 17 2025)
 
 #### 🐛 Bug Fix
