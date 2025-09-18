@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
-import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
@@ -18,7 +18,7 @@ const newtonWalletClientActions = () => (walletClient: any) => {
   }
   return {
     submitEvaluationRequest: (
-      args: CreateTaskParams,
+      args: SubmitEvaluationRequestParams,
     ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
       submitEvaluationRequest(walletClient, args),
 

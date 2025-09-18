@@ -1,20 +1,11 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
-import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
-import {
-  hexToBigInt,
-  padHex,
-  PublicClient as Client,
-  WalletClient,
-  keccak256,
-  encodePacked,
-  Hex,
-  publicActions,
-  PublicClient,
-  toHex,
-} from 'viem';
+import { hexlifyIntent, normalizeIntent } from '@core/utils/intent';
+import { getEvaluationRequestHash } from '@core/utils/request-submission';
+import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
@@ -180,11 +171,11 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 
 async function submitEvaluationRequest(
   walletClient: WalletClient,
-  args: CreateTaskParams,
+  args: SubmitEvaluationRequestParams,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const taskRequestedAtBlock = await walletWithPublic.getBlockNumber();
-  const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
+
+  const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
   const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet);
 
@@ -194,47 +185,24 @@ async function submitEvaluationRequest(
     throw new Error('Newton SDK: walletClient must have a local account to sign the request');
   }
 
-  const hash = keccak256(
-    encodePacked(
-      [
-        'address', // policyClient
-        'address', // intent.from
-        'address', // intent.to
-        'uint256', // intent.value
-        'bytes', // intent.data
-        'uint256', // intent.chainId
-        'bytes', // intent.functionSignature
-        'bytes', // quorumNumber
-        'uint32', // quorumThresholdPercentage
-        'uint64', // timeout
-      ],
-      [
-        args.policyClient,
-        args.intent.from,
-        args.intent.to,
-        typeof args.intent.value === 'bigint' ? args.intent.value : BigInt(args.intent.value),
-        args.intent.data,
-        BigInt(args.intent.chainId),
-        args.intent.functionSignature,
-        args.quorumNumber ? normalizeBytes(args.quorumNumber) : '0x',
-        args.quorumThresholdPercentage ?? 0,
-        BigInt(args.timeout),
-      ],
-    ),
-  );
+  const { policyClient, quorumNumber, quorumThresholdPercentage, timeout } = args;
+
+  const normalizedIntent = normalizeIntent(args.intent);
+
+  const hash = getEvaluationRequestHash({
+    policyClient,
+    intent: normalizedIntent,
+    quorumNumber: quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+    quorumThresholdPercentage,
+    timeout,
+  });
 
   const signature = await account.sign({ hash });
 
+  const hexlifiedIntent = hexlifyIntent(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
-    intent: {
-      from: args.intent.from,
-      to: args.intent.to,
-      value: typeof args.intent.value === 'bigint' ? toHex(args.intent.value) : args.intent.value,
-      data: args.intent.data,
-      chain_id: typeof args.intent.chainId === 'number' ? toHex(args.intent.chainId) : args.intent.chainId,
-      function_signature: args.intent.functionSignature,
-    },
+    intent: hexlifiedIntent,
     quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     timeout: args.timeout,
