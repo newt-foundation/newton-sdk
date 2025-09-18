@@ -1,3 +1,15 @@
+# v0.3.3 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- fix: do not hash the attestation [#38](https://github.com/newt-foundation/newton-sdk-private/pull/38) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.2 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
