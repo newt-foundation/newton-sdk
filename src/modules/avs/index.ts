@@ -3,7 +3,7 @@ import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_
 import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
-import { hexlifyIntent, normalizeIntent } from '@core/utils/intent';
+import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
 import { getEvaluationRequestHash } from '@core/utils/request-submission';
 import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
@@ -199,7 +199,7 @@ async function submitEvaluationRequest(
 
   const signature = await account.sign({ hash });
 
-  const hexlifiedIntent = hexlifyIntent(args.intent);
+  const hexlifiedIntent = hexlifyIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
     intent: hexlifiedIntent,

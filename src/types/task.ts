@@ -33,8 +33,8 @@ export interface HexlifiedIntent {
   to: Address;
   value: Hex;
   data: Hex;
-  chainId: Hex;
-  functionSignature: Hex;
+  chain_id: Hex;
+  function_signature: Hex;
 }
 
 export interface TaskResponse {
