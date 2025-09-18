@@ -37,15 +37,6 @@ export interface HexlifiedIntent {
   function_signature: Hex;
 }
 
-export interface ResponseIntent {
-  from: Address;
-  to: Address;
-  value: Hex;
-  data: Hex;
-  chainId: Hex;
-  functionSignature: Hex;
-}
-
 interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
