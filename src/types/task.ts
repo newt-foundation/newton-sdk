@@ -37,6 +37,15 @@ export interface HexlifiedIntent {
   function_signature: Hex;
 }
 
+export interface ResponseIntent {
+  from: Address;
+  to: Address;
+  value: Hex;
+  data: Hex;
+  chainId: Hex;
+  functionSignature: Hex;
+}
+
 export interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
@@ -51,6 +60,7 @@ export interface TaskResponse {
     functionSignature: Hex;
   };
   evaluationResult: Hex;
+  attestation: Hex;
 }
 
 export type TaskStatus = 'TaskUsed' | 'TaskChallenged' | 'TaskResponded' | 'TaskCreated';

@@ -53,7 +53,7 @@ const newtonPublicClientActions = () => (publicClient: any) => {
       taskId: TaskId;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
-    }): Promise<TaskResponse | undefined> => waitForTaskResponded(publicClient, args),
+    }): Promise<TaskResponse> => waitForTaskResponded(publicClient, args),
 
     getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> => getTaskResponseHash(publicClient, args),
 

@@ -1,7 +1,8 @@
-import { NormalizedIntent } from '@core/types/task';
+import { NormalizedIntent, TaskResponse } from '@core/types/task';
 import { encodePacked, Hex, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
 import { normalizeBytes } from './bytes';
+import { TaskRespondedLog } from '@core/abis/newtonAbi';
 
 export const getEvaluationRequestHash = (args: {
   policyClient: `0x${string}`;
@@ -44,3 +45,16 @@ export const getEvaluationRequestHash = (args: {
 
   return hash;
 };
+
+export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponse {
+  return {
+    ...log.args.taskResponse,
+    intent: {
+      ...log.args.taskResponse.intent,
+      value: BigInt(log.args.taskResponse.intent.value),
+      data: log.args.taskResponse.intent.data,
+      chainId: BigInt(log.args.taskResponse.intent.chainId),
+    },
+    attestation: '0x' as Hex,
+  };
+}
