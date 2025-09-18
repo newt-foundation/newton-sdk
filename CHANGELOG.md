@@ -1,3 +1,87 @@
+# v0.3.1 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- return evaluation result as a boolean [#37](https://github.com/newt-foundation/newton-sdk-private/pull/37) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.0 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- format attestation [#36](https://github.com/newt-foundation/newton-sdk-private/pull/36) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.14 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- fix: fix submit task request object casing [#35](https://github.com/newt-foundation/newton-sdk-private/pull/35) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.13 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- refactor: simplify task submission impl [#34](https://github.com/newt-foundation/newton-sdk-private/pull/34) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.12 (Wed Sep 17 2025)
+
+#### 🐛 Bug Fix
+
+- fix: updates various function typings and signatures [#33](https://github.com/newt-foundation/newton-sdk-private/pull/33) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.11 (Wed Sep 17 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update task manager contract address [#32](https://github.com/newt-foundation/newton-sdk-private/pull/32) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.2.10 (Wed Sep 17 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update return typing for submitEvaluationRequest [#31](https://github.com/newt-foundation/newton-sdk-private/pull/31) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.9 (Tue Sep 16 2025)
 
 #### 🐛 Bug Fix

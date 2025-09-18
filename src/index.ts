@@ -1,6 +1,6 @@
 import { mainnet, sepolia } from 'viem/chains';
-import { Address, createPublicClient, Hex, http } from 'viem';
-import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from './types/task';
+import { Address, Hex } from 'viem';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
@@ -12,7 +12,6 @@ import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 
 const newtonWalletClientActions =
   (options?: { policyContractAddress?: Address; publicClient?: any }) => (walletClient: any) => {
-    const publicClient = options?.publicClient;
     const policyContractAddress = options?.policyContractAddress;
 
     const validatePolicyContractAddress = () => {
@@ -24,20 +23,16 @@ const newtonWalletClientActions =
         return policyContractAddress;
       }
     };
-
     if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
       throw new Error(
         'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
       );
     }
-
     return {
-      submitEvaluationRequest: (args: CreateTaskParams): Promise<{ result: unknown } & PendingTaskBuilder> =>
-        submitEvaluationRequest(
-          publicClient ?? createPublicClient({ chain: walletClient.chain, transport: http() }),
-          walletClient,
-          args,
-        ),
+      submitEvaluationRequest: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
+        submitEvaluationRequest(walletClient, args),
 
       // Policy write functions
       setPolicy: (args: {
@@ -97,7 +92,7 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       taskId: TaskId;
       timeoutMs?: number; // may be short (< 1s) in fast paths
       abortSignal?: AbortSignal;
-    }): Promise<TaskResponse | undefined> => waitForTaskResponded(publicClient, args),
+    }): Promise<TaskResponseResult> => waitForTaskResponded(publicClient, args),
 
     getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> => getTaskResponseHash(publicClient, args),
 

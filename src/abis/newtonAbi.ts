@@ -1044,16 +1044,16 @@ export type TaskRespondedLog = Log & {
       intent: {
         from: Address;
         to: Address;
-        value: bigint;
+        value: string; // string representation of big int
         data: Hex;
-        chainId: bigint;
+        chainId: string; // string representation of big int
         functionSignature: Hex;
       };
       evaluationResult: Hex;
     };
     taskResponseMetadata: {
-      taskResponsedBlock: number;
-      responseExpireBlock: number;
+      taskResponsedBlock: string;
+      responseExpireBlock: string;
       hashOfNonSigners: Hex;
     };
   };

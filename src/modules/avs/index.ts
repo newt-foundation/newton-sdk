@@ -1,9 +1,12 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
-import { CreateTaskParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
-import { hexToBigInt, padHex, PublicClient as Client, WalletClient, keccak256, encodePacked, Hex } from 'viem';
+import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
+import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
+import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
+import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
   task_request_id: string;
@@ -19,13 +22,18 @@ export interface WaitForTaskIdResult {
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
-  waitForTaskResponded: () => Promise<TaskResponse | undefined>;
+  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponseResult>;
 }
 
 interface TaskIdRef {
   taskId?: TaskId;
   taskRequestedAtBlock?: bigint;
 }
+
+const SafeFromBlock: Record<number, bigint> = {
+  [sepolia.id]: BigInt(9223883),
+  [mainnet.id]: BigInt(23385048),
+} as const;
 
 const waitForTaskResponded = async (
   publicClient: Client,
@@ -35,7 +43,7 @@ const waitForTaskResponded = async (
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
-): Promise<TaskResponse | undefined> => {
+): Promise<TaskResponseResult> => {
   if (!args.taskId) {
     throw new Error('Newton SDK: waitForTaskResponded requires taskId');
   }
@@ -43,26 +51,24 @@ const waitForTaskResponded = async (
   const targetTaskId = padHex(args.taskId, { size: 32 });
 
   // 1) Check historical logs first (best-effort from the recent safe block).
-  const defaultFromBlock: bigint | undefined = undefined;
+  const defaultFromBlock = SafeFromBlock[publicClient.chain?.id ?? 1];
   const fromBlockParam = taskRequestedAtBlock ?? defaultFromBlock;
 
-  if (fromBlockParam !== undefined) {
-    const past = await publicClient.getContractEvents({
-      address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-      abi: NewtonAbi,
-      eventName: 'TaskResponded',
-      fromBlock: fromBlockParam,
-      toBlock: 'latest',
-    });
+  const past = await publicClient.getContractEvents({
+    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    abi: NewtonAbi,
+    eventName: 'TaskResponded',
+    fromBlock: fromBlockParam,
+    toBlock: 'latest',
+  });
 
-    const match = (past as TaskRespondedLog[]).find(
-      log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
-    );
-    if (match) return match.args.taskResponse;
-  }
+  const match = (past as TaskRespondedLog[]).find(
+    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
+  );
+  if (match) return convertLogToTaskResponse(match);
 
   // 2) If not found, subscribe and resolve on first match.
-  return new Promise<TaskResponse | undefined>((resolve, reject) => {
+  return new Promise<TaskResponseResult>((resolve, reject) => {
     let unsub: (() => void) | undefined = undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -94,7 +100,7 @@ const waitForTaskResponded = async (
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
-            const res = log.args.taskResponse;
+            const res = convertLogToTaskResponse(log);
             cleanup(); // unsub + clear timers
             resolve(res);
             return;
@@ -164,14 +170,14 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 };
 
 async function submitEvaluationRequest(
-  publicClient: Client,
   walletClient: WalletClient,
-  args: CreateTaskParams,
-): Promise<{ result: unknown } & PendingTaskBuilder> {
-  const taskRequestedAtBlock = await publicClient.getBlockNumber();
-  const taskIdRef: TaskIdRef = { taskRequestedAtBlock };
+  args: SubmitEvaluationRequestParams,
+): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
+  const walletWithPublic = walletClient.extend(publicActions);
 
-  const avsHttpService = new AvsHttpService(!!publicClient?.chain?.testnet);
+  const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
+
+  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet);
 
   const account = walletClient.account;
 
@@ -179,47 +185,24 @@ async function submitEvaluationRequest(
     throw new Error('Newton SDK: walletClient must have a local account to sign the request');
   }
 
-  const hash = keccak256(
-    encodePacked(
-      [
-        'address', // policyClient
-        'address', // intent.from
-        'address', // intent.to
-        'uint256', // intent.value
-        'bytes', // intent.data
-        'uint256', // intent.chainId
-        'bytes', // intent.functionSignature
-        'bytes', // quorumNumber
-        'uint32', // quorumThresholdPercentage
-        'uint64', // timeout
-      ],
-      [
-        args.policyClient,
-        args.intent.from,
-        args.intent.to,
-        BigInt(args.intent.value),
-        args.intent.data,
-        BigInt(args.intent.chainId),
-        args.intent.functionSignature,
-        args.quorumNumber ? normalizeBytes(args.quorumNumber) : '0x',
-        args.quorumThresholdPercentage ?? 0,
-        BigInt(args.timeout),
-      ],
-    ),
-  );
+  const { policyClient, quorumNumber, quorumThresholdPercentage, timeout } = args;
+
+  const normalizedIntent = normalizeIntent(args.intent);
+
+  const hash = getEvaluationRequestHash({
+    policyClient,
+    intent: normalizedIntent,
+    quorumNumber: quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+    quorumThresholdPercentage,
+    timeout,
+  });
 
   const signature = await account.sign({ hash });
 
+  const hexlifiedIntent = hexlifyIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
-    intent: {
-      from: args.intent.from,
-      to: args.intent.to,
-      value: args.intent.value,
-      data: args.intent.data,
-      chain_id: args.intent.chainId,
-      function_signature: args.intent.functionSignature,
-    },
+    intent: hexlifiedIntent,
     quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     timeout: args.timeout,
@@ -232,20 +215,22 @@ async function submitEvaluationRequest(
   const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;
 
-  const builder: { ok: true } & PendingTaskBuilder = {
-    ok: true as const,
-
+  const builder: PendingTaskBuilder = {
     // live view of the ref
     get taskId() {
       return taskIdRef.taskId;
     },
 
-    waitForTaskResponded: async () => {
+    waitForTaskResponded: async ({ timeoutMs }: { timeoutMs?: number }) => {
       const taskId = taskIdRef.taskId;
-      return waitForTaskResponded(publicClient, { taskId }, taskIdRef.taskRequestedAtBlock);
+      return waitForTaskResponded(
+        walletWithPublic as PublicClient,
+        { taskId, timeoutMs },
+        taskIdRef.taskRequestedAtBlock,
+      );
     },
   };
 
-  return { result: res.result, ...builder };
+  return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
 }
 export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };

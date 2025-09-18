@@ -2,24 +2,42 @@ import { Address, Hex } from 'viem';
 
 export type TaskId = Hex;
 
-export interface NewtonIntent {
+export interface Intent {
   from: Address;
   to: Address;
-  value: string;
+  value: Hex | bigint;
   data: Hex;
-  chainId: number;
+  chainId: Hex | number | bigint;
   functionSignature: Hex;
 }
 
-export interface CreateTaskParams {
+export interface SubmitEvaluationRequestParams {
   policyClient: Address;
-  intent: NewtonIntent;
+  intent: Intent;
   quorumNumber?: Hex | Uint8Array;
   quorumThresholdPercentage?: number;
   timeout: number; // in seconds
 }
 
-export interface TaskResponse {
+export interface NormalizedIntent {
+  from: Address;
+  to: Address;
+  value: bigint;
+  data: Hex;
+  chainId: bigint;
+  functionSignature: Hex;
+}
+
+export interface HexlifiedIntent {
+  from: Address;
+  to: Address;
+  value: Hex;
+  data: Hex;
+  chain_id: Hex;
+  function_signature: Hex;
+}
+
+interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
   policyId: Hex;
@@ -32,7 +50,19 @@ export interface TaskResponse {
     chainId: bigint;
     functionSignature: Hex;
   };
-  evaluationResult: Hex;
+  evaluationResult: boolean;
+}
+
+interface TaskResponseMetadata {
+  taskResponsedBlock: number;
+  responseExpireBlock: number;
+  hashOfNonSigners: Hex;
+}
+
+export interface TaskResponseResult {
+  taskResponse: TaskResponse;
+  taskResponseMetadata: TaskResponseMetadata;
+  attestation: Hex;
 }
 
 export type TaskStatus = 'TaskUsed' | 'TaskChallenged' | 'TaskResponded' | 'TaskCreated';
