@@ -1,5 +1,5 @@
 import { NormalizedIntent, TaskResponseResult } from '@core/types/task';
-import { encodePacked, Hex, keccak256 } from 'viem';
+import { encodePacked, Hex, hexToBigInt, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
 import { normalizeBytes } from './bytes';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
@@ -56,6 +56,7 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
       data: log.args.taskResponse.intent.data,
       chainId: BigInt(log.args.taskResponse.intent.chainId),
     },
+    evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
   };
 
   const taskResponseMetadata = {
