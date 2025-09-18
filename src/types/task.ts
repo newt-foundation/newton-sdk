@@ -50,7 +50,7 @@ interface TaskResponse {
     chainId: bigint;
     functionSignature: Hex;
   };
-  evaluationResult: Hex;
+  evaluationResult: boolean;
 }
 
 interface TaskResponseMetadata {
