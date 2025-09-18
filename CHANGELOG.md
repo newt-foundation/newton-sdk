@@ -1,3 +1,15 @@
+# v0.3.0 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- format attestation [#36](https://github.com/newt-foundation/newton-sdk-private/pull/36) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.14 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
