@@ -25,7 +25,7 @@ export function normalizeIntent(intent: Intent): NormalizedIntent {
   };
 }
 
-export function hexlifyIntent(intent: Intent): HexlifiedIntent {
+export function hexlifyIntentForRequest(intent: Intent): HexlifiedIntent {
   let valueAsHex: Hex;
   if (typeof intent.value === 'bigint') {
     valueAsHex = toHex(intent.value);
@@ -42,8 +42,11 @@ export function hexlifyIntent(intent: Intent): HexlifiedIntent {
     chainIdAsHex = intent.chainId;
   }
   return {
-    ...intent,
+    from: intent.from,
+    to: intent.to,
     value: valueAsHex,
-    chainId: chainIdAsHex,
+    data: intent.data,
+    chain_id: chainIdAsHex,
+    function_signature: intent.functionSignature,
   };
 }
