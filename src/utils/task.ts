@@ -56,7 +56,6 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
       data: log.args.taskResponse.intent.data,
       chainId: BigInt(log.args.taskResponse.intent.chainId),
     },
-    attestation: '0x' as Hex,
   };
 
   const taskResponseMetadata = {
