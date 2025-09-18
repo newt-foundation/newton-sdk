@@ -1,5 +1,5 @@
 import { NormalizedIntent } from '@core/types/task';
-import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
+import { encodeAbiParameters, parseAbiParameters } from 'viem';
 
 export function getAttestation(a: {
   taskId: `0x${string}`;
@@ -14,5 +14,5 @@ export function getAttestation(a: {
 
   const encoded = encodeAbiParameters(types, [a.taskId, a.policyId, a.policyClient, a.intent, a.expiration]);
 
-  return keccak256(encoded);
+  return encoded;
 }
