@@ -1,3 +1,15 @@
+# v0.3.1 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- return evaluation result as a boolean [#37](https://github.com/newt-foundation/newton-sdk-private/pull/37) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.0 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
