@@ -1,3 +1,15 @@
+# v0.3.2 (Thu Sep 18 2025)
+
+#### 🐛 Bug Fix
+
+- fix: make the policyContractAddress configurable globally [#30](https://github.com/newt-foundation/newton-sdk-private/pull/30) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.3.1 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
