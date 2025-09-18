@@ -1,7 +1,7 @@
 import { NormalizedIntent } from '@core/types/task';
 import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem';
 
-export function hashAttestation(a: {
+export function getAttestation(a: {
   taskId: `0x${string}`;
   policyId: `0x${string}`;
   policyClient: `0x${string}`;

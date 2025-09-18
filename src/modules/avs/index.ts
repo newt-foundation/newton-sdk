@@ -1,10 +1,10 @@
 import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponse, TaskStatus } from '@core/types/task';
+import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
 import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
-import { getEvaluationRequestHash } from '@core/utils/request-submission';
+import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
 import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
 
@@ -22,7 +22,7 @@ export interface WaitForTaskIdResult {
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
-  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponse | undefined>;
+  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponseResult>;
 }
 
 interface TaskIdRef {
@@ -43,7 +43,7 @@ const waitForTaskResponded = async (
     abortSignal?: AbortSignal;
   },
   taskRequestedAtBlock?: bigint,
-): Promise<TaskResponse | undefined> => {
+): Promise<TaskResponseResult> => {
   if (!args.taskId) {
     throw new Error('Newton SDK: waitForTaskResponded requires taskId');
   }
@@ -65,10 +65,10 @@ const waitForTaskResponded = async (
   const match = (past as TaskRespondedLog[]).find(
     log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
   );
-  if (match) return match.args.taskResponse;
+  if (match) return convertLogToTaskResponse(match);
 
   // 2) If not found, subscribe and resolve on first match.
-  return new Promise<TaskResponse | undefined>((resolve, reject) => {
+  return new Promise<TaskResponseResult>((resolve, reject) => {
     let unsub: (() => void) | undefined = undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -100,7 +100,7 @@ const waitForTaskResponded = async (
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
-            const res = log.args.taskResponse;
+            const res = convertLogToTaskResponse(log);
             cleanup(); // unsub + clear timers
             resolve(res);
             return;
