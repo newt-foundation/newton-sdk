@@ -158,8 +158,8 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   });
   const currentBlock = await publicClient.getBlockNumber();
   if (
-    taskResponse?.taskResponseMetadata?.responseExpireBlock &&
-    currentBlock > taskResponse.taskResponseMetadata.responseExpireBlock
+    taskResponse?.responseCertificate?.responseExpireBlock &&
+    currentBlock > taskResponse.responseCertificate.responseExpireBlock
   )
     return TaskStatus.TaskExpired;
 
@@ -218,6 +218,7 @@ async function submitEvaluationRequest(
 
   const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], signature);
   if (res.error) throw res.error;
+  if (res.result.error) throw new Error(res.result.error);
 
   const createTaskResult = res.result as WaitForTaskIdResult;
   taskIdRef.taskId = createTaskResult.result.task_id;

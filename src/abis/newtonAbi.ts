@@ -32,7 +32,6 @@ export const NewtonAbi = [
   { inputs: [], name: 'InvalidBLSPairingKey', type: 'error' },
   { inputs: [], name: 'InvalidBLSSignature', type: 'error' },
   { inputs: [], name: 'InvalidNewPausedStatus', type: 'error' },
-  { inputs: [], name: 'InvalidNonSigners', type: 'error' },
   { inputs: [], name: 'InvalidPolicyAddress', type: 'error' },
   { inputs: [], name: 'InvalidPolicyClient', type: 'error' },
   { inputs: [], name: 'InvalidPolicyId', type: 'error' },
@@ -47,10 +46,6 @@ export const NewtonAbi = [
   { inputs: [], name: 'OnlyUnpauser', type: 'error' },
   { inputs: [], name: 'OperatorNotRegistered', type: 'error' },
   { inputs: [], name: 'PolicyAddressMismatch', type: 'error' },
-  { inputs: [], name: 'PolicyDataAddressMismatch', type: 'error' },
-  { inputs: [], name: 'PolicyDataAttestationFailed', type: 'error' },
-  { inputs: [], name: 'PolicyDataExpired', type: 'error' },
-  { inputs: [], name: 'PolicyDataLengthMismatch', type: 'error' },
   { inputs: [], name: 'PolicyIdMismatch', type: 'error' },
   { inputs: [], name: 'ScalarTooLarge', type: 'error' },
   { inputs: [], name: 'StaleStakesForbidden', type: 'error' },
@@ -236,13 +231,60 @@ export const NewtonAbi = [
       },
       {
         components: [
-          { internalType: 'uint32', name: 'taskResponsedBlock', type: 'uint32' },
-          { internalType: 'uint32', name: 'responseExpireBlock', type: 'uint32' },
+          { internalType: 'uint32', name: 'referenceBlock', type: 'uint32' },
           { internalType: 'bytes32', name: 'hashOfNonSigners', type: 'bytes32' },
+          {
+            components: [
+              { internalType: 'uint32[]', name: 'nonSignerQuorumBitmapIndices', type: 'uint32[]' },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point[]',
+                name: 'nonSignerPubkeys',
+                type: 'tuple[]',
+              },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point[]',
+                name: 'quorumApks',
+                type: 'tuple[]',
+              },
+              {
+                components: [
+                  { internalType: 'uint256[2]', name: 'X', type: 'uint256[2]' },
+                  { internalType: 'uint256[2]', name: 'Y', type: 'uint256[2]' },
+                ],
+                internalType: 'struct BN254.G2Point',
+                name: 'apkG2',
+                type: 'tuple',
+              },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point',
+                name: 'sigma',
+                type: 'tuple',
+              },
+              { internalType: 'uint32[]', name: 'quorumApkIndices', type: 'uint32[]' },
+              { internalType: 'uint32[]', name: 'totalStakeIndices', type: 'uint32[]' },
+              { internalType: 'uint32[][]', name: 'nonSignerStakeIndices', type: 'uint32[][]' },
+            ],
+            internalType: 'struct IBLSSignatureCheckerTypes.NonSignerStakesAndSignature',
+            name: 'nonSignerStakesAndSignature',
+            type: 'tuple',
+          },
+          { internalType: 'uint32', name: 'responseExpireBlock', type: 'uint32' },
         ],
         indexed: false,
-        internalType: 'struct INewtonProverTaskManager.TaskResponseMetadata',
-        name: 'taskResponseMetadata',
+        internalType: 'struct INewtonProverTaskManager.ResponseCertificate',
+        name: 'responseCertificate',
         type: 'tuple',
       },
     ],
@@ -269,13 +311,6 @@ export const NewtonAbi = [
     inputs: [],
     name: 'TASK_RESPONSE_WINDOW_BLOCK',
     outputs: [{ internalType: 'uint32', name: '', type: 'uint32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'WADS_TO_SLASH',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
   },
@@ -727,12 +762,59 @@ export const NewtonAbi = [
       },
       {
         components: [
-          { internalType: 'uint32', name: 'taskResponsedBlock', type: 'uint32' },
-          { internalType: 'uint32', name: 'responseExpireBlock', type: 'uint32' },
+          { internalType: 'uint32', name: 'referenceBlock', type: 'uint32' },
           { internalType: 'bytes32', name: 'hashOfNonSigners', type: 'bytes32' },
+          {
+            components: [
+              { internalType: 'uint32[]', name: 'nonSignerQuorumBitmapIndices', type: 'uint32[]' },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point[]',
+                name: 'nonSignerPubkeys',
+                type: 'tuple[]',
+              },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point[]',
+                name: 'quorumApks',
+                type: 'tuple[]',
+              },
+              {
+                components: [
+                  { internalType: 'uint256[2]', name: 'X', type: 'uint256[2]' },
+                  { internalType: 'uint256[2]', name: 'Y', type: 'uint256[2]' },
+                ],
+                internalType: 'struct BN254.G2Point',
+                name: 'apkG2',
+                type: 'tuple',
+              },
+              {
+                components: [
+                  { internalType: 'uint256', name: 'X', type: 'uint256' },
+                  { internalType: 'uint256', name: 'Y', type: 'uint256' },
+                ],
+                internalType: 'struct BN254.G1Point',
+                name: 'sigma',
+                type: 'tuple',
+              },
+              { internalType: 'uint32[]', name: 'quorumApkIndices', type: 'uint32[]' },
+              { internalType: 'uint32[]', name: 'totalStakeIndices', type: 'uint32[]' },
+              { internalType: 'uint32[][]', name: 'nonSignerStakeIndices', type: 'uint32[][]' },
+            ],
+            internalType: 'struct IBLSSignatureCheckerTypes.NonSignerStakesAndSignature',
+            name: 'nonSignerStakesAndSignature',
+            type: 'tuple',
+          },
+          { internalType: 'uint32', name: 'responseExpireBlock', type: 'uint32' },
         ],
-        internalType: 'struct INewtonProverTaskManager.TaskResponseMetadata',
-        name: 'taskResponseMetadata',
+        internalType: 'struct INewtonProverTaskManager.ResponseCertificate',
+        name: 'responseCertificate',
         type: 'tuple',
       },
       {
@@ -1051,7 +1133,7 @@ export type TaskRespondedLog = Log & {
       };
       evaluationResult: Hex;
     };
-    taskResponseMetadata: {
+    responseCertificate: {
       taskResponsedBlock: string;
       responseExpireBlock: string;
       hashOfNonSigners: Hex;
