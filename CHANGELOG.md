@@ -1,3 +1,15 @@
+# v0.3.9 (Fri Sep 19 2025)
+
+#### 🐛 Bug Fix
+
+- the old one was right [#44](https://github.com/newt-foundation/newton-sdk-private/pull/44) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.8 (Fri Sep 19 2025)
 
 #### 🐛 Bug Fix
