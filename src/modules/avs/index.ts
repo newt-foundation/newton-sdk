@@ -153,7 +153,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   })) as boolean;
   if (isTaskChallenged) return TaskStatus.TaskChallenged;
 
-  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId }).catch(() => {
+  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 1000 }).catch(() => {
     console.log('getTaskStatus: waitForTaskResponded timed out');
   });
   const currentBlock = await publicClient.getBlockNumber();
