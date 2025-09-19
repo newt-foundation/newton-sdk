@@ -59,10 +59,10 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
   };
 
-  const taskResponseMetadata = {
-    taskResponsedBlock: Number(log.args.taskResponseMetadata.taskResponsedBlock),
-    responseExpireBlock: Number(log.args.taskResponseMetadata.responseExpireBlock),
-    hashOfNonSigners: log.args.taskResponseMetadata.hashOfNonSigners,
+  const responseCertificate = {
+    taskResponsedBlock: Number(log.args.responseCertificate.taskResponsedBlock),
+    responseExpireBlock: Number(log.args.responseCertificate.responseExpireBlock),
+    hashOfNonSigners: log.args.responseCertificate.hashOfNonSigners,
   };
 
   const attestation = getAttestation({
@@ -70,12 +70,12 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     policyId: taskResponse.policyId,
     policyClient: taskResponse.policyClient,
     intent: taskResponse.intent,
-    expiration: taskResponseMetadata.responseExpireBlock,
+    expiration: responseCertificate.responseExpireBlock,
   }) as Hex;
 
   return {
     taskResponse,
-    taskResponseMetadata,
+    responseCertificate,
     attestation,
   };
 }

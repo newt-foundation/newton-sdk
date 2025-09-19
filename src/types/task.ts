@@ -53,7 +53,7 @@ interface TaskResponse {
   evaluationResult: boolean;
 }
 
-interface TaskResponseMetadata {
+interface ResponseCertificate {
   taskResponsedBlock: number;
   responseExpireBlock: number;
   hashOfNonSigners: Hex;
@@ -61,7 +61,7 @@ interface TaskResponseMetadata {
 
 export interface TaskResponseResult {
   taskResponse: TaskResponse;
-  taskResponseMetadata: TaskResponseMetadata;
+  responseCertificate: ResponseCertificate;
   attestation: Hex;
 }
 
