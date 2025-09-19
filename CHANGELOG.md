@@ -1,3 +1,15 @@
+# v0.3.10 (Fri Sep 19 2025)
+
+#### 🐛 Bug Fix
+
+- update newton abi [#45](https://github.com/newt-foundation/newton-sdk-private/pull/45) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.9 (Fri Sep 19 2025)
 
 #### 🐛 Bug Fix
