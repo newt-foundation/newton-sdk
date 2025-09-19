@@ -1,3 +1,15 @@
+# v0.3.8 (Fri Sep 19 2025)
+
+#### 🐛 Bug Fix
+
+- update newton prover task manager address [#43](https://github.com/newt-foundation/newton-sdk-private/pull/43) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.7 (Fri Sep 19 2025)
 
 #### 🐛 Bug Fix
