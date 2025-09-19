@@ -143,7 +143,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
     functionName: 'attestationsSpent',
     args: [args.taskId],
   })) as boolean;
-  if (isAttestationSpent) return 'TaskUsed';
+  if (isAttestationSpent) return TaskStatus.TaskUsed;
 
   const isTaskChallenged = (await publicClient.readContract({
     address: taskManagerAddress,
@@ -151,11 +151,16 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
     functionName: 'taskSuccesfullyChallenged',
     args: [args.taskId],
   })) as boolean;
-  if (isTaskChallenged) return 'TaskChallenged';
+  if (isTaskChallenged) return TaskStatus.TaskChallenged;
 
-  // TODO: check if task is expired,
-  // within attestation field if there is a block number for expires at block, compare it against the current block
-  // task response metadata is emitted, so check contract events.
+  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 5000 });
+  const currentBlock = await publicClient.getBlockNumber();
+  if (
+    taskResponse.taskResponseMetadata.responseExpireBlock &&
+    currentBlock > taskResponse.taskResponseMetadata.responseExpireBlock
+  )
+    return TaskStatus.TaskExpired;
+
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonAbi,
@@ -164,9 +169,9 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   })) as Hex;
   const isTaskResponded = !!hexToBigInt(allTaskResponses);
 
-  if (isTaskResponded) return 'TaskResponded';
+  if (isTaskResponded) return TaskStatus.TaskResponded;
 
-  return 'TaskCreated';
+  return TaskStatus.TaskCreated;
 };
 
 async function submitEvaluationRequest(

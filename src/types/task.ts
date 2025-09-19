@@ -65,4 +65,10 @@ export interface TaskResponseResult {
   attestation: Hex;
 }
 
-export type TaskStatus = 'TaskUsed' | 'TaskChallenged' | 'TaskResponded' | 'TaskCreated';
+export enum TaskStatus {
+  TaskUsed = 'TaskUsed',
+  TaskChallenged = 'TaskChallenged',
+  TaskResponded = 'TaskResponded',
+  TaskCreated = 'TaskCreated',
+  TaskExpired = 'TaskExpired',
+}
