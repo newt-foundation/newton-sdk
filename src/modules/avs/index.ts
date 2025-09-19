@@ -153,10 +153,12 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   })) as boolean;
   if (isTaskChallenged) return TaskStatus.TaskChallenged;
 
-  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 5000 });
+  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId }).catch(() => {
+    console.log('getTaskStatus: waitForTaskResponded timed out');
+  });
   const currentBlock = await publicClient.getBlockNumber();
   if (
-    taskResponse.taskResponseMetadata.responseExpireBlock &&
+    taskResponse?.taskResponseMetadata?.responseExpireBlock &&
     currentBlock > taskResponse.taskResponseMetadata.responseExpireBlock
   )
     return TaskStatus.TaskExpired;
