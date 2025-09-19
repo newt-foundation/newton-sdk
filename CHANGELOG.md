@@ -1,3 +1,15 @@
+# v0.3.4 (Fri Sep 19 2025)
+
+#### 🐛 Bug Fix
+
+- implement task expired logic in get task status [#39](https://github.com/newt-foundation/newton-sdk-private/pull/39) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.3 (Thu Sep 18 2025)
 
 #### 🐛 Bug Fix
