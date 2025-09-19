@@ -1,3 +1,15 @@
+# v0.3.7 (Fri Sep 19 2025)
+
+#### 🐛 Bug Fix
+
+- add timeout waitAForTaskResponded [#42](https://github.com/newt-foundation/newton-sdk-private/pull/42) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.6 (Fri Sep 19 2025)
 
 #### 🐛 Bug Fix
