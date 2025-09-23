@@ -1,3 +1,15 @@
+# v0.3.12 (Tue Sep 23 2025)
+
+#### 🐛 Bug Fix
+
+- undo name changes [#48](https://github.com/newt-foundation/newton-sdk/pull/48) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.11 (Tue Sep 23 2025)
 
 #### 🐛 Bug Fix
