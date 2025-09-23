@@ -3,7 +3,6 @@ import { encodePacked, Hex, hexToBigInt, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
 import { normalizeBytes } from './bytes';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
-import { getAttestation } from './attestation';
 
 export const getEvaluationRequestHash = (args: {
   policyClient: `0x${string}`;
@@ -65,13 +64,13 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     hashOfNonSigners: log.args.responseCertificate.hashOfNonSigners,
   };
 
-  const attestation = getAttestation({
+  const attestation = {
     taskId: taskResponse.taskId,
     policyId: taskResponse.policyId,
     policyClient: taskResponse.policyClient,
     intent: taskResponse.intent,
     expiration: responseCertificate.responseExpireBlock,
-  }) as Hex;
+  };
 
   return {
     taskResponse,
