@@ -1,3 +1,15 @@
+# v0.3.13 (Tue Sep 23 2025)
+
+#### 🐛 Bug Fix
+
+- return the attestation object itself [#49](https://github.com/newt-foundation/newton-sdk/pull/49) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.12 (Tue Sep 23 2025)
 
 #### 🐛 Bug Fix
