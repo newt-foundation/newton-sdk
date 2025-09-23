@@ -1,3 +1,15 @@
+# v0.3.11 (Tue Sep 23 2025)
+
+#### 🐛 Bug Fix
+
+- update package name [#47](https://github.com/newt-foundation/newton-sdk/pull/47) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.10 (Fri Sep 19 2025)
 
 #### 🐛 Bug Fix
