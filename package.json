@@ -1,5 +1,5 @@
 {
-  "name": "@magicnewton/newton-sdk",
+  "name": "@magicnewton/newton-sdk-private",
   "version": "0.3.11",
   "description": "Passwordless authentication for the web.",
   "author": "Magic Labs <team@magic.link> (https://magic.link/)",
@@ -14,7 +14,7 @@
   "license": "MIT",
   "homepage": "https://magic.link",
   "target": "browser",
-  "cdnGlobalName": "NewtonSdk",
+  "cdnGlobalName": "NewtonSdkPrivate",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
