@@ -100,13 +100,13 @@ To test the locally built SDK from a different local project, you can use one of
 
    ```bash
    # Link to the globally linked SDK
-   pnpm link --global @magicnewton/newton-sdk
+   pnpm link --global @magicnewton/newton-sdk-private
    ```
 
 3. **Import and use in your test project:**
 
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk';
+   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
    // Your test code here
    ```
 
@@ -126,7 +126,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-sdk": "file:../path/to/newton-sdk"
+       "@magicnewton/newton-sdk": "file:../path/to/newton-sdk-private"
      }
    }
    ```
@@ -139,7 +139,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk';
+   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -155,7 +155,7 @@ If you prefer npm over pnpm:
 
 2. **In your test project directory:**
    ```bash
-   npm link @magicnewton/newton-sdk
+   npm link @magicnewton/newton-sdk-private
    ```
 
 ### Unlinking
@@ -164,7 +164,7 @@ When you're done testing:
 
 ```bash
 # In your test project directory
-pnpm unlink @magicnewton/newton-sdk
+pnpm unlink @magicnewton/newton-sdk-private
 
 # In the SDK directory
 pnpm unlink --global
@@ -200,16 +200,16 @@ The SDK provides several entry points:
 
 ```typescript
 // Main SDK
-import { NewtonSDK } from '@magicnewton/newton-sdk';
+import { NewtonSDK } from '@magicnewton/newton-sdk-private';
 
 // Types only
-import type { ... } from '@magicnewton/newton-sdk/types';
+import type { ... } from '@magicnewton/newton-sdk-private/types';
 
 // Viem integration
-import { ... } from '@magicnewton/newton-sdk/viem';
+import { ... } from '@magicnewton/newton-sdk-private/viem';
 
 // Network configurations
-import { ... } from '@magicnewton/newton-sdk/networks';
+import { ... } from '@magicnewton/newton-sdk-private/networks';
 ```
 
 ## Development Workflow
