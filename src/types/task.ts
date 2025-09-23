@@ -62,7 +62,13 @@ interface ResponseCertificate {
 export interface TaskResponseResult {
   taskResponse: TaskResponse;
   responseCertificate: ResponseCertificate;
-  attestation: Hex;
+  attestation: {
+    taskId: Hex;
+    policyId: Hex;
+    policyClient: Address;
+    intent: NormalizedIntent;
+    expiration: number;
+  };
 }
 
 export enum TaskStatus {
