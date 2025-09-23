@@ -100,13 +100,13 @@ To test the locally built SDK from a different local project, you can use one of
 
    ```bash
    # Link to the globally linked SDK
-   pnpm link --global @magicnewton/newton-sdk-private
+   pnpm link --global @magicnewton/newton-sdk
    ```
 
 3. **Import and use in your test project:**
 
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+   import { NewtonSDK } from '@magicnewton/newton-sdk';
    // Your test code here
    ```
 
@@ -126,7 +126,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-sdk-private": "file:../path/to/newton-sdk-private"
+       "@magicnewton/newton-sdk": "file:../path/to/newton-sdk"
      }
    }
    ```
@@ -139,7 +139,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+   import { NewtonSDK } from '@magicnewton/newton-sdk';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -155,7 +155,7 @@ If you prefer npm over pnpm:
 
 2. **In your test project directory:**
    ```bash
-   npm link @magicnewton/newton-sdk-private
+   npm link @magicnewton/newton-sdk
    ```
 
 ### Unlinking
@@ -164,7 +164,7 @@ When you're done testing:
 
 ```bash
 # In your test project directory
-pnpm unlink @magicnewton/newton-sdk-private
+pnpm unlink @magicnewton/newton-sdk
 
 # In the SDK directory
 pnpm unlink --global
@@ -200,16 +200,16 @@ The SDK provides several entry points:
 
 ```typescript
 // Main SDK
-import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+import { NewtonSDK } from '@magicnewton/newton-sdk';
 
 // Types only
-import type { ... } from '@magicnewton/newton-sdk-private/types';
+import type { ... } from '@magicnewton/newton-sdk/types';
 
 // Viem integration
-import { ... } from '@magicnewton/newton-sdk-private/viem';
+import { ... } from '@magicnewton/newton-sdk/viem';
 
 // Network configurations
-import { ... } from '@magicnewton/newton-sdk-private/networks';
+import { ... } from '@magicnewton/newton-sdk/networks';
 ```
 
 ## Development Workflow
@@ -250,7 +250,7 @@ pnpm lint
 
 ## Release Process
 
-This repository uses automated releases with the `auto` tool for both production releases (master branch) and canary releases (pull requests). 
+This repository uses automated releases with the `auto` tool for both production releases (master branch) and canary releases (pull requests).
 
 ### Custom GitHub Token Requirements
 
@@ -278,6 +278,7 @@ The release workflows use a custom GitHub token (`SVC_GIT_FG_TOKEN`) from the `s
 #### Token Configuration
 
 The custom token is configured in both release workflows:
+
 - `.github/workflows/release.yml` (line 9): Production releases on master branch
 - `.github/workflows/canary.yml` (line 12): Canary releases on pull requests
 
@@ -287,6 +288,7 @@ env:
 ```
 
 And used in the checkout step:
+
 ```yaml
 - name: Checkout
   uses: actions/checkout@v4
