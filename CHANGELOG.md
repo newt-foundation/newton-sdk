@@ -1,3 +1,15 @@
+# v0.3.14 (Wed Sep 24 2025)
+
+#### 🐛 Bug Fix
+
+- add mainnet prover task manager address [#50](https://github.com/newt-foundation/newton-sdk/pull/50) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.13 (Tue Sep 23 2025)
 
 #### 🐛 Bug Fix
