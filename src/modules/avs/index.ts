@@ -129,52 +129,64 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
     : MAINNET_NEWTON_PROVER_TASK_MANAGER;
   // eslint-disable-next-line no-debugger
   debugger;
-  const allTaskHashes = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonAbi,
-    functionName: 'allTaskHashes',
-    args: [args.taskId],
-  })) as Hex;
-  const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
-  if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
+  try {
+    console.log('getTaskStatus: allTaskHashes', taskManagerAddress);
+    const allTaskHashes = (await publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonAbi,
+      functionName: 'allTaskHashes',
+      args: [args.taskId],
+    })) as Hex;
+    const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
+    if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
-  const isAttestationSpent = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonAbi,
-    functionName: 'attestationsSpent',
-    args: [args.taskId],
-  })) as boolean;
-  if (isAttestationSpent) return TaskStatus.TaskUsed;
+    console.log('getTaskStatus: attestationsSpent', taskManagerAddress);
+    const isAttestationSpent = (await publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonAbi,
+      functionName: 'attestationsSpent',
+      args: [args.taskId],
+    })) as boolean;
+    if (isAttestationSpent) return TaskStatus.TaskUsed;
 
-  const isTaskChallenged = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonAbi,
-    functionName: 'taskSuccesfullyChallenged',
-    args: [args.taskId],
-  })) as boolean;
-  if (isTaskChallenged) return TaskStatus.TaskChallenged;
+    console.log('getTaskStatus: taskSuccesfullyChallenged', taskManagerAddress);
+    const isTaskChallenged = (await publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonAbi,
+      functionName: 'taskSuccesfullyChallenged',
+      args: [args.taskId],
+    })) as boolean;
+    if (isTaskChallenged) return TaskStatus.TaskChallenged;
 
-  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 1000 }).catch(() => {
-    console.log('getTaskStatus: waitForTaskResponded timed out');
-  });
-  const currentBlock = await publicClient.getBlockNumber();
-  if (
-    taskResponse?.responseCertificate?.responseExpireBlock &&
-    currentBlock > taskResponse.responseCertificate.responseExpireBlock
-  )
-    return TaskStatus.TaskExpired;
+    const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 1000 }).catch(
+      () => {
+        console.log('getTaskStatus: waitForTaskResponded timed out');
+      },
+    );
+    const currentBlock = await publicClient.getBlockNumber();
+    if (
+      taskResponse?.responseCertificate?.responseExpireBlock &&
+      currentBlock > taskResponse.responseCertificate.responseExpireBlock
+    )
+      return TaskStatus.TaskExpired;
 
-  const allTaskResponses = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonAbi,
-    functionName: 'allTaskResponses',
-    args: [args.taskId],
-  })) as Hex;
-  const isTaskResponded = !!hexToBigInt(allTaskResponses);
+    console.log('getTaskStatus: allTaskResponses', taskManagerAddress);
+    const allTaskResponses = (await publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonAbi,
+      functionName: 'allTaskResponses',
+      args: [args.taskId],
+    })) as Hex;
+    console.log('getTaskStatus: allTaskResponses', allTaskResponses);
+    const isTaskResponded = !!hexToBigInt(allTaskResponses);
 
-  if (isTaskResponded) return TaskStatus.TaskResponded;
+    if (isTaskResponded) return TaskStatus.TaskResponded;
 
-  return TaskStatus.TaskCreated;
+    return TaskStatus.TaskCreated;
+  } catch (error) {
+    console.log('getTaskStatus: error', error);
+    throw error;
+  }
 };
 
 async function submitEvaluationRequest(
