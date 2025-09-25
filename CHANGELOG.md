@@ -1,3 +1,18 @@
+# v0.0.1 (Thu Sep 25 2025)
+
+#### 🐛 Bug Fix
+
+- fix: set workflow to main and change license [#54](https://github.com/newt-foundation/newton-sdk/pull/54) ([@khaledmagic](https://github.com/khaledmagic))
+- fix: update newton prover task manager addresses [#53](https://github.com/newt-foundation/newton-sdk/pull/53) ([@Dizigen](https://github.com/Dizigen))
+- initial commit ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.3.13 (Tue Sep 23 2025)
 
 #### 🐛 Bug Fix
