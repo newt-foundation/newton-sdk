@@ -3,7 +3,7 @@ name: Publish Release
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
 env:
   CI: true
   GH_TOKEN: ${{ secrets.SVC_GIT_FG_TOKEN }}
