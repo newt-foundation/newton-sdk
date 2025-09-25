@@ -100,13 +100,13 @@ To test the locally built SDK from a different local project, you can use one of
 
    ```bash
    # Link to the globally linked SDK
-   pnpm link --global @magicnewton/newton-sdk-private
+   pnpm link --global @magicnewton/newton-protocol-sdk
    ```
 
 3. **Import and use in your test project:**
 
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
    // Your test code here
    ```
 
@@ -126,7 +126,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-sdk": "file:../path/to/newton-sdk-private"
+       "@magicnewton/newton-sdk": "file:../path/to/newton-protocol-sdk"
      }
    }
    ```
@@ -139,7 +139,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -155,7 +155,7 @@ If you prefer npm over pnpm:
 
 2. **In your test project directory:**
    ```bash
-   npm link @magicnewton/newton-sdk-private
+   npm link @magicnewton/newton-protocol-sdk
    ```
 
 ### Unlinking
@@ -164,7 +164,7 @@ When you're done testing:
 
 ```bash
 # In your test project directory
-pnpm unlink @magicnewton/newton-sdk-private
+pnpm unlink @magicnewton/newton-protocol-sdk
 
 # In the SDK directory
 pnpm unlink --global
@@ -200,16 +200,16 @@ The SDK provides several entry points:
 
 ```typescript
 // Main SDK
-import { NewtonSDK } from '@magicnewton/newton-sdk-private';
+import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
 
 // Types only
-import type { ... } from '@magicnewton/newton-sdk-private/types';
+import type { ... } from '@magicnewton/newton-protocol-sdk/types';
 
 // Viem integration
-import { ... } from '@magicnewton/newton-sdk-private/viem';
+import { ... } from '@magicnewton/newton-protocol-sdk/viem';
 
 // Network configurations
-import { ... } from '@magicnewton/newton-sdk-private/networks';
+import { ... } from '@magicnewton/newton-protocol-sdk/networks';
 ```
 
 ## Development Workflow
