@@ -323,4 +323,4 @@ If you encounter release failures, verify that the `SVC_GIT_FG_TOKEN` secret is 
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Apache License 2.0 - see [LICENSE](LICENSE) file for details.
