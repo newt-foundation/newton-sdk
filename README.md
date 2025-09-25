@@ -5,13 +5,45 @@ Initial developer-facing TypeScript SDK for the Newton Protocol.
 ## Prerequisites
 
 - Node.js >= 20
-- pnpm >= 9
 
 ## Installation
 
 ```bash
 # Install dependencies
-pnpm install
+npm install @magicnewton/newton-protocol-sdk viem
+```
+
+## Exports
+
+The SDK provides several entry points:
+
+```typescript
+// Public Client Actions
+import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
+import { createPublicClient, sepolia } from 'viem';
+
+const newtonPublicClient = createPublicClient({
+  chain: sepolia,
+  transport: webSocket(alchemyRpcWSUrls[network.id]),
+}).extend(
+  newtonPublicClientActions({
+    policyContractAddress: '0xpolicyContractAddress',
+  }),
+);
+
+newtonPublicClient.getTaskStatus();
+
+// Wallet Client Actions
+import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+import { createWalletClient, sepolia } from 'viem';
+
+const newtonWalletClient = createWalletClient({
+  chain: sepolia,
+  transport: webSocket('wss://alchemyWebsocketUrl'),
+  account: signer,
+}).extend(newtonWalletClientActions());
+
+newtonWalletClient.submitEvaluationRequest({...})
 ```
 
 ## Development
@@ -194,24 +226,6 @@ The build process generates multiple module formats:
 - **ES Modules**: `dist/es/` - For modern bundlers and browsers
 - **TypeScript**: `dist/types/` - For development and IDE support
 
-## Exports
-
-The SDK provides several entry points:
-
-```typescript
-// Main SDK
-import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
-
-// Types only
-import type { ... } from '@magicnewton/newton-protocol-sdk/types';
-
-// Viem integration
-import { ... } from '@magicnewton/newton-protocol-sdk/viem';
-
-// Network configurations
-import { ... } from '@magicnewton/newton-protocol-sdk/networks';
-```
-
 ## Development Workflow
 
 1. **Install dependencies**: `pnpm install`
@@ -251,66 +265,6 @@ pnpm lint
 ## Release Process
 
 This repository uses automated releases with the `auto` tool for both production releases (master branch) and canary releases (pull requests).
-
-### Custom GitHub Token Requirements
-
-The release workflows use a custom GitHub token (`SVC_GIT_FG_TOKEN`) from the `svc_magic_git` service account instead of the default `GITHUB_TOKEN` for several critical reasons:
-
-#### Why We Need a Custom Token
-
-1. **Write-back to Repository**: The `auto` tool needs to:
-   - Create and push git tags for new releases
-   - Update `package.json` version numbers
-   - Generate and commit changelog entries
-   - Push these changes back to the repository
-
-2. **Default Token Limitations**: GitHub's default `GITHUB_TOKEN` has restricted permissions and cannot:
-   - Trigger subsequent workflow runs after pushing commits
-   - Write to protected branches in some configurations
-   - Perform certain repository administration tasks required by `auto`
-
-3. **Service Account Token**: The `SVC_GIT_FG_TOKEN` is a personal access token from the `svc_magic_git` GitHub service account that provides:
-   - Full repository access for automated releases
-   - Ability to push to protected branches
-   - Permissions to create releases and manage tags
-   - Consistent authentication across all release operations
-
-#### Token Configuration
-
-The custom token is configured in both release workflows:
-
-- `.github/workflows/release.yml` (line 9): Production releases on master branch
-- `.github/workflows/canary.yml` (line 12): Canary releases on pull requests
-
-```yaml
-env:
-  GH_TOKEN: ${{ secrets.SVC_GIT_FG_TOKEN }}
-```
-
-And used in the checkout step:
-
-```yaml
-- name: Checkout
-  uses: actions/checkout@v4
-  with:
-    token: ${{ secrets.SVC_GIT_FG_TOKEN }}
-```
-
-#### Token Management
-
-- **Service Account**: The token belongs to the `svc_magic_git` GitHub user
-- **1Password Integration**: Token credentials are stored and managed in 1Password (check infra documentation for vault references)
-- **Current Setup**: Token is configured as a repository-specific secret
-- **Future Consideration**: Moving to organization-level secrets would simplify management across multiple repositories
-
-#### For Developers
-
-- **No action required**: The token is already configured in repository secrets
-- **Release process is automatic**: Merging to master triggers production releases
-- **Canary releases**: Pull requests automatically get canary versions published
-- **Token issues**: Contact the infrastructure team if you encounter release failures related to authentication
-
-If you encounter release failures, verify that the `SVC_GIT_FG_TOKEN` secret is properly configured and the `svc_magic_git` service account has the necessary permissions.
 
 ## Contributing
 
