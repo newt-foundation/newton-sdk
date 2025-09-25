@@ -127,7 +127,8 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   const taskManagerAddress = publicClient.chain?.testnet
     ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
     : MAINNET_NEWTON_PROVER_TASK_MANAGER;
-
+  // eslint-disable-next-line no-debugger
+  debugger;
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonAbi,
