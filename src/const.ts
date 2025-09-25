@@ -7,5 +7,5 @@ export const AVS_METHODS = {
   createTaskAndWait: 'newton_createTaskAndWait',
 };
 
-export const SEPOLIA_NEWTON_PROVER_TASK_MANAGER = '0xc0438f9839e783355b64b3ec541c03c7a7896d3a';
-export const MAINNET_NEWTON_PROVER_TASK_MANAGER = '0xAvsContractAddress';
+export const SEPOLIA_NEWTON_PROVER_TASK_MANAGER = '0xa4b94669a49f62905ab7839084d10d15ac70ffac';
+export const MAINNET_NEWTON_PROVER_TASK_MANAGER = '0x2034901f7d39271fd260fc61aa7e4c490fdfd3b9';
