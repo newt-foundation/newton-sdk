@@ -35,9 +35,7 @@ const newtonWalletClientActions =
         submitEvaluationRequest(walletClient, args),
 
       // Policy write functions
-      setPolicy: (args: {
-        policyConfig: { policyParams: `0x${string}`; expireAfter: number };
-      }): Promise<`0x${string}`> => {
+      setPolicy: (args: { policyConfig: { policyParams: object; expireAfter: number } }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
         return policyWriteFunctions.setPolicy({ walletClient, policyContractAddress: validatedAddress, ...args });
       },
@@ -131,7 +129,7 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
 
     getPolicyConfig: (args: {
       policyId: `0x${string}`;
-    }): Promise<{ policyParams: `0x${string}`; expireAfter: number }> => {
+    }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
