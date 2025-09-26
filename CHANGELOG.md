@@ -1,3 +1,15 @@
+# v0.0.3 (Fri Sep 26 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update getTaskStatus in accordance with updated abi specs [#58](https://github.com/newt-foundation/newton-sdk/pull/58) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.2 (Thu Sep 25 2025)
 
 #### 🐛 Bug Fix
