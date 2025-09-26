@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex, toHex } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async ({
@@ -140,7 +140,7 @@ const getPolicyConfig = async ({
   publicClient: PublicClient;
   policyContractAddress: Address;
   policyId: `0x${string}`;
-}): Promise<{ policyParams: object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
+}): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
   try {
     const result = await publicClient.readContract({
       address: policyContractAddress,
@@ -148,15 +148,20 @@ const getPolicyConfig = async ({
       functionName: 'getPolicyConfig',
       args: [policyId],
     });
-    // Hex decode result.policyParams and parse as JSON
-
-    const policyParams = fromHex(result.policyParams, 'string') as unknown as object;
+    // Hex decode result.policyParams
+    const policyParams = fromHex(result.policyParams, 'string');
+    let policyParamsObject = undefined;
+    try {
+      policyParamsObject = JSON.parse(policyParams);
+    } catch (error) {
+      policyParamsObject = policyParams;
+    }
     return {
-      policyParams: { policyParams },
+      policyParams: policyParamsObject ?? policyParams,
       policyParamsHex: result.policyParams,
       expireAfter: result.expireAfter,
     } as {
-      policyParams: object;
+      policyParams: string;
       policyParamsHex: `0x${string}`;
       expireAfter: number;
     };
@@ -381,8 +386,7 @@ const setPolicy = async ({
     }
 
     // Hex encode the policyParams JSON object
-    const paramsBytes =
-      `0x${new TextEncoder().encode(JSON.stringify(args.policyConfig.policyParams)).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')}` as `0x${string}`;
+    const paramsBytes = toHex(JSON.stringify(args.policyConfig.policyParams));
 
     const encodedPolicyConfig = {
       policyParams: paramsBytes,

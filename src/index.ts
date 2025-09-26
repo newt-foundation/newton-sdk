@@ -129,7 +129,7 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
 
     getPolicyConfig: (args: {
       policyId: `0x${string}`;
-    }): Promise<{ policyParams: object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
+    }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
