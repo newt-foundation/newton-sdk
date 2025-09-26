@@ -152,9 +152,9 @@ const getPolicyConfig = async ({
     const hex = result.policyParams.startsWith('0x') ? result.policyParams.slice(2) : result.policyParams;
     const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
     const jsonString = new TextDecoder().decode(bytes);
-    const policyParams = JSON.parse(jsonString);
+    const policyParams = jsonString;
     return {
-      policyParams: policyParams,
+      policyParams: { policyParams },
       policyParamsHex: result.policyParams,
       expireAfter: result.expireAfter,
     } as {
