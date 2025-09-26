@@ -140,7 +140,7 @@ const getPolicyConfig = async ({
   publicClient: PublicClient;
   policyContractAddress: Address;
   policyId: `0x${string}`;
-}): Promise<{ policyParams: `0x${string}`; expireAfter: number }> => {
+}): Promise<{ policyParams: object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
   try {
     const result = await publicClient.readContract({
       address: policyContractAddress,
@@ -148,7 +148,20 @@ const getPolicyConfig = async ({
       functionName: 'getPolicyConfig',
       args: [policyId],
     });
-    return result as { policyParams: `0x${string}`; expireAfter: number };
+    // Hex decode result.policyParams and parse as JSON
+    const hex = result.policyParams.startsWith('0x') ? result.policyParams.slice(2) : result.policyParams;
+    const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const jsonString = new TextDecoder().decode(bytes);
+    const policyParams = JSON.parse(jsonString);
+    return {
+      policyParams: policyParams,
+      policyParamsHex: result.policyParams,
+      expireAfter: result.expireAfter,
+    } as {
+      policyParams: object;
+      policyParamsHex: `0x${string}`;
+      expireAfter: number;
+    };
   } catch (error) {
     throw new Error(
       `Newton SDK: Failed to get getPolicyConfig - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -360,7 +373,7 @@ const setPolicy = async ({
   walletClient: WalletClient;
   policyContractAddress: Address;
   policyConfig: {
-    policyParams: `0x${string}`;
+    policyParams: object;
     expireAfter: number;
   };
 }): Promise<`0x${string}`> => {
@@ -369,12 +382,21 @@ const setPolicy = async ({
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
 
+    // Hex encode the policyParams JSON object
+    const paramsBytes =
+      `0x${new TextEncoder().encode(JSON.stringify(args.policyConfig.policyParams)).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')}` as `0x${string}`;
+
+    const encodedPolicyConfig = {
+      policyParams: paramsBytes,
+      expireAfter: args.policyConfig.expireAfter,
+    };
+
     const account = walletClient.account ?? (await walletClient.getAddresses())[0];
     const hash = await walletClient.writeContract({
       address: policyContractAddress,
       abi: NewtonPolicyAbi,
       functionName: 'setPolicy',
-      args: [args.policyConfig],
+      args: [encodedPolicyConfig],
       chain: walletClient.chain,
       account,
     });

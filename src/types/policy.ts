@@ -3,7 +3,21 @@ import { Address, Hex } from 'viem';
 export type PolicyId = string;
 
 export interface PolicyParamsJson {
-  [k: string]: unknown;
+  admin: string;
+  allowed_actions: {
+    [chainId: string]: {
+      address: string;
+      function_name: string;
+      max_limit: number;
+    };
+  };
+  token_whitelist: {
+    [chainId: string]: {
+      address: string;
+      max_limit: number;
+      symbol: string;
+    };
+  };
 } // developer-supplied
 export interface SetPolicyInput {
   client: Address; // policy client (e.g., vault) address
