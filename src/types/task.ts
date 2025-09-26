@@ -72,9 +72,9 @@ export interface TaskResponseResult {
 }
 
 export enum TaskStatus {
-  TaskUsed = 'TaskUsed',
-  TaskChallenged = 'TaskChallenged',
-  TaskResponded = 'TaskResponded',
-  TaskCreated = 'TaskCreated',
-  TaskExpired = 'TaskExpired',
+  AttestationSpent = 'AttestationSpent',
+  SuccessfullyChallenged = 'SuccessfullyChallenged',
+  Responded = 'Responded',
+  Created = 'Created',
+  Expired = 'Expired',
 }

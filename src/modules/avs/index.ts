@@ -1,4 +1,4 @@
-import { NewtonAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
+import { NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { normalizeBytes } from '@core/utils/bytes';
@@ -56,7 +56,7 @@ const waitForTaskResponded = async (
 
   const past = await publicClient.getContractEvents({
     address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-    abi: NewtonAbi,
+    abi: NewtonProverTaskManagerAbi,
     eventName: 'TaskResponded',
     fromBlock: fromBlockParam,
     toBlock: 'latest',
@@ -94,7 +94,7 @@ const waitForTaskResponded = async (
 
     unsub = publicClient.watchContractEvent({
       address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-      abi: NewtonAbi,
+      abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
         for (const log of logs as TaskRespondedLog[]) {
@@ -117,7 +117,7 @@ const waitForTaskResponded = async (
 const getTaskResponseHash = (publicClient: Client, args: { taskId: TaskId }): Promise<Hex | null> => {
   return publicClient.readContract({
     address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
-    abi: NewtonAbi,
+    abi: NewtonProverTaskManagerAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
   }) as Promise<Hex | null>;
@@ -130,50 +130,47 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: NewtonAbi,
+    abi: NewtonProverTaskManagerAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
   })) as Hex;
   const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
   if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
-  const isAttestationSpent = (await publicClient.readContract({
+  const attestationExpiry = await publicClient.readContract({
     address: taskManagerAddress,
-    abi: NewtonAbi,
-    functionName: 'attestationsSpent',
+    abi: NewtonProverTaskManagerAbi,
+    functionName: 'attestations',
     args: [args.taskId],
-  })) as boolean;
-  if (isAttestationSpent) return TaskStatus.TaskUsed;
+  });
+
+  const attestationExpBigInt = hexToBigInt(attestationExpiry as Hex);
+
+  if (!attestationExpBigInt) return TaskStatus.AttestationSpent;
+
+  const currentBlock = await publicClient.getBlockNumber();
+  if (attestationExpBigInt > currentBlock) return TaskStatus.Expired;
 
   const isTaskChallenged = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: NewtonAbi,
+    abi: NewtonProverTaskManagerAbi,
     functionName: 'taskSuccesfullyChallenged',
     args: [args.taskId],
   })) as boolean;
-  if (isTaskChallenged) return TaskStatus.TaskChallenged;
 
-  const taskResponse = await waitForTaskResponded(publicClient, { taskId: args.taskId, timeoutMs: 1000 }).catch(() => {
-    console.log('getTaskStatus: waitForTaskResponded timed out');
-  });
-  const currentBlock = await publicClient.getBlockNumber();
-  if (
-    taskResponse?.responseCertificate?.responseExpireBlock &&
-    currentBlock > taskResponse.responseCertificate.responseExpireBlock
-  )
-    return TaskStatus.TaskExpired;
+  if (isTaskChallenged) return TaskStatus.SuccessfullyChallenged;
 
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
-    abi: NewtonAbi,
+    abi: NewtonProverTaskManagerAbi,
     functionName: 'allTaskResponses',
     args: [args.taskId],
   })) as Hex;
   const isTaskResponded = !!hexToBigInt(allTaskResponses);
 
-  if (isTaskResponded) return TaskStatus.TaskResponded;
+  if (isTaskResponded) return TaskStatus.Responded;
 
-  return TaskStatus.TaskCreated;
+  return TaskStatus.Created;
 };
 
 async function submitEvaluationRequest(
