@@ -384,7 +384,11 @@ const setPolicy = async ({
     if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client');
     }
-
+    try {
+      JSON.stringify(args.policyConfig.policyParams);
+    } catch (error) {
+      throw new Error('policyParams must be a valid JSON object');
+    }
     // Hex encode the policyParams JSON object
     const paramsBytes = toHex(JSON.stringify(args.policyConfig.policyParams));
 
