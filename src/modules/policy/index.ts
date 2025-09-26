@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked, Address } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async ({
@@ -149,10 +149,8 @@ const getPolicyConfig = async ({
       args: [policyId],
     });
     // Hex decode result.policyParams and parse as JSON
-    const hex = result.policyParams.startsWith('0x') ? result.policyParams.slice(2) : result.policyParams;
-    const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
-    const jsonString = new TextDecoder().decode(bytes);
-    const policyParams = jsonString;
+
+    const policyParams = fromHex(result.policyParams, 'string') as unknown as object;
     return {
       policyParams: { policyParams },
       policyParamsHex: result.policyParams,
