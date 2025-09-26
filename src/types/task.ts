@@ -76,5 +76,5 @@ export enum TaskStatus {
   SuccessfullyChallenged = 'SuccessfullyChallenged',
   Responded = 'Responded',
   Created = 'Created',
-  Expired = 'Expired',
+  AttestationExpired = 'AttestationExpired',
 }

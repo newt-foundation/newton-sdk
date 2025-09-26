@@ -137,19 +137,52 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
   if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
-  const attestationExpiry = await publicClient.readContract({
+  const allTaskResponses = (await publicClient.readContract({
+    address: taskManagerAddress,
+    abi: NewtonProverTaskManagerAbi,
+    functionName: 'allTaskResponses',
+    args: [args.taskId],
+  })) as Hex;
+  const isTaskResponded = !!hexToBigInt(allTaskResponses);
+
+  if (!isTaskResponded) {
+    return TaskStatus.Created;
+  }
+
+  const past = await publicClient.getContractEvents({
+    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    abi: NewtonProverTaskManagerAbi,
+    eventName: 'TaskResponded',
+    fromBlock: SafeFromBlock[publicClient.chain?.id ?? 1],
+    toBlock: 'latest',
+  });
+
+  const match = (past as TaskRespondedLog[]).find(
+    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId,
+  );
+  if (!match) {
+    throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
+  }
+
+  const taskResponse = convertLogToTaskResponse(match);
+  const currentBlock = await publicClient.getBlockNumber();
+  if (
+    taskResponse?.responseCertificate?.responseExpireBlock &&
+    currentBlock > taskResponse.responseCertificate.responseExpireBlock
+  ) {
+    return TaskStatus.AttestationExpired;
+  }
+
+  const attestationHash = await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
     functionName: 'attestations',
     args: [args.taskId],
   });
 
-  const attestationExpBigInt = hexToBigInt(attestationExpiry as Hex);
+  const attestationHashBigInt = hexToBigInt(attestationHash as Hex);
 
-  if (!attestationExpBigInt) return TaskStatus.AttestationSpent;
-
-  const currentBlock = await publicClient.getBlockNumber();
-  if (attestationExpBigInt > currentBlock) return TaskStatus.Expired;
+  if (!attestationHashBigInt) return TaskStatus.AttestationSpent;
 
   const isTaskChallenged = (await publicClient.readContract({
     address: taskManagerAddress,
@@ -159,14 +192,6 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   })) as boolean;
 
   if (isTaskChallenged) return TaskStatus.SuccessfullyChallenged;
-
-  const allTaskResponses = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
-    functionName: 'allTaskResponses',
-    args: [args.taskId],
-  })) as Hex;
-  const isTaskResponded = !!hexToBigInt(allTaskResponses);
 
   if (isTaskResponded) return TaskStatus.Responded;
 
