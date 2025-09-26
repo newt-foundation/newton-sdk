@@ -1,3 +1,15 @@
+# v0.0.4 (Fri Sep 26 2025)
+
+#### 🐛 Bug Fix
+
+- fix: setup policy config encoding [#59](https://github.com/newt-foundation/newton-sdk/pull/59) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.0.3 (Fri Sep 26 2025)
 
 #### 🐛 Bug Fix
