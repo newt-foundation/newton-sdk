@@ -1,3 +1,15 @@
+# v0.0.5 (Mon Sep 29 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update prover avs sepolia url [#60](https://github.com/newt-foundation/newton-sdk/pull/60) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.4 (Fri Sep 26 2025)
 
 #### 🐛 Bug Fix
