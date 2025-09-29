@@ -1,4 +1,4 @@
-export const TESTNET_AVS_API = 'https://prover-avs.stagef.newt.foundation/'; // sepolia
+export const TESTNET_AVS_API = 'https://prover-avs.sepolia.newt.foundation/'; // sepolia
 export const MAINNET_AVS_API = 'https://prover-avs.newt.foundation/'; // mainnet
 
 export const AVS_METHODS = {
