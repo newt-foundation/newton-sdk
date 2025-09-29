@@ -1,3 +1,15 @@
+# v0.0.6 (Mon Sep 29 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update mainnet prover task manager address [#61](https://github.com/newt-foundation/newton-sdk/pull/61) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.5 (Mon Sep 29 2025)
 
 #### 🐛 Bug Fix
