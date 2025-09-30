@@ -1,3 +1,15 @@
+# v0.0.8 (Tue Sep 30 2025)
+
+#### 🐛 Bug Fix
+
+- fix: mark the npm repo public [#64](https://github.com/newt-foundation/newton-sdk/pull/64) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.7 (Tue Sep 30 2025)
 
 #### 🐛 Bug Fix
