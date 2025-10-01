@@ -1,3 +1,15 @@
+# v0.0.9 (Wed Oct 01 2025)
+
+#### 🐛 Bug Fix
+
+- fix: add wasm args request argument to submit eval request [#65](https://github.com/newt-foundation/newton-sdk/pull/65) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.0.8 (Tue Sep 30 2025)
 
 #### 🐛 Bug Fix
