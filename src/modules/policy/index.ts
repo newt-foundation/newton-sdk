@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked, Address } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async ({
@@ -56,7 +56,7 @@ const getPolicyConfig = async ({
   publicClient: PublicClient;
   policyContractAddress: Address;
   policyId: `0x${string}`;
-}): Promise<{ policyParams: `0x${string}`; expireAfter: number }> => {
+}): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
   try {
     const result = await publicClient.readContract({
       address: policyContractAddress,
@@ -64,7 +64,23 @@ const getPolicyConfig = async ({
       functionName: 'getPolicyConfig',
       args: [policyId],
     });
-    return result as { policyParams: `0x${string}`; expireAfter: number };
+    // Hex decode result.policyParams
+    const policyParams = fromHex(result.policyParams, 'string');
+    let policyParamsObject = undefined;
+    try {
+      policyParamsObject = JSON.parse(policyParams);
+    } catch (error) {
+      policyParamsObject = policyParams;
+    }
+    return {
+      policyParams: policyParamsObject ?? policyParams,
+      policyParamsHex: result.policyParams,
+      expireAfter: result.expireAfter,
+    } as {
+      policyParams: string;
+      policyParamsHex: `0x${string}`;
+      expireAfter: number;
+    };
   } catch (error) {
     throw new Error(
       `Newton SDK: Failed to get getPolicyConfig - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -267,39 +283,6 @@ const precomputePolicyId = ({
   }
 };
 
-// Write function wrappers
-const setPolicy = async ({
-  walletClient,
-  policyContractAddress,
-  ...args
-}: {
-  walletClient: WalletClient;
-  policyContractAddress: Address;
-  policyConfig: {
-    policyParams: `0x${string}`;
-    expireAfter: number;
-  };
-}): Promise<`0x${string}`> => {
-  try {
-    if (!walletClient.chain) {
-      throw new Error('Newton SDK: account and chain must be set on Wallet client');
-    }
-
-    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
-    const hash = await walletClient.writeContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'setPolicy',
-      args: [args.policyConfig],
-      chain: walletClient.chain,
-      account,
-    });
-    return hash;
-  } catch (error) {
-    throw new Error(`Newton SDK: Failed to set policy - ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-};
-
 const initialize = async ({
   walletClient,
   policyContractAddress,
@@ -394,7 +377,6 @@ const transferOwnership = async ({
 
 export const policyWriteFunctions = {
   // On-chain write functions
-  setPolicy,
   initialize,
   renounceOwnership,
   transferOwnership,
@@ -403,10 +385,6 @@ export const policyWriteFunctions = {
 export const policyReadFunctions = {
   // On-chain read functions
   policyUri,
-  getPolicyData,
-  getPolicyUri,
-  getSchemaUri,
-  getEntrypoint,
   getPolicyId,
   getPolicyConfig,
   supportsInterface,
