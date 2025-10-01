@@ -102,38 +102,6 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       return policyReadFunctions.policyUri({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    getPolicyData: (): Promise<Address[]> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress });
-    },
-
-    getPolicyUri: (): Promise<string> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyUri({ publicClient, policyContractAddress: validatedAddress });
-    },
-
-    getSchemaUri: (): Promise<string> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getSchemaUri({ publicClient, policyContractAddress: validatedAddress });
-    },
-
-    getEntrypoint: (): Promise<string> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getEntrypoint({ publicClient, policyContractAddress: validatedAddress });
-    },
-
-    getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
-    },
-
-    getPolicyConfig: (args: {
-      policyId: `0x${string}`;
-    }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
-    },
-
     supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.supportsInterface({ publicClient, policyContractAddress: validatedAddress, ...args });
@@ -159,14 +127,14 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       return policyReadFunctions.schemaUri({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
-    },
-
     policyData: (args: { index: number }): Promise<Address> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
 
     // SDK utility function
