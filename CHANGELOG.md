@@ -1,3 +1,15 @@
+# v0.1.0 (Wed Oct 01 2025)
+
+#### 🐛 Bug Fix
+
+- fix: refactor spec to mirror onchain interface changes [#66](https://github.com/newt-foundation/newton-sdk/pull/66) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### Authors: 1
+
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.0.9 (Wed Oct 01 2025)
 
 #### 🐛 Bug Fix
