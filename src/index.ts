@@ -34,12 +34,6 @@ const newtonWalletClientActions =
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args),
 
-      // Policy write functions
-      setPolicy: (args: { policyConfig: { policyParams: object; expireAfter: number } }): Promise<`0x${string}`> => {
-        const validatedAddress = validatePolicyContractAddress();
-        return policyWriteFunctions.setPolicy({ walletClient, policyContractAddress: validatedAddress, ...args });
-      },
-
       initialize: (args: {
         factory: Address;
         entrypoint: string;
@@ -135,6 +129,18 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
     clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    getPolicyConfig: (args: {
+      policyId: `0x${string}`;
+    }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
 
     // SDK utility function
