@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi';
 import { PolicyId, PolicyParamsJson } from '@core/types/policy';
-import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex, toHex } from 'viem';
+import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
 const policyUri = async ({
@@ -20,90 +20,6 @@ const policyUri = async ({
   } catch (error) {
     throw new Error(
       `Newton SDK: Failed to get policyUri - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
-
-const getPolicyData = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<Address[]> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'getPolicyData',
-    });
-    return result as Address[];
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get getPolicyData - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
-
-const getPolicyUri = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<string> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'getPolicyUri',
-    });
-    return result as string;
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get getPolicyUri - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
-
-const getSchemaUri = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<string> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'getSchemaUri',
-    });
-    return result as string;
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get getSchemaUri - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
-
-const getEntrypoint = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<string> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'getEntrypoint',
-    });
-    return result as string;
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get getEntrypoint - ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
   }
 };
@@ -367,51 +283,6 @@ const precomputePolicyId = ({
   }
 };
 
-// Write function wrappers
-const setPolicy = async ({
-  walletClient,
-  policyContractAddress,
-  ...args
-}: {
-  walletClient: WalletClient;
-  policyContractAddress: Address;
-  policyConfig: {
-    policyParams: object;
-    expireAfter: number;
-  };
-}): Promise<`0x${string}`> => {
-  try {
-    if (!walletClient.chain) {
-      throw new Error('Newton SDK: account and chain must be set on Wallet client');
-    }
-    try {
-      JSON.stringify(args.policyConfig.policyParams);
-    } catch (error) {
-      throw new Error('policyParams must be a valid JSON object');
-    }
-    // Hex encode the policyParams JSON object
-    const paramsBytes = toHex(JSON.stringify(args.policyConfig.policyParams));
-
-    const encodedPolicyConfig = {
-      policyParams: paramsBytes,
-      expireAfter: args.policyConfig.expireAfter,
-    };
-
-    const account = walletClient.account ?? (await walletClient.getAddresses())[0];
-    const hash = await walletClient.writeContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'setPolicy',
-      args: [encodedPolicyConfig],
-      chain: walletClient.chain,
-      account,
-    });
-    return hash;
-  } catch (error) {
-    throw new Error(`Newton SDK: Failed to set policy - ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-};
-
 const initialize = async ({
   walletClient,
   policyContractAddress,
@@ -506,7 +377,6 @@ const transferOwnership = async ({
 
 export const policyWriteFunctions = {
   // On-chain write functions
-  setPolicy,
   initialize,
   renounceOwnership,
   transferOwnership,
@@ -515,10 +385,6 @@ export const policyWriteFunctions = {
 export const policyReadFunctions = {
   // On-chain read functions
   policyUri,
-  getPolicyData,
-  getPolicyUri,
-  getSchemaUri,
-  getEntrypoint,
   getPolicyId,
   getPolicyConfig,
   supportsInterface,
