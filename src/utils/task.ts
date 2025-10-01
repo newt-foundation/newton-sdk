@@ -9,9 +9,10 @@ export const getEvaluationRequestHash = (args: {
   intent: NormalizedIntent;
   quorumNumber?: Hex;
   quorumThresholdPercentage?: number;
+  wasmArgs?: Hex;
   timeout: number;
 }) => {
-  const { policyClient, quorumNumber, quorumThresholdPercentage, timeout } = args;
+  const { policyClient, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
   const normalizedIntent = normalizeIntent(args.intent);
 
   const hash = keccak256(
@@ -26,6 +27,7 @@ export const getEvaluationRequestHash = (args: {
         'bytes', // intent.functionSignature
         'bytes', // quorumNumber
         'uint32', // quorumThresholdPercentage
+        'bytes', // wasmArgs
         'uint64', // timeout
       ],
       [
@@ -38,6 +40,7 @@ export const getEvaluationRequestHash = (args: {
         normalizedIntent.functionSignature,
         quorumNumber ? normalizeBytes(quorumNumber) : '0x',
         quorumThresholdPercentage ?? 0,
+        wasmArgs ? normalizeBytes(wasmArgs) : '0x',
         BigInt(timeout),
       ],
     ),

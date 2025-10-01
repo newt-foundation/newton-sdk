@@ -214,7 +214,7 @@ async function submitEvaluationRequest(
     throw new Error('Newton SDK: walletClient must have a local account to sign the request');
   }
 
-  const { policyClient, quorumNumber, quorumThresholdPercentage, timeout } = args;
+  const { policyClient, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
 
   const normalizedIntent = normalizeIntent(args.intent);
 
@@ -223,6 +223,7 @@ async function submitEvaluationRequest(
     intent: normalizedIntent,
     quorumNumber: quorumNumber ? normalizeBytes(quorumNumber) : '0x',
     quorumThresholdPercentage,
+    wasmArgs: wasmArgs ? normalizeBytes(wasmArgs) : '0x',
     timeout,
   });
 
@@ -234,6 +235,7 @@ async function submitEvaluationRequest(
     intent: hexlifiedIntent,
     quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
+    wasm_args: args.wasmArgs ? normalizeBytes(args.wasmArgs) : null,
     timeout: args.timeout,
     signature,
   };
