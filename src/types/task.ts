@@ -16,6 +16,7 @@ export interface SubmitEvaluationRequestParams {
   intent: Intent;
   quorumNumber?: Hex | Uint8Array;
   quorumThresholdPercentage?: number;
+  wasmArgs?: Hex | Uint8Array;
   timeout: number; // in seconds
 }
 
