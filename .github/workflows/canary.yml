@@ -25,7 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           token: ${{ secrets.SVC_GIT_FG_TOKEN }}
 
       - name: Install Node.js

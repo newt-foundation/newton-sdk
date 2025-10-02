@@ -22,11 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           token: ${{ secrets.SVC_GIT_FG_TOKEN }}
 
-      # - name: Prepare repository
-      #  run: git fetch --unshallow --tags
+      - name: Prepare repository
+        run: git fetch --unshallow --tags
 
       - name: Unset header
         # https://github.com/intuit/auto/issues/1030
