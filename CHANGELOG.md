@@ -1,3 +1,16 @@
+# v0.1.1 (Thu Oct 02 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update submit eval request function param typings [#67](https://github.com/newt-foundation/newton-sdk/pull/67) ([@Dizigen](https://github.com/Dizigen))
+- fix: reset npm version ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.1.0 (Wed Oct 01 2025)
 
 #### 🐛 Bug Fix
