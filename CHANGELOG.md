@@ -1,3 +1,15 @@
+# v0.2.1 (Thu Oct 02 2025)
+
+#### 🐛 Bug Fix
+
+- fix: test version bump [#74](https://github.com/newt-foundation/newton-sdk/pull/74) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.1.0 (Thu Oct 02 2025)
 
 #### 🐛 Bug Fix
