@@ -1,6 +1,6 @@
 # Welcome to Newton SDK
 
-TypeScript SDK for the Newton Protocol
+TypeScript SDK for the Newton Protocol.
 
 ## Prerequisites
 
