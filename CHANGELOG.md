@@ -1,3 +1,30 @@
+# v0.1.0 (Thu Oct 02 2025)
+
+#### 🐛 Bug Fix
+
+- fix: test ci release [#73](https://github.com/newt-foundation/newton-sdk/pull/73) ([@Dizigen](https://github.com/Dizigen))
+- fix: test patch ci [#72](https://github.com/newt-foundation/newton-sdk/pull/72) ([@Dizigen](https://github.com/Dizigen))
+- fix: undo ci changes ([@Dizigen](https://github.com/Dizigen))
+- fix: skip prepare repo step [#71](https://github.com/newt-foundation/newton-sdk/pull/71) ([@Dizigen](https://github.com/Dizigen))
+- fix: fetch tags deeply [#70](https://github.com/newt-foundation/newton-sdk/pull/70) ([@Dizigen](https://github.com/Dizigen))
+- fix: update readme [#69](https://github.com/newt-foundation/newton-sdk/pull/69) ([@Dizigen](https://github.com/Dizigen))
+- fix: clean up change log [#68](https://github.com/newt-foundation/newton-sdk/pull/68) ([@Dizigen](https://github.com/Dizigen))
+- fix: update submit eval request function param typings [#67](https://github.com/newt-foundation/newton-sdk/pull/67) ([@Dizigen](https://github.com/Dizigen))
+- fix: reset npm version ([@Dizigen](https://github.com/Dizigen))
+- fix: refactor spec to mirror onchain interface changes [#66](https://github.com/newt-foundation/newton-sdk/pull/66) ([@khaledmagic](https://github.com/khaledmagic))
+
+#### ⚠️ Pushed to `main`
+
+- 0.1.1 ([@Dizigen](https://github.com/Dizigen))
+- release 0.0.11 ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Khaled Magic ([@khaledmagic](https://github.com/khaledmagic))
+
+---
+
 # v0.0.9 (Wed Oct 01 2025)
 
 #### 🐛 Bug Fix
