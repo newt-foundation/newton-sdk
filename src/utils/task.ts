@@ -1,15 +1,18 @@
 import { NormalizedIntent, TaskResponseResult } from '@core/types/task';
 import { encodePacked, Hex, hexToBigInt, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
-import { normalizeBytes } from './bytes';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
+
+const addHexPrefix = (input: string): Hex => {
+  return input.startsWith('0x') ? (input as `0x${string}`) : (`0x${input}` as `0x${string}`);
+};
 
 export const getEvaluationRequestHash = (args: {
   policyClient: `0x${string}`;
   intent: NormalizedIntent;
-  quorumNumber?: Hex;
+  quorumNumber?: string;
   quorumThresholdPercentage?: number;
-  wasmArgs?: Hex;
+  wasmArgs?: string;
   timeout: number;
 }) => {
   const { policyClient, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
@@ -35,12 +38,12 @@ export const getEvaluationRequestHash = (args: {
         normalizedIntent.from,
         normalizedIntent.to,
         normalizedIntent.value,
-        normalizedIntent.data,
+        addHexPrefix(normalizedIntent.data),
         normalizedIntent.chainId,
-        normalizedIntent.functionSignature,
-        quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+        addHexPrefix(normalizedIntent.functionSignature),
+        quorumNumber ? addHexPrefix(quorumNumber) : '0x',
         quorumThresholdPercentage ?? 0,
-        wasmArgs ? normalizeBytes(wasmArgs) : '0x',
+        wasmArgs ? addHexPrefix(wasmArgs) : '0x',
         BigInt(timeout),
       ],
     ),

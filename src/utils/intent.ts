@@ -1,7 +1,7 @@
-import { HexlifiedIntent, Intent, NormalizedIntent } from '@core/types/task';
+import { HexlifiedIntent, IntentFromParams, NormalizedIntent } from '@core/types/task';
 import { Hex, hexToBigInt, toHex } from 'viem';
 
-export function normalizeIntent(intent: Intent): NormalizedIntent {
+export function normalizeIntent(intent: IntentFromParams): NormalizedIntent {
   let valueAsBigInt: bigint;
   if (typeof intent.value === 'bigint') {
     valueAsBigInt = intent.value;
@@ -25,7 +25,7 @@ export function normalizeIntent(intent: Intent): NormalizedIntent {
   };
 }
 
-export function hexlifyIntentForRequest(intent: Intent): HexlifiedIntent {
+export function hexlifyIntentForRequest(intent: IntentFromParams): HexlifiedIntent {
   let valueAsHex: Hex;
   if (typeof intent.value === 'bigint') {
     valueAsHex = toHex(intent.value);

@@ -1,7 +1,6 @@
 import { NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
-import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
 import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
 import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
@@ -221,9 +220,9 @@ async function submitEvaluationRequest(
   const hash = getEvaluationRequestHash({
     policyClient,
     intent: normalizedIntent,
-    quorumNumber: quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+    quorumNumber,
     quorumThresholdPercentage,
-    wasmArgs: wasmArgs ? normalizeBytes(wasmArgs) : '0x',
+    wasmArgs,
     timeout,
   });
 
@@ -233,9 +232,9 @@ async function submitEvaluationRequest(
   const requestBody = {
     policy_client: args.policyClient,
     intent: hexlifiedIntent,
-    quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
+    quorum_number: args.quorumNumber ?? null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
-    wasm_args: args.wasmArgs ? normalizeBytes(args.wasmArgs) : null,
+    wasm_args: args.wasmArgs ?? null,
     timeout: args.timeout,
     signature,
   };

@@ -2,21 +2,21 @@ import { Address, Hex } from 'viem';
 
 export type TaskId = Hex;
 
-export interface Intent {
+export interface IntentFromParams {
   from: Address;
   to: Address;
   value: Hex | bigint;
-  data: Hex;
+  data: string;
   chainId: Hex | number | bigint;
-  functionSignature: Hex;
+  functionSignature: string;
 }
 
 export interface SubmitEvaluationRequestParams {
   policyClient: Address;
-  intent: Intent;
-  quorumNumber?: Hex | Uint8Array;
+  intent: IntentFromParams;
+  quorumNumber?: string;
   quorumThresholdPercentage?: number;
-  wasmArgs?: Hex | Uint8Array;
+  wasmArgs?: string;
   timeout: number; // in seconds
 }
 
@@ -24,18 +24,18 @@ export interface NormalizedIntent {
   from: Address;
   to: Address;
   value: bigint;
-  data: Hex;
+  data: Hex | string;
   chainId: bigint;
-  functionSignature: Hex;
+  functionSignature: Hex | string;
 }
 
 export interface HexlifiedIntent {
   from: Address;
   to: Address;
   value: Hex;
-  data: Hex;
+  data: string;
   chain_id: Hex;
-  function_signature: Hex;
+  function_signature: string;
 }
 
 interface TaskResponse {
@@ -47,9 +47,9 @@ interface TaskResponse {
     from: Address;
     to: Address;
     value: bigint;
-    data: Hex;
+    data: string;
     chainId: bigint;
-    functionSignature: Hex;
+    functionSignature: string;
   };
   evaluationResult: boolean;
 }
