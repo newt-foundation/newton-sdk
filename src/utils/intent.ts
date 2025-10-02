@@ -1,6 +1,10 @@
 import { HexlifiedIntent, IntentFromParams, NormalizedIntent } from '@core/types/task';
 import { Hex, hexToBigInt, toHex } from 'viem';
 
+export const removeHexPrefix = (input: Hex): string => {
+  return input.startsWith('0x') ? input.slice(2) : input;
+};
+
 export function normalizeIntent(intent: IntentFromParams): NormalizedIntent {
   let valueAsBigInt: bigint;
   if (typeof intent.value === 'bigint') {
@@ -25,7 +29,7 @@ export function normalizeIntent(intent: IntentFromParams): NormalizedIntent {
   };
 }
 
-export function hexlifyIntentForRequest(intent: IntentFromParams): HexlifiedIntent {
+export function sanitizeIntentForRequest(intent: IntentFromParams): HexlifiedIntent {
   let valueAsHex: Hex;
   if (typeof intent.value === 'bigint') {
     valueAsHex = toHex(intent.value);
@@ -45,8 +49,8 @@ export function hexlifyIntentForRequest(intent: IntentFromParams): HexlifiedInte
     from: intent.from,
     to: intent.to,
     value: valueAsHex,
-    data: intent.data,
+    data: removeHexPrefix(intent.data),
     chain_id: chainIdAsHex,
-    function_signature: intent.functionSignature,
+    function_signature: removeHexPrefix(intent.functionSignature),
   };
 }

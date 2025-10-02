@@ -6,17 +6,17 @@ export interface IntentFromParams {
   from: Address;
   to: Address;
   value: Hex | bigint;
-  data: string;
+  data: Hex;
   chainId: Hex | number | bigint;
-  functionSignature: string;
+  functionSignature: Hex;
 }
 
 export interface SubmitEvaluationRequestParams {
   policyClient: Address;
   intent: IntentFromParams;
-  quorumNumber?: string;
+  quorumNumber?: Hex;
   quorumThresholdPercentage?: number;
-  wasmArgs?: string;
+  wasmArgs?: Hex;
   timeout: number; // in seconds
 }
 
@@ -24,9 +24,9 @@ export interface NormalizedIntent {
   from: Address;
   to: Address;
   value: bigint;
-  data: Hex | string;
+  data: Hex;
   chainId: bigint;
-  functionSignature: Hex | string;
+  functionSignature: Hex;
 }
 
 export interface HexlifiedIntent {
