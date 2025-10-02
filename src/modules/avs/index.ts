@@ -1,9 +1,8 @@
 import { NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
-import { normalizeBytes } from '@core/utils/bytes';
 import { AvsHttpService } from '@core/utils/https';
-import { hexlifyIntentForRequest, normalizeIntent } from '@core/utils/intent';
+import { sanitizeIntentForRequest, normalizeIntent, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
 import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
@@ -221,21 +220,21 @@ async function submitEvaluationRequest(
   const hash = getEvaluationRequestHash({
     policyClient,
     intent: normalizedIntent,
-    quorumNumber: quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+    quorumNumber,
     quorumThresholdPercentage,
-    wasmArgs: wasmArgs ? normalizeBytes(wasmArgs) : '0x',
+    wasmArgs,
     timeout,
   });
 
   const signature = await account.sign({ hash });
 
-  const hexlifiedIntent = hexlifyIntentForRequest(args.intent);
+  const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
-    intent: hexlifiedIntent,
-    quorum_number: args.quorumNumber ? normalizeBytes(args.quorumNumber) : null,
+    intent: sanitiziedIntent,
+    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
-    wasm_args: args.wasmArgs ? normalizeBytes(args.wasmArgs) : null,
+    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     signature,
   };

@@ -1,7 +1,6 @@
 import { NormalizedIntent, TaskResponseResult } from '@core/types/task';
 import { encodePacked, Hex, hexToBigInt, keccak256 } from 'viem';
 import { normalizeIntent } from './intent';
-import { normalizeBytes } from './bytes';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
 
 export const getEvaluationRequestHash = (args: {
@@ -38,9 +37,9 @@ export const getEvaluationRequestHash = (args: {
         normalizedIntent.data,
         normalizedIntent.chainId,
         normalizedIntent.functionSignature,
-        quorumNumber ? normalizeBytes(quorumNumber) : '0x',
+        quorumNumber ? quorumNumber : '0x',
         quorumThresholdPercentage ?? 0,
-        wasmArgs ? normalizeBytes(wasmArgs) : '0x',
+        wasmArgs ? wasmArgs : '0x',
         BigInt(timeout),
       ],
     ),
