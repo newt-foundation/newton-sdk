@@ -1,3 +1,15 @@
+# v0.2.2 (Wed Oct 15 2025)
+
+#### 🐛 Bug Fix
+
+- fix: add attestation validator addresses and abis [#77](https://github.com/newt-foundation/newton-sdk/pull/77) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.1 (Thu Oct 02 2025)
 
 #### 🐛 Bug Fix
