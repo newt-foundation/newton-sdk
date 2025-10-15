@@ -1,13 +1,416 @@
 import type { Address, Hex, Log } from 'viem';
 
+export const AttestationValidatorAbi = [
+  {
+    type: 'constructor',
+    inputs: [
+      {
+        name: '_taskManager',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'attestations',
+    inputs: [
+      {
+        name: '',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'createAttestationHash',
+    inputs: [
+      {
+        name: 'taskId',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+      {
+        name: 'policyId',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+      {
+        name: 'policyClient',
+        type: 'address',
+        internalType: 'address',
+      },
+      {
+        name: 'intent',
+        type: 'tuple',
+        internalType: 'struct NewtonMessage.Intent',
+        components: [
+          {
+            name: 'from',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'to',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'value',
+            type: 'uint256',
+            internalType: 'uint256',
+          },
+          {
+            name: 'data',
+            type: 'bytes',
+            internalType: 'bytes',
+          },
+          {
+            name: 'chainId',
+            type: 'uint256',
+            internalType: 'uint256',
+          },
+          {
+            name: 'functionSignature',
+            type: 'bytes',
+            internalType: 'bytes',
+          },
+        ],
+      },
+      {
+        name: 'expiration',
+        type: 'uint32',
+        internalType: 'uint32',
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'getAttestationHash',
+    inputs: [
+      {
+        name: 'taskId',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'initialize',
+    inputs: [
+      {
+        name: '_owner',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'invalidateAttestation',
+    inputs: [
+      {
+        name: 'taskId',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'isAttestationValid',
+    inputs: [
+      {
+        name: 'attestation',
+        type: 'tuple',
+        internalType: 'struct NewtonMessage.Attestation',
+        components: [
+          {
+            name: 'taskId',
+            type: 'bytes32',
+            internalType: 'bytes32',
+          },
+          {
+            name: 'policyId',
+            type: 'bytes32',
+            internalType: 'bytes32',
+          },
+          {
+            name: 'policyClient',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'intent',
+            type: 'tuple',
+            internalType: 'struct NewtonMessage.Intent',
+            components: [
+              {
+                name: 'from',
+                type: 'address',
+                internalType: 'address',
+              },
+              {
+                name: 'to',
+                type: 'address',
+                internalType: 'address',
+              },
+              {
+                name: 'value',
+                type: 'uint256',
+                internalType: 'uint256',
+              },
+              {
+                name: 'data',
+                type: 'bytes',
+                internalType: 'bytes',
+              },
+              {
+                name: 'chainId',
+                type: 'uint256',
+                internalType: 'uint256',
+              },
+              {
+                name: 'functionSignature',
+                type: 'bytes',
+                internalType: 'bytes',
+              },
+            ],
+          },
+          {
+            name: 'expiration',
+            type: 'uint32',
+            internalType: 'uint32',
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bool',
+        internalType: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'owner',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'renounceOwnership',
+    inputs: [],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'taskManager',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'transferOwnership',
+    inputs: [
+      {
+        name: 'newOwner',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'validateAttestation',
+    inputs: [
+      {
+        name: 'attestation',
+        type: 'tuple',
+        internalType: 'struct NewtonMessage.Attestation',
+        components: [
+          {
+            name: 'taskId',
+            type: 'bytes32',
+            internalType: 'bytes32',
+          },
+          {
+            name: 'policyId',
+            type: 'bytes32',
+            internalType: 'bytes32',
+          },
+          {
+            name: 'policyClient',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'intent',
+            type: 'tuple',
+            internalType: 'struct NewtonMessage.Intent',
+            components: [
+              {
+                name: 'from',
+                type: 'address',
+                internalType: 'address',
+              },
+              {
+                name: 'to',
+                type: 'address',
+                internalType: 'address',
+              },
+              {
+                name: 'value',
+                type: 'uint256',
+                internalType: 'uint256',
+              },
+              {
+                name: 'data',
+                type: 'bytes',
+                internalType: 'bytes',
+              },
+              {
+                name: 'chainId',
+                type: 'uint256',
+                internalType: 'uint256',
+              },
+              {
+                name: 'functionSignature',
+                type: 'bytes',
+                internalType: 'bytes',
+              },
+            ],
+          },
+          {
+            name: 'expiration',
+            type: 'uint32',
+            internalType: 'uint32',
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: '',
+        type: 'bool',
+        internalType: 'bool',
+      },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'event',
+    name: 'Initialized',
+    inputs: [
+      {
+        name: 'version',
+        type: 'uint8',
+        indexed: false,
+        internalType: 'uint8',
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'OwnershipTransferred',
+    inputs: [
+      {
+        name: 'previousOwner',
+        type: 'address',
+        indexed: true,
+        internalType: 'address',
+      },
+      {
+        name: 'newOwner',
+        type: 'address',
+        indexed: true,
+        internalType: 'address',
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'error',
+    name: 'AttestationAlreadySpent',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'AttestationExpired',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'AttestationHashMismatch',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'OnlyTaskManager',
+    inputs: [],
+  },
+];
+
 export const NewtonProverTaskManagerAbi = [
   {
     type: 'constructor',
     inputs: [
       {
-        name: '_registryCoordinator',
+        name: '_operatorRegistry',
         type: 'address',
-        internalType: 'contract ISlashingRegistryCoordinator',
+        internalType: 'contract OperatorRegistry',
       },
       {
         name: '_pauserRegistry',
@@ -70,32 +473,13 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'function',
-    name: 'allocationManager',
+    name: 'attestationValidator',
     inputs: [],
     outputs: [
       {
         name: '',
         type: 'address',
         internalType: 'address',
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'attestations',
-    inputs: [
-      {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
-    ],
-    outputs: [
-      {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
       },
     ],
     stateMutability: 'view',
@@ -109,6 +493,19 @@ export const NewtonProverTaskManagerAbi = [
         name: '',
         type: 'address',
         internalType: 'contract IBLSApkRegistry',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'challengeVerifier',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'address',
+        internalType: 'address',
       },
     ],
     stateMutability: 'view',
@@ -259,6 +656,11 @@ export const NewtonProverTaskManagerAbi = [
     name: 'createNewTask',
     inputs: [
       {
+        name: 'taskId',
+        type: 'bytes32',
+        internalType: 'bytes32',
+      },
+      {
         name: 'policyClient',
         type: 'address',
         internalType: 'address',
@@ -372,19 +774,6 @@ export const NewtonProverTaskManagerAbi = [
         name: '',
         type: 'address',
         internalType: 'contract IDelegationManager',
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'generator',
-    inputs: [],
-    outputs: [
-      {
-        name: '',
-        type: 'address',
-        internalType: 'address',
       },
     ],
     stateMutability: 'view',
@@ -621,36 +1010,6 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'function',
-    name: 'getTaskManagerConfig',
-    inputs: [],
-    outputs: [
-      {
-        name: '',
-        type: 'tuple',
-        internalType: 'struct INewtonProverTaskManager.TaskManagerConfig',
-        components: [
-          {
-            name: 'taskResponseWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'taskChallengeWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'isChallengeEnabled',
-            type: 'bool',
-            internalType: 'bool',
-          },
-        ],
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
     name: 'initialize',
     inputs: [
       {
@@ -664,76 +1023,33 @@ export const NewtonProverTaskManagerAbi = [
         internalType: 'address',
       },
       {
-        name: '_generator',
-        type: 'address',
-        internalType: 'address',
-      },
-      {
-        name: '_allocationManager',
-        type: 'address',
-        internalType: 'address',
-      },
-      {
-        name: '_slasher',
-        type: 'address',
-        internalType: 'address',
-      },
-      {
         name: '_serviceManager',
         type: 'address',
         internalType: 'address',
       },
       {
-        name: 'taskManagerConfig',
-        type: 'tuple',
-        internalType: 'struct INewtonProverTaskManager.TaskManagerConfig',
-        components: [
-          {
-            name: 'taskResponseWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'taskChallengeWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'isChallengeEnabled',
-            type: 'bool',
-            internalType: 'bool',
-          },
-        ],
-      },
-    ],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'instantSlasher',
-    inputs: [],
-    outputs: [
-      {
-        name: '',
+        name: '_operatorRegistry',
         type: 'address',
         internalType: 'address',
       },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'latestNonce',
-    inputs: [],
-    outputs: [
       {
-        name: '',
+        name: '_challengeVerifier',
+        type: 'address',
+        internalType: 'address',
+      },
+      {
+        name: '_attestationValidator',
+        type: 'address',
+        internalType: 'address',
+      },
+      {
+        name: '_taskResponseWindowBlock',
         type: 'uint32',
         internalType: 'uint32',
       },
     ],
-    stateMutability: 'view',
+    outputs: [],
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -744,6 +1060,19 @@ export const NewtonProverTaskManagerAbi = [
         name: '',
         type: 'uint32',
         internalType: 'uint32',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'operatorRegistry',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'address',
+        internalType: 'address',
       },
     ],
     stateMutability: 'view',
@@ -1595,19 +1924,13 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'function',
-    name: 'taskSuccesfullyChallenged',
-    inputs: [
-      {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
-    ],
+    name: 'taskResponseWindowBlock',
+    inputs: [],
     outputs: [
       {
         name: '',
-        type: 'bool',
-        internalType: 'bool',
+        type: 'uint32',
+        internalType: 'uint32',
       },
     ],
     stateMutability: 'view',
@@ -1715,29 +2038,25 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'function',
-    name: 'updateTaskManagerConfig',
+    name: 'updateAggregator',
     inputs: [
       {
-        name: 'taskManagerConfig',
-        type: 'tuple',
-        internalType: 'struct INewtonProverTaskManager.TaskManagerConfig',
-        components: [
-          {
-            name: 'taskResponseWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'taskChallengeWindowBlock',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'isChallengeEnabled',
-            type: 'bool',
-            internalType: 'bool',
-          },
-        ],
+        name: '_aggregator',
+        type: 'address',
+        internalType: 'address',
+      },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'updateTaskResponseWindowBlock',
+    inputs: [
+      {
+        name: '_taskResponseWindowBlock',
+        type: 'uint32',
+        internalType: 'uint32',
       },
     ],
     outputs: [],
@@ -2406,16 +2725,6 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'error',
-    name: 'ChallengeNotEnabled',
-    inputs: [],
-  },
-  {
-    type: 'error',
-    name: 'ChallengePeriodExpired',
-    inputs: [],
-  },
-  {
-    type: 'error',
     name: 'CurrentlyPaused',
     inputs: [],
   },
@@ -2461,6 +2770,11 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'error',
+    name: 'InvalidAggregatorAddress',
+    inputs: [],
+  },
+  {
+    type: 'error',
     name: 'InvalidBLSPairingKey',
     inputs: [],
   },
@@ -2486,17 +2800,7 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     type: 'error',
-    name: 'InvalidTaskManagerConfig',
-    inputs: [],
-  },
-  {
-    type: 'error',
     name: 'NonSignerPubkeysNotSorted',
-    inputs: [],
-  },
-  {
-    type: 'error',
-    name: 'NotChallengable',
     inputs: [],
   },
   {
@@ -2527,6 +2831,11 @@ export const NewtonProverTaskManagerAbi = [
   {
     type: 'error',
     name: 'OperatorNotRegistered',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'OperatorNotWhitelisted',
     inputs: [],
   },
   {

@@ -1,5 +1,11 @@
-import { NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
-import { MAINNET_NEWTON_PROVER_TASK_MANAGER, AVS_METHODS, SEPOLIA_NEWTON_PROVER_TASK_MANAGER } from '@core/const';
+import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
+import {
+  MAINNET_NEWTON_PROVER_TASK_MANAGER,
+  AVS_METHODS,
+  SEPOLIA_NEWTON_PROVER_TASK_MANAGER,
+  SEPOLIA_ATTESTATION_VALIDATOR,
+  MAINNET_ATTESTATION_VALIDATOR,
+} from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, normalizeIntent, removeHexPrefix } from '@core/utils/intent';
@@ -127,6 +133,10 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
     ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
     : MAINNET_NEWTON_PROVER_TASK_MANAGER;
 
+  const attestationValidatorAddress = publicClient.chain?.testnet
+    ? SEPOLIA_ATTESTATION_VALIDATOR
+    : MAINNET_ATTESTATION_VALIDATOR;
+
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
@@ -149,7 +159,7 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   }
 
   const past = await publicClient.getContractEvents({
-    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
     eventName: 'TaskResponded',
     fromBlock: SafeFromBlock[publicClient.chain?.id ?? 1],
@@ -173,8 +183,8 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   }
 
   const attestationHash = await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
+    address: attestationValidatorAddress,
+    abi: AttestationValidatorAbi,
     functionName: 'attestations',
     args: [args.taskId],
   });
@@ -182,15 +192,6 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
   const attestationHashBigInt = hexToBigInt(attestationHash as Hex);
 
   if (!attestationHashBigInt) return TaskStatus.AttestationSpent;
-
-  const isTaskChallenged = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
-    functionName: 'taskSuccesfullyChallenged',
-    args: [args.taskId],
-  })) as boolean;
-
-  if (isTaskChallenged) return TaskStatus.SuccessfullyChallenged;
 
   if (isTaskResponded) return TaskStatus.Responded;
 
