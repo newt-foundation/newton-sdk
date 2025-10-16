@@ -131,9 +131,9 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
 
-    getPolicyData: (args: { index: number }): Promise<Address[]> => {
+    getPolicyData: (): Promise<Address[]> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress, ...args });
+      return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress });
     },
 
     getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
