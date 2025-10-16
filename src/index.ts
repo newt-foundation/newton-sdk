@@ -170,6 +170,12 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
+
+    schemaCid: (): Promise<string> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.schemaCid({ publicClient, policyContractAddress: validatedAddress });
+    },
+
     supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.supportsInterface({ publicClient, policyContractAddress: validatedAddress, ...args });
