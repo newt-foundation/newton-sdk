@@ -146,9 +146,9 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       return policyReadFunctions.getSchemaCid({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    isPolicyVerified: (args: { client: Address }): Promise<boolean> => {
+    isPolicyVerified: (): Promise<boolean> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.isPolicyVerified({ publicClient, policyContractAddress: validatedAddress, ...args });
+      return policyReadFunctions.isPolicyVerified({ publicClient, policyContractAddress: validatedAddress });
     },
 
     metadataCid: (): Promise<string> => {
