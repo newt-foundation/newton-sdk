@@ -3,26 +3,6 @@ import { PolicyId, PolicyParamsJson } from '@core/types/policy';
 import { PublicClient, WalletClient, keccak256, encodePacked, Address, fromHex } from 'viem';
 
 // Read function wrappers - exact same names as on-chain functions
-const policyUri = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<string> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'policyUri',
-    });
-    return result as string;
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get policyUri - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
 
 const getPolicyId = async ({
   publicClient,
@@ -171,27 +151,6 @@ const entrypoint = async ({
   }
 };
 
-const schemaUri = async ({
-  publicClient,
-  policyContractAddress,
-}: {
-  publicClient: PublicClient;
-  policyContractAddress: Address;
-}): Promise<string> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'schemaUri',
-    });
-    return result as string;
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get schemaUri - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
-  }
-};
-
 const clientToPolicyId = async ({
   publicClient,
   policyContractAddress,
@@ -236,6 +195,195 @@ const policyData = async ({
   } catch (error) {
     throw new Error(
       `Newton SDK: Failed to get policyData - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const getEntrypoint = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getEntrypoint',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getEntrypoint - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const getMetadataCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getMetadataCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getMetadataCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const getPolicyCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getPolicyCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getPolicyCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const getPolicyData = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<Address[]> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getPolicyData',
+    });
+    return result as Address[];
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getPolicyData - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const getSchemaCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getSchemaCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getSchemaCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const isPolicyVerified = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<boolean> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'isPolicyVerified',
+    });
+    return result as boolean;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get isPolicyVerified - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const metadataCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'metadataCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get metadataCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const policyCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'policyCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get policyCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+};
+
+const schemaCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient;
+  policyContractAddress: Address;
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'schemaCid',
+    });
+    return result as string;
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get schemaCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
   }
 };
@@ -292,9 +440,11 @@ const initialize = async ({
   policyContractAddress: Address;
   factory: Address;
   entrypoint: string;
-  policyUri: string;
-  schemaUri: string;
+  policyCid: string;
+  schemaCid: string;
   policyData: Address[];
+  metadataCid: string;
+  owner: Address;
 }): Promise<`0x${string}`> => {
   try {
     if (!walletClient.chain) {
@@ -306,7 +456,15 @@ const initialize = async ({
       address: policyContractAddress,
       abi: NewtonPolicyAbi,
       functionName: 'initialize',
-      args: [args.factory, args.entrypoint, args.policyUri, args.schemaUri, args.policyData],
+      args: [
+        args.factory,
+        args.entrypoint,
+        args.policyCid,
+        args.schemaCid,
+        args.policyData,
+        args.metadataCid,
+        args.owner,
+      ],
       chain: walletClient.chain,
       account,
     });
@@ -384,16 +542,23 @@ export const policyWriteFunctions = {
 
 export const policyReadFunctions = {
   // On-chain read functions
-  policyUri,
   getPolicyId,
   getPolicyConfig,
   supportsInterface,
   owner,
   factory,
   entrypoint,
-  schemaUri,
   clientToPolicyId,
   policyData,
+  getEntrypoint,
+  getMetadataCid,
+  getPolicyCid,
+  getPolicyData,
+  getSchemaCid,
+  isPolicyVerified,
+  metadataCid,
+  policyCid,
+  schemaCid,
   // Off-chain functions
   precomputePolicyId,
 };

@@ -37,9 +37,11 @@ const newtonWalletClientActions =
       initialize: (args: {
         factory: Address;
         entrypoint: string;
-        policyUri: string;
-        schemaUri: string;
+        policyCid: string;
+        schemaCid: string;
         policyData: Address[];
+        metadataCid: string;
+        owner: Address;
       }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
         return policyWriteFunctions.initialize({ walletClient, policyContractAddress: validatedAddress, ...args });
@@ -91,24 +93,10 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
     getTaskStatus: (args: { taskId: TaskId }): Promise<TaskStatus> => getTaskStatus(publicClient, args),
 
     // Policy read functions
-    policyUri: (): Promise<string> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.policyUri({ publicClient, policyContractAddress: validatedAddress });
-    },
 
-    supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
+    clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.supportsInterface({ publicClient, policyContractAddress: validatedAddress, ...args });
-    },
-
-    owner: (): Promise<Address> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.owner({ publicClient, policyContractAddress: validatedAddress });
-    },
-
-    factory: (): Promise<Address> => {
-      const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.factory({ publicClient, policyContractAddress: validatedAddress });
+      return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
 
     entrypoint: (): Promise<string> => {
@@ -116,24 +104,24 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
       return policyReadFunctions.entrypoint({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    schemaUri: (): Promise<string> => {
+    factory: (): Promise<Address> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.schemaUri({ publicClient, policyContractAddress: validatedAddress });
+      return policyReadFunctions.factory({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    policyData: (args: { index: number }): Promise<Address> => {
+    getEntrypoint: (): Promise<string> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args });
+      return policyReadFunctions.getEntrypoint({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
+    getMetadataCid: (): Promise<string> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+      return policyReadFunctions.getMetadataCid({ publicClient, policyContractAddress: validatedAddress });
     },
 
-    getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
+    getPolicyCid: (): Promise<string> => {
       const validatedAddress = validatePolicyContractAddress();
-      return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+      return policyReadFunctions.getPolicyCid({ publicClient, policyContractAddress: validatedAddress });
     },
 
     getPolicyConfig: (args: {
@@ -141,6 +129,56 @@ const newtonPublicClientActions = (options?: { policyContractAddress?: Address }
     }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
       const validatedAddress = validatePolicyContractAddress();
       return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    getPolicyData: (): Promise<Address[]> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    getSchemaCid: (): Promise<string> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.getSchemaCid({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    isPolicyVerified: (): Promise<boolean> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.isPolicyVerified({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    metadataCid: (): Promise<string> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.metadataCid({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    owner: (): Promise<Address> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.owner({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    policyCid: (): Promise<string> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.policyCid({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    policyData: (args: { index: number }): Promise<Address> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args });
+    },
+
+    schemaCid: (): Promise<string> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.schemaCid({ publicClient, policyContractAddress: validatedAddress });
+    },
+
+    supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
+      const validatedAddress = validatePolicyContractAddress();
+      return policyReadFunctions.supportsInterface({ publicClient, policyContractAddress: validatedAddress, ...args });
     },
 
     // SDK utility function
