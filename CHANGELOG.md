@@ -1,3 +1,15 @@
+# v0.2.3 (Thu Oct 16 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update policy methods [#78](https://github.com/newt-foundation/newton-sdk/pull/78) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.2 (Wed Oct 15 2025)
 
 #### 🐛 Bug Fix
