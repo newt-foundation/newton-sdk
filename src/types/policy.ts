@@ -49,5 +49,5 @@ export interface PolicyDataInfo {
 }
 
 export interface PolicyCodeInfo {
-  codeUri: string; // e.g., IPFS for Rego or other
+  codeUri: string; // e.g., IPFS for Rego or other.
 }
