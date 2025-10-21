@@ -1,16 +1,19 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
-import {
-  MAINNET_NEWTON_PROVER_TASK_MANAGER,
-  AVS_METHODS,
-  SEPOLIA_NEWTON_PROVER_TASK_MANAGER,
-  SEPOLIA_ATTESTATION_VALIDATOR,
-  MAINNET_ATTESTATION_VALIDATOR,
-} from '@core/const';
+import { AVS_METHODS } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, normalizeIntent, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
-import { hexToBigInt, padHex, PublicClient as Client, WalletClient, Hex, publicActions, PublicClient } from 'viem';
+import {
+  hexToBigInt,
+  padHex,
+  PublicClient as Client,
+  WalletClient,
+  Hex,
+  publicActions,
+  PublicClient,
+  Address,
+} from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
@@ -47,6 +50,7 @@ const waitForTaskResponded = async (
     timeoutMs?: number;
     abortSignal?: AbortSignal;
   },
+  taskManagerAddress: Address,
   taskRequestedAtBlock?: bigint,
 ): Promise<TaskResponseResult> => {
   if (!args.taskId) {
@@ -60,7 +64,7 @@ const waitForTaskResponded = async (
   const fromBlockParam = taskRequestedAtBlock ?? defaultFromBlock;
 
   const past = await publicClient.getContractEvents({
-    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
     eventName: 'TaskResponded',
     fromBlock: fromBlockParam,
@@ -98,7 +102,7 @@ const waitForTaskResponded = async (
     }
 
     unsub = publicClient.watchContractEvent({
-      address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+      address: taskManagerAddress,
       abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
@@ -119,24 +123,25 @@ const waitForTaskResponded = async (
   });
 };
 
-const getTaskResponseHash = (publicClient: Client, args: { taskId: TaskId }): Promise<Hex | null> => {
+const getTaskResponseHash = (
+  publicClient: Client,
+  args: { taskId: TaskId },
+  taskManagerAddress: Address,
+): Promise<Hex | null> => {
   return publicClient.readContract({
-    address: publicClient.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER,
+    address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
     functionName: 'allTaskHashes',
     args: [args.taskId],
   }) as Promise<Hex | null>;
 };
 
-const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Promise<TaskStatus> => {
-  const taskManagerAddress = publicClient.chain?.testnet
-    ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER
-    : MAINNET_NEWTON_PROVER_TASK_MANAGER;
-
-  const attestationValidatorAddress = publicClient.chain?.testnet
-    ? SEPOLIA_ATTESTATION_VALIDATOR
-    : MAINNET_ATTESTATION_VALIDATOR;
-
+const getTaskStatus = async (
+  publicClient: Client,
+  args: { taskId: TaskId },
+  taskManagerAddress: Address,
+  attestationValidatorAddress: Address,
+): Promise<TaskStatus> => {
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
@@ -201,12 +206,14 @@ const getTaskStatus = async (publicClient: Client, args: { taskId: TaskId }): Pr
 async function submitEvaluationRequest(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
+  taskManagerAddress: Address,
+  proverApiUrl?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
 
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
-  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet);
+  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet, proverApiUrl);
 
   const account = walletClient.account;
 
@@ -258,6 +265,7 @@ async function submitEvaluationRequest(
       return waitForTaskResponded(
         walletWithPublic as PublicClient,
         { taskId, timeoutMs },
+        taskManagerAddress,
         taskIdRef.taskRequestedAtBlock,
       );
     },
