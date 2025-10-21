@@ -1,3 +1,15 @@
+# v0.2.4 (Tue Oct 21 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update to latest attestation validator and task manager addresses [#81](https://github.com/newt-foundation/newton-sdk/pull/81) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.3 (Thu Oct 16 2025)
 
 #### 🐛 Bug Fix
