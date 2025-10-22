@@ -4,8 +4,8 @@ import { createJsonRpcRequestPayload } from './json-rpc';
 export class AvsHttpService {
   private baseUrl;
 
-  constructor(testMode: boolean) {
-    this.baseUrl = testMode ? TESTNET_AVS_API : MAINNET_AVS_API;
+  constructor(testMode: boolean, urlOverride?: string) {
+    this.baseUrl = urlOverride || (testMode ? TESTNET_AVS_API : MAINNET_AVS_API);
   }
 
   async Post(method: string, args: unknown, authorization?: string) {
