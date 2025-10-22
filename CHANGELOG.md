@@ -1,3 +1,15 @@
+# v0.2.5 (Wed Oct 22 2025)
+
+#### 🐛 Bug Fix
+
+- fix: implement sdk overrides for testing [#82](https://github.com/newt-foundation/newton-sdk/pull/82) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.4 (Tue Oct 21 2025)
 
 #### 🐛 Bug Fix
