@@ -1,3 +1,15 @@
+# v0.2.6 (Fri Oct 31 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update sepolia task manager and validator addresses [#84](https://github.com/newt-foundation/newton-sdk/pull/84) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.5 (Wed Oct 22 2025)
 
 #### 🐛 Bug Fix
