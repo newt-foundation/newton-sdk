@@ -17,11 +17,10 @@ import {
 import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
-  task_request_id: string;
+  task_id: Hex;
   task_request: any;
   status: 'Completed' | 'Failed';
   result: {
-    task_id: Hex;
     tx_hash: Hex;
   };
   error?: unknown;
@@ -252,7 +251,7 @@ async function submitEvaluationRequest(
   if (res.result.error) throw new Error(res.result.error);
 
   const createTaskResult = res.result as WaitForTaskIdResult;
-  taskIdRef.taskId = createTaskResult.result.task_id;
+  taskIdRef.taskId = createTaskResult.task_id;
 
   const builder: PendingTaskBuilder = {
     // live view of the ref
