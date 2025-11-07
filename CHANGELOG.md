@@ -1,3 +1,15 @@
+# v0.2.7 (Fri Nov 07 2025)
+
+#### 🐛 Bug Fix
+
+- fix: update WaitForTaskIdResult [#85](https://github.com/newt-foundation/newton-sdk/pull/85) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.6 (Fri Oct 31 2025)
 
 #### 🐛 Bug Fix
