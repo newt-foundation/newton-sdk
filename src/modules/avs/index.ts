@@ -254,16 +254,10 @@ async function submitEvaluationRequest(
   taskIdRef.taskId = createTaskResult.task_id;
 
   const builder: PendingTaskBuilder = {
-    // live view of the ref
-    get taskId() {
-      return taskIdRef.taskId;
-    },
-
     waitForTaskResponded: async ({ timeoutMs }: { timeoutMs?: number }) => {
-      const taskId = taskIdRef.taskId;
       return waitForTaskResponded(
         walletWithPublic as PublicClient,
-        { taskId, timeoutMs },
+        { timeoutMs },
         taskManagerAddress,
         taskIdRef.taskRequestedAtBlock,
       );
