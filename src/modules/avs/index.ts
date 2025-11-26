@@ -14,6 +14,7 @@ import {
   PublicClient,
   Address,
 } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, sepolia } from 'viem/chains';
 
 export interface WaitForTaskIdResult {
@@ -206,6 +207,7 @@ async function submitEvaluationRequest(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
   taskManagerAddress: Address,
+  developerPk: Hex,
   proverApiUrl?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
@@ -213,12 +215,6 @@ async function submitEvaluationRequest(
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
   const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet, proverApiUrl);
-
-  const account = walletClient.account;
-
-  if (!account || !account.sign) {
-    throw new Error('Newton SDK: walletClient must have a local account to sign the request');
-  }
 
   const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
 
@@ -234,7 +230,8 @@ async function submitEvaluationRequest(
     timeout,
   });
 
-  const requestSignature = await account.sign({ hash });
+  const devSigner = privateKeyToAccount(developerPk);
+  const requestSignature = await devSigner.sign({ hash });
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
@@ -248,7 +245,7 @@ async function submitEvaluationRequest(
     request_signature: requestSignature,
   };
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], request_signature);
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], requestSignature);
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
