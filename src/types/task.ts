@@ -14,6 +14,7 @@ export interface IntentFromParams {
 export interface SubmitEvaluationRequestParams {
   policyClient: Address;
   intent: IntentFromParams;
+  intentSignature?: Hex;
   quorumNumber?: Hex;
   quorumThresholdPercentage?: number;
   wasmArgs?: Hex;
@@ -51,6 +52,7 @@ interface TaskResponse {
     chainId: bigint;
     functionSignature: string;
   };
+  intentSignature: Hex;
   evaluationResult: boolean;
 }
 
@@ -68,6 +70,7 @@ export interface TaskResponseResult {
     policyId: Hex;
     policyClient: Address;
     intent: NormalizedIntent;
+    intentSignature: Hex;
     expiration: number;
   };
 }

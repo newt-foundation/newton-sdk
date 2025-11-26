@@ -220,33 +220,35 @@ async function submitEvaluationRequest(
     throw new Error('Newton SDK: walletClient must have a local account to sign the request');
   }
 
-  const { policyClient, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
+  const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
 
   const normalizedIntent = normalizeIntent(args.intent);
 
   const hash = getEvaluationRequestHash({
     policyClient,
     intent: normalizedIntent,
+    intentSignature,
     quorumNumber,
     quorumThresholdPercentage,
     wasmArgs,
     timeout,
   });
 
-  const signature = await account.sign({ hash });
+  const requestSignature = await account.sign({ hash });
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
     intent: sanitiziedIntent,
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
     quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
-    signature,
+    request_signature: requestSignature,
   };
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], signature);
+  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], request_signature);
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
