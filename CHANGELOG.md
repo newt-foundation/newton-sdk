@@ -1,3 +1,16 @@
+# v0.2.8 (Mon Dec 01 2025)
+
+#### 🐛 Bug Fix
+
+- minor: Intent Signature [#88](https://github.com/newt-foundation/newton-sdk/pull/88) ([@albertnbrown](https://github.com/albertnbrown) [@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 2
+
+- Albert Brown ([@albertnbrown](https://github.com/albertnbrown))
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.7 (Fri Nov 07 2025)
 
 #### 🐛 Bug Fix
