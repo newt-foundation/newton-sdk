@@ -2875,6 +2875,7 @@ export type TaskRespondedLog = Log & {
         chainId: string; // string representation of big int
         functionSignature: Hex;
       };
+      intentSignature: Hex;
       evaluationResult: Hex;
     };
     responseCertificate: {

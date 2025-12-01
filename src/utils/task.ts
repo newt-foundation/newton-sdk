@@ -6,12 +6,13 @@ import { TaskRespondedLog } from '@core/abis/newtonAbi';
 export const getEvaluationRequestHash = (args: {
   policyClient: `0x${string}`;
   intent: NormalizedIntent;
+  intentSignature?: Hex;
   quorumNumber?: Hex;
   quorumThresholdPercentage?: number;
   wasmArgs?: Hex;
   timeout: number;
 }) => {
-  const { policyClient, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
+  const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
   const normalizedIntent = normalizeIntent(args.intent);
 
   const hash = keccak256(
@@ -24,6 +25,7 @@ export const getEvaluationRequestHash = (args: {
         'bytes', // intent.data
         'uint256', // intent.chainId
         'bytes', // intent.functionSignature
+        'bytes', // intentSignature
         'bytes', // quorumNumber
         'uint32', // quorumThresholdPercentage
         'bytes', // wasmArgs
@@ -37,6 +39,7 @@ export const getEvaluationRequestHash = (args: {
         normalizedIntent.data,
         normalizedIntent.chainId,
         normalizedIntent.functionSignature,
+        intentSignature ? intentSignature : '0x',
         quorumNumber ? quorumNumber : '0x',
         quorumThresholdPercentage ?? 0,
         wasmArgs ? wasmArgs : '0x',
@@ -71,6 +74,7 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     policyId: taskResponse.policyId,
     policyClient: taskResponse.policyClient,
     intent: taskResponse.intent,
+    intentSignature: taskResponse.intentSignature,
     expiration: responseCertificate.responseExpireBlock,
   };
 
