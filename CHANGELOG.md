@@ -1,3 +1,15 @@
+# v0.2.9 (Tue Dec 02 2025)
+
+#### 🐛 Bug Fix
+
+- update newton abis [#89](https://github.com/newt-foundation/newton-sdk/pull/89) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.8 (Mon Dec 01 2025)
 
 #### 🐛 Bug Fix
