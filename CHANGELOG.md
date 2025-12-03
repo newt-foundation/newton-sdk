@@ -1,3 +1,15 @@
+# v0.2.10 (Wed Dec 03 2025)
+
+#### 🐛 Bug Fix
+
+- update sepolia CAs [#90](https://github.com/newt-foundation/newton-sdk/pull/90) ([@mikeysight](https://github.com/mikeysight))
+
+#### Authors: 1
+
+- Michael Finn ([@mikeysight](https://github.com/mikeysight))
+
+---
+
 # v0.2.9 (Tue Dec 02 2025)
 
 #### 🐛 Bug Fix
