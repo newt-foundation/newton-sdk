@@ -1,11 +1,11 @@
-import { MAINNET_AVS_API, TESTNET_AVS_API } from '@core/const';
+import { MAINNET_GATEWAY_API, TESTNET_GATEWAY_API } from '@core/const';
 import { createJsonRpcRequestPayload } from './json-rpc';
 
 export class AvsHttpService {
   private baseUrl;
 
   constructor(testMode: boolean, urlOverride?: string) {
-    this.baseUrl = urlOverride || (testMode ? TESTNET_AVS_API : MAINNET_AVS_API);
+    this.baseUrl = urlOverride || (testMode ? TESTNET_GATEWAY_API : MAINNET_GATEWAY_API);
   }
 
   async Post(method: string, args: unknown, authorization?: string) {
