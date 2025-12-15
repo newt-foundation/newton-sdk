@@ -17,7 +17,7 @@ import {
 } from './const';
 
 interface SdkOverrides {
-  proverApiUrl?: string;
+  gatewayApiUrl?: string;
   taskManagerAddress?: Address;
   attestationValidatorAddress?: Address;
 }
@@ -44,13 +44,13 @@ const newtonWalletClientActions =
       overrides?.taskManagerAddress ??
       (walletClient?.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER);
 
-    const proverApiUrl = overrides?.proverApiUrl ?? undefined;
+    const gatewayApiUrl = overrides?.gatewayApiUrl ?? undefined;
 
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, proverApiUrl),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, gatewayApiUrl),
 
       initialize: (args: {
         factory: Address;
