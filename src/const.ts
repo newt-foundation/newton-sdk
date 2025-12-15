@@ -2,7 +2,7 @@ export const TESTNET_GATEWAY_API = 'https://gateway-avs.sepolia.newt.foundation/
 export const MAINNET_GATEWAY_API = 'https://gateway-avs.newt.foundation/'; // mainnet
 
 export const GATEWAY_METHODS = {
-  createTask: 'newton_createTask',
+  createTask: 'newt_createTask',
 };
 
 export const SEPOLIA_NEWTON_PROVER_TASK_MANAGER = '0xb9758d9d03e6dfb8001cadf63b87ba519a618e13';
