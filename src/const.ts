@@ -1,5 +1,5 @@
-export const TESTNET_GATEWAY_API = 'https://gateway-avs.sepolia.newt.foundation/'; // sepolia
-export const MAINNET_GATEWAY_API = 'https://gateway-avs.newt.foundation/'; // mainnet
+export const TESTNET_GATEWAY_API = 'https://gateway-avs.sepolia.newt.foundation/rpc'; // sepolia
+export const MAINNET_GATEWAY_API = 'https://gateway-avs.newt.foundation/rpc'; // mainnet
 
 export const GATEWAY_METHODS = {
   createTask: 'newt_createTask',
