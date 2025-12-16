@@ -23,8 +23,9 @@ interface SdkOverrides {
 }
 
 const newtonWalletClientActions =
-  (config: { developerPk: Hex; policyContractAddress?: Address }, overrides?: SdkOverrides) => (walletClient: any) => {
-    const { developerPk, policyContractAddress } = config;
+  (config: { developerPk: Hex; apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (walletClient: any) => {
+    const { developerPk, apiKey, policyContractAddress } = config;
 
     const validatePolicyContractAddress = () => {
       if (!policyContractAddress) {
@@ -50,7 +51,7 @@ const newtonWalletClientActions =
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, gatewayApiUrl),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, apiKey, gatewayApiUrl),
 
       initialize: (args: {
         factory: Address;

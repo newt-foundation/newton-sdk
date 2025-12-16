@@ -206,6 +206,7 @@ async function submitEvaluationRequest(
   args: SubmitEvaluationRequestParams,
   taskManagerAddress: Address,
   developerPk: Hex,
+  apiKey: string,
   gatewayApiUrl?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
@@ -243,7 +244,7 @@ async function submitEvaluationRequest(
     request_signature: requestSignature,
   };
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, [requestBody], requestSignature);
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, [requestBody], apiKey);
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
