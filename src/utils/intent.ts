@@ -49,8 +49,8 @@ export function sanitizeIntentForRequest(intent: IntentFromParams): HexlifiedInt
     from: intent.from,
     to: intent.to,
     value: valueAsHex,
-    data: removeHexPrefix(intent.data),
+    data: intent.data,
     chain_id: chainIdAsHex,
-    function_signature: removeHexPrefix(intent.functionSignature),
+    function_signature: intent.functionSignature,
   };
 }

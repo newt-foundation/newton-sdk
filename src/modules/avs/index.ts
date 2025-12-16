@@ -241,10 +241,10 @@ async function submitEvaluationRequest(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
-    request_signature: requestSignature,
+    signature: requestSignature,
   };
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, [requestBody], apiKey);
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
