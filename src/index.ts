@@ -35,11 +35,6 @@ const newtonWalletClientActions =
         return policyContractAddress;
       }
     };
-    if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
-      throw new Error(
-        'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
-      );
-    }
     const taskManagerAddress =
       overrides?.taskManagerAddress ??
       (walletClient?.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER);
@@ -83,11 +78,6 @@ const newtonWalletClientActions =
 
 const newtonPublicClientActions =
   (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
-    if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
-      throw new Error(
-        'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
-      );
-    }
 
     const policyContractAddress = options?.policyContractAddress;
     const validatePolicyContractAddress = () => {
