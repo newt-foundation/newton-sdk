@@ -1,3 +1,15 @@
+# v0.2.11 (Fri Dec 26 2025)
+
+#### 🐛 Bug Fix
+
+- update task manager address [#94](https://github.com/newt-foundation/newton-sdk/pull/94) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.10 (Wed Dec 03 2025)
 
 #### 🐛 Bug Fix
