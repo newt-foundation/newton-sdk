@@ -1,0 +1,46 @@
+title = "Gitleaks Configuration"
+
+minVersion = "v8.30.0"
+
+[extend]
+# Extend the default gitleaks configuration
+useDefault = true
+
+# Custom rule to detect Stripe API keys
+[[rules]]
+id = "stripe-api-key"
+description = "Stripe API Key"
+regex = '''(?i)(sk|pk)_(test|live)_[0-9a-zA-Z]{10,99}'''
+keywords = [
+    "pk_live",
+    "sk_live",
+    "pk_test",
+    "sk_test",
+]
+
+[[allowlists]]
+description = "global allow lists"
+paths = [
+    '''gitleaks\.toml''',
+    '''(?i)\.(?:bmp|gif|jpe?g|png|svg|tiff?)$''',
+    '''(?i)\.(?:eot|[ot]tf|woff2?)$''',
+    '''(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|.dll|pdb|exe|gltf)$''',
+]
+regexes = [
+    '''(?i)^true|false|null$''',
+    '''^(?i:a+|b+|c+|d+|e+|f+|g+|h+|i+|j+|k+|l+|m+|n+|o+|p+|q+|r+|s+|t+|u+|v+|w+|x+|y+|z+|\*+|\.+)$''',
+    '''^\$(?:\d+|{\d+})$''',
+    '''^\$(?:[A-Z_]+|[a-z_]+)$''',
+    '''^\${(?:[A-Z_]+|[a-z_]+)}$''',
+    '''^\{\{[ \t]*[\w ().|]+[ \t]*}}$''',
+    '''^\$\{\{[ \t]*(?:(?:env|github|secrets|vars)(?:\.[A-Za-z]\w+)+[\w "'&./=|]*)[ \t]*}}$''',
+    '''^%(?:[A-Z_]+|[a-z_]+)%$''',
+    '''^%[+\-# 0]?[bcdeEfFgGoOpqstTUvxX]$''',
+    '''^\{\d{0,2}}$''',
+    '''^@(?:[A-Z_]+|[a-z_]+)@$''',
+    '''^/Users/(?i)[a-z0-9]+/[\w .-/]+$''',
+    '''^/(?:bin|etc|home|opt|tmp|usr|var)/[\w ./-]+$''',
+]
+stopwords = [
+    "",
+]
