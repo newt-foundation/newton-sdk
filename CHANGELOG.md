@@ -1,3 +1,15 @@
+# v0.3.0 (Mon Jan 05 2026)
+
+#### 🚀 Enhancement
+
+- feat: deleted deepsource config and implemented gitleaks [#95](https://github.com/newt-foundation/newton-sdk/pull/95) ([@noahyoshida](https://github.com/noahyoshida))
+
+#### Authors: 1
+
+- [@noahyoshida](https://github.com/noahyoshida)
+
+---
+
 # v0.2.11 (Fri Dec 26 2025)
 
 #### 🐛 Bug Fix
