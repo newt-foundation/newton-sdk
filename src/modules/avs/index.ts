@@ -106,6 +106,8 @@ const waitForTaskResponded = async (
       abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
+        console.log('taskManagerAddress: ', taskManagerAddress);
+        console.log('logs: ', logs);
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
