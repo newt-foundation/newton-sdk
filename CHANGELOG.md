@@ -1,3 +1,15 @@
+# v0.3.1 (Wed Jan 14 2026)
+
+#### 🐛 Bug Fix
+
+- bump task manager and attestation validator addresses [#96](https://github.com/newt-foundation/newton-sdk/pull/96) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.0 (Mon Jan 05 2026)
 
 #### 🚀 Enhancement
