@@ -1,3 +1,39 @@
+# v0.3.1 (Wed Jan 14 2026)
+
+#### 🐛 Bug Fix
+
+- bump task manager and attestation validator addresses [#96](https://github.com/newt-foundation/newton-sdk/pull/96) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.0 (Mon Jan 05 2026)
+
+#### 🚀 Enhancement
+
+- feat: deleted deepsource config and implemented gitleaks [#95](https://github.com/newt-foundation/newton-sdk/pull/95) ([@noahyoshida](https://github.com/noahyoshida))
+
+#### Authors: 1
+
+- [@noahyoshida](https://github.com/noahyoshida)
+
+---
+
+# v0.2.11 (Fri Dec 26 2025)
+
+#### 🐛 Bug Fix
+
+- update task manager address [#94](https://github.com/newt-foundation/newton-sdk/pull/94) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.2.10 (Wed Dec 03 2025)
 
 #### 🐛 Bug Fix
