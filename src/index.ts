@@ -17,14 +17,15 @@ import {
 } from './const';
 
 interface SdkOverrides {
-  proverApiUrl?: string;
+  gatewayApiUrl?: string;
   taskManagerAddress?: Address;
   attestationValidatorAddress?: Address;
 }
 
 const newtonWalletClientActions =
-  (config: { developerPk: Hex; policyContractAddress?: Address }, overrides?: SdkOverrides) => (walletClient: any) => {
-    const { developerPk, policyContractAddress } = config;
+  (config: { developerPk: Hex; apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (walletClient: any) => {
+    const { developerPk, apiKey, policyContractAddress } = config;
 
     const validatePolicyContractAddress = () => {
       if (!policyContractAddress) {
@@ -44,13 +45,13 @@ const newtonWalletClientActions =
       overrides?.taskManagerAddress ??
       (walletClient?.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER);
 
-    const proverApiUrl = overrides?.proverApiUrl ?? undefined;
+    const gatewayApiUrl = overrides?.gatewayApiUrl ?? undefined;
 
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, proverApiUrl),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, apiKey, gatewayApiUrl),
 
       initialize: (args: {
         factory: Address;

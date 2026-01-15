@@ -1,5 +1,5 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
-import { AVS_METHODS } from '@core/const';
+import { GATEWAY_METHODS } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, normalizeIntent, removeHexPrefix } from '@core/utils/intent';
@@ -17,15 +17,13 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, sepolia } from 'viem/chains';
 
-export interface WaitForTaskIdResult {
+export interface CreateTaskResult {
   task_id: Hex;
   task_request: any;
   status: 'Completed' | 'Failed';
-  result: {
-    tx_hash: Hex;
-  };
+  aggregation_response: any;
+  timestamp: number;
   error?: unknown;
-  processing_time_ms?: number;
 }
 
 export interface PendingTaskBuilder {
@@ -106,8 +104,6 @@ const waitForTaskResponded = async (
       abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
-        console.log('taskManagerAddress: ', taskManagerAddress);
-        console.log('logs: ', logs);
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
@@ -210,13 +206,14 @@ async function submitEvaluationRequest(
   args: SubmitEvaluationRequestParams,
   taskManagerAddress: Address,
   developerPk: Hex,
-  proverApiUrl?: string,
+  apiKey: string,
+  gatewayApiUrl?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
 
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
-  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet, proverApiUrl);
+  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet, gatewayApiUrl);
 
   const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
 
@@ -244,14 +241,14 @@ async function submitEvaluationRequest(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
-    request_signature: requestSignature,
+    signature: requestSignature,
   };
 
-  const res = await avsHttpService.Post(AVS_METHODS.createTaskAndWait, [requestBody], requestSignature);
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
-  const createTaskResult = res.result as WaitForTaskIdResult;
+  const createTaskResult = res.result as CreateTaskResult;
   taskIdRef.taskId = createTaskResult.task_id;
 
   const builder: PendingTaskBuilder = {
