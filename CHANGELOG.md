@@ -1,3 +1,15 @@
+# v0.3.2 (Thu Jan 15 2026)
+
+#### 🐛 Bug Fix
+
+- update use gateway for task creation [#91](https://github.com/newt-foundation/newton-sdk/pull/91) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.1 (Wed Jan 14 2026)
 
 #### 🐛 Bug Fix
