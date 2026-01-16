@@ -1,4 +1,4 @@
-import { mainnet, sepolia } from 'viem/chains';
+import { mainnet, sepolia, baseSepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
 import {
@@ -9,18 +9,15 @@ import {
   waitForTaskResponded,
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
-import {
-  MAINNET_ATTESTATION_VALIDATOR,
-  MAINNET_NEWTON_PROVER_TASK_MANAGER,
-  SEPOLIA_ATTESTATION_VALIDATOR,
-  SEPOLIA_NEWTON_PROVER_TASK_MANAGER,
-} from './const';
+import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
 
 interface SdkOverrides {
   gatewayApiUrl?: string;
   taskManagerAddress?: Address;
   attestationValidatorAddress?: Address;
 }
+
+const supportedChains = [mainnet.id, sepolia.id, baseSepolia.id];
 
 const newtonWalletClientActions =
   (config: { developerPk: Hex; apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
@@ -36,22 +33,21 @@ const newtonWalletClientActions =
         return policyContractAddress;
       }
     };
-    if (walletClient?.chain?.id !== mainnet.id && walletClient?.chain?.id !== sepolia.id) {
+    if (!supportedChains.includes(walletClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        'Newton SDK: Invalid network specified for newtonWalletClientActions. Only mainnet and sepolia are supported',
+        `Newton SDK: Invalid network specified for newtonWalletClientActions. Only ${supportedChains.join(', ')} are supported`,
       );
     }
     const taskManagerAddress =
-      overrides?.taskManagerAddress ??
-      (walletClient?.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER);
+      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id];
 
-    const gatewayApiUrl = overrides?.gatewayApiUrl ?? undefined;
+    const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined;
 
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, apiKey, gatewayApiUrl),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
@@ -101,12 +97,10 @@ const newtonPublicClientActions =
     };
 
     const taskManagerAddress =
-      overrides?.taskManagerAddress ??
-      (publicClient?.chain?.testnet ? SEPOLIA_NEWTON_PROVER_TASK_MANAGER : MAINNET_NEWTON_PROVER_TASK_MANAGER);
+      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id];
 
     const attestationValidatorAddress =
-      overrides?.attestationValidatorAddress ??
-      (publicClient?.chain?.testnet ? SEPOLIA_ATTESTATION_VALIDATOR : MAINNET_ATTESTATION_VALIDATOR);
+      overrides?.attestationValidatorAddress ?? ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id];
 
     return {
       // AVS module functions

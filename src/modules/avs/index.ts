@@ -207,13 +207,13 @@ async function submitEvaluationRequest(
   taskManagerAddress: Address,
   developerPk: Hex,
   apiKey: string,
-  gatewayApiUrl?: string,
+  gatewayApiUrlOverride?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
 
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
-  const avsHttpService = new AvsHttpService(!!walletWithPublic?.chain?.testnet, gatewayApiUrl);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
 
   const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
 
