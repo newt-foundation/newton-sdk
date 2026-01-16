@@ -1,3 +1,15 @@
+# v0.3.3 (Fri Jan 16 2026)
+
+#### 🐛 Bug Fix
+
+- add base sepolia support [#97](https://github.com/newt-foundation/newton-sdk/pull/97) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.2 (Thu Jan 15 2026)
 
 #### 🐛 Bug Fix
