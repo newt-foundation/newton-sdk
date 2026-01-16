@@ -1,11 +1,11 @@
-import { MAINNET_GATEWAY_API, TESTNET_GATEWAY_API } from '@core/const';
+import { GATEWAY_API_URLS } from '@core/const';
 import { createJsonRpcRequestPayload } from './json-rpc';
 
 export class AvsHttpService {
   private baseUrl;
 
-  constructor(testMode: boolean, urlOverride?: string) {
-    this.baseUrl = urlOverride || (testMode ? TESTNET_GATEWAY_API : MAINNET_GATEWAY_API);
+  constructor(chainId: number, urlOverride?: string) {
+    this.baseUrl = urlOverride || GATEWAY_API_URLS[chainId];
   }
 
   async Post(method: string, args: unknown, apiKey: string) {
