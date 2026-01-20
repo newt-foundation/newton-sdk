@@ -1,55 +1,6 @@
-import { NormalizedIntent, TaskResponseResult } from '@core/types/task';
-import { encodePacked, Hex, hexToBigInt, keccak256 } from 'viem';
-import { normalizeIntent } from './intent';
+import { TaskResponseResult } from '@core/types/task';
+import { hexToBigInt } from 'viem';
 import { TaskRespondedLog } from '@core/abis/newtonAbi';
-
-export const getEvaluationRequestHash = (args: {
-  policyClient: `0x${string}`;
-  intent: NormalizedIntent;
-  intentSignature?: Hex;
-  quorumNumber?: Hex;
-  quorumThresholdPercentage?: number;
-  wasmArgs?: Hex;
-  timeout: number;
-}) => {
-  const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
-  const normalizedIntent = normalizeIntent(args.intent);
-
-  const hash = keccak256(
-    encodePacked(
-      [
-        'address', // policyClient
-        'address', // intent.from
-        'address', // intent.to
-        'uint256', // intent.value
-        'bytes', // intent.data
-        'uint256', // intent.chainId
-        'bytes', // intent.functionSignature
-        'bytes', // intentSignature
-        'bytes', // quorumNumber
-        'uint32', // quorumThresholdPercentage
-        'bytes', // wasmArgs
-        'uint64', // timeout
-      ],
-      [
-        policyClient,
-        normalizedIntent.from,
-        normalizedIntent.to,
-        normalizedIntent.value,
-        normalizedIntent.data,
-        normalizedIntent.chainId,
-        normalizedIntent.functionSignature,
-        intentSignature ? intentSignature : '0x',
-        quorumNumber ? quorumNumber : '0x',
-        quorumThresholdPercentage ?? 0,
-        wasmArgs ? wasmArgs : '0x',
-        BigInt(timeout),
-      ],
-    ),
-  );
-
-  return hash;
-};
 
 export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseResult {
   const taskResponse = {

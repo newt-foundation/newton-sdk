@@ -2,8 +2,8 @@ import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog }
 import { GATEWAY_METHODS } from '@core/const';
 import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
-import { sanitizeIntentForRequest, normalizeIntent, removeHexPrefix } from '@core/utils/intent';
-import { convertLogToTaskResponse, getEvaluationRequestHash } from '@core/utils/task';
+import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
+import { convertLogToTaskResponse } from '@core/utils/task';
 import {
   hexToBigInt,
   padHex,
@@ -14,7 +14,6 @@ import {
   PublicClient,
   Address,
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, sepolia } from 'viem/chains';
 
 export interface CreateTaskResult {
@@ -205,7 +204,6 @@ async function submitEvaluationRequest(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
   taskManagerAddress: Address,
-  developerPk: Hex,
   apiKey: string,
   gatewayApiUrlOverride?: string,
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
@@ -214,23 +212,6 @@ async function submitEvaluationRequest(
   const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
-
-  const { policyClient, intentSignature, quorumNumber, quorumThresholdPercentage, wasmArgs, timeout } = args;
-
-  const normalizedIntent = normalizeIntent(args.intent);
-
-  const hash = getEvaluationRequestHash({
-    policyClient,
-    intent: normalizedIntent,
-    intentSignature,
-    quorumNumber,
-    quorumThresholdPercentage,
-    wasmArgs,
-    timeout,
-  });
-
-  const devSigner = privateKeyToAccount(developerPk);
-  const requestSignature = await devSigner.sign({ hash });
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
@@ -241,7 +222,6 @@ async function submitEvaluationRequest(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
-    signature: requestSignature,
     direct_broadcast: true,
   };
 
