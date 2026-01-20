@@ -1,3 +1,15 @@
+# v0.3.4 (Tue Jan 20 2026)
+
+#### 🐛 Bug Fix
+
+- add direct broadcast flag [#98](https://github.com/newt-foundation/newton-sdk/pull/98) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.3 (Fri Jan 16 2026)
 
 #### 🐛 Bug Fix
