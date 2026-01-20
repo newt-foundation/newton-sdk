@@ -1,3 +1,15 @@
+# v0.3.5 (Tue Jan 20 2026)
+
+#### 🐛 Bug Fix
+
+- clean up intent request params [#99](https://github.com/newt-foundation/newton-sdk/pull/99) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.4 (Tue Jan 20 2026)
 
 #### 🐛 Bug Fix
