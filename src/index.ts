@@ -20,9 +20,8 @@ interface SdkOverrides {
 const supportedChains = [mainnet.id, sepolia.id, baseSepolia.id];
 
 const newtonWalletClientActions =
-  (config: { developerPk: Hex; apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
-  (walletClient: any) => {
-    const { developerPk, apiKey, policyContractAddress } = config;
+  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) => (walletClient: any) => {
+    const { apiKey, policyContractAddress } = config;
 
     const validatePolicyContractAddress = () => {
       if (!policyContractAddress) {
@@ -47,7 +46,7 @@ const newtonWalletClientActions =
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, developerPk, apiKey, gatewayApiUrlOverride),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
