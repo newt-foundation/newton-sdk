@@ -242,6 +242,7 @@ async function submitEvaluationRequest(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     signature: requestSignature,
+    direct_broadcast: true,
   };
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
