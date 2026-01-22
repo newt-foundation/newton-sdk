@@ -10,6 +10,7 @@ import {
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
+import { popupRequest } from './service/popup';
 
 interface SdkOverrides {
   gatewayApiUrl?: string;
@@ -81,7 +82,7 @@ const newtonWalletClientActions =
       },
 
       connectIdentityWithNewton: (): Promise<any> => {
-        return Promise.resolve({ foo: 'bar ' });
+        return popupRequest({}, idpUrl);
       },
     };
   };
