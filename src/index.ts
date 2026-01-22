@@ -15,6 +15,7 @@ interface SdkOverrides {
   gatewayApiUrl?: string;
   taskManagerAddress?: Address;
   attestationValidatorAddress?: Address;
+  newtonIdpUrl?: string;
 }
 
 const supportedChains = [mainnet.id, sepolia.id, baseSepolia.id];
@@ -41,6 +42,10 @@ const newtonWalletClientActions =
       overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id];
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined;
+
+    const idpUrl = overrides?.newtonIdpUrl ?? 'https://idp.newtonproject.org';
+
+    console.log('idpUrl:', idpUrl);
 
     return {
       submitEvaluationRequest: (
@@ -73,6 +78,10 @@ const newtonWalletClientActions =
           policyContractAddress: validatedAddress,
           ...args,
         });
+      },
+
+      connectIdentityWithNewton: (): Promise<any> => {
+        return Promise.resolve({ foo: 'bar ' });
       },
     };
   };
