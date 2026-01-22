@@ -46,9 +46,7 @@ const newtonWalletClientActions =
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined;
 
-    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs-bf5a.vercel.app';
-
-    console.log('idpUrl:', idpUrl);
+    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs.vercel.app';
 
     return {
       submitEvaluationRequest: (
@@ -83,12 +81,12 @@ const newtonWalletClientActions =
         });
       },
 
-      connectIdentityWithNewton: (args: { appWalletAddress: Address }): Promise<any> => {
+      connectIdentityWithNewton: (args: { appWalletAddress: Address; appClientAddress?: Address }): Promise<any> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Connect,
             id: getPayloadId(),
-            params: { apiKey, appWalletAddress: args.appWalletAddress },
+            params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
           },
           idpUrl,
         );
