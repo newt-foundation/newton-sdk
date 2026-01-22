@@ -11,6 +11,8 @@ import {
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
 import { popupRequest } from './service/popup';
+import { NewtonIdpPayloadMethod } from './types';
+import { getPayloadId } from './utils/get-payload-id';
 
 interface SdkOverrides {
   gatewayApiUrl?: string;
@@ -44,7 +46,7 @@ const newtonWalletClientActions =
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined;
 
-    const idpUrl = overrides?.newtonIdpUrl ?? 'https://idp.newtonproject.org';
+    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs-bf5a.vercel.app';
 
     console.log('idpUrl:', idpUrl);
 
@@ -81,8 +83,15 @@ const newtonWalletClientActions =
         });
       },
 
-      connectIdentityWithNewton: (): Promise<any> => {
-        return popupRequest({}, idpUrl);
+      connectIdentityWithNewton: (args: { appWalletAddress: Address }): Promise<any> => {
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.Connect,
+            id: getPayloadId(),
+            params: { apiKey, appWalletAddress: args.appWalletAddress },
+          },
+          idpUrl,
+        );
       },
     };
   };

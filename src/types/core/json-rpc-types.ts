@@ -39,16 +39,6 @@ export interface JsonRpcResponsePayload<ResultType = any> {
   error?: JsonRpcError | null;
 }
 
-export enum NewtonWalletPayloadMethod {
-  // Wallet methods
-  ShowUI = 'newton_wallet_wallet',
-  Receive = 'newton_wallet_wallet_receive',
-  PersonalSign = 'personal_sign',
-  SendUserOperation = 'eth_sendUserOperation',
-
-  // User methods
-  Connect = 'newton_wallet_user_connect',
-  Disconnect = 'newton_wallet_user_disconnect',
-  IsConnected = 'newton_wallet_user_is_connected',
-  GetConnectedProfile = 'newton_wallet_user_get_connected_profile',
+export enum NewtonIdpPayloadMethod {
+  Connect = 'newton_idp_user_connect',
 }

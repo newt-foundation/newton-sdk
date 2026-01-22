@@ -1,19 +1,18 @@
 import { renderPopupPrompt } from '@core/popup-prompt';
 import { createRpcError, MagicRPCError, SDKError } from '@core/sdk-exceptions';
-import { JsonRpcResponsePayload, NewtonWalletPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types';
+import { JsonRpcResponsePayload, NewtonIdpPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types';
 import { createPromiEvent } from '@core/utils/promise-tools';
 
 const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app';
 
-enum MagicIncomingWindowMessage {
-  MAGIC_HANDLE_RESPONSE = 'MAGIC_HANDLE_RESPONSE',
-  MAGIC_POPUP_READY = 'MAGIC_POPUP_READY',
-  MAGIC_HANDLE_EVENT = 'MAGIC_HANDLE_EVENT',
-  POPUP_RPC_REQUEST_RESOLVE = 'POPUP_RPC_REQUEST_RESOLVE',
+enum NewtonIdpIncomingWindowMessage {
+  NEWTON_IDP_POPUP_READY = 'NEWTON_IDP_POPUP_READY',
+  NEWTON_IDP_POPUP_RESPONSE = 'NEWTON_IDP_POPUP_RESPONSE',
+  NEWTON_IDP_POPUP_EVENT = 'NEWTON_IDP_POPUP_EVENT',
 }
 
-enum MagicOutgoingWindowMessage {
-  MAGIC_HANDLE_REQUEST = 'MAGIC_HANDLE_REQUEST',
+enum NewtonIdpOutgoingWindowMessage {
+  NEWTON_IDP_HANDLE_REQUEST = 'NEWTON_IDP_HANDLE_REQUEST',
 }
 
 enum PopupIntermediaryEventName {
@@ -29,11 +28,11 @@ function setPopup(_popup: Window | null) {
 }
 
 function isPopupReady(msgType: string) {
-  return msgType === MagicIncomingWindowMessage.MAGIC_POPUP_READY;
+  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_READY;
 }
 
 function isPopupResolve(msgType: string) {
-  return msgType === MagicIncomingWindowMessage.POPUP_RPC_REQUEST_RESOLVE;
+  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_RESPONSE;
 }
 
 const POPUP_ERROR_MESSAGES = {
@@ -50,7 +49,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
   const popupTop = window.screenTop + window.outerHeight * 0.15;
   const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`;
   const endpoint = endpointOverride || defaultEndpoint;
-  const containerId = `newton-wallet-popup-action-modal-container`;
+  const containerId = `newton-idp-popup-action-modal-container`;
 
   const isPopupOpen = () => popup && popup?.window !== null && !popup.closed;
 
@@ -62,7 +61,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     const focusPopup = () => {
       popup?.focus?.();
     };
-    const refocusPromptContainerId = `newton-wallet-popup-refocus-modal-container`;
+    const refocusPromptContainerId = `newton-idp-popup-refocus-modal-container`;
     let unmountRefocusPrompt: () => void | undefined;
     const showRefocusPrompt = () => {
       const { unmount } = renderPopupPrompt({
@@ -88,7 +87,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     if (isPopupOpen() && popupReady) {
       // Override current action or enqueue the new one
       focusPopup();
-      popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*');
+      popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_IDP_HANDLE_REQUEST, payload }, '*');
     } else if (isPopupOpen() || popupPromptModalExists) {
       fulfillPromiEvent(() =>
         reject(new SDKError(SDKErrorCode.PopupAlreadyExists, POPUP_ERROR_MESSAGES.POP_WINDOW_ALREADY_EXISTS)),
@@ -97,7 +96,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     } else {
       // try to open the pop up.
       openPopup();
-      if (payload.method === NewtonWalletPayloadMethod.Connect) {
+      if (payload.method === NewtonIdpPayloadMethod.Connect) {
         showRefocusPrompt();
       }
     }
@@ -151,7 +150,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
       }, 1000);
       if (isPopupReady(event.data?.msgType)) {
         popupReady = true;
-        popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*');
+        popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_IDP_HANDLE_REQUEST, payload }, '*');
         setPopupCheckInterval();
       } else if (isPopupResolve(event.data?.msgType)) {
         window.removeEventListener('message', messageListener);
@@ -169,7 +168,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
         } else {
           fulfillPromiEvent(() => resolve(response?.result as ResultType));
         }
-      } else if (event.data?.msgType === MagicIncomingWindowMessage.MAGIC_HANDLE_EVENT) {
+      } else if (event.data?.msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_EVENT) {
         const intermediaryEventName = event.data?.response?.result?.event;
         if (!intermediaryEventName) return;
         const intermediaryEventParams = event.data?.response?.result?.params;

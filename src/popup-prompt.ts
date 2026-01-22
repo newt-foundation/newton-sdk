@@ -146,10 +146,15 @@ export const renderPopupPrompt = ({
           `,
   );
   const unmount = () => {
-    document.body.removeChild(elContainer);
-    document.head.removeChild(link1);
-    document.head.removeChild(link2);
-    document.head.removeChild(link3);
+    try {
+      document.body.removeChild(elContainer);
+      document.head.removeChild(link1);
+      document.head.removeChild(link2);
+      document.head.removeChild(link3);
+    } catch (e) {
+      // do nothing
+    }
+
     // RESTORE SCROLLING IN BODY
     document.body.setAttribute(
       'style',
