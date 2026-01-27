@@ -103,7 +103,7 @@ export const renderPopupPrompt = ({
 
   /** BODY TEXT */
   const elBodyText = document.createElement('p');
-  elBodyText.innerText = 'Don’t see the Newton Wallet browser? Click continue to re-launch it.';
+  elBodyText.innerText = 'Don’t see the Newton IDP popup? Click continue to re-launch it.';
   elBodyText.setAttribute(
     'style',
     `
