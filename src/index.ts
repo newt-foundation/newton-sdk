@@ -81,7 +81,7 @@ const newtonWalletClientActions =
         });
       },
 
-      connectIdentityWithNewton: (args: { appWalletAddress: Address; appClientAddress?: Address }): Promise<any> => {
+      connectIdentityWithNewton: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Connect,
@@ -90,6 +90,14 @@ const newtonWalletClientActions =
           },
           idpUrl,
         );
+      },
+
+      unlinkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
+        return popupRequest({
+          method: NewtonIdpPayloadMethod.Unlink,
+          id: getPayloadId(),
+          params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+        });
       },
     };
   };
