@@ -3,6 +3,8 @@ import { createRpcError, MagicRPCError, SDKError } from '@core/sdk-exceptions';
 import { JsonRpcResponsePayload, NewtonWalletPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types';
 import { createPromiEvent } from '@core/utils/promise-tools';
 
+const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app';
+
 enum MagicIncomingWindowMessage {
   MAGIC_HANDLE_RESPONSE = 'MAGIC_HANDLE_RESPONSE',
   MAGIC_POPUP_READY = 'MAGIC_POPUP_READY',
@@ -40,14 +42,14 @@ const POPUP_ERROR_MESSAGES = {
   FAILED_TO_OPEN_POPUP: 'Failed to open popup window',
 };
 
-export function popupRequest<ResultType = any>(payload: any) {
+export function popupRequest<ResultType = any>(payload: any, endpointOverride?: string) {
   // Popup window constants
   const popupWidth = 393;
   const popupHeight = 620;
   const popupLeft = window.screenLeft + (window.outerWidth / 2 - popupWidth / 2);
   const popupTop = window.screenTop + window.outerHeight * 0.15;
   const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`;
-  const endpoint = this.sdk._options.endpoint || this.sdk.defaultEndpoint;
+  const endpoint = endpointOverride || defaultEndpoint;
   const containerId = `newton-wallet-popup-action-modal-container`;
 
   const isPopupOpen = () => popup && popup?.window !== null && !popup.closed;

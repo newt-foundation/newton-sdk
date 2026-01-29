@@ -82,3 +82,85 @@ export enum TaskStatus {
   Created = 'Created',
   AttestationExpired = 'AttestationExpired',
 }
+
+export interface AggregationResponse {
+  non_signer_quorum_bitmap_indices: number[];
+  non_signer_stake_indices: number[][];
+  non_signers_pub_keys_g1: number[][];
+  quorum_apk_indices: number[];
+  quorum_apks_g1: number[][];
+  signers_agg_sig_g1: { g1_point: number[] };
+  signers_apk_g2: number[];
+}
+
+export interface Attestation {
+  taskId: Hex;
+  policyId: Hex;
+  policyClient: Address;
+  intentSignature: Hex;
+  expiration: number;
+  intent: {
+    chainId: Hex;
+    data: Hex;
+    from: Address;
+    functionSignature: Hex;
+    to: Address;
+    value: Hex;
+  };
+}
+
+export interface GatewayCreateTaskResult {
+  aggregation_response: AggregationResponse;
+  error: null;
+  expiration: number;
+  reference_block: number;
+  status: 'success' | 'failed';
+  task: {
+    intent: {
+      chainId: Hex;
+      data: Hex;
+      from: Address;
+      functionSignature: Hex;
+      to: Address;
+      value: Hex;
+    };
+    intentSignature: Hex;
+    policyClient: Address;
+    quorumNumbers: Hex;
+    quorumThresholdPercentage: number;
+    taskCreatedBlock: number;
+    taskId: Hex;
+    wasmArgs: Hex;
+  };
+  task_id: Hex;
+  task_response: {
+    evaluation_result: number[];
+    intent: {
+      chainId: Hex;
+      data: Hex;
+      from: Address;
+      functionSignature: Hex;
+      to: Address;
+      value: Hex;
+    };
+    intent_signature: Hex;
+    policy_address: Address;
+    policy_client: Address;
+    policy_config: { expireAfter: number; policyParams: Hex };
+    policy_id: Hex;
+    policy_task_data: {
+      policy: Hex;
+      policyAddress: Address;
+      policyData: Array<{
+        attestation: Hex;
+        data: Hex;
+        expireBlock: number;
+        policyDataAddress: Address;
+        wasmArgs: Hex;
+      }>;
+      policyId: Hex;
+    };
+    task_id: Hex;
+  };
+  timestamp: number;
+}

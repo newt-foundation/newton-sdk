@@ -1,6 +1,14 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { GATEWAY_METHODS } from '@core/const';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
+import {
+  GatewayCreateTaskResult,
+  SubmitEvaluationRequestParams,
+  TaskId,
+  TaskResponseResult,
+  TaskStatus,
+  AggregationResponse,
+  Attestation,
+} from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
@@ -251,4 +259,57 @@ async function submitEvaluationRequest(
 
   return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
 }
-export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
+
+async function evaluateIntent(
+  walletClient: WalletClient,
+  args: SubmitEvaluationRequestParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<{
+  result: {
+    evaluationResult: boolean;
+    attestation: Attestation;
+    taskId: Hex;
+    aggregationResponse: AggregationResponse;
+  };
+}> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+
+  const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: sanitiziedIntent,
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
+    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
+    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    timeout: args.timeout,
+    direct_broadcast: true,
+  };
+
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
+  if (res.error) throw res.error;
+  if (res.result.error) throw new Error(res.result.error);
+
+  const createTaskResult = res.result as GatewayCreateTaskResult;
+  const taskResponse = createTaskResult.task_response;
+  const attestation = {
+    taskId: taskResponse.task_id,
+    policyId: taskResponse.policy_id,
+    policyClient: taskResponse.policy_client,
+    intent: taskResponse.intent,
+    intentSignature: taskResponse.intent_signature,
+    expiration: createTaskResult.expiration,
+  };
+  return {
+    result: {
+      evaluationResult: taskResponse.evaluation_result.some(a => a === 1),
+      attestation,
+      taskId: taskResponse.task_id,
+      aggregationResponse: createTaskResult.aggregation_response,
+    },
+  };
+}
+
+export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus, evaluateIntent };

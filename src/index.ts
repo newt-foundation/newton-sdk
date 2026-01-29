@@ -7,6 +7,7 @@ import {
   PendingTaskBuilder,
   submitEvaluationRequest,
   waitForTaskResponded,
+  evaluateIntent,
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
@@ -52,6 +53,11 @@ const newtonWalletClientActions =
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
+
+      evaluateIntent: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
+        evaluateIntent(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
