@@ -43,7 +43,7 @@ const newtonWalletClient = createWalletClient({
   account: signer,
 }).extend(newtonWalletClientActions());
 
-newtonWalletClient.submitEvaluationRequest({...})
+newtonWalletClient.evaluateIntent({...})
 ```
 
 ## Development
