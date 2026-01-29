@@ -6,6 +6,8 @@ import {
   TaskId,
   TaskResponseResult,
   TaskStatus,
+  AggregationResponse,
+  Attestation,
 } from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
@@ -263,7 +265,14 @@ async function evaluateIntent(
   args: SubmitEvaluationRequestParams,
   apiKey: string,
   gatewayApiUrlOverride?: string,
-): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> {
+): Promise<{
+  result: {
+    evaluationResult: boolean;
+    attestation: Attestation;
+    taskId: Hex;
+    aggregationResponse: AggregationResponse;
+  };
+}> {
   const walletWithPublic = walletClient.extend(publicActions);
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
 
@@ -298,6 +307,7 @@ async function evaluateIntent(
       evaluationResult: taskResponse.evaluation_result.some(a => a === 1),
       attestation,
       taskId: taskResponse.task_id,
+      aggregationResponse: createTaskResult.aggregation_response,
     },
   };
 }

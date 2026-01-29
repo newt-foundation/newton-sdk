@@ -83,20 +83,34 @@ export enum TaskStatus {
   AttestationExpired = 'AttestationExpired',
 }
 
-export interface GatewayCreateTaskResult {
-  aggregation_response: {
-    non_signer_quorum_bitmap_indices: number[];
-    non_signer_stake_indices: number[][];
-    non_signers_pub_keys_g1: number[][];
-    quorum_apk_indices: number[];
-    quorum_apks_g1: number[][];
-    signers_agg_sig_g1: { g1_point: number[] };
-    signers_apk_g2: number[];
-    task_created_block: number;
-    task_id: Hex;
-    task_response_digest: Hex;
-    total_stake_indices: number[];
+export interface AggregationResponse {
+  non_signer_quorum_bitmap_indices: number[];
+  non_signer_stake_indices: number[][];
+  non_signers_pub_keys_g1: number[][];
+  quorum_apk_indices: number[];
+  quorum_apks_g1: number[][];
+  signers_agg_sig_g1: { g1_point: number[] };
+  signers_apk_g2: number[];
+}
+
+export interface Attestation {
+  taskId: Hex;
+  policyId: Hex;
+  policyClient: Address;
+  intentSignature: Hex;
+  expiration: number;
+  intent: {
+    chainId: Hex;
+    data: Hex;
+    from: Address;
+    functionSignature: Hex;
+    to: Address;
+    value: Hex;
   };
+}
+
+export interface GatewayCreateTaskResult {
+  aggregation_response: AggregationResponse;
   error: null;
   expiration: number;
   reference_block: number;
