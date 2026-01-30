@@ -92,6 +92,7 @@ export interface AggregationResponse {
   signers_agg_sig_g1: { g1_point: number[] };
   signers_apk_g2: number[];
   total_stake_indices: number[];
+  task_created_block: number;
 }
 
 export interface Task {

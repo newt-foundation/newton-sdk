@@ -298,7 +298,6 @@ async function evaluateIntent(
     policyId: createTaskResult.task_response.policy_id,
     policyTaskData: createTaskResult.task_response.policy_task_data,
     taskId: createTaskResult.task_id,
-    taskCreatedBlock: createTaskResult.task.taskCreatedBlock,
   };
 
   const blsSignature = transformAggregationResponse(createTaskResult.aggregation_response);
