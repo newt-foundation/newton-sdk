@@ -294,6 +294,7 @@ async function evaluateIntent(
     intentSignature: createTaskResult.task_response.intent_signature,
     policyAddress: createTaskResult.task_response.policy_address,
     policyClient: createTaskResult.task_response.policy_client,
+    policyConfig: createTaskResult.task_response.policy_config,
     policyId: createTaskResult.task_response.policy_id,
     policyTaskData: createTaskResult.task_response.policy_task_data,
     taskId: createTaskResult.task_id,
