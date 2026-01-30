@@ -6,9 +6,8 @@ import {
   TaskId,
   TaskResponseResult,
   TaskStatus,
-  AggregationResponse,
-  Attestation,
 } from '@core/types/task';
+import { transformAggregationResponse } from '@core/utils/format-bls-signature';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
@@ -21,6 +20,7 @@ import {
   publicActions,
   PublicClient,
   Address,
+  bytesToHex,
 } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
 
@@ -266,12 +266,7 @@ async function evaluateIntent(
   apiKey: string,
   gatewayApiUrlOverride?: string,
 ): Promise<{
-  result: {
-    evaluationResult: boolean;
-    attestation: Attestation;
-    taskId: Hex;
-    aggregationResponse: AggregationResponse;
-  };
+  result: any;
 }> {
   const walletWithPublic = walletClient.extend(publicActions);
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
@@ -293,21 +288,26 @@ async function evaluateIntent(
   if (res.result.error) throw new Error(res.result.error);
 
   const createTaskResult = res.result as GatewayCreateTaskResult;
-  const taskResponse = createTaskResult.task_response;
-  const attestation = {
-    taskId: taskResponse.task_id,
-    policyId: taskResponse.policy_id,
-    policyClient: taskResponse.policy_client,
-    intent: taskResponse.intent,
-    intentSignature: taskResponse.intent_signature,
-    expiration: createTaskResult.expiration,
+  const taskResponse = {
+    evaluationResult: bytesToHex(Uint8Array.from(createTaskResult.task_response.evaluation_result)),
+    intent: createTaskResult.task_response.intent,
+    intentSignature: createTaskResult.task_response.intent_signature,
+    policyAddress: createTaskResult.task_response.policy_address,
+    policyClient: createTaskResult.task_response.policy_client,
+    policyId: createTaskResult.task_response.policy_id,
+    policyTaskData: createTaskResult.task_response.policy_task_data,
+    taskId: createTaskResult.task_id,
+    taskCreatedBlock: createTaskResult.task.taskCreatedBlock,
   };
+
+  const blsSignature = transformAggregationResponse(createTaskResult.aggregation_response);
+
   return {
     result: {
-      evaluationResult: taskResponse.evaluation_result.some(a => a === 1),
-      attestation,
-      taskId: taskResponse.task_id,
-      aggregationResponse: createTaskResult.aggregation_response,
+      evaluationResult: !!hexToBigInt(taskResponse.evaluationResult),
+      task: createTaskResult.task,
+      taskResponse,
+      blsSignature,
     },
   };
 }
