@@ -12,6 +12,7 @@ import { transformAggregationResponse } from '@core/utils/format-bls-signature';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
+import { subscribeToTaskEvents } from '@core/utils/task-events';
 import {
   hexToBigInt,
   padHex,
@@ -338,7 +339,7 @@ async function submitIntentAndSubscribe(
   args: SubmitEvaluationRequestParams,
   apiKey: string,
   gatewayApiUrlOverride?: string,
-): Promise<{ result: SubmitIntentResult }> {
+): Promise<{ result: SubmitIntentResult; ws: WebSocket }> {
   const walletWithPublic = walletClient.extend(publicActions);
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
@@ -359,9 +360,18 @@ async function submitIntentAndSubscribe(
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
-  const submitIntentResult = res.result as any;
+  const submitIntentResult = res.result as SubmitIntentResult;
 
-  return { result: submitIntentResult };
+  const WS_URL = `wss://${new URL(avsHttpService.baseUrl).hostname}/ws`;
+
+  const ws = subscribeToTaskEvents(WS_URL, submitIntentResult.subscription_topic, {
+    apiKey,
+    onEvent: event => {
+      console.log('Newton SDK Task event:', event);
+    },
+  });
+
+  return { result: submitIntentResult, ws };
 }
 
 export {

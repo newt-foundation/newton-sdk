@@ -2,7 +2,7 @@ import { GATEWAY_API_URLS } from '@core/const';
 import { createJsonRpcRequestPayload } from './json-rpc';
 
 export class AvsHttpService {
-  private baseUrl;
+  public baseUrl;
 
   constructor(chainId: number, urlOverride?: string) {
     this.baseUrl = urlOverride || GATEWAY_API_URLS[chainId];
