@@ -12,7 +12,7 @@ import { transformAggregationResponse } from '@core/utils/format-bls-signature';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
-import { subscribeToTaskEvents } from '@core/utils/task-events';
+import { getTaskEventsWebSocket } from '@core/utils/task-events';
 import {
   hexToBigInt,
   padHex,
@@ -364,12 +364,7 @@ async function submitIntentAndSubscribe(
 
   const WS_URL = `wss://${new URL(avsHttpService.baseUrl).hostname}/ws`;
 
-  const ws = subscribeToTaskEvents(WS_URL, submitIntentResult.subscription_topic, {
-    apiKey,
-    onEvent: event => {
-      console.log('Newton SDK Task event:', event);
-    },
-  });
+  const ws = getTaskEventsWebSocket(WS_URL, submitIntentResult.subscription_topic, apiKey);
 
   return { result: submitIntentResult, ws };
 }
