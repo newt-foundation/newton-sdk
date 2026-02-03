@@ -260,7 +260,17 @@ async function submitEvaluationRequest(
   return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
 }
 
-async function evaluateIntent(
+/**
+ * Evaluate intent directly without waiting for task response confirmation on source chain.
+ * Results are to be used with `validateAttestationDirect` on NewtonPolicyClient (NewtonProverTaskManagerShared)
+ *
+ * @param walletClient - Wallet client
+ * @param args - Evaluation request parameters
+ * @param apiKey - API key
+ * @param gatewayApiUrlOverride - Gateway API URL override
+ * @returns Evaluation result
+ */
+async function evaluateIntentDirect(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
   apiKey: string,
@@ -312,4 +322,4 @@ async function evaluateIntent(
   };
 }
 
-export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus, evaluateIntent };
+export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus, evaluateIntentDirect };
