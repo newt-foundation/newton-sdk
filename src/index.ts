@@ -8,6 +8,7 @@ import {
   submitEvaluationRequest,
   waitForTaskResponded,
   evaluateIntentDirect,
+  submitIntentAndSubscribe,
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
@@ -58,6 +59,9 @@ const newtonWalletClientActions =
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      submitIntentAndSubscribe: (args: SubmitEvaluationRequestParams): Promise<{ result: any }> =>
+        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
