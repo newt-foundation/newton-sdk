@@ -21,6 +21,13 @@ export interface SubmitEvaluationRequestParams {
   timeout: number; // in seconds
 }
 
+export interface SubmitIntentResult {
+  message: string;
+  subscription_topic: string;
+  task_id: Hex;
+  timestamp: number;
+}
+
 export interface NormalizedIntent {
   from: Address;
   to: Address;

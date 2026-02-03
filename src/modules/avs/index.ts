@@ -4,6 +4,7 @@ import {
   GatewayCreateTaskResult,
   SubmitEvaluationRequestParams,
   TaskId,
+  SubmitIntentResult,
   TaskResponseResult,
   TaskStatus,
 } from '@core/types/task';
@@ -337,7 +338,7 @@ async function submitIntentAndSubscribe(
   args: SubmitEvaluationRequestParams,
   apiKey: string,
   gatewayApiUrlOverride?: string,
-): Promise<{ result: any }> {
+): Promise<{ result: SubmitIntentResult }> {
   const walletWithPublic = walletClient.extend(publicActions);
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
