@@ -78,29 +78,3 @@ export function subscribeToTaskEvents(
 
   return ws;
 }
-
-// --- Example usage ---
-
-const WS_URL = 'wss://gateway-avs.sepolia.newt.foundation/ws';
-const API_KEY = 'your-api-key';
-
-// After calling newt_sendTask you get something like:
-// { task_id, subscription_topic: "newton.task.0x1234...", message, timestamp }
-const subscriptionTopic = 'newton.task.0x1234567890abcdef...'; // use actual value from response
-
-export const ws = subscribeToTaskEvents(WS_URL, subscriptionTopic, {
-  apiKey: API_KEY,
-  onEvent: event => {
-    if (event.type === 'update') {
-      const { status, result, error } = event.data || {};
-      if (status === 'success' && result?.response_transaction_hash) {
-        console.log('Recorded on-chain:', result.response_transaction_hash);
-      }
-      if (status === 'failed' && error) {
-        console.error('Task failed:', error);
-      }
-    }
-  },
-});
-
-// Later: ws.close();
