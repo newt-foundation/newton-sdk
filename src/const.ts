@@ -9,6 +9,7 @@ export const GATEWAY_API_URLS: Record<number, string> = {
 
 export const GATEWAY_METHODS = {
   createTask: 'newt_createTask',
+  sendTask: 'newt_sendTask',
 };
 
 export const NEWTON_PROVER_TASK_MANAGER: Record<number, Hex> = {

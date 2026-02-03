@@ -322,4 +322,52 @@ async function evaluateIntentDirect(
   };
 }
 
-export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus, evaluateIntentDirect };
+/**
+ * Submit intent and subscribe to task response on source chain (this will be slower but can be used to challenge the task evaluation)
+ * Results are to be used with `validateAttestation` on NewtonPolicyClient (NewtonProverTaskManager)
+ *
+ * @param walletClient - Wallet client
+ * @param args
+ * @param apiKey
+ * @param gatewayApiUrlOverride
+ * @returns
+ */
+async function submitIntentAndSubscribe(
+  walletClient: WalletClient,
+  args: SubmitEvaluationRequestParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<{ result: any }> {
+  const walletWithPublic = walletClient.extend(publicActions);
+
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+
+  const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: sanitiziedIntent,
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
+    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
+    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    timeout: args.timeout,
+    direct_broadcast: true,
+  };
+
+  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey);
+  if (res.error) throw res.error;
+  if (res.result.error) throw new Error(res.result.error);
+
+  const submitIntentResult = res.result as any;
+
+  return { result: submitIntentResult };
+}
+
+export {
+  submitEvaluationRequest,
+  waitForTaskResponded,
+  getTaskResponseHash,
+  getTaskStatus,
+  evaluateIntentDirect,
+  submitIntentAndSubscribe,
+};
