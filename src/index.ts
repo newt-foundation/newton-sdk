@@ -1,6 +1,12 @@
 import { mainnet, sepolia, baseSepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
+import {
+  SubmitEvaluationRequestParams,
+  TaskId,
+  TaskResponseResult,
+  TaskStatus,
+  SubmitIntentResult,
+} from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
@@ -60,7 +66,9 @@ const newtonWalletClientActions =
       ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      submitIntentAndSubscribe: (args: SubmitEvaluationRequestParams): Promise<{ result: any }> =>
+      submitIntentAndSubscribe: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
         submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
