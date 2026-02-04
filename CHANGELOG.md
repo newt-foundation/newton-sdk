@@ -1,3 +1,15 @@
+# v0.3.8 (Wed Feb 04 2026)
+
+#### 🐛 Bug Fix
+
+- update sepolia task manager address [#104](https://github.com/newt-foundation/newton-sdk/pull/104) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.7 (Wed Feb 04 2026)
 
 #### 🐛 Bug Fix
