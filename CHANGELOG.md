@@ -1,3 +1,15 @@
+# v0.3.7 (Wed Feb 04 2026)
+
+#### 🐛 Bug Fix
+
+- update abis [#103](https://github.com/newt-foundation/newton-sdk/pull/103) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.6 (Thu Jan 29 2026)
 
 #### 🐛 Bug Fix
