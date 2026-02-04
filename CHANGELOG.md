@@ -1,3 +1,19 @@
+# v0.3.6 (Thu Jan 29 2026)
+
+#### 🐛 Bug Fix
+
+- Resolve task evals optimistcally [#101](https://github.com/newt-foundation/newton-sdk/pull/101) ([@Dizigen](https://github.com/Dizigen))
+
+#### ⚠️ Pushed to `main`
+
+- popup request implementation ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.5 (Tue Jan 20 2026)
 
 #### 🐛 Bug Fix
