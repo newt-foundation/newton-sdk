@@ -1,3 +1,15 @@
+# v0.3.11 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- update the typing of evaluate intent direct to be more correct [#106](https://github.com/newt-foundation/newton-sdk/pull/106) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.10 (Thu Feb 05 2026)
 
 #### 🐛 Bug Fix
