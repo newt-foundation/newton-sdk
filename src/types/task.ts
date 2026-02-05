@@ -120,6 +120,102 @@ export interface Task {
   wasmArgs: Hex;
 }
 
+/** PolicyData item for newt_simulateTask policy_task_data.policyData */
+export interface SimulateTaskPolicyData {
+  wasmArgs: Hex;
+  data: Hex;
+  attestation: Hex;
+  policyDataAddress: Address;
+  expireBlock: number;
+}
+
+/** PolicyTaskData for newt_simulateTask */
+export interface SimulateTaskPolicyTaskData {
+  policyId: Hex;
+  policyAddress: Address;
+  policy: Hex;
+  policyData: SimulateTaskPolicyData[];
+}
+
+export interface SimulateTaskParams {
+  intent: IntentFromParams;
+  policyTaskData: SimulateTaskPolicyTaskData;
+}
+
+export interface SimulateTaskResult {
+  success: boolean;
+  result: { allow?: boolean; reason?: string } | null;
+  error: string | null;
+  details: unknown;
+}
+
+/** PolicyDataInput for newt_simulatePolicy policy_data array */
+export interface PolicyDataInput {
+  policyDataAddress: Address;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyParams {
+  policyClient: Address;
+  policy: string;
+  intent: IntentFromParams;
+  entrypoint?: string;
+  policyData: PolicyDataInput[];
+  policyParams?: Record<string, unknown>;
+  intentSignature?: Hex;
+}
+
+export interface SimulatePolicyEvaluationResult {
+  policy: string;
+  parsed_intent: unknown;
+  policy_params_and_data: unknown;
+  entrypoint: string;
+  result: unknown;
+  expire_after: number;
+}
+
+export interface SimulatePolicyResult {
+  success: boolean;
+  evaluation_result: SimulatePolicyEvaluationResult | null;
+  error: string | null;
+  error_details: {
+    missing_secrets?: Array<{ policy_data_address: Address; has_secrets_schema: boolean }>;
+    suggested_actions?: string[];
+  } | null;
+}
+
+export interface SimulatePolicyDataParams {
+  policyDataAddress: Address;
+  secrets?: string;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyDataResult {
+  success: boolean;
+  policy_data: {
+    specifier: string;
+    data: unknown;
+    timestamp: number;
+  } | null;
+  error: string | null;
+}
+
+export interface SimulatePolicyDataWithClientParams {
+  policyDataAddress: Address;
+  policyClient: Address;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyDataWithClientResult {
+  success: boolean;
+  policy_data: {
+    specifier: string;
+    data: unknown;
+    timestamp: number;
+  } | null;
+  error: string | null;
+}
+
 export interface GatewayCreateTaskResult {
   aggregation_response: AggregationResponse;
   error: null;
