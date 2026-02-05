@@ -14,6 +14,7 @@ import {
   SimulatePolicyDataResult,
   SimulatePolicyDataWithClientParams,
   SimulatePolicyDataWithClientResult,
+  Task,
 } from './types/task';
 import {
   getTaskResponseHash,
@@ -75,7 +76,7 @@ const newtonWalletClientActions =
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
+      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: any; blsSignature: any } }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
