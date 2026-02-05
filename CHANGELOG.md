@@ -1,3 +1,15 @@
+# v0.3.10 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- return task, taskResponse and blsSignature for evaluateIntentDirect [#102](https://github.com/newt-foundation/newton-sdk/pull/102) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.9 (Thu Feb 05 2026)
 
 #### 🐛 Bug Fix
