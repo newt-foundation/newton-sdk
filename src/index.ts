@@ -1,6 +1,19 @@
 import { mainnet, sepolia, baseSepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
+import {
+  SubmitEvaluationRequestParams,
+  TaskId,
+  TaskResponseResult,
+  TaskStatus,
+  SimulateTaskParams,
+  SimulateTaskResult,
+  SimulatePolicyParams,
+  SimulatePolicyResult,
+  SimulatePolicyDataParams,
+  SimulatePolicyDataResult,
+  SimulatePolicyDataWithClientParams,
+  SimulatePolicyDataWithClientResult,
+} from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
@@ -8,6 +21,10 @@ import {
   submitEvaluationRequest,
   waitForTaskResponded,
   evaluateIntent,
+  simulateTask,
+  simulatePolicy,
+  simulatePolicyData,
+  simulatePolicyDataWithClient,
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
@@ -58,6 +75,20 @@ const newtonWalletClientActions =
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
         evaluateIntent(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
+        simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicy: (args: SimulatePolicyParams): Promise<SimulatePolicyResult> =>
+        simulatePolicy(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicyData: (args: SimulatePolicyDataParams): Promise<SimulatePolicyDataResult> =>
+        simulatePolicyData(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicyDataWithClient: (
+        args: SimulatePolicyDataWithClientParams,
+      ): Promise<SimulatePolicyDataWithClientResult> =>
+        simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
