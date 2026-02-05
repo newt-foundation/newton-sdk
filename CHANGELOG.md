@@ -1,3 +1,15 @@
+# v0.3.9 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- add simulate policy functionality [#105](https://github.com/newt-foundation/newton-sdk/pull/105) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.8 (Wed Feb 04 2026)
 
 #### 🐛 Bug Fix
