@@ -5,6 +5,7 @@ import {
   TaskId,
   TaskResponseResult,
   TaskStatus,
+  SubmitIntentResult,
   SimulateTaskParams,
   SimulateTaskResult,
   SimulatePolicyParams,
@@ -21,6 +22,7 @@ import {
   submitEvaluationRequest,
   waitForTaskResponded,
   evaluateIntentDirect,
+  submitIntentAndSubscribe,
   simulateTask,
   simulatePolicy,
   simulatePolicyData,
@@ -71,11 +73,15 @@ const newtonWalletClientActions =
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
 
-      aluateIntentDirect: (
+      evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { evaluationResult: boolean; attestation: any; taskId: Hex } }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
+      submitIntentAndSubscribe: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
+        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
       simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
         simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
 

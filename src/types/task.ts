@@ -21,6 +21,13 @@ export interface SubmitEvaluationRequestParams {
   timeout: number; // in seconds
 }
 
+export interface SubmitIntentResult {
+  message: string;
+  subscription_topic: string;
+  task_id: Hex;
+  timestamp: number;
+}
+
 export interface NormalizedIntent {
   from: Address;
   to: Address;
@@ -39,7 +46,7 @@ export interface HexlifiedIntent {
   function_signature: string;
 }
 
-interface TaskResponse {
+export interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
   policyId: Hex;
@@ -91,14 +98,11 @@ export interface AggregationResponse {
   quorum_apks_g1: number[][];
   signers_agg_sig_g1: { g1_point: number[] };
   signers_apk_g2: number[];
+  total_stake_indices: number[];
+  task_created_block: number;
 }
 
-export interface Attestation {
-  taskId: Hex;
-  policyId: Hex;
-  policyClient: Address;
-  intentSignature: Hex;
-  expiration: number;
+export interface Task {
   intent: {
     chainId: Hex;
     data: Hex;
@@ -107,6 +111,13 @@ export interface Attestation {
     to: Address;
     value: Hex;
   };
+  intentSignature: Hex;
+  policyClient: Address;
+  quorumNumbers: Hex;
+  quorumThresholdPercentage: number;
+  taskCreatedBlock: number;
+  taskId: Hex;
+  wasmArgs: Hex;
 }
 
 /** PolicyData item for newt_simulateTask policy_task_data.policyData */
@@ -211,23 +222,7 @@ export interface GatewayCreateTaskResult {
   expiration: number;
   reference_block: number;
   status: 'success' | 'failed';
-  task: {
-    intent: {
-      chainId: Hex;
-      data: Hex;
-      from: Address;
-      functionSignature: Hex;
-      to: Address;
-      value: Hex;
-    };
-    intentSignature: Hex;
-    policyClient: Address;
-    quorumNumbers: Hex;
-    quorumThresholdPercentage: number;
-    taskCreatedBlock: number;
-    taskId: Hex;
-    wasmArgs: Hex;
-  };
+  task: Task;
   task_id: Hex;
   task_response: {
     evaluation_result: number[];
