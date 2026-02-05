@@ -15,6 +15,7 @@ import {
   SimulatePolicyDataResult,
   SimulatePolicyDataWithClientParams,
   SimulatePolicyDataWithClientResult,
+  Task,
 } from '@core/types/task';
 import { transformAggregationResponse } from '@core/utils/format-bls-signature';
 import { AvsHttpService } from '@core/utils/https';
@@ -286,7 +287,12 @@ async function evaluateIntentDirect(
   apiKey: string,
   gatewayApiUrlOverride?: string,
 ): Promise<{
-  result: any;
+  result: {
+    evaluationResult: boolean;
+    task: Task;
+    taskResponse: any;
+    blsSignature: any;
+  };
 }> {
   const walletWithPublic = walletClient.extend(publicActions);
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
