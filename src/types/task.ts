@@ -253,5 +253,6 @@ export interface GatewayCreateTaskResult {
     };
     task_id: Hex;
   };
+  signature_data: Hex;
   timestamp: number;
 }
