@@ -1,3 +1,15 @@
+# v0.3.12 (Mon Feb 09 2026)
+
+#### 🐛 Bug Fix
+
+- use the signature data returned by gateway instead of computing the b… [#107](https://github.com/newt-foundation/newton-sdk/pull/107) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.11 (Thu Feb 05 2026)
 
 #### 🐛 Bug Fix
