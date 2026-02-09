@@ -1,60 +1,57 @@
-import { AggregationResponse } from '@core/types/task';
+import { decodeAbiParameters, Hex, hexToBytes } from 'viem';
 
-/**
- * Converts a byte array to a hex string
- */
-function bytesToHex(bytes: number[]) {
-  return '0x' + bytes.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Converts a 64-byte array to a BN254.G1Point struct
- * G1Point { X: uint256, Y: uint256 }
- */
-function bytesToG1Point(bytes: number[]) {
-  if (bytes.length !== 64) {
-    throw new Error(`G1Point must be 64 bytes, got ${bytes.length}`);
-  }
-  return {
-    X: BigInt(bytesToHex(bytes.slice(0, 32))),
-    Y: BigInt(bytesToHex(bytes.slice(32, 64))),
-  };
-}
-
-/**
- * Converts a 128-byte array to a BN254.G2Point struct
- * G2Point { X: uint256[2], Y: uint256[2] }
- * Encoding: X[1] * i + X[0], Y[1] * i + Y[0]
- */
-function bytesToG2Point(bytes: number[]) {
-  if (bytes.length !== 128) {
-    throw new Error(`G2Point must be 128 bytes, got ${bytes.length}`);
-  }
-  return {
-    X: [
-      BigInt(bytesToHex(bytes.slice(32, 64))), // X[0]
-      BigInt(bytesToHex(bytes.slice(0, 32))), // X[1]
+// ABI parameter for decoding signature_data (single tuple = NonSignerStakesAndSignature)
+const nonSignerStakesAndSignatureAbi = [
+  {
+    type: 'tuple',
+    name: 'nonSignerStakesAndSignature',
+    components: [
+      { name: 'nonSignerQuorumBitmapIndices', type: 'uint32[]' },
+      {
+        name: 'nonSignerPubkeys',
+        type: 'tuple[]',
+        components: [
+          { name: 'X', type: 'uint256' },
+          { name: 'Y', type: 'uint256' },
+        ],
+      },
+      {
+        name: 'quorumApks',
+        type: 'tuple[]',
+        components: [
+          { name: 'X', type: 'uint256' },
+          { name: 'Y', type: 'uint256' },
+        ],
+      },
+      {
+        name: 'apkG2',
+        type: 'tuple',
+        components: [
+          { name: 'X', type: 'uint256[2]' },
+          { name: 'Y', type: 'uint256[2]' },
+        ],
+      },
+      {
+        name: 'sigma',
+        type: 'tuple',
+        components: [
+          { name: 'X', type: 'uint256' },
+          { name: 'Y', type: 'uint256' },
+        ],
+      },
+      { name: 'quorumApkIndices', type: 'uint32[]' },
+      { name: 'totalStakeIndices', type: 'uint32[]' },
+      { name: 'nonSignerStakeIndices', type: 'uint32[][]' },
     ],
-    Y: [
-      BigInt(bytesToHex(bytes.slice(96, 128))), // Y[0]
-      BigInt(bytesToHex(bytes.slice(64, 96))), // Y[1]
-    ],
-  };
-}
+  },
+];
 
 /**
- * Transforms the server's aggregation_response into the
- * IBLSSignatureChecker.NonSignerStakesAndSignature struct format
+ * Decode protocol signature_data (ABI-encoded NonSignerStakesAndSignature) into
+ * the struct shape expected by validateAttestationDirect.
  */
-export function transformAggregationResponse(aggregationResponse: AggregationResponse) {
-  return {
-    nonSignerQuorumBitmapIndices: aggregationResponse.non_signer_quorum_bitmap_indices,
-    nonSignerPubkeys: aggregationResponse.non_signers_pub_keys_g1.map(bytesToG1Point),
-    quorumApks: aggregationResponse.quorum_apks_g1.map(bytesToG1Point),
-    apkG2: bytesToG2Point(aggregationResponse.signers_apk_g2),
-    sigma: bytesToG1Point(aggregationResponse.signers_agg_sig_g1.g1_point),
-    quorumApkIndices: aggregationResponse.quorum_apk_indices,
-    totalStakeIndices: aggregationResponse.total_stake_indices,
-    nonSignerStakeIndices: aggregationResponse.non_signer_stake_indices,
-  };
+export function decodeSignatureData(signatureDataHex: Hex) {
+  const bytes = signatureDataHex.startsWith('0x') ? hexToBytes(signatureDataHex) : hexToBytes(`0x${signatureDataHex}`);
+  const [decoded] = decodeAbiParameters(nonSignerStakesAndSignatureAbi, bytes);
+  return decoded;
 }
