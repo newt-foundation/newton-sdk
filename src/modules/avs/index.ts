@@ -17,7 +17,6 @@ import {
   SimulatePolicyDataWithClientResult,
   Task,
 } from '@core/types/task';
-import { decodeSignatureData } from '@core/utils/format-bls-signature';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
@@ -326,14 +325,12 @@ async function evaluateIntentDirect(
     taskId: createTaskResult.task_id,
   };
 
-  const blsSignature = decodeSignatureData(createTaskResult.signature_data);
-
   return {
     result: {
       evaluationResult: !!hexToBigInt(taskResponse.evaluationResult),
       task: createTaskResult.task,
       taskResponse,
-      blsSignature,
+      blsSignature: createTaskResult.signature_data,
     },
   };
 }
