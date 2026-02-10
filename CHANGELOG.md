@@ -1,3 +1,15 @@
+# v0.3.13 (Tue Feb 10 2026)
+
+#### 🐛 Bug Fix
+
+- add prod addresses for base sepolia [#108](https://github.com/newt-foundation/newton-sdk/pull/108) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.12 (Mon Feb 09 2026)
 
 #### 🐛 Bug Fix
