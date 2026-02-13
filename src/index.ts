@@ -132,9 +132,9 @@ const newtonWalletClientActions =
 
 const newtonPublicClientActions =
   (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
-    if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
+    if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported`,
       );
     }
 
