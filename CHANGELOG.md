@@ -1,3 +1,15 @@
+# v0.3.14 (Fri Feb 13 2026)
+
+#### 🐛 Bug Fix
+
+- newton public actions supports base sepolia as well [#109](https://github.com/newt-foundation/newton-sdk/pull/109) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.13 (Tue Feb 10 2026)
 
 #### 🐛 Bug Fix
