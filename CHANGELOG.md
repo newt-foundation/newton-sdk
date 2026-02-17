@@ -1,3 +1,15 @@
+# v0.3.15 (Tue Feb 17 2026)
+
+#### 🐛 Bug Fix
+
+- update task manager + attestation validator abis to protocol 0.2.0 [#110](https://github.com/newt-foundation/newton-sdk/pull/110) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.14 (Fri Feb 13 2026)
 
 #### 🐛 Bug Fix
