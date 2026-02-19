@@ -1,9 +1,26 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
 import { GATEWAY_METHODS } from '@core/const';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from '@core/types/task';
+import {
+  GatewayCreateTaskResult,
+  SubmitEvaluationRequestParams,
+  TaskId,
+  SubmitIntentResult,
+  TaskResponseResult,
+  TaskStatus,
+  SimulateTaskParams,
+  SimulateTaskResult,
+  SimulatePolicyParams,
+  SimulatePolicyResult,
+  SimulatePolicyDataParams,
+  SimulatePolicyDataResult,
+  SimulatePolicyDataWithClientParams,
+  SimulatePolicyDataWithClientResult,
+  Task,
+} from '@core/types/task';
 import { AvsHttpService } from '@core/utils/https';
 import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
 import { convertLogToTaskResponse } from '@core/utils/task';
+import { getTaskEventsWebSocket } from '@core/utils/task-events';
 import {
   hexToBigInt,
   padHex,
@@ -13,6 +30,7 @@ import {
   publicActions,
   PublicClient,
   Address,
+  bytesToHex,
 } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
 
@@ -251,4 +269,227 @@ async function submitEvaluationRequest(
 
   return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
 }
-export { submitEvaluationRequest, waitForTaskResponded, getTaskResponseHash, getTaskStatus };
+
+/**
+ * Evaluate intent directly without waiting for task response confirmation on source chain.
+ * Results are to be used with `validateAttestationDirect` on NewtonPolicyClient (NewtonProverTaskManagerShared)
+ *
+ * @param walletClient - Wallet client
+ * @param args - Evaluation request parameters
+ * @param apiKey - API key
+ * @param gatewayApiUrlOverride - Gateway API URL override
+ * @returns Evaluation result
+ */
+async function evaluateIntentDirect(
+  walletClient: WalletClient,
+  args: SubmitEvaluationRequestParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<{
+  result: {
+    evaluationResult: boolean;
+    task: Task;
+    taskResponse: any;
+    blsSignature: any;
+  };
+}> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+
+  const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: sanitiziedIntent,
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
+    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
+    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    timeout: args.timeout,
+    direct_broadcast: true,
+  };
+
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
+  if (res.error) throw res.error;
+  if (res.result.error) throw new Error(res.result.error);
+
+  const createTaskResult = res.result as GatewayCreateTaskResult;
+  const taskResponse = {
+    evaluationResult: bytesToHex(Uint8Array.from(createTaskResult.task_response.evaluation_result)),
+    intent: createTaskResult.task_response.intent,
+    intentSignature: createTaskResult.task_response.intent_signature,
+    policyAddress: createTaskResult.task_response.policy_address,
+    policyClient: createTaskResult.task_response.policy_client,
+    policyConfig: createTaskResult.task_response.policy_config,
+    policyId: createTaskResult.task_response.policy_id,
+    policyTaskData: createTaskResult.task_response.policy_task_data,
+    taskId: createTaskResult.task_id,
+  };
+
+  return {
+    result: {
+      evaluationResult: !!hexToBigInt(taskResponse.evaluationResult),
+      task: createTaskResult.task,
+      taskResponse,
+      blsSignature: createTaskResult.signature_data,
+    },
+  };
+}
+
+/**
+ * Submit intent and subscribe to task response on source chain (this will be slower but can be used to challenge the task evaluation)
+ * Results are to be used with `validateAttestation` on NewtonPolicyClient (NewtonProverTaskManager)
+ *
+ * @param walletClient - Wallet client
+ * @param args
+ * @param apiKey
+ * @param gatewayApiUrlOverride
+ * @returns
+ */
+async function submitIntentAndSubscribe(
+  walletClient: WalletClient,
+  args: SubmitEvaluationRequestParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<{ result: SubmitIntentResult; ws: WebSocket }> {
+  const walletWithPublic = walletClient.extend(publicActions);
+
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+
+  const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
+  const requestBody = {
+    policy_client: args.policyClient,
+    intent: sanitiziedIntent,
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
+    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
+    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    timeout: args.timeout,
+    direct_broadcast: true,
+  };
+
+  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey);
+  if (res.error) throw res.error;
+  if (res.result.error) throw new Error(res.result.error);
+
+  const submitIntentResult = res.result as SubmitIntentResult;
+
+  const WS_URL = `wss://${new URL(avsHttpService.baseUrl).hostname}/ws`;
+
+  const ws = getTaskEventsWebSocket(WS_URL, submitIntentResult.subscription_topic, apiKey);
+
+  return { result: submitIntentResult, ws };
+}
+
+/**
+ * Simulates task evaluation (newt_simulateTask). Forwards to an operator and returns allow/deny without executing on-chain.
+ */
+async function simulateTask(
+  walletClient: WalletClient,
+  args: SimulateTaskParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<SimulateTaskResult> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const requestBody = {
+    intent: sanitizeIntentForRequest(args.intent),
+    policy_task_data: {
+      policyId: args.policyTaskData.policyId,
+      policyAddress: args.policyTaskData.policyAddress,
+      policy: args.policyTaskData.policy,
+      policyData: args.policyTaskData.policyData.map(pd => ({
+        wasmArgs: pd.wasmArgs,
+        data: pd.data,
+        attestation: pd.attestation,
+        policyDataAddress: pd.policyDataAddress,
+        expireBlock: pd.expireBlock,
+      })),
+    },
+  };
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulateTask, requestBody, apiKey);
+  if (res.error) throw res.error;
+  return res.result as SimulateTaskResult;
+}
+
+/**
+ * Simulates full Rego policy evaluation (newt_simulatePolicy). Tests policy with sample intent and policy data; may require ownership if PolicyData uses stored secrets.
+ */
+async function simulatePolicy(
+  walletClient: WalletClient,
+  args: SimulatePolicyParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<SimulatePolicyResult> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const requestBody = {
+    policy_client: args.policyClient,
+    policy: args.policy,
+    intent: sanitizeIntentForRequest(args.intent),
+    entrypoint: args.entrypoint ?? undefined,
+    policy_data: args.policyData.map(pd => ({
+      policy_data_address: pd.policyDataAddress,
+      wasm_args: pd.wasmArgs,
+    })),
+    policy_params: args.policyParams ?? {},
+    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : undefined,
+  };
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, apiKey);
+  if (res.error) throw res.error;
+  return res.result as SimulatePolicyResult;
+}
+
+/**
+ * Simulates PolicyData WASM execution with caller-provided secrets (newt_simulatePolicyData). No ownership verification.
+ */
+async function simulatePolicyData(
+  walletClient: WalletClient,
+  args: SimulatePolicyDataParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<SimulatePolicyDataResult> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const requestBody = {
+    policy_data_address: args.policyDataAddress,
+    secrets: args.secrets,
+    wasm_args: args.wasmArgs,
+  };
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey);
+  if (res.error) throw res.error;
+  return res.result as SimulatePolicyDataResult;
+}
+
+/**
+ * Simulates PolicyData WASM execution with stored secrets for a policy client (newt_simulatePolicyDataWithClient). Requires ownership.
+ */
+async function simulatePolicyDataWithClient(
+  walletClient: WalletClient,
+  args: SimulatePolicyDataWithClientParams,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<SimulatePolicyDataWithClientResult> {
+  const walletWithPublic = walletClient.extend(publicActions);
+  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const requestBody = {
+    policy_data_address: args.policyDataAddress,
+    policy_client: args.policyClient,
+    wasm_args: args.wasmArgs,
+  };
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyDataWithClient, requestBody, apiKey);
+  if (res.error) throw res.error;
+  return res.result as SimulatePolicyDataWithClientResult;
+}
+
+export {
+  submitEvaluationRequest,
+  waitForTaskResponded,
+  getTaskResponseHash,
+  getTaskStatus,
+  evaluateIntentDirect,
+  submitIntentAndSubscribe,
+  simulateTask,
+  simulatePolicy,
+  simulatePolicyData,
+  simulatePolicyDataWithClient,
+};

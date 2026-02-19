@@ -21,6 +21,13 @@ export interface SubmitEvaluationRequestParams {
   timeout: number; // in seconds
 }
 
+export interface SubmitIntentResult {
+  message: string;
+  subscription_topic: string;
+  task_id: Hex;
+  timestamp: number;
+}
+
 export interface NormalizedIntent {
   from: Address;
   to: Address;
@@ -39,7 +46,7 @@ export interface HexlifiedIntent {
   function_signature: string;
 }
 
-interface TaskResponse {
+export interface TaskResponse {
   taskId: Hex;
   policyClient: Address;
   policyId: Hex;
@@ -81,4 +88,171 @@ export enum TaskStatus {
   Responded = 'Responded',
   Created = 'Created',
   AttestationExpired = 'AttestationExpired',
+}
+
+export interface AggregationResponse {
+  non_signer_quorum_bitmap_indices: number[];
+  non_signer_stake_indices: number[][];
+  non_signers_pub_keys_g1: number[][];
+  quorum_apk_indices: number[];
+  quorum_apks_g1: number[][];
+  signers_agg_sig_g1: { g1_point: number[] };
+  signers_apk_g2: number[];
+  total_stake_indices: number[];
+  task_created_block: number;
+}
+
+export interface Task {
+  intent: {
+    chainId: Hex;
+    data: Hex;
+    from: Address;
+    functionSignature: Hex;
+    to: Address;
+    value: Hex;
+  };
+  intentSignature: Hex;
+  policyClient: Address;
+  quorumNumbers: Hex;
+  quorumThresholdPercentage: number;
+  taskCreatedBlock: number;
+  taskId: Hex;
+  wasmArgs: Hex;
+}
+
+/** PolicyData item for newt_simulateTask policy_task_data.policyData */
+export interface SimulateTaskPolicyData {
+  wasmArgs: Hex;
+  data: Hex;
+  attestation: Hex;
+  policyDataAddress: Address;
+  expireBlock: number;
+}
+
+/** PolicyTaskData for newt_simulateTask */
+export interface SimulateTaskPolicyTaskData {
+  policyId: Hex;
+  policyAddress: Address;
+  policy: Hex;
+  policyData: SimulateTaskPolicyData[];
+}
+
+export interface SimulateTaskParams {
+  intent: IntentFromParams;
+  policyTaskData: SimulateTaskPolicyTaskData;
+}
+
+export interface SimulateTaskResult {
+  success: boolean;
+  result: { allow?: boolean; reason?: string } | null;
+  error: string | null;
+  details: unknown;
+}
+
+/** PolicyDataInput for newt_simulatePolicy policy_data array */
+export interface PolicyDataInput {
+  policyDataAddress: Address;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyParams {
+  policyClient: Address;
+  policy: string;
+  intent: IntentFromParams;
+  entrypoint?: string;
+  policyData: PolicyDataInput[];
+  policyParams?: Record<string, unknown>;
+  intentSignature?: Hex;
+}
+
+export interface SimulatePolicyEvaluationResult {
+  policy: string;
+  parsed_intent: unknown;
+  policy_params_and_data: unknown;
+  entrypoint: string;
+  result: unknown;
+  expire_after: number;
+}
+
+export interface SimulatePolicyResult {
+  success: boolean;
+  evaluation_result: SimulatePolicyEvaluationResult | null;
+  error: string | null;
+  error_details: {
+    missing_secrets?: Array<{ policy_data_address: Address; has_secrets_schema: boolean }>;
+    suggested_actions?: string[];
+  } | null;
+}
+
+export interface SimulatePolicyDataParams {
+  policyDataAddress: Address;
+  secrets?: string;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyDataResult {
+  success: boolean;
+  policy_data: {
+    specifier: string;
+    data: unknown;
+    timestamp: number;
+  } | null;
+  error: string | null;
+}
+
+export interface SimulatePolicyDataWithClientParams {
+  policyDataAddress: Address;
+  policyClient: Address;
+  wasmArgs?: Hex;
+}
+
+export interface SimulatePolicyDataWithClientResult {
+  success: boolean;
+  policy_data: {
+    specifier: string;
+    data: unknown;
+    timestamp: number;
+  } | null;
+  error: string | null;
+}
+
+export interface GatewayCreateTaskResult {
+  aggregation_response: AggregationResponse;
+  error: null;
+  expiration: number;
+  reference_block: number;
+  status: 'success' | 'failed';
+  task: Task;
+  task_id: Hex;
+  task_response: {
+    evaluation_result: number[];
+    intent: {
+      chainId: Hex;
+      data: Hex;
+      from: Address;
+      functionSignature: Hex;
+      to: Address;
+      value: Hex;
+    };
+    intent_signature: Hex;
+    policy_address: Address;
+    policy_client: Address;
+    policy_config: { expireAfter: number; policyParams: Hex };
+    policy_id: Hex;
+    policy_task_data: {
+      policy: Hex;
+      policyAddress: Address;
+      policyData: Array<{
+        attestation: Hex;
+        data: Hex;
+        expireBlock: number;
+        policyDataAddress: Address;
+        wasmArgs: Hex;
+      }>;
+      policyId: Hex;
+    };
+    task_id: Hex;
+  };
+  signature_data: Hex;
+  timestamp: number;
 }

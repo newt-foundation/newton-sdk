@@ -1,3 +1,127 @@
+# v0.3.15 (Tue Feb 17 2026)
+
+#### 🐛 Bug Fix
+
+- update task manager + attestation validator abis to protocol 0.2.0 [#110](https://github.com/newt-foundation/newton-sdk/pull/110) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.14 (Fri Feb 13 2026)
+
+#### 🐛 Bug Fix
+
+- newton public actions supports base sepolia as well [#109](https://github.com/newt-foundation/newton-sdk/pull/109) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.13 (Tue Feb 10 2026)
+
+#### 🐛 Bug Fix
+
+- add prod addresses for base sepolia [#108](https://github.com/newt-foundation/newton-sdk/pull/108) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.12 (Mon Feb 09 2026)
+
+#### 🐛 Bug Fix
+
+- use the signature data returned by gateway instead of computing the b… [#107](https://github.com/newt-foundation/newton-sdk/pull/107) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.11 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- update the typing of evaluate intent direct to be more correct [#106](https://github.com/newt-foundation/newton-sdk/pull/106) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.10 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- return task, taskResponse and blsSignature for evaluateIntentDirect [#102](https://github.com/newt-foundation/newton-sdk/pull/102) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.9 (Thu Feb 05 2026)
+
+#### 🐛 Bug Fix
+
+- add simulate policy functionality [#105](https://github.com/newt-foundation/newton-sdk/pull/105) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.8 (Wed Feb 04 2026)
+
+#### 🐛 Bug Fix
+
+- update sepolia task manager address [#104](https://github.com/newt-foundation/newton-sdk/pull/104) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.7 (Wed Feb 04 2026)
+
+#### 🐛 Bug Fix
+
+- update abis [#103](https://github.com/newt-foundation/newton-sdk/pull/103) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.3.6 (Thu Jan 29 2026)
+
+#### 🐛 Bug Fix
+
+- Resolve task evals optimistcally [#101](https://github.com/newt-foundation/newton-sdk/pull/101) ([@Dizigen](https://github.com/Dizigen))
+
+#### ⚠️ Pushed to `main`
+
+- popup request implementation ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.5 (Tue Jan 20 2026)
 
 #### 🐛 Bug Fix

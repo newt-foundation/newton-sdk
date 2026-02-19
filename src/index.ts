@@ -1,12 +1,33 @@
 import { mainnet, sepolia, baseSepolia } from 'viem/chains';
 import { Address, Hex } from 'viem';
-import { SubmitEvaluationRequestParams, TaskId, TaskResponseResult, TaskStatus } from './types/task';
+import {
+  SubmitEvaluationRequestParams,
+  TaskId,
+  TaskResponseResult,
+  TaskStatus,
+  SubmitIntentResult,
+  SimulateTaskParams,
+  SimulateTaskResult,
+  SimulatePolicyParams,
+  SimulatePolicyResult,
+  SimulatePolicyDataParams,
+  SimulatePolicyDataResult,
+  SimulatePolicyDataWithClientParams,
+  SimulatePolicyDataWithClientResult,
+  Task,
+} from './types/task';
 import {
   getTaskResponseHash,
   getTaskStatus,
   PendingTaskBuilder,
   submitEvaluationRequest,
   waitForTaskResponded,
+  evaluateIntentDirect,
+  submitIntentAndSubscribe,
+  simulateTask,
+  simulatePolicy,
+  simulatePolicyData,
+  simulatePolicyDataWithClient,
 } from './modules/avs';
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
 import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
@@ -53,6 +74,29 @@ const newtonWalletClientActions =
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
+
+      evaluateIntentDirect: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: any; blsSignature: any } }> =>
+        evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      submitIntentAndSubscribe: (
+        args: SubmitEvaluationRequestParams,
+      ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
+        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
+      simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
+        simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicy: (args: SimulatePolicyParams): Promise<SimulatePolicyResult> =>
+        simulatePolicy(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicyData: (args: SimulatePolicyDataParams): Promise<SimulatePolicyDataResult> =>
+        simulatePolicyData(walletClient, args, apiKey, gatewayApiUrlOverride),
+
+      simulatePolicyDataWithClient: (
+        args: SimulatePolicyDataWithClientParams,
+      ): Promise<SimulatePolicyDataWithClientResult> =>
+        simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address;
@@ -107,9 +151,9 @@ const newtonWalletClientActions =
 
 const newtonPublicClientActions =
   (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
-    if (publicClient?.chain?.id !== mainnet.id && publicClient?.chain?.id !== sepolia.id) {
+    if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        'Newton SDK: Invalid network specified for newtonPublicActions. Only mainnet and sepolia are supported',
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported`,
       );
     }
 
