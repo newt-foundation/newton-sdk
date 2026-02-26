@@ -43,7 +43,7 @@ const POPUP_ERROR_MESSAGES = {
 
 export function popupRequest<ResultType = any>(payload: any, endpointOverride?: string) {
   // Popup window constants
-  const popupWidth = 496;
+  const popupWidth = 448;
   const popupHeight = 620;
   const popupLeft = window.screenLeft + (window.outerWidth / 2 - popupWidth / 2);
   const popupTop = window.screenTop + window.outerHeight * 0.15;
