@@ -130,7 +130,12 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.Connect,
             id: getPayloadId(),
-            params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+            params: {
+              apiKey,
+              chainId: walletClient.chain?.id,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+            },
           },
           idpUrl,
         );
