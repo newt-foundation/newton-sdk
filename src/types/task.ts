@@ -19,6 +19,7 @@ export interface SubmitEvaluationRequestParams {
   quorumThresholdPercentage?: number;
   wasmArgs?: Hex;
   timeout: number; // in seconds
+  identityDomain?: Hex;
 }
 
 export interface SubmitIntentResult {

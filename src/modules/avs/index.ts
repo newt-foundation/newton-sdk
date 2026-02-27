@@ -306,6 +306,7 @@ async function evaluateIntentDirect(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
+    identity_domain: args.identityDomain ?? null,
   };
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
