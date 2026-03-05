@@ -142,19 +142,25 @@ const newtonWalletClientActions =
       },
 
       registerUserData: (args: { userData: any }): Promise<any> => {
-        return popupRequest({
-          method: NewtonIdpPayloadMethod.RegisterUserData,
-          id: getPayloadId(),
-          params: { apiKey, userData: args.userData },
-        });
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.RegisterUserData,
+            id: getPayloadId(),
+            params: { apiKey, userData: args.userData },
+          },
+          idpUrl,
+        );
       },
 
       linkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
-        return popupRequest({
-          method: NewtonIdpPayloadMethod.LinkApp,
-          id: getPayloadId(),
-          params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
-        });
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.LinkApp,
+            id: getPayloadId(),
+            params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+          },
+          idpUrl,
+        );
       },
 
       unlinkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
