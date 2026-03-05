@@ -190,7 +190,7 @@ const newtonPublicClientActions =
   (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
     if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported`,
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported.`,
       );
     }
 
