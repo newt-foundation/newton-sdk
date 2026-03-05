@@ -38,7 +38,7 @@ function isPopupResolve(msgType: string) {
 
 const POPUP_ERROR_MESSAGES = {
   USER_CLOSED_POPUP: 'User closed the popup before a response was received',
-  POP_WINDOW_ALREADY_EXISTS: 'Popup window already exists for this request',
+  POP_WINDOW_ALREADY_EXISTS: 'Popup window already exists for this request.',
   FAILED_TO_OPEN_POPUP: 'Failed to open popup window',
 };
 
