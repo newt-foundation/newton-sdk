@@ -1,3 +1,15 @@
+# v0.3.16 (Wed Mar 04 2026)
+
+#### 🐛 Bug Fix
+
+- update gateway rpc urls [#111](https://github.com/newt-foundation/newton-sdk/pull/111) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.3.15 (Tue Feb 17 2026)
 
 #### 🐛 Bug Fix

@@ -1,10 +1,11 @@
-import { mainnet, sepolia, baseSepolia } from 'viem/chains';
+import { mainnet, sepolia, baseSepolia, base } from 'viem/chains';
 import { Hex } from 'viem';
 
 export const GATEWAY_API_URLS: Record<number, string> = {
-  [sepolia.id]: 'https://gateway-avs.sepolia.newt.foundation/rpc',
-  [mainnet.id]: 'https://gateway-avs.newt.foundation/rpc',
-  [baseSepolia.id]: 'https://gateway-avs.base-sepolia.newt.foundation/rpc',
+  [sepolia.id]: 'https://gateway.testnet.newton.xyz/rpc',
+  [mainnet.id]: 'https://gateway.newton.xyz/rpc',
+  [baseSepolia.id]: 'https://gateway.testnet.newton.xyz/rpc',
+  [base.id]: 'https://gateway.newton.xyz/rpc',
 } as const;
 
 export const GATEWAY_METHODS = {
