@@ -146,7 +146,7 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.RegisterUserData,
             id: getPayloadId(),
-            params: { apiKey, userData: args.userData },
+            params: { apiKey, userData: args.userData, gatewayApiUrlOverride, chainId: walletClient.chain?.id },
           },
           idpUrl,
         );
@@ -157,7 +157,12 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.LinkApp,
             id: getPayloadId(),
-            params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+            params: {
+              apiKey,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+              chainId: walletClient.chain?.id,
+            },
           },
           idpUrl,
         );
@@ -168,7 +173,12 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.Unlink,
             id: getPayloadId(),
-            params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+            params: {
+              apiKey,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+              chainId: walletClient.chain?.id,
+            },
           },
           idpUrl,
         );
