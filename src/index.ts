@@ -141,6 +141,22 @@ const newtonWalletClientActions =
         );
       },
 
+      registerUserData: (args: { userData: any }): Promise<any> => {
+        return popupRequest({
+          method: NewtonIdpPayloadMethod.RegisterUserData,
+          id: getPayloadId(),
+          params: { apiKey, userData: args.userData },
+        });
+      },
+
+      linkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
+        return popupRequest({
+          method: NewtonIdpPayloadMethod.LinkApp,
+          id: getPayloadId(),
+          params: { apiKey, appWalletAddress: args.appWalletAddress, appClientAddress: args.appClientAddress },
+        });
+      },
+
       unlinkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
         return popupRequest(
           {

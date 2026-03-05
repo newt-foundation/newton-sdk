@@ -40,6 +40,8 @@ export interface JsonRpcResponsePayload<ResultType = any> {
 }
 
 export enum NewtonIdpPayloadMethod {
-  Connect = 'newton_idp_user_connect',
-  Unlink = 'newton_idp_user_unlink',
+  Connect = 'newton_vc_user_connect',
+  Unlink = 'newton_vc_user_unlink',
+  RegisterUserData = 'newton_vc_user_register_user_data',
+  LinkApp = 'newton_vc_user_link_app',
 }

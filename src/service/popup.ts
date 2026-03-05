@@ -6,13 +6,13 @@ import { createPromiEvent } from '@core/utils/promise-tools';
 const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app';
 
 enum NewtonIdpIncomingWindowMessage {
-  NEWTON_IDP_POPUP_READY = 'NEWTON_IDP_POPUP_READY',
-  NEWTON_IDP_POPUP_RESPONSE = 'NEWTON_IDP_POPUP_RESPONSE',
-  NEWTON_IDP_POPUP_EVENT = 'NEWTON_IDP_POPUP_EVENT',
+  NEWTON_VC_POPUP_READY = 'NEWTON_VC_POPUP_READY',
+  NEWTON_VC_POPUP_RESPONSE = 'NEWTON_VC_POPUP_RESPONSE',
+  NEWTON_VC_POPUP_EVENT = 'NEWTON_VC_POPUP_EVENT',
 }
 
 enum NewtonIdpOutgoingWindowMessage {
-  NEWTON_IDP_HANDLE_REQUEST = 'NEWTON_IDP_HANDLE_REQUEST',
+  NEWTON_VC_HANDLE_REQUEST = 'NEWTON_VC_HANDLE_REQUEST',
 }
 
 enum PopupIntermediaryEventName {
@@ -28,11 +28,11 @@ function setPopup(_popup: Window | null) {
 }
 
 function isPopupReady(msgType: string) {
-  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_READY;
+  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_VC_POPUP_READY;
 }
 
 function isPopupResolve(msgType: string) {
-  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_RESPONSE;
+  return msgType === NewtonIdpIncomingWindowMessage.NEWTON_VC_POPUP_RESPONSE;
 }
 
 const POPUP_ERROR_MESSAGES = {
@@ -87,7 +87,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     if (isPopupOpen() && popupReady) {
       // Override current action or enqueue the new one
       focusPopup();
-      popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_IDP_HANDLE_REQUEST, payload }, '*');
+      popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST, payload }, '*');
     } else if (isPopupOpen() || popupPromptModalExists) {
       fulfillPromiEvent(() =>
         reject(new SDKError(SDKErrorCode.PopupAlreadyExists, POPUP_ERROR_MESSAGES.POP_WINDOW_ALREADY_EXISTS)),
@@ -150,7 +150,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
       }, 1000);
       if (isPopupReady(event.data?.msgType)) {
         popupReady = true;
-        popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_IDP_HANDLE_REQUEST, payload }, '*');
+        popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST, payload }, '*');
         setPopupCheckInterval();
       } else if (isPopupResolve(event.data?.msgType)) {
         window.removeEventListener('message', messageListener);
@@ -168,7 +168,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
         } else {
           fulfillPromiEvent(() => resolve(response?.result as ResultType));
         }
-      } else if (event.data?.msgType === NewtonIdpIncomingWindowMessage.NEWTON_IDP_POPUP_EVENT) {
+      } else if (event.data?.msgType === NewtonIdpIncomingWindowMessage.NEWTON_VC_POPUP_EVENT) {
         const intermediaryEventName = event.data?.response?.result?.event;
         if (!intermediaryEventName) return;
         const intermediaryEventParams = event.data?.response?.result?.params;
