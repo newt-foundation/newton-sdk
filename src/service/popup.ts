@@ -63,7 +63,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
       popup?.focus?.()
     }
     const refocusPromptContainerId = 'newton-wallet-popup-refocus-modal-container'
-    let unmountRefocusPrompt: () => undefined | undefined
+    let unmountRefocusPrompt: (() => void) | undefined
     const showRefocusPrompt = () => {
       const { unmount } = renderPopupPrompt({
         onContinue: () => {

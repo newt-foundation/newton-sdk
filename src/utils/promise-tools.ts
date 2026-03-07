@@ -21,8 +21,8 @@ interface ExtendedPromise<T> extends Promise<T> {
 /**
  * A `Promise` and `EventEmitter` all in one!
  */
-export type PromiEvent<TResult, TEvents extends EventsDefinition = void> = ExtendedPromise<TResult> &
-  TypedEmitter<TEvents extends void ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>>
+export type PromiEvent<TResult, TEvents extends EventsDefinition = undefined> = ExtendedPromise<TResult> &
+  TypedEmitter<TEvents extends undefined ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>>
 
 /**
  * Default events attached to every `PromiEvent`.
@@ -54,9 +54,9 @@ export function isPromiEvent(value: any): value is PromiEvent<any> {
  * Create a native JavaScript `Promise` overloaded with strongly-typed methods
  * from `EventEmitter`.
  */
-export function createPromiEvent<TResult, TEvents extends EventsDefinition = void>(
+export function createPromiEvent<TResult, TEvents extends EventsDefinition = undefined>(
   executor: AsyncPromiseExecutor<TResult>,
-): PromiEvent<TResult, TEvents extends void ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>> {
+): PromiEvent<TResult, TEvents extends undefined ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>> {
   const promise = createPromise(executor)
   const { createBoundEmitterMethod, createChainingEmitterMethod } = createTypedEmitter<
     TEvents & DefaultEvents<TResult>

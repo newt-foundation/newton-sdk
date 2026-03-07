@@ -11,60 +11,64 @@ REPO="newt-foundation/newton-prover-avs"
 BRANCH="main"
 OUT_DIR="src/abis"
 
+# Newton core contracts to sync.
+# Format: "SolidityFileName:ExportName"
+# SolidityFileName maps to contracts/out/<name>.sol/<name>.json
+CONTRACTS=(
+  "NewtonProverTaskManager:NewtonProverTaskManagerAbi"
+  "AttestationValidator:AttestationValidatorAbi"
+  "NewtonPolicy:NewtonPolicyAbi"
+  "NewtonPolicyFactory:NewtonPolicyFactoryAbi"
+  "NewtonPolicyData:NewtonPolicyDataAbi"
+  "NewtonProverServiceManager:NewtonProverServiceManagerAbi"
+  "IdentityRegistry:IdentityRegistryAbi"
+  "PolicyClientRegistry:PolicyClientRegistryAbi"
+  "OperatorRegistry:OperatorRegistryAbi"
+  "NewtonPolicyClient:NewtonPolicyClientAbi"
+)
+
 echo "Syncing ABIs from $REPO@$BRANCH..."
 
-# Fetch TaskManager ABI
-echo "  Fetching NewtonProverTaskManager ABI..."
-TASK_MANAGER_ABI=$(gh api "repos/$REPO/contents/contracts/out/NewtonProverTaskManager.sol/NewtonProverTaskManager.json?ref=$BRANCH" \
-  --jq '.content' | base64 -d | node -e "
-    const fs = require('fs');
-    const json = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
-    console.log(JSON.stringify(json.abi, null, 2));
-  ")
+fetch_abi() {
+  local contract_name="$1"
+  gh api "repos/$REPO/contents/contracts/out/${contract_name}.sol/${contract_name}.json?ref=$BRANCH" \
+    --jq '.content' | base64 -d | node -e "
+      const fs = require('fs');
+      const json = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
+      console.log(JSON.stringify(json.abi, null, 2));
+    "
+}
 
-# Fetch AttestationValidator ABI
-echo "  Fetching AttestationValidator ABI..."
-ATTESTATION_ABI=$(gh api "repos/$REPO/contents/contracts/out/AttestationValidator.sol/AttestationValidator.json?ref=$BRANCH" \
-  --jq '.content' | base64 -d | node -e "
-    const fs = require('fs');
-    const json = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
-    console.log(JSON.stringify(json.abi, null, 2));
-  ")
+# Fetch all ABIs
+declare -A ABIS
+for entry in "${CONTRACTS[@]}"; do
+  contract_name="${entry%%:*}"
+  echo "  Fetching ${contract_name}..."
+  ABIS["$entry"]=$(fetch_abi "$contract_name")
+done
 
-# Fetch Policy ABI
-echo "  Fetching NewtonPolicy ABI..."
-POLICY_ABI=$(gh api "repos/$REPO/contents/contracts/out/NewtonPolicy.sol/NewtonPolicy.json?ref=$BRANCH" \
-  --jq '.content' | base64 -d | node -e "
-    const fs = require('fs');
-    const json = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
-    console.log(JSON.stringify(json.abi, null, 2));
-  ")
-
-# Generate newtonAbi.ts
-cat > "$OUT_DIR/newtonAbi.ts" << HEREDOC
+# Generate single output file
+cat > "$OUT_DIR/newtonAbi.ts" << 'HEADER'
 // Auto-generated from newton-prover-avs contracts. DO NOT EDIT.
 // Regenerate with: pnpm sync-abis
 
-export const NewtonProverTaskManagerAbi = ${TASK_MANAGER_ABI} as const
+HEADER
 
-export const AttestationValidatorAbi = ${ATTESTATION_ABI} as const
+for entry in "${CONTRACTS[@]}"; do
+  export_name="${entry##*:}"
+  echo "export const ${export_name} = ${ABIS["$entry"]} as const" >> "$OUT_DIR/newtonAbi.ts"
+  echo "" >> "$OUT_DIR/newtonAbi.ts"
+done
 
+# Append convenience type re-exports
+cat >> "$OUT_DIR/newtonAbi.ts" << 'FOOTER'
 // Re-export the TaskResponded event log type for convenience
 export type TaskRespondedLog = typeof NewtonProverTaskManagerAbi extends readonly (infer T)[]
   ? T extends { type: 'event'; name: 'TaskResponded' }
     ? T
     : never
   : never
-HEREDOC
+FOOTER
 
-# Generate newtonPolicyAbi.ts
-cat > "$OUT_DIR/newtonPolicyAbi.ts" << HEREDOC
-// Auto-generated from newton-prover-avs contracts. DO NOT EDIT.
-// Regenerate with: pnpm sync-abis
-
-export const NewtonPolicyAbi = ${POLICY_ABI} as const
-HEREDOC
-
-echo "Done. ABIs written to $OUT_DIR/"
-echo "  - newtonAbi.ts (TaskManager + AttestationValidator)"
-echo "  - newtonPolicyAbi.ts (Policy)"
+echo "Done. ABIs written to $OUT_DIR/newtonAbi.ts"
+echo "Contracts synced: ${#CONTRACTS[@]}"

@@ -6,8 +6,8 @@ export type EventsDefinition = { [K in string | symbol]: (...args: any[]) => voi
  * An extension of `EventEmitter` (provided by `eventemitter3`) with an adjusted
  * type interface that supports the unique structure of Newton Wallet SDK modules.
  */
-export class TypedEmitter<Events extends EventsDefinition = void> extends EventEmitter<
-  Events extends void ? string | symbol : Events
+export class TypedEmitter<Events extends EventsDefinition = undefined> extends EventEmitter<
+  Events extends undefined ? string | symbol : Events
 > {}
 
 type ChainingMethods = 'on' | 'once' | 'addListener' | 'off' | 'removeListener' | 'removeAllListeners'
@@ -19,7 +19,7 @@ type ReplaceReturnType<T extends (...a: any) => any, TNewReturn> = (...a: Parame
  * Creates a `TypedEmitter` instance and returns helper functions for easily
  * mixing `TypedEmitter` methods into other objects.
  */
-export function createTypedEmitter<Events extends EventsDefinition = void>() {
+export function createTypedEmitter<Events extends EventsDefinition = undefined>() {
   const emitter = new TypedEmitter<Events>()
 
   const createChainingEmitterMethod = <T1 extends ChainingMethods, T2>(
