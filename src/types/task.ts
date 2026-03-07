@@ -19,6 +19,12 @@ export interface SubmitEvaluationRequestParams {
   quorumThresholdPercentage?: number
   wasmArgs?: Hex
   timeout: number // in seconds
+  /** Encrypted data reference UUIDs for privacy-preserving evaluation */
+  encryptedDataRefs?: string[]
+  /** User Ed25519 signature for privacy authorization (hex-encoded) */
+  userSignature?: string
+  /** Application Ed25519 signature for privacy authorization (hex-encoded) */
+  appSignature?: string
 }
 
 export interface SubmitIntentResult {

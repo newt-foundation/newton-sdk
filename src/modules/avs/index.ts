@@ -241,6 +241,9 @@ async function submitEvaluationRequest(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
+    encrypted_data_refs: args.encryptedDataRefs ?? null,
+    user_signature: args.userSignature ?? null,
+    app_signature: args.appSignature ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -306,6 +309,9 @@ async function evaluateIntentDirect(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
+    encrypted_data_refs: args.encryptedDataRefs ?? null,
+    user_signature: args.userSignature ?? null,
+    app_signature: args.appSignature ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -365,6 +371,9 @@ async function submitIntentAndSubscribe(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
+    encrypted_data_refs: args.encryptedDataRefs ?? null,
+    user_signature: args.userSignature ?? null,
+    app_signature: args.appSignature ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)

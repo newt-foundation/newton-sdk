@@ -92,3 +92,66 @@ export interface UploadEncryptedDataRpcRequest {
   ttl: number | null
   chain_id: number
 }
+
+/** An Ed25519 key pair for signing envelopes and privacy authorization. */
+export interface Ed25519KeyPair {
+  /** Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
+  privateKey: string
+  /** Ed25519 public key (hex-encoded, 32 bytes, no 0x prefix) */
+  publicKey: string
+}
+
+/** Parameters for uploading KMS-encrypted secrets for a policy client. */
+export interface StoreEncryptedSecretsParams {
+  /** Policy client address secrets are scoped to */
+  policyClient: Address
+  /** PolicyData address secrets are scoped to */
+  policyDataAddress: Address
+  /** Base64-encoded KMS ciphertext of a JSON object containing plaintext secrets */
+  secrets: string
+  /** Chain ID the policy client lives on */
+  chainId: number
+}
+
+/** Response from newt_storeEncryptedSecrets. */
+export interface StoreEncryptedSecretsResponse {
+  success: boolean
+  /** The policy data schema JSON used for validation (present on success) */
+  schema: Record<string, unknown> | null
+  /** Error message (present on failure) */
+  error: string | null
+}
+
+/** RPC request body for newt_storeEncryptedSecrets. */
+export interface StoreEncryptedSecretsRpcRequest {
+  policy_client: Address
+  policy_data_address: Address
+  secrets: string
+  chain_id: number
+}
+
+/** Parameters for computing dual-signature privacy authorization. */
+export interface SignPrivacyAuthorizationParams {
+  /** Policy client address */
+  policyClient: Address
+  /** Keccak256 hash of the intent (hex-encoded, 32 bytes) */
+  intentHash: string
+  /** Encrypted data reference UUIDs returned from uploadEncryptedData */
+  encryptedDataRefs: string[]
+  /** User's Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
+  userSigningKey: string
+  /** Application's Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
+  appSigningKey: string
+}
+
+/** Result of dual-signature privacy authorization computation. */
+export interface PrivacyAuthorizationResult {
+  /** User Ed25519 signature (hex-encoded, no 0x prefix) */
+  userSignature: string
+  /** Application Ed25519 signature (hex-encoded, no 0x prefix) */
+  appSignature: string
+  /** User's Ed25519 public key (hex-encoded, no 0x prefix) */
+  userPublicKey: string
+  /** Application's Ed25519 public key (hex-encoded, no 0x prefix) */
+  appPublicKey: string
+}
