@@ -1,3 +1,15 @@
+# v0.3.18 (Sat Mar 07 2026)
+
+#### 🐛 Bug Fix
+
+- chore: migrate tooling to Biome, Vitest, and simple-git-hooks [#114](https://github.com/newt-foundation/newton-sdk/pull/114) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.17 (Thu Mar 05 2026)
 
 #### ⚠️ Pushed to `main`
