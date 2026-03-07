@@ -25,6 +25,8 @@ CONTRACTS=(
   "PolicyClientRegistry:PolicyClientRegistryAbi"
   "OperatorRegistry:OperatorRegistryAbi"
   "NewtonPolicyClient:NewtonPolicyClientAbi"
+  # Cross-chain (destination L2s)
+  "NewtonProverDestTaskManager:NewtonProverDestTaskManagerAbi"
 )
 
 echo "Syncing ABIs from $REPO@$BRANCH..."
