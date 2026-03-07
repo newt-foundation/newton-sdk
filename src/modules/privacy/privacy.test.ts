@@ -1,9 +1,11 @@
+import type { Address } from 'viem'
 import { describe, expect, it } from 'vitest'
 import { createSecureEnvelope } from './index'
 
 // Deterministic test keys (not real secrets — test-only Ed25519 seed)
 const TEST_ED25519_SEED = 'a'.repeat(64) // 32 bytes of 0xaa
 const TEST_X25519_PUBKEY = '3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29' // well-known test key
+const TEST_POLICY_CLIENT: Address = '0x1234567890abcdef1234567890abcdef12345678'
 
 describe('privacy module', () => {
   describe('createSecureEnvelope', () => {
@@ -11,7 +13,7 @@ describe('privacy module', () => {
       const result = await createSecureEnvelope(
         {
           plaintext: { hello: 'world' },
-          policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+          policyClient: TEST_POLICY_CLIENT,
           chainId: 11155111,
           recipientPublicKey: TEST_X25519_PUBKEY,
         },
@@ -34,7 +36,7 @@ describe('privacy module', () => {
     it('is offline — produces different ciphertexts for identical inputs (ephemeral keys)', async () => {
       const params = {
         plaintext: 'deterministic input',
-        policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+        policyClient: TEST_POLICY_CLIENT,
         chainId: 1,
         recipientPublicKey: TEST_X25519_PUBKEY,
       }
@@ -54,7 +56,7 @@ describe('privacy module', () => {
       const result = await createSecureEnvelope(
         {
           plaintext: new Uint8Array([1, 2, 3, 4]),
-          policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+          policyClient: TEST_POLICY_CLIENT,
           chainId: 1,
           recipientPublicKey: TEST_X25519_PUBKEY,
         },
@@ -69,7 +71,7 @@ describe('privacy module', () => {
       const result = await createSecureEnvelope(
         {
           plaintext: 'raw string data',
-          policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+          policyClient: TEST_POLICY_CLIENT,
           chainId: 1,
           recipientPublicKey: TEST_X25519_PUBKEY,
         },
@@ -82,7 +84,7 @@ describe('privacy module', () => {
     it('binds AAD to policy_client and chain_id', async () => {
       const baseParams = {
         plaintext: 'same data',
-        policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+        policyClient: TEST_POLICY_CLIENT,
         chainId: 1,
         recipientPublicKey: TEST_X25519_PUBKEY,
       }
@@ -102,7 +104,7 @@ describe('privacy module', () => {
         createSecureEnvelope(
           {
             plaintext: 'test',
-            policyClient: '0x1234567890abcdef1234567890abcdef12345678',
+            policyClient: TEST_POLICY_CLIENT,
             chainId: 1,
             recipientPublicKey: 'not-valid-hex',
           },
