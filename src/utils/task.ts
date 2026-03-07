@@ -1,6 +1,6 @@
-import { TaskResponseResult } from '@core/types/task';
-import { hexToBigInt } from 'viem';
-import { TaskRespondedLog } from '@core/abis/newtonAbi';
+import type { TaskRespondedLog } from '@core/abis/newtonAbi'
+import type { TaskResponseResult } from '@core/types/task'
+import { hexToBigInt } from 'viem'
 
 export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseResult {
   const taskResponse = {
@@ -12,13 +12,13 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
       chainId: BigInt(log.args.taskResponse.intent.chainId),
     },
     evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
-  };
+  }
 
   const responseCertificate = {
     taskResponsedBlock: Number(log.args.responseCertificate.taskResponsedBlock),
     responseExpireBlock: Number(log.args.responseCertificate.responseExpireBlock),
     hashOfNonSigners: log.args.responseCertificate.hashOfNonSigners,
-  };
+  }
 
   const attestation = {
     taskId: taskResponse.taskId,
@@ -27,11 +27,11 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     intent: taskResponse.intent,
     intentSignature: taskResponse.intentSignature,
     expiration: responseCertificate.responseExpireBlock,
-  };
+  }
 
   return {
     taskResponse,
     responseCertificate,
     attestation,
-  };
+  }
 }

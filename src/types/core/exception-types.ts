@@ -35,5 +35,5 @@ export enum RPCErrorCode {
   PopupRequestOverriden = -10017,
 }
 
-export type ErrorCode = SDKErrorCode | RPCErrorCode;
-export type WarningCode = SDKWarningCode;
+export type ErrorCode = SDKErrorCode | RPCErrorCode
+export type WarningCode = SDKWarningCode

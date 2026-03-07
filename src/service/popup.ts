@@ -1,9 +1,9 @@
-import { renderPopupPrompt } from '@core/popup-prompt';
-import { createRpcError, MagicRPCError, SDKError } from '@core/sdk-exceptions';
-import { JsonRpcResponsePayload, NewtonWalletPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types';
-import { createPromiEvent } from '@core/utils/promise-tools';
+import { renderPopupPrompt } from '@core/popup-prompt'
+import { MagicRPCError, SDKError, createRpcError } from '@core/sdk-exceptions'
+import { type JsonRpcResponsePayload, NewtonWalletPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types'
+import { createPromiEvent } from '@core/utils/promise-tools'
 
-const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app';
+const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app'
 
 enum MagicIncomingWindowMessage {
   MAGIC_HANDLE_RESPONSE = 'MAGIC_HANDLE_RESPONSE',
@@ -20,85 +20,85 @@ enum PopupIntermediaryEventName {
   POPUP_RHINESTONE_USER_ID_FOUND = 'POPUP_RHINESTONE_USER_ID_FOUND',
 }
 
-let popupReady = false;
-let popup: Window | null = null;
+let popupReady = false
+let popup: Window | null = null
 
 function setPopup(_popup: Window | null) {
-  popupReady = false;
-  popup = _popup;
+  popupReady = false
+  popup = _popup
 }
 
 function isPopupReady(msgType: string) {
-  return msgType === MagicIncomingWindowMessage.MAGIC_POPUP_READY;
+  return msgType === MagicIncomingWindowMessage.MAGIC_POPUP_READY
 }
 
 function isPopupResolve(msgType: string) {
-  return msgType === MagicIncomingWindowMessage.POPUP_RPC_REQUEST_RESOLVE;
+  return msgType === MagicIncomingWindowMessage.POPUP_RPC_REQUEST_RESOLVE
 }
 
 const POPUP_ERROR_MESSAGES = {
   USER_CLOSED_POPUP: 'User closed the popup before a response was received',
   POP_WINDOW_ALREADY_EXISTS: 'Popup window already exists for this request.',
   FAILED_TO_OPEN_POPUP: 'Failed to open popup window',
-};
+}
 
 export function popupRequest<ResultType = any>(payload: any, endpointOverride?: string) {
   // Popup window constants
-  const popupWidth = 393;
-  const popupHeight = 620;
-  const popupLeft = window.screenLeft + (window.outerWidth / 2 - popupWidth / 2);
-  const popupTop = window.screenTop + window.outerHeight * 0.15;
-  const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`;
-  const endpoint = endpointOverride || defaultEndpoint;
-  const containerId = `newton-wallet-popup-action-modal-container`;
+  const popupWidth = 393
+  const popupHeight = 620
+  const popupLeft = window.screenLeft + (window.outerWidth / 2 - popupWidth / 2)
+  const popupTop = window.screenTop + window.outerHeight * 0.15
+  const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`
+  const endpoint = endpointOverride || defaultEndpoint
+  const containerId = 'newton-wallet-popup-action-modal-container'
 
-  const isPopupOpen = () => popup && popup?.window !== null && !popup.closed;
+  const isPopupOpen = () => popup && popup?.window !== null && !popup.closed
 
   const openPopup = () => {
-    setPopup(window.open(`${endpoint}/handle`, '_blank', popupPosition));
-  };
+    setPopup(window.open(`${endpoint}/handle`, '_blank', popupPosition))
+  }
 
   const promiEvent = createPromiEvent<ResultType>((resolve, reject) => {
     const focusPopup = () => {
-      popup?.focus?.();
-    };
-    const refocusPromptContainerId = `newton-wallet-popup-refocus-modal-container`;
-    let unmountRefocusPrompt: () => void | undefined;
+      popup?.focus?.()
+    }
+    const refocusPromptContainerId = 'newton-wallet-popup-refocus-modal-container'
+    let unmountRefocusPrompt: (() => void) | undefined
     const showRefocusPrompt = () => {
       const { unmount } = renderPopupPrompt({
         onContinue: () => {
           if (isPopupOpen()) {
-            focusPopup();
+            focusPopup()
           } else {
-            openPopup();
+            openPopup()
           }
         },
         onDone: () => {},
         containerId: refocusPromptContainerId,
-      });
-      unmountRefocusPrompt = unmount;
-    };
+      })
+      unmountRefocusPrompt = unmount
+    }
     const fulfillPromiEvent = (callback: () => void) => {
-      unmountRefocusPrompt?.();
-      callback?.();
-    };
+      unmountRefocusPrompt?.()
+      callback?.()
+    }
 
     // see if the popup or popup prompt modal already exists.
-    let popupPromptModalExists = !!document.getElementById(containerId);
+    let popupPromptModalExists = !!document.getElementById(containerId)
     if (isPopupOpen() && popupReady) {
       // Override current action or enqueue the new one
-      focusPopup();
-      popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*');
+      focusPopup()
+      popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*')
     } else if (isPopupOpen() || popupPromptModalExists) {
       fulfillPromiEvent(() =>
         reject(new SDKError(SDKErrorCode.PopupAlreadyExists, POPUP_ERROR_MESSAGES.POP_WINDOW_ALREADY_EXISTS)),
-      );
-      return;
+      )
+      return
     } else {
       // try to open the pop up.
-      openPopup();
+      openPopup()
       if (payload.method === NewtonWalletPayloadMethod.Connect) {
-        showRefocusPrompt();
+        showRefocusPrompt()
       }
     }
 
@@ -106,87 +106,87 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     if (!popup) {
       renderPopupPrompt({
         onDone: () => {
-          popupPromptModalExists = true;
+          popupPromptModalExists = true
         },
         onContinue: () => {
-          openPopup();
+          openPopup()
         },
         containerId,
         unmountOnContinue: true,
-      });
+      })
     }
 
-    let popupCheckInterval: NodeJS.Timeout | undefined;
+    let popupCheckInterval: NodeJS.Timeout | undefined
 
     const clearPopupCheckInterval = () => {
-      if (popupCheckInterval) clearInterval(popupCheckInterval);
-    };
+      if (popupCheckInterval) clearInterval(popupCheckInterval)
+    }
 
     const setPopupCheckInterval = () => {
-      clearPopupCheckInterval();
+      clearPopupCheckInterval()
       popupCheckInterval = setInterval(() => {
-        popupPromptModalExists = !!document.getElementById(containerId);
-        if (popupPromptModalExists) return;
+        popupPromptModalExists = !!document.getElementById(containerId)
+        if (popupPromptModalExists) return
         if (!isPopupOpen() || popup?.closed) {
-          if (popupCheckInterval) clearInterval(popupCheckInterval);
+          if (popupCheckInterval) clearInterval(popupCheckInterval)
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          window.removeEventListener('message', messageListener);
-          setPopup(null);
+          window.removeEventListener('message', messageListener)
+          setPopup(null)
           fulfillPromiEvent(() =>
             reject(createRpcError(RPCErrorCode.UserRejectedAction, POPUP_ERROR_MESSAGES.USER_CLOSED_POPUP)),
-          );
-          return;
+          )
+          return
         }
-      }, 500);
-    };
+      }, 500)
+    }
 
-    setPopupCheckInterval();
+    setPopupCheckInterval()
 
     const messageListener = (event: MessageEvent) => {
       // Detatch the interval while processing a message so that when popup resolves and closes with
       // a specific message it is captured
-      clearPopupCheckInterval();
+      clearPopupCheckInterval()
       setTimeout(() => {
-        setPopupCheckInterval();
-      }, 1000);
+        setPopupCheckInterval()
+      }, 1000)
       if (isPopupReady(event.data?.msgType)) {
-        popupReady = true;
-        popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*');
-        setPopupCheckInterval();
+        popupReady = true
+        popup?.postMessage({ msgType: MagicOutgoingWindowMessage.MAGIC_HANDLE_REQUEST, payload }, '*')
+        setPopupCheckInterval()
       } else if (isPopupResolve(event.data?.msgType)) {
-        window.removeEventListener('message', messageListener);
-        const response = event?.data?.response as JsonRpcResponsePayload;
+        window.removeEventListener('message', messageListener)
+        const response = event?.data?.response as JsonRpcResponsePayload
         if (response?.error) {
           // If user logs out from the pop up, clear the local storage.
           if (response.error.code === RPCErrorCode.NewtonWalletSessionTerminated) {
-            localStorage.removeItem('newtonWalletIdToken');
-            localStorage.removeItem('newtonWalletPublicAddress');
+            localStorage.removeItem('newtonWalletIdToken')
+            localStorage.removeItem('newtonWalletPublicAddress')
           }
           if (!RPCErrorCode.PopupRequestOverriden) {
-            setPopup(null);
+            setPopup(null)
           }
-          fulfillPromiEvent(() => reject(new MagicRPCError(response?.error)));
+          fulfillPromiEvent(() => reject(new MagicRPCError(response?.error)))
         } else {
-          fulfillPromiEvent(() => resolve(response?.result as ResultType));
+          fulfillPromiEvent(() => resolve(response?.result as ResultType))
         }
       } else if (event.data?.msgType === MagicIncomingWindowMessage.MAGIC_HANDLE_EVENT) {
-        const intermediaryEventName = event.data?.response?.result?.event;
-        if (!intermediaryEventName) return;
-        const intermediaryEventParams = event.data?.response?.result?.params;
+        const intermediaryEventName = event.data?.response?.result?.event
+        if (!intermediaryEventName) return
+        const intermediaryEventParams = event.data?.response?.result?.params
         if (
           intermediaryEventName === PopupIntermediaryEventName.POPUP_RHINESTONE_USER_ID_FOUND &&
           !!intermediaryEventParams[0]
         ) {
-          const rhinestoneUserId = intermediaryEventParams[0];
-          if (rhinestoneUserId) localStorage.setItem('newtonWalletRhinestoneUserId', rhinestoneUserId);
+          const rhinestoneUserId = intermediaryEventParams[0]
+          if (rhinestoneUserId) localStorage.setItem('newtonWalletRhinestoneUserId', rhinestoneUserId)
         }
-        setPopupCheckInterval();
+        setPopupCheckInterval()
       }
-    };
+    }
 
-    window.addEventListener('message', messageListener);
-  });
-  return promiEvent;
+    window.addEventListener('message', messageListener)
+  })
+  return promiEvent
 
   // TODO: implement batch request handling.
 }
