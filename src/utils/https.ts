@@ -1,15 +1,15 @@
-import { GATEWAY_API_URLS } from '@core/const';
-import { createJsonRpcRequestPayload } from './json-rpc';
+import { GATEWAY_API_URLS } from '@core/const'
+import { createJsonRpcRequestPayload } from './json-rpc'
 
 export class AvsHttpService {
-  public baseUrl;
+  public baseUrl
 
   constructor(chainId: number, urlOverride?: string) {
-    this.baseUrl = urlOverride || GATEWAY_API_URLS[chainId];
+    this.baseUrl = urlOverride || GATEWAY_API_URLS[chainId]
   }
 
   async Post(method: string, args: unknown, apiKey: string) {
-    const body = createJsonRpcRequestPayload(method, args);
+    const body = createJsonRpcRequestPayload(method, args)
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
@@ -17,7 +17,7 @@ export class AvsHttpService {
         'X-API-Key': apiKey,
       },
       body: JSON.stringify(body),
-    });
-    return response.json();
+    })
+    return response.json()
   }
 }

@@ -6,5 +6,5 @@ export function createJsonRpcRequestPayload(
     jsonrpc: '2.0',
     method,
     params,
-  };
+  }
 }

@@ -7,11 +7,11 @@
  * @param {Object} options - Optional: { apiKey?: string, onEvent?: (event) => void }
  */
 export function getTaskEventsWebSocket(wsUrl: string, subscriptionTopic: string, apiKey: string) {
-  const url = `${wsUrl}?api_key=${encodeURIComponent(apiKey)}`;
-  const ws = new WebSocket(url);
+  const url = `${wsUrl}?api_key=${encodeURIComponent(apiKey)}`
+  const ws = new WebSocket(url)
 
   ws.onopen = () => {
-    console.log('WebSocket connected');
+    console.log('WebSocket connected')
 
     // Subscribe to the task topic
     ws.send(
@@ -21,11 +21,11 @@ export function getTaskEventsWebSocket(wsUrl: string, subscriptionTopic: string,
         method: subscriptionTopic,
         params: null,
       }),
-    );
-  };
+    )
+  }
 
-  ws.onerror = err => console.error('Newton SDK WebSocket error', err);
-  ws.onclose = () => console.log('Newton SDK WebSocket closed');
+  ws.onerror = err => console.error('Newton SDK WebSocket error', err)
+  ws.onclose = () => console.log('Newton SDK WebSocket closed')
 
-  return ws;
+  return ws
 }
