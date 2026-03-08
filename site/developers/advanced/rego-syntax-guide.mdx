@@ -1,0 +1,313 @@
+---
+title: "Rego Syntax Guide"
+description: "Supported Rego syntax, builtins, and Newton crypto extensions for policy development"
+---
+
+## Modules & Files
+
+**A module is one policy file.**
+
+- Must start with a package
+- Optional imports
+- Then one or more **rules**
+
+```rego
+package app.auth
+
+import data.roles
+import data.helpers as H
+
+default allow = false
+```
+
+---
+
+## Rules
+
+## Value Rules (with if/else bodies)
+
+```rego
+allow if {
+  input.user == "admin"
+} else if {
+  input.action == "read"
+}
+```
+
+- Branching with else
+- Each block is a **query** of literals
+
+## Default Rules
+
+```rego
+default allow = false
+```
+
+- Sets a fallback value if no other rule branch applies
+
+## Function Rules
+
+```rego
+allow(u, a) := true if {
+  u == "admin"
+} else if {
+  a == "read"
+}
+```
+
+- Rules can take arguments, like functions
+
+## Set & Object Rules
+
+```rego
+# Set membership
+my_ids[id] if {
+  id := input.items[_].id
+  id > 1000
+}
+
+# Object construction
+user_roles[uid] := role if {
+  role := data.roles[uid]
+}
+```
+
+## Comprehension Rules
+
+```rego
+allowed_names := [n | u := input.users[_]; u.allowed; n := u.name]
+project_ids   := {p | p := input.projects[_].id}
+role_by_user  := { u.id: u.role | u := input.users[_] }
+```
+
+---
+
+## Expressions & Queries
+
+## Literals
+
+- Expressions, not exprs
+- `some` existential, `every` universal
+
+```rego
+some i
+not blocked[i]
+
+every u in input.users { u.active }
+```
+
+## Assignments & Comparisons
+
+```rego
+x := input.value
+x in [1,2,3]
+count(input.items) >= 5
+```
+
+## Arithmetic & Boolean
+
+```rego
+total := price * quantity + tax
+ok if input.age >= 18 and not input.banned
+```
+
+## References & Calls
+
+```rego
+v1 := input.user.name
+v2 := data.groups["admins"].members
+r  := helper.add(2,3)
+```
+
+## With Modifiers
+
+```rego
+allow with data.now as "2025-06-01T00:00:00Z"
+```
+
+---
+
+## Collections & Scalars
+
+## Arrays, Objects, Sets
+
+```rego
+a := [1,2,3]
+o := {"x":1, "y":2}
+s := {1,2,3}
+```
+
+## Scalars & Variables
+
+```rego
+n := 42
+s := "hello"
+t := true
+z := null
+```
+
+---
+
+## Quantifiers
+
+- `some` / `every`
+
+```rego
+some i in input.items
+input.items[i].active
+
+every u in input.users {
+  u.age >= 18
+}
+```
+
+---
+
+## Negation
+
+- `not`
+
+```rego
+deny if {
+  not input.authenticated
+}
+```
+
+---
+
+## Membership
+
+- `in`
+
+```rego
+"admin" in input.user.roles
+```
+
+---
+
+## Builtins (Supported Categories)
+
+## Aggregates
+
+```rego
+n := count(input.items)
+sum_ok := sum([1,2,3]) == 6
+min_val := min([4,9,1])
+```
+
+## Arrays
+
+```rego
+array.slice([1,2,3,4], 1, 3)  # [2,3]
+```
+
+## Sets
+
+```rego
+u := union({{1,2},{2,3}})
+```
+
+## Objects
+
+```rego
+ks := object.keys({"a":1,"b":2})
+```
+
+## Strings
+
+```rego
+ok := contains("hello world", "world")
+```
+
+## Numbers
+
+```rego
+cl := ceil(3.2)  # 4
+```
+
+## Time
+
+```rego
+ts := time.parse_rfc3339_ns("2024-01-01T00:00:00Z")
+```
+
+## Conversions & Encoding
+
+```rego
+j := json.marshal({"x":1})
+```
+
+## Regex
+
+```rego
+regex.match(`^\\d+$`, "12345")
+```
+
+## Semver
+
+```rego
+semver.is_valid("1.2.3")
+```
+
+---
+
+## Newton Crypto Extensions
+
+Newton extends the standard Rego runtime with custom cryptographic builtins for signature recovery. These are available in the Newton Regorus engine used by operators and the `newton-cli regorus eval` command.
+
+### `newton.crypto.ecdsa_recover_signer`
+
+Recovers the signer address from a raw message hash and ECDSA signature.
+
+```rego
+signer := newton.crypto.ecdsa_recover_signer(signature, message_hash)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `signature` | `string` | Hex-encoded ECDSA signature (65 bytes with recovery id) |
+| `message_hash` | `string` | Hex-encoded 32-byte message hash |
+
+**Returns:** Hex-encoded Ethereum address of the signer.
+
+### `newton.crypto.ecdsa_recover_signer_personal`
+
+Recovers the signer address from a personal message and ECDSA signature. Applies the EIP-191 `\x19Ethereum Signed Message:\n` prefix before recovery.
+
+```rego
+signer := newton.crypto.ecdsa_recover_signer_personal(signature, message)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `signature` | `string` | Hex-encoded ECDSA signature (65 bytes with recovery id) |
+| `message` | `string` | The original message string (prefix is applied automatically) |
+
+**Returns:** Hex-encoded Ethereum address of the signer.
+
+### Example
+
+```rego
+package auth
+
+default allow = false
+
+allow if {
+    signer := newton.crypto.ecdsa_recover_signer(input.intent_signature, input.intent_hash)
+    signer == input.from
+}
+```
+
+---
+
+## Not Yet Supported
+
+- **Standard Crypto / Tokens / JWT**: `crypto.*`, `jwtverify*`, `jwtencode*` — use Newton crypto extensions instead
+- **HTTP**: `http.send` — not implemented (use PolicyData WASM oracles for external data)
+- **GraphQL**: `graphql.*` — not implemented
+- **Glob matching**: `regex.globs_match` — not implemented
+- **JSON Patch**: `json.patch` — not implemented
+- **Networking**: `net.*` — not implemented
+- **AWS Providers**: `providers.aws.*` — not implemented
+- **Rego Meta**: `rego.metadata.*`, `rego.parse_module` — not implemented
+- **Template rendering**: `strings.render_template` — not implemented

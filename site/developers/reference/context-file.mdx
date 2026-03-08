@@ -1,0 +1,52 @@
+---
+title: "LLM Context Files"
+description: "Download Newton Protocol LLM context files for use with AI coding assistants"
+---
+
+## What are the LLM context files?
+
+Newton provides two separate LLM context files — one for policy development and one for TypeScript SDK integration. Load the relevant file (or both) into your AI coding assistant to give it the full context it needs to help you build on Newton.
+
+## Download
+
+<Card title="Newton Policy Guide" icon="download" href="https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context">
+  Creating and deploying Newton policies (WASM oracles, Rego, newton-cli)
+</Card>
+
+<Card title="Newton TypeScript SDK Guide" icon="download" href="https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context">
+  Building frontends with the Newton TypeScript SDK
+</Card>
+
+## Usage
+
+Place the relevant file(s) in your project root and point your AI coding assistant to them:
+
+**Claude Code**
+
+Save as `CLAUDE.md` in your project root. Claude Code automatically reads this file for context.
+
+```bash
+# Policy development
+curl -o newton-policy-guide.md "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
+
+# TypeScript SDK integration
+curl -o newton-sdk-guide.md "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
+```
+
+Rename either file to `CLAUDE.md` (or concatenate both) to have Claude Code pick it up automatically.
+
+**Cursor**
+
+Save as `.cursorrules` or add to your project's context files.
+
+```bash
+# Policy development
+curl -o .cursorrules "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
+
+# TypeScript SDK integration
+curl -o .cursorrules "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
+```
+
+**Other tools**
+
+Most AI coding assistants support loading a context file. Refer to your tool's documentation for the expected file name and location.

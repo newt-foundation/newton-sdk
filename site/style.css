@@ -1,0 +1,14 @@
+h1, h2, h3, h4, h5, h6, p, span, div {
+    /*color:#19191a!important;*/
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6, .dark p, .dark span, .dark div {
+    color:#fff!important;
+}
+
+/* trigger build */
+
+p img {
+    width:100%;
+    height:auto;
+}

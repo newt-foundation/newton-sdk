@@ -1,0 +1,148 @@
+---
+title: "Dashboard & API Keys"
+description: "Create and manage Newton Protocol API keys via the Dashboard API"
+---
+
+The Newton Dashboard API at `dashboard.api.newt.foundation` provides self-service API key management. You can authenticate with Sign-In with Ethereum (SIWE) or email OTP, then create API keys that are immediately usable with the Newton Gateway.
+
+<Note>
+The Dashboard web platform is coming soon. For early access, reach out to [product@magicnewton.com](mailto:product@magicnewton.com).
+</Note>
+
+## Authentication
+
+The Dashboard API uses a factor-based authentication flow: you first request a challenge, then verify it to receive session tokens.
+
+<Tabs>
+  <Tab title="SIWE (Preferred)">
+    Sign-In with Ethereum (SIWE) links your wallet address to your Dashboard account.
+
+    <Steps>
+      <Step title="Request a challenge">
+        ```bash
+        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/siwe/challenge \
+          -H "Content-Type: application/json" \
+          -d '{"address": "0xYourWalletAddress"}'
+        ```
+        Returns a `verify_flow_id` and `nonce`.
+      </Step>
+      <Step title="Sign the SIWE message">
+        Construct a SIWE message with the returned `nonce` and sign it with your wallet (e.g., via MetaMask or viem).
+      </Step>
+      <Step title="Verify and get session">
+        ```bash
+        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/verify \
+          -H "Content-Type: application/json" \
+          -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "<signed_siwe_message>"}'
+        ```
+        Returns an `access_token` and `refresh_token`.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Email OTP">
+    Email-based authentication sends a one-time password to your email.
+
+    <Steps>
+      <Step title="Request OTP">
+        ```bash
+        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/email/challenge \
+          -H "Content-Type: application/json" \
+          -d '{"value": "you@example.com", "challenge": "<recaptcha_token>"}'
+        ```
+        Returns a `verify_flow_id`.
+      </Step>
+      <Step title="Verify OTP">
+        ```bash
+        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/verify \
+          -H "Content-Type: application/json" \
+          -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "123456"}'
+        ```
+        Returns an `access_token` and `refresh_token`.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Create an API Key
+
+Once authenticated, create an API key for use with the Newton Gateway.
+
+<Steps>
+  <Step title="Authenticate">
+    Use SIWE or email OTP as described above to obtain an access token.
+  </Step>
+  <Step title="Create an API key">
+    ```bash
+    curl -X POST https://dashboard.api.newt.foundation/v1/api_key \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <access_token>" \
+      -d '{"name": "my-app-key", "permissions": ["rpc_read", "rpc_write"]}'
+    ```
+  </Step>
+  <Step title="Use the API key">
+    Include the key in the `Authorization` header when calling the Newton Gateway:
+    ```bash
+    curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <your_api_key>" \
+      -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":1}'
+    ```
+  </Step>
+</Steps>
+
+## API Key Management
+
+| Operation | Method | Endpoint |
+|-----------|--------|----------|
+| Create | `POST` | `/v1/api_key` |
+| List | `GET` | `/v1/api_key` |
+| Get | `GET` | `/v1/api_key/:id` |
+| Update | `PUT` | `/v1/api_key/:id` |
+| Rotate | `POST` | `/v1/api_key/:id/rotate` |
+| Delete | `DELETE` | `/v1/api_key/:id` |
+
+All management endpoints require an authenticated session (access token in `Authorization` header).
+
+## Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `admin` | Full access — manage projects, keys, and settings |
+| `rpc_write` | Write operations — secrets management via `newt_storeEncryptedSecrets` |
+| `rpc_read` | Read operations — task submission and simulation |
+| `rpc` | Combined `rpc_read` + `rpc_write` |
+
+<Note>
+Most integrations need `rpc` permission (combined read + write). Use `rpc_read` for frontend-only applications that submit tasks but do not manage secrets.
+</Note>
+
+## Policy Client Ownership
+
+The Dashboard API verifies PolicyClient ownership by reading the on-chain `getOwner()` method. This ensures that only the contract owner can:
+
+- Upload encrypted secrets via `newt_storeEncryptedSecrets`
+- Access stored secrets via `newt_simulatePolicyDataWithClient`
+
+Ownership is transferable on-chain via `setOwner()` or `transferOwnership()` on the PolicyClient contract.
+
+## Session Management
+
+| Operation | Method | Endpoint |
+|-----------|--------|----------|
+| Refresh token | `POST` | `/v1/auth/refresh` |
+| Logout | `POST` | `/v1/auth/logout` |
+
+Access tokens expire after a short period. Use the refresh token to obtain a new access token without re-authenticating.
+
+## Alternative: Email Request
+
+If you prefer not to use the Dashboard API, you can request an API key by emailing [product@magicnewton.com](mailto:product@magicnewton.com).
+
+## Next Steps
+
+<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+  Use your API key to simulate a policy evaluation
+</Card>
+<Card icon="plug" href="/developers/reference/rpc-api" title="RPC API">
+  Full Gateway API reference
+</Card>

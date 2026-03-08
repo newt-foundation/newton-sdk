@@ -67,5 +67,8 @@ jobs:
       - name: Unit Tests
         run: pnpm test
 
+      - name: Verify docs code samples
+        run: pnpm docs:check
+
       - name: Audit Prod Dependencies
         run: pnpm audit --prod || exit 0

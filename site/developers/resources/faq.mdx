@@ -1,0 +1,121 @@
+---
+title: "FAQ & Troubleshooting"
+description: "Frequently asked questions and solutions to common issues with Newton Protocol"
+---
+
+## General FAQ
+
+<AccordionGroup>
+
+<Accordion title="What is Newton Protocol?">
+Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer Actively Validated Service (AVS). It lets you encode, verify, and enforce rules — such as spend limits, sanctions screening, or KYC gates — directly within smart contracts. See [What is Newton?](/developers/overview/about) for a full overview.
+</Accordion>
+
+<Accordion title="What chains does Newton support?">
+Newton currently supports **Ethereum Sepolia** (`11155111`) as both a source and destination chain, and **Base Sepolia** (`84532`) as a destination chain. Ethereum Mainnet support is forthcoming. See [Supported Networks](/developers/concepts/multichain#supported-networks).
+</Accordion>
+
+<Accordion title="How do I get an API key?">
+API keys can be created via the Newton Dashboard API using SIWE (Sign-In with Ethereum) or email OTP authentication at `dashboard.api.newt.foundation`, or by emailing `product@magicnewton.com`. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
+</Accordion>
+
+<Accordion title="What programming languages can I use for data oracles?">
+Newton data oracles compile to WebAssembly (WASM) components. You can write them in:
+- [JavaScript](/developers/advanced/javascript-wasm-guide) (using ComponentizeJS)
+- [Python](/developers/advanced/python-wasm-guide) (using componentize-py)
+- [Rust](/developers/advanced/rust-wasm-guide) (using cargo-component)
+
+Any language that compiles to WASM and supports the WIT interface can be used.
+</Accordion>
+
+<Accordion title="What is the difference between Standard and Direct validation?">
+**Standard validation** (`_validateAttestation`) uses the PolicyClientRegistry to automatically resolve your contract's policy configuration. It costs more gas but is simpler to use.
+
+**Direct validation** (`_validateAttestationDirect`) bypasses the registry. It uses less gas but requires your contract to manage its own policy reference.
+
+See [Validation Methods](/developers/overview/core-concepts#validation-methods) for details.
+</Accordion>
+
+<Accordion title="How long does policy evaluation take?">
+Two-phase consensus (Prepare-Commit) takes approximately **4 seconds**. See [Consensus & Security](/developers/concepts/consensus-security).
+</Accordion>
+
+<Accordion title="Can I test policies without deploying on-chain?">
+Yes. Use `newt_simulateTask` via the SDK or Gateway RPC to simulate a full policy evaluation without any on-chain interaction. You can also test individual components:
+- `newt_simulatePolicy` — test Rego policy logic with provided inputs
+- `newt_simulatePolicyData` — test a WASM data oracle
+- `newton-cli regorus eval` — evaluate Rego locally with Newton crypto extensions
+
+See [Testing & Debugging](/developers/resources/testing-debugging).
+</Accordion>
+
+<Accordion title="What is the difference between a Policy and a PolicyClient?">
+A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "block transactions over $10,000"). A **PolicyClient** is a smart contract that references a specific policy and its configuration parameters (thresholds, allowlists). Multiple PolicyClients can use the same Policy with different parameters. See [Core Concepts](/developers/overview/core-concepts).
+</Accordion>
+
+</AccordionGroup>
+
+## Common Errors
+
+<AccordionGroup>
+
+<Accordion title="TaskAlreadyExists — duplicate task submission">
+**Cause:** You submitted a task with the same intent hash that is already being evaluated.
+
+**Fix:** Wait for the existing task to complete, or modify the intent (e.g., change the nonce or timestamp) to produce a different hash.
+</Accordion>
+
+<Accordion title="InvalidAttestation — on-chain verification failed">
+**Cause:** The attestation proof failed BLS signature verification on-chain.
+
+**Common reasons:**
+- The attestation has expired (check `expiration` field)
+- The operator set has rotated since the attestation was produced
+- The attestation was produced for a different chain
+
+**Fix:** Request a fresh attestation and submit it before expiration. Ensure the `chainId` in your intent matches the chain where the PolicyClient is deployed.
+</Accordion>
+
+<Accordion title="PolicyNotFound (-32617) — policy not found">
+**Cause:** The Gateway could not find the policy associated with the provided PolicyClient address.
+
+**Fix:** Verify:
+1. The PolicyClient address is correct and deployed on the expected chain
+2. The PolicyClient has a policy set (use `newton-cli policy-client status`)
+3. The PolicyClient is registered with the PolicyClientRegistry
+</Accordion>
+
+<Accordion title="Unauthorized (-32615) — authentication failed">
+**Cause:** Your API key is missing, invalid, or lacks the required permission.
+
+**Fix:**
+- Ensure your `Authorization: Bearer <key>` header is present
+- Check that your key has the required permission level (`rpc_read` for simulations, `rpc_write` for secret storage)
+- Verify the key has not been revoked
+</Accordion>
+
+<Accordion title="IncompatiblePolicyVersion — version mismatch">
+**Cause:** Your PolicyClient contract was deployed with an older SDK version that is incompatible with the current protocol.
+
+**Fix:** Run `newton-cli version check-compatibility` to identify the issue, then `newton-cli version migrate` for automated migration.
+</Accordion>
+
+<Accordion title="WASM oracle returns empty or unexpected data">
+**Cause:** The WASM component's `run` function is not returning valid JSON, or the HTTP fetch is failing silently.
+
+**Fix:**
+1. Test locally: `newton-cli --chain-id 11155111 policy-data simulate --wasm-file policy.wasm --input-json '{}'`
+2. Verify your `run` function returns a JSON string (not an object)
+3. Check that HTTP requests use the correct URL and headers
+4. Ensure secrets are stored if your oracle requires API keys
+</Accordion>
+
+</AccordionGroup>
+
+For a complete list of error codes, see the [Error Reference](/developers/reference/error-reference).
+
+## Getting Help
+
+- **GitHub Issues:** [github.com/newt-foundation](https://github.com/newt-foundation)
+- **Email:** `product@magicnewton.com`
+- **Blog:** [blog.newt.foundation](https://blog.newt.foundation)

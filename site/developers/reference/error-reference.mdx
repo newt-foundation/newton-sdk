@@ -1,0 +1,114 @@
+---
+title: "Error Reference"
+description: "Newton Protocol error codes, messages, and resolution steps"
+---
+
+This page documents all error codes and messages you may encounter when interacting with the Newton Protocol Gateway, SDK, and smart contracts.
+
+## JSON-RPC Standard Errors
+
+| Code | Message | Description |
+|------|---------|-------------|
+| -32700 | Parse error | Invalid JSON in request body |
+| -32600 | Invalid request | Request does not conform to JSON-RPC 2.0 |
+| -32601 | Method not found | Unknown RPC method name |
+| -32602 | Invalid params | Missing or invalid method parameters |
+| -32603 | Internal error | Unexpected server-side error |
+
+## Newton-Specific Error Codes
+
+| Code | Name | Description | Resolution |
+|------|------|-------------|------------|
+| -32615 | PolicyEvaluationError | Rego policy evaluation failed | Check Rego syntax, verify `data.data` and `data.params` are populated correctly |
+| -32616 | ContractError | Smart contract interaction failed | Verify contract addresses are correct and contracts are deployed |
+| -32617 | OperatorNotRegistered | Calling operator is not registered with the AVS | Ensure operator registration is complete |
+| -32618 | IncompatiblePolicyVersion | Policy version mismatch between client and protocol | Run `newton-cli version check-compatibility` and migrate if needed |
+| -32619 | IncompatiblePolicyDataVersion | PolicyData version mismatch | Redeploy PolicyData with compatible version |
+| -32620 | DataProviderError | WASM oracle execution failed | Check WASM binary, verify secrets and `wasm_args` |
+
+## Gateway Error Messages
+
+| Error Message | Cause | Resolution |
+|---------------|-------|------------|
+| `"Unknown Newton RPC method: {method}"` | Typo in method name | Verify method spelling against [RPC API](/developers/reference/rpc-api) |
+| `"Invalid request format: {details}"` | Malformed request parameters | Review parameter types and required fields |
+| `"RpcRead permission required"` | API key lacks read permission | Use key with `rpc_read` or `rpc` permission |
+| `"RpcWrite permission required"` | API key lacks write permission | Use key with `rpc_write` or `rpc` permission |
+| `"Invalid API key"` | API key is invalid or expired | Verify key or create a new one via [Dashboard](/developers/overview/dashboard-api-keys) |
+| `"policy_client is owned by another user"` | On-chain owner does not match API key holder | Use API key associated with the on-chain `getOwner()` address |
+| `"policy client has no owner"` | Contract returned zero address for `getOwner()` | Verify contract is initialized with an owner |
+| `"Missing secrets for N PolicyData contract(s)"` | Secrets not uploaded for PolicyData contracts | Upload secrets via `newt_storeEncryptedSecrets` |
+| `"No secrets found for policy_client ... and policy_data..."` | No secrets stored for this client/data pair | Upload secrets or use `newt_simulatePolicyData` with inline secrets |
+| `"Secrets upload validation failed: {details}"` | Secrets JSON does not match on-chain schema | Fix secrets format to match `secretsSchemaCid` schema |
+| `"WASM execution failed: {details}"` | WASM oracle runtime error | Check WASM binary, inputs, and `wasm_args` |
+| `"Rego evaluation failed: {details}"` | Policy syntax or runtime error | Fix Rego code, test with `newton-cli regorus eval` |
+| `"Contract read failed: {details}"` | On-chain contract read failed | Verify contract addresses and chain connectivity |
+| `"Task timeout"` | BLS aggregation exceeded timeout | Increase timeout parameter or retry |
+| `"No operators available"` | No registered operators online | Retry later; check network status |
+| `"TaskAlreadyExists"` | Duplicate task submission | Use a different nonce or wait for existing task |
+| `"BlockNumberTooRecent"` | Reference block too close to current | Wait a few blocks before submitting |
+
+## On-Chain Errors
+
+| Error | Contract | Cause | Resolution |
+|-------|----------|-------|------------|
+| `InvalidAttestation()` | PolicyClient | BLS signature verification failed | Verify Task Manager address, check attestation expiration |
+| `ExecutionFailed()` | PolicyClient | Inner transaction call reverted | Debug the target transaction independently |
+| `IncompatiblePolicyVersion` | NewtonPolicy | Policy factory version below TaskManager's `minCompatiblePolicyVersion` | Deploy new policy via latest factory, call `setPolicyAddress(newPolicy)`. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility) |
+| `PolicyClientNotRegistered` | PolicyClientRegistry | Client not registered or has been deactivated | Register via `registerClient()` or CLI: `newton-cli policy-client register`. See [PolicyClientRegistry](/developers/guides/smart-contract-integration#policyclientregistry) |
+| `PolicyNotSet` | PolicyClient | `_setPolicy()` called before policy address is set | Call `_setPolicyAddress()` or `setPolicyAddress()` first |
+| `Not authorized intent sender` | PolicyClient | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent is the transaction sender |
+| `Chain ID does not match` | PolicyClient | Attestation was created for a different chain | Verify the intent specifies the correct `chainId` |
+| `Attestation expired` | TaskManager | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` in policy config |
+| `Attestation already spent` | TaskManager | Attestation has already been used | Each attestation is single-use; request a new one |
+| `InterfaceNotSupported` | PolicyClient | Contract does not implement `IERC165` correctly | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
+
+## SDK Error Codes
+
+| Code | Description |
+|------|-------------|
+| `INVALID_PARAMS` | Invalid parameters passed to SDK method |
+| `TIMEOUT` | Request exceeded timeout threshold |
+| `NETWORK_ERROR` | Network connectivity issue |
+| `CONTRACT_ERROR` | On-chain contract interaction failed |
+| `GATEWAY_ERROR` | Newton Gateway returned an error |
+| `UNKNOWN` | Unexpected error |
+
+```typescript
+import { SDKError, SDKErrorCode } from '@magicnewton/newton-protocol-sdk';
+
+try {
+  await walletClient.evaluateIntentDirect(request);
+} catch (error) {
+  if (error instanceof SDKError) {
+    switch (error.code) {
+      case SDKErrorCode.TIMEOUT:
+        // Increase timeout or retry
+        break;
+      case SDKErrorCode.GATEWAY_ERROR:
+        // Check API key and Gateway connectivity
+        break;
+    }
+  }
+}
+```
+
+## HTTP Status Codes
+
+| Status | Description |
+|--------|-------------|
+| 200 | Success (check JSON-RPC result for application-level errors) |
+| 401 | Unauthorized — invalid API key |
+| 403 | Forbidden — insufficient permissions |
+| 429 | Too Many Requests — rate limited |
+| 500 | Internal Server Error |
+| 502 | Bad Gateway — service unavailable |
+
+## Diagnostic Tools
+
+- **`newton-cli regorus eval`** — test Rego policies locally with Newton crypto extensions
+- **`newton-cli policy simulate`** — test full policy evaluation locally
+- **`newton-cli policy-data simulate`** — test WASM oracle execution locally
+- **`newt_simulatePolicy`** — test policy evaluation via the Gateway
+- **`newt_simulatePolicyData`** — test WASM execution via the Gateway
+- **[Newton Explorer](https://explorer.newt.foundation)** — view task status and evaluation results

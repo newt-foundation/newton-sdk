@@ -1,0 +1,135 @@
+---
+title: "Core Concepts"
+description: "Understand Newton Protocol's key concepts — policies, intents, tasks, attestations, and the evaluation lifecycle"
+---
+
+Newton Protocol is a policy engine for onchain transaction authorization, built as an EigenLayer Actively Validated Service (AVS). Before building with Newton, it helps to understand how the core pieces fit together.
+
+## How Newton Works
+
+You write rules (policies) that define when a transaction should be allowed. When a user submits a transaction (intent), Newton's decentralized operator network evaluates it against your policy, and returns a cryptographic proof (attestation) that your smart contract verifies before executing.
+
+```mermaid
+flowchart LR
+    A[User submits Intent] --> B[Newton Gateway]
+    B --> C[AVS Operators evaluate Policy]
+    C --> D[BLS Attestation returned]
+    D --> E[Smart contract verifies proof]
+    E --> F[Transaction executes]
+```
+
+## Key Concepts
+
+### Policy
+
+A **Policy** is a Rego program that defines the conditions an Intent must meet to be approved. Policies are stored on IPFS (referenced by CID) and are reusable across multiple PolicyClients.
+
+Policies can reference two data sources:
+- **`data.params`** — configuration parameters set by the PolicyClient owner (e.g., spend limits, allowlists)
+- **`data.data`** — runtime data fetched by PolicyData WASM oracles (e.g., token prices, KYC status)
+
+### Intent
+
+An **Intent** is a proposed transaction submitted for policy evaluation. It contains standard EVM fields:
+
+| Field | Description |
+|-------|-------------|
+| `from` | Transaction sender address |
+| `to` | Transaction recipient address |
+| `value` | Wei value to transfer |
+| `data` | Transaction calldata |
+| `chain_id` | Target chain ID |
+| `function_signature` | ABI-encoded function signature |
+
+### Task
+
+A **Task** pairs an Intent with its Policy for evaluation. Tasks are the atomic unit of evaluation in Newton — each Task is either **compliant** or **non-compliant**.
+
+### Attestation
+
+An **Attestation** is a cryptographic proof (BLS aggregate signature) that Newton operators evaluated a policy and approved or rejected the Intent. Attestations contain the `taskId`, `policyId`, evaluation result, and expiration block.
+
+### PolicyClient
+
+A **PolicyClient** is a smart contract that validates attestations before executing transactions. You integrate Newton into your contract by inheriting `NewtonPolicyClient` and calling `_validateAttestation()` or `_validateAttestationDirect()` in your function modifiers.
+
+### PolicyData
+
+A **PolicyData** oracle is a WASM component that fetches or computes external data at evaluation time. The output is fed to the Rego policy as `data.data`. Examples include fetching token prices, checking sanctions lists, or verifying KYC status.
+
+### Operator
+
+An **Operator** is an EigenLayer node registered with the Newton AVS. Operators independently evaluate tasks, and their individual BLS signatures are aggregated into a single consensus proof once quorum is reached.
+
+### Gateway
+
+The **Gateway** is the JSON-RPC 2.0 endpoint that receives tasks and coordinates operator evaluation. All SDK and CLI interactions go through the Gateway.
+
+## Evaluation Lifecycle
+
+```mermaid
+flowchart TD
+    A[Deploy Policy] --> B[Configure PolicyClient]
+    B --> C[Submit Task]
+    C --> D[Operators Evaluate]
+    D --> E[Attestation Returned]
+```
+
+<Steps>
+  <Step title="Developer deploys a Policy">
+    Publish a reusable policy to the Newton registry with Rego logic, schema, and optional PolicyData dependencies. The policy is stored on IPFS and referenced by CID.
+  </Step>
+  <Step title="User configures a PolicyClient">
+    Deploy a PolicyClient smart contract with a chosen policy, configuration parameters (thresholds, allowlists), and expiration settings.
+  </Step>
+  <Step title="Caller submits a Task">
+    An Intent is paired with the PolicyClient and sent to the Newton Gateway via the SDK or RPC API.
+  </Step>
+  <Step title="Operators evaluate">
+    AVS operators independently fetch PolicyData, evaluate the Rego policy, and produce individual BLS signatures. The Aggregator collects signatures into a single consensus proof once quorum is reached.
+  </Step>
+  <Step title="Attestation returned">
+    The aggregated attestation is returned to the caller, who submits it on-chain. The contract validates the proof and executes or blocks the transaction.
+  </Step>
+</Steps>
+
+## Architecture Layers
+
+| Layer | Purpose | Components |
+|-------|---------|------------|
+| **Policy Layer** | Defines policies, schemas, rules, thresholds, offchain inputs | Policy Registry, Policy Library |
+| **Compute & Consensus Layer** | Offchain policy evaluation by AVS operators, outputs verifiable proofs | AVS Operators, Aggregator, Consensus Proofs |
+| **Verification & Execution Layer** | Onchain proof verification and outcome enforcement | NewtonVerifier, PolicyClient, SDKs |
+
+## Validation Methods
+
+When your smart contract receives an attestation, you validate it using one of two methods:
+
+| Method | Function | Trade-off |
+|--------|----------|-----------|
+| **Standard** | `_validateAttestation(attestation, proof)` | Uses PolicyClientRegistry lookup — more gas but automatically resolves contract configuration |
+| **Direct** | `_validateAttestationDirect(attestation, proof)` | Bypasses registry — less gas but requires the contract to manage its own policy reference |
+
+## Supported Chains
+
+| Chain | Chain ID | Status |
+|-------|----------|--------|
+| Ethereum Sepolia | `11155111` | Active |
+| Base Sepolia | `84532` | Active |
+| Ethereum Mainnet | `1` | Forthcoming |
+
+<Warning>
+Mainnet support is not yet available. All examples and deployments in these docs target Sepolia testnets.
+</Warning>
+
+## Next Steps
+
+<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+  Simulate your first policy evaluation in 5 minutes
+</Card>
+<Card icon="book" href="/developers/guides/integration-guide" title="Integration Guide">
+  End-to-end walkthrough from policy to production
+</Card>
+<Card icon="code" href="/developers/reference/sdk-reference" title="SDK Reference">
+  Full TypeScript SDK documentation
+</Card>

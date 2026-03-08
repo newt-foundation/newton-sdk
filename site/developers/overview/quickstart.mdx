@@ -1,0 +1,227 @@
+---
+title: "Quickstart"
+description: "Simulate your first Newton Protocol policy evaluation in 5 minutes"
+---
+
+In this quickstart, you simulate a policy evaluation using the Newton Protocol SDK. The example policy performs **OFAC sanctions screening** — a common compliance use case where a transaction is checked against a sanctions list before it can proceed. By the end, you will have submitted an intent, received an evaluation result, and understood the response.
+
+## What you will build
+
+A TypeScript script that:
+1. Creates a Newton client using the SDK
+2. Simulates a sanctions-screening policy evaluation against a sample transaction intent
+3. Parses the evaluation response to see whether the transaction was approved or blocked
+
+## Prerequisites
+
+- **Node.js >= 20** and a package manager (pnpm recommended)
+- **A Newton API key** — create one via the [Dashboard API](/developers/overview/dashboard-api-keys), or email [product@magicnewton.com](mailto:product@magicnewton.com)
+- **Sepolia ETH** — for gas fees on testnet (use a [Sepolia faucet](https://sepoliafaucet.com/))
+
+## Step 1: Install the SDK
+
+<CodeGroup>
+
+```bash pnpm (recommended)
+mkdir newton-quickstart && cd newton-quickstart
+pnpm init
+pnpm add @magicnewton/newton-protocol-sdk@0.3.15 viem
+```
+
+```bash npm
+mkdir newton-quickstart && cd newton-quickstart
+npm init -y
+npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
+```
+
+```bash yarn
+mkdir newton-quickstart && cd newton-quickstart
+yarn init -y
+yarn add @magicnewton/newton-protocol-sdk@0.3.15 viem
+```
+
+</CodeGroup>
+
+## Step 2: Create a Newton client
+
+Create a file called `quickstart.ts`:
+
+```typescript
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import {
+  newtonPublicClientActions,
+  newtonWalletClientActions,
+} from '@magicnewton/newton-protocol-sdk';
+
+const API_KEY = process.env.NEWTON_API_KEY!;
+const RPC_URL = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY';
+
+// Public client for read operations
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(RPC_URL),
+}).extend(newtonPublicClientActions());
+
+// Wallet client for write operations (task submission, simulation)
+const walletClient = createWalletClient({
+  chain: sepolia,
+  transport: http(RPC_URL),
+}).extend(
+  newtonWalletClientActions({
+    apiKey: API_KEY,
+  })
+);
+```
+
+## Step 3: Simulate a policy evaluation
+
+Add the following to `quickstart.ts`:
+
+```typescript
+async function main() {
+  // Simulate a sanctions-screening policy evaluation.
+  // This policy checks whether the sender address appears on an OFAC sanctions list
+  // before allowing the transaction to proceed.
+  const result = await walletClient.simulateTask({
+    intent: {
+      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',
+      value: '0x0',
+      data: '0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22',
+      chainId: 11155111,
+      functionSignature: '0x62757928616464726573732c75696e743235362c75696e74333229',
+    },
+    policyTaskData: {
+      policyId: '0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626',
+      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',
+      policy: '0x',
+      policyData: [
+        {
+          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d',
+          data: '0x',
+          attestation: '0x',
+          policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07',
+          expireBlock: 0,
+        },
+      ],
+    },
+  });
+
+  console.log('Simulation result:', {
+    success: result.success,
+    allowed: result.result?.allow,
+    reason: result.result?.reason,
+    error: result.error,
+  });
+}
+
+main().catch(console.error);
+```
+
+Run the script:
+
+```bash
+NEWTON_API_KEY=your_key_here npx tsx quickstart.ts
+```
+
+## Step 4: Understand the response
+
+The simulation returns a `SimulateTaskResult`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Whether the evaluation completed without errors |
+| `result.allow` | `boolean` | Whether the policy approved the intent |
+| `result.reason` | `string` | Human-readable explanation |
+| `error` | `string` | Error message if evaluation failed |
+
+A successful response looks like:
+
+```json
+{
+  "success": true,
+  "result": {
+    "allow": true,
+    "reason": "Policy conditions met"
+  },
+  "error": null
+}
+```
+
+## What just happened?
+
+You submitted an intent to the Newton Gateway, where an available operator ran the Rego policy with the PolicyData oracle output and returned an allow/deny result. In production, this same flow produces a BLS attestation that your smart contract verifies on-chain.
+
+## Next steps
+
+<Card icon="lightbulb" href="/developers/overview/core-concepts" title="Core Concepts">
+  Understand policies, intents, tasks, and attestations
+</Card>
+<Card icon="book" href="/developers/guides/integration-guide" title="Integration Guide">
+  Build and deploy a full Newton integration end-to-end
+</Card>
+<Card icon="code" href="/developers/reference/sdk-reference" title="SDK Reference">
+  Full TypeScript SDK documentation
+</Card>
+
+<Accordion title="Alternative: AI-assisted build">
+
+The fastest way to build a complete Newton application is to use Claude (or a similar AI coding assistant) with the Newton LLM context files. This approach scaffolds a full-stack app including data oracle, Rego policy, Solidity contract, and Next.js frontend.
+
+### Get the LLM context files
+
+Download both Newton LLM context files and place them in your project root. See the [LLM context files reference](/developers/reference/context-file) for full usage details.
+
+```bash
+# Policy guide (WASM oracles, Rego, newton-cli)
+curl -o newton-policy-guide.md "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
+
+# TypeScript SDK guide (Next.js frontend integration)
+curl -o newton-sdk-guide.md "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
+```
+
+### Provide context to your AI assistant
+
+Start a conversation with Claude and provide the LLM context file. Then ask it to build the Newton sanctions-checked transfer app.
+
+Example prompt:
+
+> Using the Newton integration context provided, help me build a complete Newton Protocol app that:
+> 1. Creates a WASM data oracle for sanctions checking
+> 2. Writes a Rego policy that checks the oracle results
+> 3. Deploys the policy via newton-cli
+> 4. Deploys a NewtonPolicyWallet on Sepolia
+> 5. Builds a Next.js frontend using the Newton SDK
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CHAIN_ID` | `11155111` (Sepolia) or `84532` (Base Sepolia) |
+| `PINATA_JWT` | Your Pinata API JWT token |
+| `PINATA_GATEWAY` | Your Pinata gateway URL |
+| `PRIVATE_KEY` | Deployer wallet private key (with `0x` prefix) |
+| `RPC_URL` | Sepolia RPC endpoint |
+| `NEXT_PUBLIC_NEWTON_API_KEY` | Newton Protocol API key |
+| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL` | Alchemy HTTP RPC URL |
+| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` | Alchemy WebSocket RPC URL |
+
+### Deploy and run
+
+```bash
+# Build the WASM component
+jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
+
+# Deploy policy via newton-cli
+newton-cli policy-files generate-cids --directory policy-files --output policy_cids.json --entrypoint "your_policy.allow"
+newton-cli policy-data deploy --policy-cids policy_cids.json
+newton-cli policy deploy --policy-cids policy_cids.json --policy-data-address "0x..."
+
+# Deploy the wallet contract
+forge script script/Deploy.s.sol:DeployScript --rpc-url $RPC_URL --broadcast
+
+# Run the Next.js app
+cd newton-sdk-app && npm install && npm run dev
+```
+</Accordion>
