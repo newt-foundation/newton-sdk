@@ -1,0 +1,46 @@
+---
+title: "What is Newton?"
+description: "Newton Protocol — a decentralized policy engine for onchain transaction authorization"
+---
+
+Newton Protocol is a policy engine that allows you to encode, verify, and enforce rules—such as spend limits, jurisdictional gating, or fraud prevention—directly within your smart contracts.
+
+#### **The Problem**
+
+Smart contracts are built to initiate onchain actions like mints, transfers, and swaps. However, they are inherently **"blind" to offchain contexts**, such as whether a user is sanctioned, if an AI agent is hallucinating, or if a transaction violates a corporate spend policy.
+
+Furthermore, traditional security often relies on **"closed-loop" gates** like frontend filters or centralized API checks. These measures leave protocols vulnerable to unauthorized actions initiated outside your controlled environment, such as through third-party aggregators, autonomous agents, or direct CLI interactions.
+
+#### **The Solution**
+
+Newton bridges this gap by informing onchain actions with real-time offchain data—including KYC status, market feeds, and proof of reserves—all while preserving privacy and decentralization.
+
+Because these rules are enforced at the smart contract level, your protocol remains protected regardless of where the transaction originates. This allows developers to move beyond static allowlists and implement **dynamic, real-time guardrails** that block high-risk or non-compliant actions at the source.
+
+#### **Modular and Chain-Agnostic**
+
+Newton is modular by design and integrates easily with most EVM-compatible networks, including Ethereum, Base, and Arbitrum. Non-EVM support is currently on our roadmap to provide a universal safety net for open protocols and autonomous agents across the entire ecosystem.
+
+<Card icon="play" href="https://demo.newton.xyz/" title="Try the demo">
+  See a live example of a Newton-powered sanctions-checked transfer app
+</Card>
+
+## Walkthrough
+
+<iframe className="w-full aspect-video rounded-xl" src="https://player.vimeo.com/video/1154806337" title="Vimeo video player" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+
+## Why Newton
+
+- **Verifiable Trust:** Every compliance decision is backed by cryptographic proof, not reputation.
+- **Privacy-Preserving:** Only hashes and commitments are onchain — no PII or sensitive data exposure.
+- **Composable:** Works with wallets, dApps, AI agents, and DeFi protocols through a standard interface.
+- **Chain-Agnostic:** Newton proofs can be verified across any EVM chain via lightweight verifier contracts.
+- **Extensible:** Supports both open-source policies and enterprise modules for regulated financial institutions.
+
+## **Summary**
+
+Newton Protocol is a policy engine that allows you to program and enforce rules with both onchain and offchain data directly within your smart contracts.
+
+Whether you are adhering to jurisdictional requirements for cross-border payments, defining risk managed thresholds for vault trades, or setting safety guardrails for AI agents, Newton allows you to enforce dynamic, real-time policies that keep your protocol secure at the source.
+
+By combining deterministic policy computation, offchain consensus verification, and onchain composability, Newton establishes a new foundation for **trust, compliance, and safety in autonomous systems** — powered by the **NEWT token** and sustained through a decentralized, self-reinforcing economic model.
