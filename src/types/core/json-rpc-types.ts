@@ -2,7 +2,7 @@ import type { RPCErrorCode } from '@core/types'
 
 // --- Request interfaces
 
-export interface JsonRpcRequestPayload<TParams = any> {
+export interface JsonRpcRequestPayload<TParams = unknown> {
   jsonrpc: string
   id: string | number | null
   method: string
@@ -28,10 +28,10 @@ export interface ShowUIParams {
 export interface JsonRpcError {
   message: string
   code: RPCErrorCode
-  data?: any
+  data?: unknown
 }
 
-export interface JsonRpcResponsePayload<ResultType = any> {
+export interface JsonRpcResponsePayload<ResultType = unknown> {
   jsonrpc: string
   id: string | number | null
   result?: ResultType | null

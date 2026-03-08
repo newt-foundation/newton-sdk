@@ -29,7 +29,7 @@ export class MagicRPCError extends Error {
 
   public rawMessage: string
 
-  public data: any
+  public data: unknown
 
   constructor(sourceError?: JsonRpcError | null) {
     super()
@@ -44,6 +44,6 @@ export class MagicRPCError extends Error {
   }
 }
 
-export function createRpcError(code: RPCErrorCode, message: string, data?: any): MagicRPCError {
+export function createRpcError(code: RPCErrorCode, message: string, data?: unknown): MagicRPCError {
   return new MagicRPCError({ code, message, data })
 }

@@ -4,9 +4,7 @@ interface CacheDataParams {
   headers?: {
     [key: string]: string
   }
-  body?: {
-    [key: string]: any
-  }
+  body?: Record<string, unknown>
   staleTimeMs?: number
 }
 
