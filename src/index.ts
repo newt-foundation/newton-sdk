@@ -63,10 +63,6 @@ const newtonWalletClientActions =
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
-    const idpUrl = overrides?.newtonIdpUrl ?? 'https://idp.newtonproject.org'
-
-    console.log('idpUrl:', idpUrl)
-
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,

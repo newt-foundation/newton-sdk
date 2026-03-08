@@ -13,6 +13,7 @@
   },
   "license": "MIT",
   "homepage": "https://newton.foundation",
+  "type": "commonjs",
   "target": "browser",
   "cdnGlobalName": "NewtonSdk",
   "types": "./dist/types/index.d.ts",
@@ -26,16 +27,6 @@
       "types": "./dist/types/types/index.d.ts",
       "import": "./dist/es/types/index.js",
       "require": "./dist/cjs/types/index.js"
-    },
-    "./viem": {
-      "types": "./dist/types/viem/index.d.ts",
-      "import": "./dist/es/viem/index.js",
-      "require": "./dist/cjs/viem/index.js"
-    },
-    "./networks": {
-      "types": "./dist/types/networks/index.d.ts",
-      "import": "./dist/es/networks/index.js",
-      "require": "./dist/cjs/networks/index.js"
     }
   },
   "files": [
@@ -54,11 +45,15 @@
     "format": "biome format --write src/",
     "format:check": "biome format src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "sync-abis": "./scripts/sync-abis.sh",
-    "clean": "rimraf dist && rimraf node_modules"
+    "clean": "rimraf dist && rimraf node_modules",
+    "check:exports": "publint",
+    "check:size": "size-limit",
+    "check:unused": "knip",
+    "check:all": "pnpm check:exports && pnpm check:size"
   },
   "auto": {
     "plugins": [
@@ -68,19 +63,24 @@
     ]
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.4",
+    "@auto-it/conventional-commits": "^11.3.0",
     "@biomejs/biome": "^1.9.4",
     "@rollup/plugin-node-resolve": "^16.0.1",
+    "@size-limit/file": "^11.2.0",
     "@types/rimraf": "^4.0.5",
+    "auto": "^11.3.0",
     "builtin-modules": "^4.0.0",
+    "knip": "^5.86.0",
+    "publint": "^0.3.18",
     "rimraf": "^6.0.1",
     "rollup": "^4.48.1",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-node-externals": "^8.1.0",
     "rollup-plugin-tsc-alias": "^1.1.4",
     "rollup-plugin-typescript2": "^0.36.0",
-    "@auto-it/conventional-commits": "^11.3.0",
-    "auto": "^11.3.0",
     "simple-git-hooks": "^2.11.1",
+    "size-limit": "^11.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "vitest": "^3.1.1"
@@ -98,5 +98,15 @@
       "eventemitter3",
       "localforage"
     ]
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/es/index.js",
+      "limit": "50 kB"
+    },
+    {
+      "path": "dist/cjs/index.js",
+      "limit": "50 kB"
+    }
+  ]
 }
