@@ -49,8 +49,20 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Validate package exports
+        run: pnpm check:exports
+
+      - name: Check bundle size
+        run: pnpm check:size
+
+      - name: Unit Tests
+        run: pnpm test
+
       - name: Audit Prod Dependencies
         run: pnpm audit --prod || exit 0
-
-      # - name: Unit Tests
-      #   run: pnpm test
