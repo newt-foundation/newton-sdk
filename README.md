@@ -90,25 +90,16 @@ pnpm lint
 
 ## Testing
 
-Currently, the project doesn't have unit tests implemented yet. The test script outputs:
+The project uses Vitest for unit testing:
 
 ```bash
-pnpm test
-# Output: "No unit tests... yet :("
-```
-
-### Future Testing Setup
-
-When tests are added, they will likely be configured to run with:
-
-```bash
-# Run tests (when implemented)
+# Run tests
 pnpm test
 
-# Run tests in watch mode (when implemented)
+# Run tests in watch mode
 pnpm test:watch
 
-# Run tests with coverage (when implemented)
+# Run tests with coverage
 pnpm test:coverage
 ```
 
@@ -138,7 +129,7 @@ To test the locally built SDK from a different local project, you can use one of
 3. **Import and use in your test project:**
 
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
    // Your test code here
    ```
 
@@ -171,7 +162,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -232,7 +223,8 @@ The build process generates multiple module formats:
 2. **Make changes** to source files in `src/`
 3. **Build**: `pnpm build` (or `pnpm build --watch` for development)
 4. **Lint**: `pnpm lint` to check code quality
-5. **Type check**: `npx tsc --noEmit` for TypeScript validation
+5. **Type check**: `pnpm typecheck` for TypeScript validation
+6. **Quality checks**: `pnpm check:all` to validate exports and bundle size
 
 ## Troubleshooting
 
@@ -271,9 +263,12 @@ This repository uses automated releases with the `auto` tool for both production
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Ensure the build passes: `pnpm build`
-5. Ensure linting passes: `pnpm lint`
-6. Submit a pull request
+4. Ensure linting passes: `pnpm lint`
+5. Ensure types check: `pnpm typecheck`
+6. Ensure the build passes: `pnpm build`
+7. Run quality checks: `pnpm check:all`
+8. Run tests: `pnpm test`
+9. Submit a pull request
 
 ## License
 
