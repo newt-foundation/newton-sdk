@@ -8,10 +8,12 @@ import { type EventsDefinition, type TypedEmitter, createTypedEmitter } from './
 interface ExtendedPromise<T> extends Promise<T> {
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null,
+    // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise.then signature
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null,
   ): ExtendedPromise<TResult1 | TResult2> & this
 
   catch<TResult = never>(
+    // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise.catch signature
     onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null,
   ): ExtendedPromise<T | TResult> & this
 
@@ -29,6 +31,7 @@ export type PromiEvent<TResult, TEvents extends EventsDefinition = undefined> = 
  */
 type DefaultEvents<TResult> = {
   done: (result: TResult) => void
+  // biome-ignore lint/suspicious/noExplicitAny: error event can carry any rejection reason
   error: (reason: any) => void
   settled: () => void
 }
@@ -38,6 +41,7 @@ type DefaultEvents<TResult> = {
  */
 type AsyncPromiseExecutor<TResult> = (
   resolve: (value: TResult | PromiseLike<TResult>) => void,
+  // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise reject signature
   reject: (reason?: any) => void,
 ) => void | Promise<void>
 
@@ -46,6 +50,7 @@ const promiEventBrand = Symbol('isPromiEvent')
 /**
  * Returns `true` if the given `value` is a `PromiEvent`.
  */
+// biome-ignore lint/suspicious/noExplicitAny: type guard must accept any value and return PromiEvent<any>
 export function isPromiEvent(value: any): value is PromiEvent<any> {
   return !!value[promiEventBrand]
 }
@@ -73,16 +78,20 @@ export function createPromiEvent<TResult, TEvents extends EventsDefinition = und
    * `EventEmitter` methods.
    */
   const createChainingPromiseMethod =
-    (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<any>) =>
-    (...args: any[]) => {
-      const nextPromise = (source as any)[method].apply(source, args)
-      return promiEvent(nextPromise)
-    }
+    // biome-ignore lint/suspicious/noExplicitAny: internal promise chaining requires type erasure
+      (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<any>) =>
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch requires any args
+      (...args: any[]) => {
+        // biome-ignore lint/suspicious/noExplicitAny: symbol-keyed property access requires type erasure
+        const nextPromise = (source as any)[method].apply(source, args)
+        return promiEvent(nextPromise)
+      }
 
   /**
    * Builds a `PromiEvent` by assigning `EventEmitter` methods to a native
    * `Promise` object.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: PromiEvent builder augments a raw promise with emitter methods
   const promiEvent = (source: any) => {
     return Object.assign(source, {
       [promiEventBrand]: true,

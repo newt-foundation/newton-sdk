@@ -1,6 +1,12 @@
 import { renderPopupPrompt } from '@core/popup-prompt'
 import { MagicRPCError, SDKError, createRpcError } from '@core/sdk-exceptions'
-import { type JsonRpcResponsePayload, NewtonWalletPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types'
+import {
+  type JsonRpcRequestPayload,
+  type JsonRpcResponsePayload,
+  NewtonWalletPayloadMethod,
+  RPCErrorCode,
+  SDKErrorCode,
+} from '@core/types'
 import { createPromiEvent } from '@core/utils/promise-tools'
 
 const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app'
@@ -42,7 +48,7 @@ const POPUP_ERROR_MESSAGES = {
   FAILED_TO_OPEN_POPUP: 'Failed to open popup window',
 }
 
-export function popupRequest<ResultType = any>(payload: any, endpointOverride?: string) {
+export function popupRequest<ResultType = unknown>(payload: JsonRpcRequestPayload, endpointOverride?: string) {
   // Popup window constants
   const popupWidth = 393
   const popupHeight = 620

@@ -36,9 +36,9 @@ import { mainnet, sepolia } from 'viem/chains'
 
 export interface CreateTaskResult {
   task_id: Hex
-  task_request: any
+  task_request: unknown
   status: 'Completed' | 'Failed'
-  aggregation_response: any
+  aggregation_response: unknown
   timestamp: number
   error?: unknown
 }
@@ -289,8 +289,8 @@ async function evaluateIntentDirect(
   result: {
     evaluationResult: boolean
     task: Task
-    taskResponse: any
-    blsSignature: any
+    taskResponse: unknown
+    blsSignature: unknown
   }
 }> {
   const walletWithPublic = walletClient.extend(publicActions)

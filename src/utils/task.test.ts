@@ -59,7 +59,7 @@ describe('convertLogToTaskResponse', () => {
   it('converts zero evaluationResult to false', () => {
     const log = createMockLog({
       taskResponse: { evaluationResult: '0x00' as `0x${string}` },
-    } as any)
+    } as Partial<TaskRespondedLog['args']>)
     const result = convertLogToTaskResponse(log)
 
     expect(result.taskResponse.evaluationResult).toBe(false)

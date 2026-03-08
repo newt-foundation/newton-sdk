@@ -1,4 +1,4 @@
-import type { Address, Hex } from 'viem'
+import type { Address, Hex, PublicClient, WalletClient } from 'viem'
 import { baseSepolia, mainnet, sepolia } from 'viem/chains'
 import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
 import {
@@ -15,6 +15,7 @@ import {
   waitForTaskResponded,
 } from './modules/avs'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
+import type { PolicyParamsJson } from './types/policy'
 import type {
   SimulatePolicyDataParams,
   SimulatePolicyDataResult,
@@ -39,10 +40,11 @@ interface SdkOverrides {
   newtonIdpUrl?: string
 }
 
-const supportedChains = [mainnet.id, sepolia.id, baseSepolia.id]
+const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id]
 
 const newtonWalletClientActions =
-  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) => (walletClient: any) => {
+  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (walletClient: WalletClient) => {
     const { apiKey, policyContractAddress } = config
 
     const validatePolicyContractAddress = () => {
@@ -71,7 +73,7 @@ const newtonWalletClientActions =
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: any; blsSignature: any } }> =>
+      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: unknown; blsSignature: unknown } }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
@@ -119,14 +121,14 @@ const newtonWalletClientActions =
         })
       },
 
-      connectIdentityWithNewton: (): Promise<any> => {
+      connectIdentityWithNewton: (): Promise<unknown> => {
         return Promise.resolve({ foo: 'bar ' })
       },
     }
   }
 
 const newtonPublicClientActions =
-  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
+  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: PublicClient) => {
     if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
         `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported`,
@@ -260,7 +262,7 @@ const newtonPublicClientActions =
       precomputePolicyId: (args: {
         policyContract: Address
         policyData: Address[]
-        params: any // PolicyParamsJson
+        params: PolicyParamsJson
         client: Address
         policyUri: string
         schemaUri: string
