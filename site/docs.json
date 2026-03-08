@@ -21,8 +21,8 @@
             "group": "Getting Started",
             "pages": [
               "developers/overview/about",
-              "developers/overview/core-concepts",
               "developers/overview/quickstart",
+              "developers/overview/core-concepts",
               "developers/overview/dashboard-api-keys"
             ]
           },

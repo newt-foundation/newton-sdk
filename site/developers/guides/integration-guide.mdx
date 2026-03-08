@@ -3,7 +3,16 @@ title: "Integration Guide"
 description: "End-to-end guide for integrating Newton Protocol — from policy deployment to SDK integration"
 ---
 
-This guide walks through the full Newton Protocol integration flow. Each step links to a dedicated guide with complete code and instructions.
+This guide walks through the full Newton Protocol integration flow. Choose your starting point based on what you need:
+
+<Tabs>
+  <Tab title="Use an existing policy">
+    If a policy is already deployed (e.g., you completed the [quickstart](/developers/overview/quickstart) or someone shared a policy address with you), skip directly to [Step 4: Smart Contract Integration](#step-4-smart-contract-integration) or [Step 5: Frontend SDK Integration](#step-5-frontend-sdk-integration). You only need **Node.js** and optionally **Foundry**.
+  </Tab>
+  <Tab title="Build everything from scratch">
+    Follow all five steps below to create a data oracle, write a Rego policy, deploy it, and integrate with a smart contract and frontend.
+  </Tab>
+</Tabs>
 
 ## Overview
 
@@ -15,21 +24,30 @@ flowchart LR
     B --> C[Deploy with CLI]
     C --> D[Smart Contract]
     D --> E[Frontend SDK]
+
+    style D stroke-dasharray: 5 5
+    style E stroke-dasharray: 5 5
 ```
+
+<Note>
+Steps 4 and 5 (dashed) can be done independently if you already have a deployed policy. You do not need the full toolchain to integrate via the SDK.
+</Note>
 
 ## Prerequisites
 
-| Requirement | Use |
-|---|---|
-| **Rust + Cargo** | Building and running `newton-cli` |
-| **Node.js >= 20 + npm** | Running `@bytecodealliance/jco` and the Next.js app |
-| **Foundry** (`forge`, `cast`, `anvil`) | Compiling and deploying Solidity contracts |
-| **newton-cli 0.2.0** | Uploading policy files, generating CIDs, deploying policies |
-| **Pinata account** | IPFS pinning (you will need a JWT and a gateway URL) |
-| **Sepolia ETH** | Gas fees on the Ethereum Sepolia testnet |
-| **Newton API key** | Authenticate SDK requests — create one via the [Newton Dashboard API](https://dashboard.api.newt.foundation) (SIWE or email authentication), or email [product@magicnewton.com](mailto:product@magicnewton.com) |
+Install only what you need for the steps you plan to follow:
 
-### Install tooling
+| Requirement | Steps | Use |
+|---|---|---|
+| **Node.js >= 20 + npm** | All | SDK, frontend, WASM tooling |
+| **Sepolia ETH** | 3–5 | Gas fees on testnet |
+| **Newton API key** | 4–5 | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
+| **Foundry** (`forge`, `cast`, `anvil`) | 4 | Compiling and deploying Solidity contracts |
+| **Rust + Cargo** | 1–3 | Building and running `newton-cli` |
+| **newton-cli 0.2.0** | 3 | Uploading policy files, generating CIDs, deploying policies |
+| **Pinata account** | 3 | IPFS pinning (you will need a JWT and a gateway URL) |
+
+<Accordion title="Install all tooling (Steps 1–5)">
 
 ```bash
 # Rust (includes cargo)
@@ -52,6 +70,7 @@ npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
 <Warning>
 After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
 </Warning>
+</Accordion>
 
 ## Step 1: Write a Data Oracle
 

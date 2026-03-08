@@ -3,48 +3,41 @@ title: "Quickstart"
 description: "Simulate your first Newton Protocol policy evaluation in 5 minutes"
 ---
 
-In this quickstart, you simulate a policy evaluation using the Newton Protocol SDK. The example policy performs **OFAC sanctions screening** — a common compliance use case where a transaction is checked against a sanctions list before it can proceed. By the end, you will have submitted an intent, received an evaluation result, and understood the response.
-
-## What you will build
-
-A TypeScript script that:
-1. Creates a Newton client using the SDK
-2. Simulates a sanctions-screening policy evaluation against a sample transaction intent
-3. Parses the evaluation response to see whether the transaction was approved or blocked
+Simulate a policy evaluation using the Newton SDK. The example policy performs **OFAC sanctions screening** — checking a transaction against a sanctions list before allowing it to proceed.
 
 ## Prerequisites
 
 - **Node.js >= 20** and a package manager (pnpm recommended)
-- **A Newton API key** — create one via the [Dashboard API](/developers/overview/dashboard-api-keys), or email [product@magicnewton.com](mailto:product@magicnewton.com)
+- **A Newton API key** — create one via the [Dashboard](/developers/overview/dashboard-api-keys), or email [product@magicnewton.com](mailto:product@magicnewton.com)
 - **Sepolia ETH** — for gas fees on testnet (use a [Sepolia faucet](https://sepoliafaucet.com/))
 
-## Step 1: Install the SDK
+## Install
 
 <CodeGroup>
 
 ```bash pnpm (recommended)
 mkdir newton-quickstart && cd newton-quickstart
 pnpm init
-pnpm add @magicnewton/newton-protocol-sdk@0.3.15 viem
+pnpm add @magicnewton/newton-protocol-sdk viem
 ```
 
 ```bash npm
 mkdir newton-quickstart && cd newton-quickstart
 npm init -y
-npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
+npm install @magicnewton/newton-protocol-sdk viem
 ```
 
 ```bash yarn
 mkdir newton-quickstart && cd newton-quickstart
 yarn init -y
-yarn add @magicnewton/newton-protocol-sdk@0.3.15 viem
+yarn add @magicnewton/newton-protocol-sdk viem
 ```
 
 </CodeGroup>
 
-## Step 2: Create a Newton client
+## Run a simulation
 
-Create a file called `quickstart.ts`:
+Create a file called `quickstart.ts` and paste the full script:
 
 ```typescript
 import { createPublicClient, createWalletClient, http } from 'viem';
@@ -57,13 +50,13 @@ import {
 const API_KEY = process.env.NEWTON_API_KEY!;
 const RPC_URL = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY';
 
-// Public client for read operations
+// Public client — read-only operations (poll for task responses, read policy state)
 const publicClient = createPublicClient({
   chain: sepolia,
   transport: http(RPC_URL),
 }).extend(newtonPublicClientActions());
 
-// Wallet client for write operations (task submission, simulation)
+// Wallet client — write operations (submit tasks, run simulations)
 const walletClient = createWalletClient({
   chain: sepolia,
   transport: http(RPC_URL),
@@ -72,36 +65,29 @@ const walletClient = createWalletClient({
     apiKey: API_KEY,
   })
 );
-```
 
-## Step 3: Simulate a policy evaluation
-
-Add the following to `quickstart.ts`:
-
-```typescript
 async function main() {
   // Simulate a sanctions-screening policy evaluation.
-  // This policy checks whether the sender address appears on an OFAC sanctions list
-  // before allowing the transaction to proceed.
+  // This checks whether the sender address appears on an OFAC sanctions list.
   const result = await walletClient.simulateTask({
     intent: {
-      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
-      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',
-      value: '0x0',
-      data: '0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22',
-      chainId: 11155111,
-      functionSignature: '0x62757928616464726573732c75696e743235362c75696e74333229',
+      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',   // sender address
+      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',     // recipient (PolicyClient contract)
+      value: '0x0',                                           // no ETH transfer
+      data: '0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22', // encoded calldata
+      chainId: 11155111,                                      // Sepolia testnet
+      functionSignature: '0x62757928616464726573732c75696e743235362c75696e74333229', // ABI signature (hex-encoded)
     },
     policyTaskData: {
-      policyId: '0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626',
-      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',
+      policyId: '0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626', // OFAC sanctions policy
+      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',                    // deployed policy contract
       policy: '0x',
       policyData: [
         {
-          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d',
+          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d', // {"base_symbol":"BTC"} (hex-encoded JSON)
           data: '0x',
           attestation: '0x',
-          policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07',
+          policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07', // PolicyData oracle contract
           expireBlock: 0,
         },
       ],
@@ -119,13 +105,13 @@ async function main() {
 main().catch(console.error);
 ```
 
-Run the script:
+Run it:
 
 ```bash
 NEWTON_API_KEY=your_key_here npx tsx quickstart.ts
 ```
 
-## Step 4: Understand the response
+## Understand the response
 
 The simulation returns a `SimulateTaskResult`:
 
@@ -136,7 +122,7 @@ The simulation returns a `SimulateTaskResult`:
 | `result.reason` | `string` | Human-readable explanation |
 | `error` | `string` | Error message if evaluation failed |
 
-A successful response looks like:
+A successful response:
 
 ```json
 {
@@ -151,15 +137,32 @@ A successful response looks like:
 
 ## What just happened?
 
-You submitted an intent to the Newton Gateway, where an available operator ran the Rego policy with the PolicyData oracle output and returned an allow/deny result. In production, this same flow produces a BLS attestation that your smart contract verifies on-chain.
+```mermaid
+sequenceDiagram
+    participant You as Your Script
+    participant GW as Newton Gateway
+    participant Op as AVS Operators
+    participant Pol as Rego Policy
+
+    You->>GW: simulateTask(intent, policy)
+    GW->>Op: Forward to available operator
+    Op->>Pol: Run OFAC sanctions policy
+    Pol-->>Op: allow: true/false
+    Op-->>GW: Signed result
+    GW-->>You: SimulateTaskResult
+```
+
+You submitted an intent to the Newton Gateway, where an operator ran the OFAC sanctions Rego policy with PolicyData oracle output and returned an allow/deny result. This was a **simulation** — no on-chain transaction occurred.
+
+In production, the same flow produces a **BLS attestation** that your smart contract verifies on-chain before executing the transaction. The [integration guide](/developers/guides/integration-guide) walks through the full end-to-end flow.
 
 ## Next steps
 
+<Card icon="book" href="/developers/guides/integration-guide" title="Integration Guide">
+  Build and deploy a full Newton integration — policy, contract, and frontend
+</Card>
 <Card icon="lightbulb" href="/developers/overview/core-concepts" title="Core Concepts">
   Understand policies, intents, tasks, and attestations
-</Card>
-<Card icon="book" href="/developers/guides/integration-guide" title="Integration Guide">
-  Build and deploy a full Newton integration end-to-end
 </Card>
 <Card icon="code" href="/developers/reference/sdk-reference" title="SDK Reference">
   Full TypeScript SDK documentation
