@@ -46,6 +46,7 @@
     "format:check": "biome format src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:typecheck": "vitest --config vitest.typecheck.config.ts --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "sync-abis": "./scripts/sync-abis.sh",
@@ -53,7 +54,8 @@
     "check:exports": "publint",
     "check:size": "size-limit",
     "check:unused": "knip",
-    "check:all": "pnpm check:exports && pnpm check:size"
+    "check:types-resolution": "attw --pack . --entrypoints . --ignore-rules=unexpected-module-syntax",
+    "check:all": "pnpm check:exports && pnpm check:size && pnpm check:types-resolution"
   },
   "auto": {
     "plugins": [

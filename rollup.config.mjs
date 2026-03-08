@@ -38,6 +38,7 @@ export default {
         compilerOptions: {
           rootDir: 'src',
         },
+        exclude: ['node_modules', 'src/**/*.test.ts', 'src/**/*.test-d.ts'],
       },
       useTsconfigDeclarationDir: true,
     }),
