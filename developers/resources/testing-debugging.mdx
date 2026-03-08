@@ -1,0 +1,187 @@
+---
+title: "Testing & Debugging"
+description: "Tools and techniques for testing policies, oracles, and attestations during Newton Protocol development"
+---
+
+Newton provides simulation endpoints and local tools at every layer of the stack. Use these to validate your policies, oracles, and integration before deploying to production.
+
+## Local Policy Simulation
+
+Test Rego policy logic without the network using the Newton CLI:
+
+```bash
+newton-cli regorus eval \
+  --policy policy.rego \
+  --input '{"from":"0xAbC...","to":"0xDeF...","value":"0x0","data":"0x","chainId":"0xaa36a7","functionSignature":"0x"}' \
+  --data '{"params":{"max_amount":"1000"},"data":{"eth_price_usd":2500}}'
+```
+
+This evaluates your Rego policy locally with full support for Newton crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`).
+
+## Local Oracle Simulation
+
+Test your WASM data oracle without deploying:
+
+```bash
+newton-cli --chain-id 11155111 policy-data simulate \
+  --wasm-file policy.wasm \
+  --input-json '{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"}'
+```
+
+The CLI runs your WASM component in a sandboxed environment with the Newton HTTP host. The `--input-json` value is passed to your `run` function as the `input` string.
+
+## Gateway Simulation
+
+Simulate a full policy evaluation via the Gateway RPC without any on-chain interaction:
+
+### Simulate a Task
+
+Tests the complete evaluation pipeline (data oracle + policy) for a specific PolicyClient:
+
+```bash
+curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulateTask",
+    "params": {
+      "policy_client": "0xYourPolicyClientAddress",
+      "intent": {
+        "from": "0xCallerAddress",
+        "to": "0xTargetAddress",
+        "value": "0x0",
+        "data": "0x",
+        "chain_id": "0xaa36a7",
+        "function_signature": "0x"
+      }
+    },
+    "id": 1
+  }'
+```
+
+### Simulate Policy Only
+
+Test Rego policy evaluation with provided inputs (no oracle execution):
+
+```bash
+curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulatePolicy",
+    "params": {
+      "policy_cid": "bafyrei...",
+      "intent": { ... },
+      "data": { "eth_price_usd": 2500 },
+      "params": { "max_amount": "1000" }
+    },
+    "id": 1
+  }'
+```
+
+### Simulate PolicyData Only
+
+Test a WASM oracle execution via the Gateway:
+
+<Tabs>
+  <Tab title="With inline secrets">
+    ```bash
+    curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <your_api_key>" \
+      -d '{
+        "jsonrpc": "2.0",
+        "method": "newt_simulatePolicyData",
+        "params": {
+          "policy_data_cid": "bafyrei...",
+          "input": "{\"address\":\"0x...\"}",
+          "secrets": { "API_KEY": "sk-test-xxx" }
+        },
+        "id": 1
+      }'
+    ```
+  </Tab>
+  <Tab title="With stored secrets">
+    ```bash
+    curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <your_api_key>" \
+      -d '{
+        "jsonrpc": "2.0",
+        "method": "newt_simulatePolicyDataWithClient",
+        "params": {
+          "policy_client": "0xYourPolicyClientAddress"
+        },
+        "id": 1
+      }'
+    ```
+    <Note>Requires ownership of the PolicyClient. The Gateway reads secrets stored via `newt_storeEncryptedSecrets`.</Note>
+  </Tab>
+</Tabs>
+
+## Newton Explorer
+
+The [Newton Explorer](/developers/resources/newton-explorer) provides a visual interface for inspecting tasks, attestations, and policy evaluations on-chain. Use it to:
+
+- View task status and results
+- Inspect attestation details (signers, quorum, expiration)
+- Trace the evaluation flow from intent to on-chain verification
+
+## BLS Diagnostics
+
+If an attestation fails on-chain verification, check:
+
+| Check | How |
+|-------|-----|
+| Attestation expiration | Compare `attestation.expiration` against current block number |
+| Signer bitmap | Verify the signer bitmap includes enough operators for quorum |
+| Reference block | Ensure the reference block matches the operator set used for verification |
+| Chain ID | Confirm the intent's `chainId` matches the chain where the PolicyClient is deployed |
+
+## Debugging Patterns
+
+| Symptom | Likely Cause | Diagnostic Step |
+|---------|-------------|-----------------|
+| `newt_simulateTask` returns `non-compliant` | Policy logic rejects the intent | Run `newt_simulatePolicy` with the same inputs to isolate the Rego evaluation |
+| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy-data simulate` |
+| Attestation expires before on-chain submission | Too much time between evaluation and transaction | Reduce latency or increase the `expiry_offset` parameter |
+| On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
+| `TaskAlreadyExists` error | Duplicate intent hash | Modify the intent nonce or wait for the existing task |
+| Policy returns `CAP` instead of `ALLOW` | Intent value exceeds policy threshold | Check `data.params` values on your PolicyClient |
+
+## SDK Debugging
+
+Enable verbose logging in the Newton SDK:
+
+```typescript
+import { createPublicClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
+
+const client = createPublicClient({
+  chain: sepolia,
+  transport: http(),
+}).extend(newtonPublicClientActions({
+  apiKey: process.env.NEWTON_API_KEY!,
+  gatewayUrl: 'https://gateway-avs.sepolia.newt.foundation/rpc',
+}));
+
+// Simulate first to debug
+const simulation = await client.simulateTask({
+  policyClient: '0xYourPolicyClientAddress',
+  intent: { /* ... */ },
+});
+
+console.log('Simulation result:', JSON.stringify(simulation, null, 2));
+```
+
+## Next Steps
+
+<Card icon="list-check" href="/developers/resources/deployment-checklist" title="Deployment Checklist">
+  Pre-launch verification checklist
+</Card>
+<Card icon="circle-exclamation" href="/developers/reference/error-reference" title="Error Reference">
+  Complete error code reference
+</Card>

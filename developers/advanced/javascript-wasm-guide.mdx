@@ -1,0 +1,173 @@
+---
+title: "Writing Data Oracles in JavaScript"
+description: "This guide walks you through building a JavaScript newton-provider WebAssembly component using ComponentizeJS (@bytecodealliance/componentize-js). "
+---
+
+## 0) Prerequisites
+
+- **Node.js 18+** and **npm** installed
+- A terminal on macOS/Linux/WSL (Windows PowerShell also works)
+
+> **Tip:** Use nvm to manage Node versions:
+
+```bash
+# macOS/Linux example
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install --lts
+nvm use --lts
+```
+
+---
+
+## 1) Create a project folder
+
+```bash
+mkdir my_project
+cd my_project
+```
+
+---
+
+## 2) Install CLI
+
+```bash
+npm install -g @bytecodealliance/componentize-js
+```
+
+---
+
+## 3) Add the WIT world
+
+Create **`newton-provider.wit`** in the project root:
+
+```wit
+package newton:provider@0.1.0;
+
+interface http {
+    record http-request {
+        url: string,
+        method: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: list<u8>,
+    }
+
+    fetch: func(request: http-request) -> result<http-response, string>;
+}
+
+world newton-provider {
+    import http;
+    export run: func(input: string) -> result<string, string>;
+}
+```
+
+---
+
+## 4) Implement your component logic
+
+Create **`app.js`**:
+
+```js
+// Import the WIT import exactly like the ComponentizeJS usage pattern:
+// e.g. import { log } from 'local:hello/logger' in their docs.
+// Here our package is newton:provider and interface is http.
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+
+// WIT: export run: func(input: string) -> result<string, string>
+// We return a JSON string on success AND on "errors"
+// (i.e., we don't surface WIT Err<string> — we encode error info in JSON)
+export function run(input) {
+  const req = JSON.parse(input);
+
+  // Fetch ETH price from CoinGecko
+  const response = httpFetch({
+    url: "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+    method: "GET",
+    headers: [],
+    body: null,
+  });
+
+  if (response.tag === "err") {
+    return JSON.stringify({ error: response.val });
+  }
+
+  const body = new TextDecoder().decode(new Uint8Array(response.val.body));
+  const data = JSON.parse(body);
+
+  return JSON.stringify({
+    eth_price_usd: data.ethereum.usd,
+    timestamp: Date.now(),
+  });
+}
+```
+
+> **Note:** Keep this import at the top level of your module; ComponentizeJS resolves virtual specifiers like `'newton:provider/http@0.1.0'` when you build the component.
+
+---
+
+## 5) Build the component
+
+```bash
+componentize-js --wit newton-provider.wit -o policy.wasm app.js -d stdio random clocks http fetch-event
+```
+
+This produces `policy.wasm` in the project root — a component that:
+
+- **Imports** `newton:provider/http.fetch` from the host
+- **Exports** `run(input: string) -> result<string, string>`
+
+Resulting project tree:
+
+```
+my_project/
+├─ policy.wasm
+├─ newton-provider.wit
+└─ app.js
+```
+
+---
+
+## 6) (Alternative) Programmatic build
+
+Create **`componentize.mjs`**:
+
+```js
+import { componentize } from "@bytecodealliance/componentize-js";
+import { readFile, writeFile } from "node:fs/promises";
+
+const { component, imports } = await componentize({
+  sourcePath: "./app.js", // your JS file
+  witPath: "./newton-provider.wit", // WIT file path
+  worldName: "newton-provider", // the world in your WIT
+});
+
+await writeFile("policy.wasm", component);
+console.log("guest imports:", imports);
+```
+
+Run it with:
+
+```bash
+node componentize.mjs
+```
+
+---
+
+## 7) Test your component
+
+Use the Newton CLI to simulate your WASM data provider locally without deploying to the blockchain:
+
+```bash
+newton-cli --chain-id 11155111 policy-data simulate \
+  --wasm-file policy.wasm \
+  --input-json '{"inquiry_id": "inq_xRZrQFKg7rqZ5UZGLhnvb2ympshE"}'
+```
+
+The `--input-json` value is passed directly to your component's `run` function as the `input` string argument. Replace the example JSON with your own input schema.
+
+For more options, see the [Newton CLI reference](/developers/reference/command-line-tool#simulate).

@@ -1,0 +1,145 @@
+---
+title: "Deploying with CLI"
+description: "Deploy Newton Protocol policies and data oracles to IPFS and on-chain using newton-cli"
+---
+
+This guide walks through deploying your policy files to IPFS and registering them on-chain using `newton-cli`. By the end, you will have a deployed PolicyData contract, a deployed Policy contract, and a registered PolicyClient.
+
+## Prerequisites
+
+- **newton-cli** installed: `cargo install newton-cli@0.2.0`
+- **Pinata account** for IPFS pinning ([pinata.cloud](https://pinata.cloud))
+- **Sepolia ETH** in your deployer wallet
+- Completed [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies)
+
+## Environment Variables
+
+Create a `.env` file with deployment credentials:
+
+```bash
+CHAIN_ID=11155111
+PINATA_JWT=your_pinata_jwt
+PINATA_GATEWAY=your_pinata_gateway
+PRIVATE_KEY=0xYourDeploymentPK
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/apiKey
+```
+
+Load the variables:
+
+```bash
+set -a && source .env && set +a
+```
+
+## Step 1: Generate CIDs and Upload to IPFS
+
+```bash
+newton-cli policy-files generate-cids \
+  --directory policy-files \
+  --output policy_cids.json \
+  --entrypoint "your_policy.allow"
+```
+
+This uploads your policy files to IPFS via Pinata and generates `policy_cids.json` containing the content identifiers.
+
+<Note>
+The `--entrypoint` value must match your Rego package name + rule name. For `package your_policy` with rule `allow`, use `your_policy.allow`.
+</Note>
+
+## Step 2: Deploy PolicyData
+
+Deploy the WASM oracle on-chain:
+
+```bash
+newton-cli policy-data deploy --policy-cids policy_cids.json
+```
+
+Save the output address:
+
+```
+Policy data deployed successfully at address: 0xPolicyDataAddress
+```
+
+## Step 3: Deploy Policy
+
+Deploy the Rego policy on-chain, referencing the PolicyData:
+
+```bash
+newton-cli policy deploy \
+  --policy-cids policy_cids.json \
+  --policy-data-address "0xPolicyDataAddress"
+```
+
+Save the output address — you will use it when deploying your PolicyClient contract.
+
+## Step 4: Register PolicyClient
+
+After deploying your smart contract (see [Smart Contract Integration](/developers/guides/smart-contract-integration)), register it with the PolicyClientRegistry:
+
+```bash
+newton-cli policy-client register \
+  --policy-client "0xYourPolicyClientAddress"
+```
+
+## Step 5: Set Policy on Client
+
+Configure the policy and parameters on your PolicyClient:
+
+```bash
+newton-cli policy-client set-policy \
+  --policy-client "0xYourPolicyClientAddress" \
+  --policy-address "0xPolicyAddress"
+```
+
+Set policy parameters and expiration:
+
+```bash
+newton-cli policy-client set-policy-params \
+  --policy-client "0xYourPolicyClientAddress" \
+  --policy-params policy_params.json \
+  --expire-after 1000
+```
+
+## Step 6: Verify
+
+Check that your PolicyClient is registered and active:
+
+```bash
+newton-cli policy-client status \
+  --policy-client "0xYourPolicyClientAddress"
+```
+
+You can also test the full policy via the Gateway:
+
+```bash
+curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulatePolicy",
+    "params": {
+      "policy_client": "0xYourPolicyClientAddress",
+      "policy": "package your_policy\ndefault allow := false\nallow if { data.data.success }",
+      "intent": {
+        "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
+        "value": "0x0",
+        "data": "0x",
+        "chain_id": "0xaa36a7",
+        "function_signature": "0x"
+      },
+      "policy_data": [{"policy_data_address": "0xPolicyDataAddress"}],
+      "policy_params": {}
+    },
+    "id": 1
+  }'
+```
+
+## Next Steps
+
+<Card icon="shield" href="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
+  Deploy a PolicyClient smart contract
+</Card>
+<Card icon="window" href="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
+  Build a frontend that submits tasks via the SDK
+</Card>

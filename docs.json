@@ -1,0 +1,243 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Docs | Magic Newton Foundation",
+  "colors": {
+    "primary": "#19191a",
+    "light": "#ffffff",
+    "dark": "#303030"
+  },
+  "favicon": "/favicon.svg",
+  "appearance": {
+    "default": "light",
+    "strict": false
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Developers",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "developers/overview/about",
+              "developers/overview/core-concepts",
+              "developers/overview/quickstart",
+              "developers/overview/dashboard-api-keys"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "developers/guides/integration-guide",
+              "developers/guides/writing-data-oracles",
+              "developers/guides/writing-policies",
+              "developers/guides/deploying-with-cli",
+              "developers/guides/smart-contract-integration",
+              "developers/guides/frontend-sdk-integration"
+            ]
+          },
+          {
+            "group": "Deep Dives",
+            "pages": [
+              "developers/concepts/architecture",
+              "developers/concepts/privacy-layer",
+              "developers/concepts/consensus-security",
+              "developers/concepts/multichain"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "developers/reference/sdk-reference",
+              "developers/reference/rpc-api",
+              "developers/reference/command-line-tool",
+              "developers/reference/contract-addresses",
+              "developers/reference/error-reference",
+              "developers/reference/glossary"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "developers/advanced/rego-syntax-guide",
+              "developers/advanced/kms-encryption",
+              "developers/advanced/policy-data-oracles",
+              "developers/advanced/python-wasm-guide",
+              "developers/advanced/javascript-wasm-guide",
+              "developers/advanced/rust-wasm-guide"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "developers/resources/faq",
+              "developers/resources/testing-debugging",
+              "developers/resources/deployment-checklist",
+              "developers/resources/newton-explorer",
+              "developers/reference/context-file"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Whitepaper",
+        "groups": [
+          {
+            "group": "Technical Whitepaper",
+            "pages": [
+              "whitepaper/introduction",
+              "whitepaper/privacy-architecture",
+              "whitepaper/bls-attestation",
+              "whitepaper/streaming-consensus",
+              "whitepaper/cross-chain",
+              "whitepaper/slashing-challenge",
+              "whitepaper/policy-engine",
+              "whitepaper/decentralization",
+              "whitepaper/security-properties",
+              "whitepaper/references"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Protocol",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "protocol/overview/project-and-protocol",
+              "protocol/overview/bug-bounty"
+            ]
+          },
+          {
+            "group": "Foundation",
+            "pages": [
+              "protocol/foundation/structure-and-key-contributors",
+              "protocol/foundation/conflict-of-interest-and-code-of-conduct"
+            ]
+          },
+          {
+            "group": "Token",
+            "pages": [
+              "protocol/token/characteristics-and-utility",
+              "protocol/token/distribution-and-vesting"
+            ]
+          },
+          {
+            "group": "Transparency Reports",
+            "pages": ["protocol/transparency-reports/reports"]
+          },
+          {
+            "group": "Governance",
+            "pages": ["protocol/governance/governance-model"]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Blog",
+          "href": "https://blog.newt.foundation",
+          "icon": "newspaper"
+        }
+      ]
+    }
+  },
+  "redirects": [
+    {
+      "source": "/how-to-guides/newt-token-staking",
+      "destination": "https://blog.newt.foundation/how-to-stake-newt/"
+    },
+    {
+      "source": "/references/newt-token-airdrop",
+      "destination": "https://blog.newt.foundation/newt-airdrop-claiming-staking/"
+    },
+    {
+      "source": "/newton-protocol/overview",
+      "destination": "/protocol/overview/project-and-protocol"
+    },
+    {
+      "source": "/newton-protocol/:path*",
+      "destination": "/protocol/overview/:path*"
+    },
+    {
+      "source": "/foundation/foundation-structure-and-key-contributors",
+      "destination": "/protocol/foundation/structure-and-key-contributors"
+    },
+    {
+      "source": "/foundation/conflict-of-interest-and-code-of-conduct",
+      "destination": "/protocol/foundation/conflict-of-interest-and-code-of-conduct"
+    },
+    {
+      "source": "/token/token-characteristics-and-utility",
+      "destination": "/protocol/token/characteristics-and-utility"
+    },
+    {
+      "source": "/token/token-distribution-and-vesting",
+      "destination": "/protocol/token/distribution-and-vesting"
+    },
+    {
+      "source": "/transparency-reports/transparency-reports",
+      "destination": "/protocol/transparency-reports/reports"
+    },
+    {
+      "source": "/governance/governance-model",
+      "destination": "/protocol/governance/governance-model"
+    },
+    {
+      "source": "/developers/overview/integration-guide",
+      "destination": "/developers/guides/integration-guide"
+    },
+    {
+      "source": "/developers/advanced/policy-client-guide",
+      "destination": "/developers/guides/smart-contract-integration"
+    },
+    {
+      "source": "/developers/advanced/building-policies",
+      "destination": "/developers/guides/writing-policies"
+    },
+    {
+      "source": "/developers/overview/newton-explorer",
+      "destination": "/developers/resources/newton-explorer"
+    }
+  ],
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {},
+  "footer": {
+    "socials": {
+      "x": "https://x.com/newtfoundation"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "title": "Docs | Magic Newton Foundation",
+      "description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
+      "keywords": "Magic Newton Foundation, newton protocol, onchain automation, verifiable onchain data, crypto automation protocol, ethereum automation framework, smart contract automation, decentralized finance protocol, defi data verification, web3 automation infrastructure, trustless execution layer, onchain logic verification, modular smart contract system, verifiable computation onchain, programmable compliance, policy engine, policy protocol, agentic economy",
+      "author": "Magic Newton Foundation",
+      "og:title": "Docs | Magic Newton Foundation",
+      "og:type": "website",
+      "og:url": "https://newt.foundation",
+      "og:image": "/og/opengraph-image.jpg",
+      "og:description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
+      "og:site_name": "Docs | Magic Newton Foundation",
+      "og:locale": "en_US",
+      "twitter:card": "https://newt.foundation/twitter-image.png",
+      "twitter:site": "@newtfoundation",
+      "twitter:creator": "@newtfoundation",
+      "twitter:title": "Docs | Magic Newton Foundation",
+      "twitter:description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
+      "twitter:image": "/og/twitter-image.jpg",
+      "twitter:image:alt": "Docs | Magic Newton Foundation"
+    }
+  },
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-JFG7Z812VK"
+    }
+  }
+}
