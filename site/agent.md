@@ -630,7 +630,7 @@ cd newton-sdk-app
 ### 5.2 Install dependencies
 
 ```bash
-npm install @magicnewton/newton-protocol-sdk@0.3.13 viem
+npm install @magicnewton/newton-protocol-sdk viem
 ```
 
 ### 5.3 Set up environment variables
