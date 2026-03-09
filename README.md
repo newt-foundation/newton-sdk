@@ -1,6 +1,13 @@
 # Welcome to Newton SDK
 
-TypeScript SDK for the Newton Protocol
+TypeScript SDK for the [Newton Protocol](https://docs.newton.xyz/developers/overview/about) — a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.
+
+## Documentation
+
+- [Quickstart](https://docs.newton.xyz/developers/overview/quickstart) — simulate your first policy evaluation in 5 minutes
+- [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide) — full end-to-end integration with policy, contract, and frontend
+- [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) — complete API documentation
+- [Core Concepts](https://docs.newton.xyz/developers/overview/core-concepts) — policies, intents, tasks, and attestations
 
 ## Prerequisites
 
