@@ -38,6 +38,14 @@
             ]
           },
           {
+            "group": "Use Cases",
+            "pages": [
+              "developers/use-cases/stablecoins-and-payments",
+              "developers/use-cases/agent-security",
+              "developers/use-cases/institutional-defi"
+            ]
+          },
+          {
             "group": "Deep Dives",
             "pages": [
               "developers/concepts/architecture",
