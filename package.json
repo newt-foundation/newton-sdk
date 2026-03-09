@@ -16,16 +16,24 @@
   "type": "commonjs",
   "target": "browser",
   "cdnGlobalName": "NewtonSdk",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/es/index.mjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/es/index.js",
+      "types": {
+        "import": "./dist/types/index.d.mts",
+        "require": "./dist/types/index.d.ts"
+      },
+      "import": "./dist/es/index.mjs",
       "require": "./dist/cjs/index.js"
     },
     "./types": {
-      "types": "./dist/types/types/index.d.ts",
-      "import": "./dist/es/types/index.js",
+      "types": {
+        "import": "./dist/types/types/index.d.mts",
+        "require": "./dist/types/types/index.d.ts"
+      },
+      "import": "./dist/es/types/index.mjs",
       "require": "./dist/cjs/types/index.js"
     }
   },
@@ -112,7 +120,7 @@
   },
   "size-limit": [
     {
-      "path": "dist/es/index.js",
+      "path": "dist/es/index.mjs",
       "limit": "50 kB"
     },
     {
