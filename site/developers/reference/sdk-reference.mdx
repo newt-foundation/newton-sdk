@@ -70,7 +70,7 @@ For a step-by-step walkthrough of integrating these into your application, see t
 ## Setup & Initialization
 
 <Info>
-  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`) and **Base Sepolia** (chain ID `84532`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), and **Ethereum Mainnet** (chain ID `1`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
 </Info>
 
 ### newtonPublicClientActions
@@ -1184,14 +1184,16 @@ The following methods read individual fields from the policy contract. They all 
     data?: any;
   }
   
-  type NewtonWalletPayloadMethod =
-    | 'newt_simulateTask'
-    | 'newt_simulatePolicy'
-    | 'newt_simulatePolicyData'
-    | 'newt_simulatePolicyDataWithClient'
-    | 'newt_createTask'
-    | 'newt_evaluateIntent'
-    | 'newt_submitIntent';
+  enum NewtonWalletPayloadMethod {
+    ShowUI = 'newton_wallet_wallet',
+    Receive = 'newton_wallet_wallet_receive',
+    PersonalSign = 'personal_sign',
+    SendUserOperation = 'eth_sendUserOperation',
+    Connect = 'newton_wallet_user_connect',
+    Disconnect = 'newton_wallet_user_disconnect',
+    IsConnected = 'newton_wallet_user_is_connected',
+    GetConnectedProfile = 'newton_wallet_user_get_connected_profile',
+  }
   ```
 </Expandable>
 
@@ -1220,23 +1222,28 @@ The SDK provides structured error classes with typed error codes for precise err
 
 ### SDKError
 
+Thrown when an SDK-level error occurs (e.g., missing API key, invalid arguments).
+
 ```ts
 class SDKError extends Error {
   code: SDKErrorCode;
-  details?: any;
+  rawMessage: string;
 
-  constructor(code: SDKErrorCode, message: string, details?: any);
+  constructor(code: SDKErrorCode, rawMessage: string);
 }
 ```
 
 ### MagicRPCError
 
+Thrown when the Newton Gateway returns a JSON-RPC error.
+
 ```ts
 class MagicRPCError extends Error {
-  code: RPCErrorCode;
-  data?: any;
+  code: RPCErrorCode | number;
+  rawMessage: string;
+  data: unknown;
 
-  constructor(code: RPCErrorCode, message: string, data?: any);
+  constructor(sourceError?: JsonRpcError | null);
 }
 ```
 
@@ -1245,12 +1252,14 @@ class MagicRPCError extends Error {
 <Expandable title="SDKErrorCode enum values">
   ```ts
   enum SDKErrorCode {
-    INVALID_PARAMS = 'INVALID_PARAMS',
-    TIMEOUT = 'TIMEOUT',
-    NETWORK_ERROR = 'NETWORK_ERROR',
-    CONTRACT_ERROR = 'CONTRACT_ERROR',
-    GATEWAY_ERROR = 'GATEWAY_ERROR',
-    UNKNOWN = 'UNKNOWN',
+    MissingApiKey = 'MISSING_API_KEY',
+    PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
+    MalformedResponse = 'MALFORMED_RESPONSE',
+    InvalidArgument = 'INVALID_ARGUMENT',
+    ExtensionNotInitialized = 'EXTENSION_NOT_INITIALIZED',
+    IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
+    FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
+    FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
   }
   ```
 </Expandable>
@@ -1260,12 +1269,22 @@ class MagicRPCError extends Error {
 <Expandable title="RPCErrorCode enum values">
   ```ts
   enum RPCErrorCode {
-    PARSE_ERROR = -32700,
-    INVALID_REQUEST = -32600,
-    METHOD_NOT_FOUND = -32601,
-    INVALID_PARAMS = -32602,
-    INTERNAL_ERROR = -32603,
-    SERVER_ERROR = -32000,
+    // Standard JSON-RPC 2.0 error codes
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InternalError = -32603,
+
+    // Custom Newton error codes
+    MagicLinkRateLimited = -10002,
+    UserAlreadyLoggedIn = -10003,
+    AccessDeniedToUser = -10011,
+    UserRejectedAction = -10012,
+    RequestCancelled = -10014,
+    RedirectLoginComplete = -10015,
+    NewtonWalletSessionTerminated = -10016,
+    PopupRequestOverriden = -10017,
   }
   ```
 </Expandable>
@@ -1275,190 +1294,17 @@ class MagicRPCError extends Error {
 <Expandable title="SDKWarningCode enum values">
   ```ts
   enum SDKWarningCode {
-    DEPRECATED = 'DEPRECATED',
-    FALLBACK = 'FALLBACK',
+    SyncWeb3Method = 'SYNC_WEB3_METHOD',
+    ReactNativeEndpointConfiguration = 'REACT_NATIVE_ENDPOINT_CONFIGURATION',
+    DeprecationNotice = 'DEPRECATION_NOTICE',
+    ProductAnnouncement = 'ANNOUNCEMENT',
   }
   ```
 </Expandable>
 
-**Example error handling:**
-
-```ts
-import { SDKError, SDKErrorCode } from '@magicnewton/newton-protocol-sdk';
-
-try {
-  const { result } = await walletClient.submitEvaluationRequest({ /* ... */ });
-} catch (error) {
-  if (error instanceof SDKError) {
-    switch (error.code) {
-      case SDKErrorCode.TIMEOUT:
-        console.error('Request timed out:', error.message);
-        break;
-      case SDKErrorCode.GATEWAY_ERROR:
-        console.error('Gateway error:', error.message, error.details);
-        break;
-      default:
-        console.error('SDK error:', error.code, error.message);
-    }
-  }
-}
-```
-
----
-
-## Utility Functions
-
-The SDK exports several utility functions for common operations.
-
-### normalizeIntent
-
-Normalizes an `IntentFromParams` into a `NormalizedIntent` with consistent field types.
-
-```ts
-import { normalizeIntent } from '@magicnewton/newton-protocol-sdk';
-
-const normalized = normalizeIntent({
-  from: '0x...',
-  to: '0x...',
-  value: '0x0',
-  data: '0x...',
-  chainId: '0xaa36a7',
-  functionSignature: '0x...',
-});
-```
-
-### sanitizeIntentForRequest
-
-Prepares an intent for gateway API requests by encoding fields as expected by the backend.
-
-```ts
-import { sanitizeIntentForRequest } from '@magicnewton/newton-protocol-sdk';
-
-const sanitized = sanitizeIntentForRequest(intent);
-```
-
-### removeHexPrefix
-
-Strips the `0x` prefix from a hex string.
-
-```ts
-import { removeHexPrefix } from '@magicnewton/newton-protocol-sdk';
-
-const raw = removeHexPrefix('0xabcdef'); // 'abcdef'
-```
-
-### decodeJWT
-
-Decodes a JWT token and returns its payload.
-
-```ts
-import { decodeJWT } from '@magicnewton/newton-protocol-sdk';
-
-const payload = decodeJWT(token);
-```
-
-### fetchWithCache
-
-A fetch wrapper with a built-in caching layer to avoid redundant network requests.
-
-```ts
-import { fetchWithCache } from '@magicnewton/newton-protocol-sdk';
-
-const response = await fetchWithCache(url, options);
-```
-
-### createJsonRpcRequestPayload
-
-Constructs a well-formed JSON-RPC 2.0 request payload for Newton RPC methods.
-
-```ts
-import { createJsonRpcRequestPayload } from '@magicnewton/newton-protocol-sdk';
-
-const payload = createJsonRpcRequestPayload('newt_simulateTask', [params]);
-```
-
-### createPromiEvent / isPromiEvent
-
-Creates and detects promise-event hybrids that are both `Promise` and `EventEmitter`.
-
-```ts
-import { createPromiEvent, isPromiEvent } from '@magicnewton/newton-protocol-sdk';
-
-const promiEvent = createPromiEvent((resolve, reject) => {
-  // async logic
-});
-
-promiEvent.on('taskCreated', (taskId) => { /* ... */ });
-const result = await promiEvent;
-```
-
-### convertLogToTaskResponse
-
-Converts a raw on-chain event log into a typed `TaskResponse` object.
-
-```ts
-import { convertLogToTaskResponse } from '@magicnewton/newton-protocol-sdk';
-
-const taskResponse = convertLogToTaskResponse(log);
-```
-
----
-
-## Constants
-
-The SDK exports pre-configured constants for network addresses and gateway endpoints.
-
-### GATEWAY_API_URLS
-
-```ts
-const GATEWAY_API_URLS: Record<string, string>;
-```
-
-Maps network identifiers to their Newton Gateway API URLs.
-
-### GATEWAY_METHODS
-
-```ts
-const GATEWAY_METHODS: Record<string, NewtonWalletPayloadMethod>;
-```
-
-Mapping of method names to their JSON-RPC method identifiers.
-
-### NEWTON_PROVER_TASK_MANAGER
-
-```ts
-const NEWTON_PROVER_TASK_MANAGER: Record<string, Address>;
-```
-
-Deployed `NewtonProverTaskManager` contract addresses per network.
-
-### ATTESTATION_VALIDATOR
-
-```ts
-const ATTESTATION_VALIDATOR: Record<string, Address>;
-```
-
-Deployed `AttestationValidator` contract addresses per network.
-
----
-
-## Contract ABIs
-
-The SDK exports typed ABI arrays for direct use with viem contract interactions.
-
-```ts
-import {
-  NewtonProverTaskManagerAbi,
-  AttestationValidatorAbi,
-  NewtonPolicyAbi,
-} from '@magicnewton/newton-protocol-sdk';
-```
-
-| ABI                          | Contract                | Description                                         |
-| ---------------------------- | ----------------------- | --------------------------------------------------- |
-| `NewtonProverTaskManagerAbi` | NewtonProverTaskManager | Task creation, response, and challenge functions    |
-| `AttestationValidatorAbi`    | AttestationValidator    | Attestation validation and status queries           |
-| `NewtonPolicyAbi`            | NewtonPolicy            | Policy initialization, configuration, and ownership |
+<Note>
+  `SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
+</Note>
 
 ---
 

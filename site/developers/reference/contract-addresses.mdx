@@ -17,7 +17,7 @@ This page lists all deployed Newton Protocol contract addresses. Use these when 
 ### Staging
 
 <Note>
-Staging contracts are deployed at `gateway-avs.stagef.sepolia.newt.foundation`. Use staging for development and testing before moving to production.
+Staging environments are available for development and testing before moving to production. Contact the Newton team for staging access.
 </Note>
 
 ## Base Sepolia (Chain ID: 84532)
@@ -32,7 +32,7 @@ Base Sepolia serves as a destination chain for cross-chain policy verification.
 ## Ethereum Mainnet (Chain ID: 1)
 
 <Warning>
-Mainnet support is forthcoming. These contracts are deployed but not yet active for production use.
+Mainnet contracts are deployed but not yet active for production use. Mainnet launch is imminent.
 </Warning>
 
 | Contract | Address |
@@ -42,30 +42,15 @@ Mainnet support is forthcoming. These contracts are deployed but not yet active 
 
 ## SDK Constants
 
-The SDK exports these addresses as constants. You typically do not need to hardcode them — the SDK resolves the correct address based on the chain your client is connected to.
-
-```typescript
-import {
-  NEWTON_PROVER_TASK_MANAGER,
-  ATTESTATION_VALIDATOR,
-  GATEWAY_API_URLS,
-} from '@magicnewton/newton-protocol-sdk/networks';
-
-// Access by chain ID (uses viem chain IDs as keys)
-const taskManager = NEWTON_PROVER_TASK_MANAGER[11155111]; // Sepolia
-const validator = ATTESTATION_VALIDATOR[11155111];
-const gatewayUrl = GATEWAY_API_URLS[11155111];
-```
+The SDK resolves the correct contract addresses and gateway URLs based on the chain your client is connected to. You typically do not need to hardcode them. To override defaults, pass custom values via `SdkOverrides` when initializing the client extensions.
 
 ## Gateway URLs
 
-| Network | Environment | URL |
-|---------|-------------|-----|
-| Sepolia | Production | `https://gateway-avs.sepolia.newt.foundation/rpc` |
-| Sepolia | Staging | `https://gateway-avs.stagef.sepolia.newt.foundation/rpc` |
-| Base Sepolia | Production | `https://gateway-avs.base-sepolia.newt.foundation/rpc` |
-| Mainnet | Production | `https://gateway-avs.newt.foundation/rpc` |
-| Mainnet | Staging | `https://gateway-avs.stagef.newt.foundation/rpc` |
+| Network | URL |
+|---------|-----|
+| Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
+| Base Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
+| Mainnet | `https://gateway.newton.xyz/rpc` |
 
 ## Next Steps
 

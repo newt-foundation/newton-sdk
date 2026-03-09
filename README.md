@@ -48,9 +48,9 @@ const newtonWalletClient = createWalletClient({
   chain: sepolia,
   transport: webSocket('wss://alchemyWebsocketUrl'),
   account: signer,
-}).extend(newtonWalletClientActions());
+}).extend(newtonWalletClientActions({ apiKey: '<YOUR_API_KEY>' }));
 
-newtonWalletClient.evaluateIntent({...})
+newtonWalletClient.evaluateIntentDirect({...})
 ```
 
 ## Development

@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/newt-foundation/newton-sdk.git"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://newton.foundation",
   "type": "commonjs",
   "target": "browser",
