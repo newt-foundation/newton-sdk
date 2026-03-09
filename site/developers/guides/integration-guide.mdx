@@ -12,7 +12,7 @@ keywords:
   - smart contract risk management
 ---
 
-This guide walks through the full Newton Protocol integration flow. Choose your starting point based on what you need:
+This guide walks through the full Newton Protocol integration: a [WASM data oracle](/developers/guides/writing-data-oracles), a [Rego policy](/developers/guides/writing-policies), a [PolicyClient smart contract](/developers/guides/smart-contract-integration), and a [frontend](/developers/guides/frontend-sdk-integration) that submits intents and executes attested transactions. Choose your starting point based on what you need:
 
 <Tabs>
   <Tab title="Use an existing policy">
@@ -81,41 +81,41 @@ After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** 
 </Warning>
 </Accordion>
 
-## Step 1: Write a Data Oracle
+## Step 1: Write a Data Oracle (~30 min)
 
-Build a WebAssembly component that fetches external data (e.g., price feeds, sanctions screening, KYC status) for policy evaluation.
+Build a WebAssembly component that fetches external data (e.g., price feeds, sanctions screening, KYC status) for [policy evaluation](/developers/overview/core-concepts#policydata).
 
 <Card icon="database" href="/developers/guides/writing-data-oracles" title="Writing Data Oracles">
   Define the WIT interface, implement in JavaScript, build WASM, test locally
 </Card>
 
-## Step 2: Write a Rego Policy
+## Step 2: Write a Rego Policy (~20 min)
 
-Create a Rego policy that evaluates transaction intents using data from your oracle and configuration parameters.
+Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates transaction intents using data from your oracle and configuration parameters.
 
 <Card icon="file-code" href="/developers/guides/writing-policies" title="Writing Policies">
   Write Rego rules, define parameter schemas, organize policy files
 </Card>
 
-## Step 3: Deploy with CLI
+## Step 3: Deploy with CLI (~15 min)
 
-Upload your policy files to IPFS and register PolicyData and Policy contracts on-chain.
+Upload your policy files to IPFS and register [PolicyData](/developers/overview/core-concepts#policydata) and [Policy](/developers/overview/core-concepts#policy) contracts on-chain.
 
 <Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
   Generate CIDs, deploy PolicyData, deploy Policy, register PolicyClient
 </Card>
 
-## Step 4: Smart Contract Integration
+## Step 4: Smart Contract Integration (~30 min)
 
-Deploy a PolicyClient smart contract that validates Newton attestations before executing transactions.
+Deploy a [PolicyClient](/developers/overview/core-concepts#policyclient) smart contract that validates Newton [attestations](/developers/overview/core-concepts#attestation) before executing transactions.
 
 <Card icon="shield" href="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
   Inherit NewtonPolicyClient, configure validation, deploy with Foundry
 </Card>
 
-## Step 5: Frontend SDK Integration
+## Step 5: Frontend SDK Integration (~30 min)
 
-Build a Next.js application that submits evaluation requests via the SDK and executes attested transactions.
+Build a Next.js application that submits evaluation requests via the [SDK](/developers/reference/sdk-reference) and executes attested transactions.
 
 <Card icon="window" href="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
   Create Newton client, submit evaluations, execute with attestations
@@ -125,12 +125,14 @@ Build a Next.js application that submits evaluation requests via the SDK and exe
 
 Once everything is deployed:
 
-1. Your frontend submits an Intent via the Newton SDK
-2. The Newton Gateway forwards it to AVS operators
-3. Operators run the WASM data oracle, evaluate the Rego policy, and produce BLS-signed attestations
-4. The attestation is returned to your app
-5. Your app submits the transaction + attestation to the PolicyClient on-chain
+1. Your frontend submits an [Intent](/developers/overview/core-concepts#intent) via the Newton [SDK](/developers/reference/sdk-reference)
+2. The Newton [Gateway](/developers/overview/core-concepts#gateway) forwards it to AVS [operators](/developers/overview/core-concepts#operator)
+3. Operators run the WASM [data oracle](/developers/overview/core-concepts#policydata), evaluate the [Rego policy](/developers/overview/core-concepts#policy), and produce BLS-signed attestations
+4. The [attestation](/developers/overview/core-concepts#attestation) is returned to your app
+5. Your app submits the transaction + attestation to the [PolicyClient](/developers/overview/core-concepts#policyclient) on-chain
 6. The contract validates the attestation and executes the transaction
+
+For the full architecture, see [Architecture](/developers/concepts/architecture).
 
 ## Troubleshooting
 

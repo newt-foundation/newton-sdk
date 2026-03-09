@@ -9,15 +9,18 @@ keywords:
   - ofac sanctions screening
 ---
 
-Simulate a policy evaluation using the Newton SDK. The example policy performs **OFAC sanctions screening** — checking a transaction against a sanctions list before allowing it to proceed.
+Simulate a policy evaluation in under 5 minutes. The example policy performs **OFAC sanctions screening** — checking a transaction sender against a sanctions list before allowing it to proceed. No smart contract deployment required.
 
 ## Prerequisites
 
-- **Node.js >= 20** and a package manager (pnpm recommended)
-- **A Newton API key** — create one via the [Dashboard](/developers/overview/dashboard-api-keys), or email [product@magicnewton.com](mailto:product@magicnewton.com)
-- **Sepolia ETH** — for gas fees on testnet (use a [Sepolia faucet](https://sepoliafaucet.com/))
+| Requirement | How to get it |
+|-------------|--------------|
+| **Node.js >= 20** | [nodejs.org](https://nodejs.org/) |
+| **Newton API key** | [Dashboard](/developers/overview/dashboard-api-keys) or email [product@magicnewton.com](mailto:product@magicnewton.com) |
 
-## Install
+<Note>This quickstart uses `simulateTask` — a dry run that does not submit anything on-chain. No Sepolia ETH or wallet needed.</Note>
+
+## Step 1 — Install
 
 <CodeGroup>
 
@@ -41,9 +44,9 @@ yarn add @magicnewton/newton-protocol-sdk viem
 
 </CodeGroup>
 
-## Run a simulation
+## Step 2 — Run a simulation
 
-Create a file called `quickstart.ts` and paste the full script:
+Create `quickstart.ts` and paste:
 
 ```typescript
 import { createPublicClient, createWalletClient, http } from 'viem';
@@ -73,27 +76,28 @@ const walletClient = createWalletClient({
 );
 
 async function main() {
-  // Simulate a sanctions-screening policy evaluation.
-  // This checks whether the sender address appears on an OFAC sanctions list.
+  // Simulate OFAC sanctions screening on a transaction.
+  // No on-chain transaction occurs — this is a dry run.
   const result = await walletClient.simulateTask({
     intent: {
-      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',   // sender address
-      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',     // recipient (PolicyClient contract)
-      value: '0x0',                                           // no ETH transfer
-      data: '0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22', // encoded calldata
-      chainId: 11155111,                                      // Sepolia testnet
-      functionSignature: '0x62757928616464726573732c75696e743235362c75696e74333229', // ABI signature (hex-encoded)
+      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',   // sender to check against sanctions list
+      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',     // PolicyClient contract on Sepolia
+      value: '0x0',                                           // no ETH value
+      data: '0x28dca9f7...e42e3458...',                       // ABI-encoded function call (buy/transfer)
+      chainId: 11155111,                                      // Sepolia
+      functionSignature: '0x627579...',                        // buy(address,uint256,uint32) encoded
     },
     policyTaskData: {
-      policyId: '0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626', // OFAC sanctions policy
-      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',                    // deployed policy contract
+      // Pre-deployed OFAC sanctions policy — you can use this for testing
+      policyId: '0x27b7c88f...eecd1626',
+      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',
       policy: '0x',
       policyData: [
         {
-          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d', // {"base_symbol":"BTC"} (hex-encoded JSON)
+          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d', // {"base_symbol":"BTC"}
           data: '0x',
           attestation: '0x',
-          policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07', // PolicyData oracle contract
+          policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07', // sanctions list oracle
           expireBlock: 0,
         },
       ],
@@ -117,7 +121,7 @@ Run it:
 NEWTON_API_KEY=your_key_here npx tsx quickstart.ts
 ```
 
-## Understand the response
+## Step 3 — Understand the response
 
 The simulation returns a `SimulateTaskResult`:
 
@@ -141,7 +145,7 @@ A successful response:
 }
 ```
 
-## What just happened?
+## Step 4 — What just happened?
 
 ```mermaid
 sequenceDiagram
@@ -158,15 +162,12 @@ sequenceDiagram
     GW-->>You: SimulateTaskResult
 ```
 
-You submitted an intent to the Newton Gateway, where an operator ran the OFAC sanctions Rego policy with PolicyData oracle output and returned an allow/deny result. This was a **simulation** — no on-chain transaction occurred.
+Your script submitted an [Intent](/developers/overview/core-concepts#intent) to the Newton [Gateway](/developers/overview/core-concepts#gateway), where an [Operator](/developers/overview/core-concepts#operator) ran the OFAC sanctions [Rego policy](/developers/overview/core-concepts#policy) with a [PolicyData](/developers/overview/core-concepts#policydata) oracle and returned an allow/deny result. This was a **simulation** — no on-chain transaction occurred.
 
-In production, the same flow produces a **BLS attestation** that your smart contract verifies on-chain before executing the transaction. The [integration guide](/developers/guides/integration-guide) walks through the full end-to-end flow.
+In production, the same flow produces a **BLS [attestation](/developers/overview/core-concepts#attestation)** that your smart contract verifies on-chain before executing the transaction.
 
-## Next steps
+## Next step
 
-<Card icon="play" href="https://demo.newton.xyz/" title="Try the demo">
-  See a live sanctions-checked transfer app built with the Newton SDK
-</Card>
 <Card icon="book" href="/developers/guides/integration-guide" title="Integration Guide">
   Build and deploy a full Newton integration — policy, contract, and frontend
 </Card>
@@ -175,6 +176,9 @@ In production, the same flow produces a **BLS attestation** that your smart cont
 </Card>
 <Card icon="code" href="/developers/reference/sdk-reference" title="SDK Reference">
   Full TypeScript SDK documentation
+</Card>
+<Card icon="play" href="https://demo.newton.xyz/" title="Try the demo">
+  See a live sanctions-checked transfer app built with the Newton SDK
 </Card>
 
 <Accordion title="Alternative: AI-assisted build">
