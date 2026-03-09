@@ -21,12 +21,18 @@
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
+      "types": {
+        "import": "./dist/types/index.d.mts",
+        "require": "./dist/types/index.d.ts"
+      },
       "import": "./dist/es/index.mjs",
       "require": "./dist/cjs/index.js"
     },
     "./types": {
-      "types": "./dist/types/types/index.d.ts",
+      "types": {
+        "import": "./dist/types/types/index.d.mts",
+        "require": "./dist/types/types/index.d.ts"
+      },
       "import": "./dist/es/types/index.mjs",
       "require": "./dist/cjs/types/index.js"
     }
@@ -41,7 +47,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "prepare": "simple-git-hooks",
-    "build": "rollup -c rollup.config.mjs",
+    "build": "rollup -c rollup.config.mjs && cp dist/types/index.d.ts dist/types/index.d.mts && cp dist/types/types/index.d.ts dist/types/types/index.d.mts",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",
