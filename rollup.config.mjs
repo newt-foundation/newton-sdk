@@ -1,5 +1,5 @@
 import builtins from 'builtin-modules';
-import { copyFile, readdir } from 'node:fs/promises';
+import { access, copyFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Rollup plugins
@@ -39,6 +39,71 @@ async function copyDtsToDmts(dir) {
   );
 }
 
+async function resolveRelativeDmtsImport(baseDir, specifier) {
+  const fileTarget = path.resolve(baseDir, `${specifier}.d.mts`);
+  try {
+    await access(fileTarget);
+    return `${specifier}.d.mts`;
+  } catch {
+    // Continue to try index file in folder.
+  }
+
+  const indexTarget = path.resolve(baseDir, specifier, 'index.d.mts');
+  try {
+    await access(indexTarget);
+    return `${specifier}/index.d.mts`;
+  } catch {
+    return null;
+  }
+}
+
+async function rewriteDmtsImports(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await rewriteDmtsImports(fullPath);
+        return;
+      }
+
+      if (!entry.isFile() || !entry.name.endsWith('.d.mts')) {
+        return;
+      }
+
+      const content = await readFile(fullPath, 'utf8');
+      const matches = [...content.matchAll(/(from\s+['"])(\.\.?\/[^'"]+)(['"])/g)];
+      if (matches.length === 0) {
+        return;
+      }
+
+      let updated = content;
+      for (const match of matches) {
+        const fullMatch = match[0];
+        const prefix = match[1];
+        const specifier = match[2];
+        const suffix = match[3];
+
+        if (/\.(d\.mts|d\.ts|mjs|js|json)$/.test(specifier)) {
+          continue;
+        }
+
+        const resolved = await resolveRelativeDmtsImport(path.dirname(fullPath), specifier);
+        if (!resolved) {
+          continue;
+        }
+
+        const replacement = `${prefix}${resolved}${suffix}`;
+        updated = updated.replace(fullMatch, replacement);
+      }
+
+      if (updated !== content) {
+        await writeFile(fullPath, updated);
+      }
+    }),
+  );
+}
+
 export default {
   input: ['src/index.ts', 'src/types/index.ts'],
 
@@ -73,7 +138,9 @@ export default {
     {
       name: 'copy-dts-to-dmts',
       async closeBundle() {
-        await copyDtsToDmts(path.resolve('dist/types'));
+        const typesDir = path.resolve('dist/types');
+        await copyDtsToDmts(typesDir);
+        await rewriteDmtsImports(typesDir);
       },
     },
   ],
