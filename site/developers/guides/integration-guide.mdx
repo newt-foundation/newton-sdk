@@ -1,15 +1,7 @@
 ---
 title: "Integration Guide"
 description: "End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations on-chain."
-keywords:
-  - newton protocol integration
-  - add transaction policies to smart contracts
-  - eigenlayer avs tutorial
-  - onchain compliance integration
-  - rego policy deployment
-  - blockchain compliance setup
-  - transaction monitoring integration
-  - smart contract risk management
+keywords: ["newton protocol integration", "add transaction policies to smart contracts", "eigenlayer avs tutorial", "onchain compliance integration", "rego policy deployment", "blockchain compliance setup", "transaction monitoring integration", "smart contract risk management"]
 ---
 
 This guide walks through the full Newton Protocol integration: a [WASM data oracle](/developers/guides/writing-data-oracles), a [Rego policy](/developers/guides/writing-policies), a [PolicyClient smart contract](/developers/guides/smart-contract-integration), and a [frontend](/developers/guides/frontend-sdk-integration) that submits intents and executes attested transactions. Choose your starting point based on what you need:
@@ -39,46 +31,45 @@ flowchart LR
 ```
 
 <Note>
-Steps 4 and 5 (dashed) can be done independently if you already have a deployed policy. You do not need the full toolchain to integrate via the SDK.
+  Steps 4 and 5 (dashed) can be done independently if you already have a deployed policy. You do not need the full toolchain to integrate via the SDK.
 </Note>
 
 ## Prerequisites
 
 Install only what you need for the steps you plan to follow:
 
-| Requirement | Steps | Use |
-|---|---|---|
-| **Node.js >= 20 + npm** | All | SDK, frontend, WASM tooling |
-| **Sepolia ETH** | 3–5 | Gas fees on testnet |
-| **Newton API key** | 4–5 | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
-| **Foundry** (`forge`, `cast`, `anvil`) | 4 | Compiling and deploying Solidity contracts |
-| **Rust + Cargo** | 1–3 | Building and running `newton-cli` |
-| **newton-cli 0.2.0** | 3 | Uploading policy files, generating CIDs, deploying policies |
-| **Pinata account** | 3 | IPFS pinning (you will need a JWT and a gateway URL) |
+| Requirement                            | Steps | Use                                                                                    |
+| -------------------------------------- | ----- | -------------------------------------------------------------------------------------- |
+| **Node.js \>= 20 + npm**               | All   | SDK, frontend, WASM tooling                                                            |
+| **Sepolia ETH**                        | 3–5   | Gas fees on testnet                                                                    |
+| **Newton API key**                     | 4–5   | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
+| **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
+| **Rust + Cargo**                       | 1–3   | Building and running `newton-cli`                                                      |
+| **newton-cli 0.2.0**                   | 3     | Uploading policy files, generating CIDs, deploying policies                            |
+| **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
 <Accordion title="Install all tooling (Steps 1–5)">
+  ```bash
+  # Rust (includes cargo)
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  
+  # Node.js (macOS — or use your preferred method)
+  brew install node
+  
+  # Foundry
+  curl -L https://foundry.paradigm.xyz | bash
+  foundryup
+  
+  # newton-cli
+  cargo install newton-cli@0.2.0
+  
+  # jco (WASM componentization)
+  npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
+  ```
 
-```bash
-# Rust (includes cargo)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Node.js (macOS — or use your preferred method)
-brew install node
-
-# Foundry
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# newton-cli
-cargo install newton-cli@0.2.0
-
-# jco (WASM componentization)
-npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
-```
-
-<Warning>
-After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
-</Warning>
+  <Warning>
+    After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
+  </Warning>
 </Accordion>
 
 ## Step 1: Write a Data Oracle (~30 min)
@@ -139,15 +130,18 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 <AccordionGroup>
   <Accordion title="'command not found' after installing tools">
     Restart your shell after installing Rust, Node via Homebrew, or Foundry:
+
     ```bash
     source ~/.zshrc  # or source ~/.bashrc
     ```
   </Accordion>
   <Accordion title="jco componentize fails">
     Ensure both packages are installed:
+
     ```bash
     npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
     ```
+
     If installed locally, use `npx jco componentize ...`.
   </Accordion>
   <Accordion title="InvalidAttestation error (0xbd8ba84d)">
@@ -157,12 +151,14 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   </Accordion>
   <Accordion title="ExecutionFailed error (0xacfdb444)">
     The attestation passed but the inner call reverted. Common causes:
+
     - Wallet contract has no ETH (fund it directly)
     - Target contract reverted
     - Malformed calldata
   </Accordion>
   <Accordion title="WebSocket connection fails">
     Use `wss://` protocol, not `https://`:
+
     ```bash
     NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
     ```
@@ -178,34 +174,37 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 ## Factory Pattern
 
 <Accordion title="Advanced: Factory pattern for deploying multiple PolicyClients">
+  If you need to deploy multiple PolicyClient instances (e.g., one per user), use a factory contract:
 
-If you need to deploy multiple PolicyClient instances (e.g., one per user), use a factory contract:
+  ```solidity
+  // SPDX-License-Identifier: MIT
+  pragma solidity ^0.8.27;
+  
+  import {NewtonPolicyWallet} from "./NewtonPolicyWallet.sol";
+  
+  contract WalletFactory {
+      address public immutable taskManager;
+      address public immutable policy;
+  
+      event WalletCreated(address indexed owner, address wallet);
+  
+      constructor(address _taskManager, address _policy) {
+          taskManager = _taskManager;
+          policy = _policy;
+      }
+  
+      function createWallet() external returns (address) {
+          NewtonPolicyWallet wallet = new NewtonPolicyWallet();
+          wallet.initialize(taskManager, policy, msg.sender);
+          emit WalletCreated(msg.sender, address(wallet));
+          return address(wallet);
+      }
+  }
+  ```
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
-
-import {NewtonPolicyWallet} from "./NewtonPolicyWallet.sol";
-
-contract WalletFactory {
-    address public immutable taskManager;
-    address public immutable policy;
-
-    event WalletCreated(address indexed owner, address wallet);
-
-    constructor(address _taskManager, address _policy) {
-        taskManager = _taskManager;
-        policy = _policy;
-    }
-
-    function createWallet() external returns (address) {
-        NewtonPolicyWallet wallet = new NewtonPolicyWallet();
-        wallet.initialize(taskManager, policy, msg.sender);
-        emit WalletCreated(msg.sender, address(wallet));
-        return address(wallet);
-    }
-}
-```
-
-This deploys pre-configured wallet instances bound to your policy. Each user gets their own wallet with the same policy enforcement.
+  This deploys pre-configured wallet instances bound to your policy. Each user gets their own wallet with the same policy enforcement.
 </Accordion>
+
+<Card icon="comment-question" title="Have questions?">
+  Get in touch with someone from the Newton team to discuss your integration 
+</Card>

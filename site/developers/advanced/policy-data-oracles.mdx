@@ -19,6 +19,7 @@ Veriff enables developers to build policies that use KYC data — specifically a
 Persona is another service that can assist with applications that require KYC. In addition to country of residence, data such as a bot score and state of residence can be used as part of a policy.
 
 - [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/persona-kyc-demo)
+- [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-persona-to-enable-real-time-identity-and-jurisdictional-compliance/)
 
 ## Sanctions & Wallet Screening
 
@@ -40,6 +41,7 @@ Chainalysis provides useful insights into whether an address is sanctioned or no
 Human Passport (part of the broader [human.tech](https://human.tech) suite of products) provides the infrastructure layer for verifying unique personhood across web3. Use it to implement sophisticated anti-Sybil and compliance controls without sacrificing user privacy or protocol decentralization.
 
 - [Reference implementation](https://github.com/newt-foundation/quickstart-policies/tree/main/human.tech)
+- [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-human-passport-to-power-onchain-humanity-verification/)
 
 ## Transaction Controls
 
@@ -79,6 +81,7 @@ To integrate a reference oracle into your project:
 2. **Configure secrets** — add your API keys via [Encrypting Secrets](/developers/advanced/kms-encryption) or pass them inline during simulation
 3. **Build the WASM component** — follow the language-specific guide ([JavaScript](/developers/advanced/javascript-wasm-guide), [Python](/developers/advanced/python-wasm-guide), [Rust](/developers/advanced/rust-wasm-guide))
 4. **Test locally** — simulate the oracle with the Newton CLI:
+
    ```bash
    newton-cli --chain-id 11155111 policy-data simulate \
      --wasm-file policy.wasm \
@@ -86,6 +89,7 @@ To integrate a reference oracle into your project:
    ```
 5. **Deploy on-chain** — use the CLI to upload your WASM to IPFS and deploy a PolicyData contract. See [Deploying with CLI](/developers/guides/deploying-with-cli).
 6. **Reference in your policy** — access the oracle output in your Rego policy via `data.data`:
+
    ```rego
    risk_score := data.data.risk_score
    allow if risk_score < 50
