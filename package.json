@@ -2,7 +2,7 @@
   "name": "@magicnewton/newton-protocol-sdk",
   "version": "0.3.20",
   "description": "Official SDK for the Newton Protocol.",
-  "author": "Newton Foundation <https://x.com/newtfoundation> (https://newton.foundation)",
+  "author": "Newton Protocol <https://x.com/newton_xyz> (https://newton.xyz)",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -12,7 +12,7 @@
     "url": "git+https://github.com/newt-foundation/newton-sdk.git"
   },
   "license": "Apache-2.0",
-  "homepage": "https://newton.foundation",
+  "homepage": "https://newton.xyz",
   "type": "commonjs",
   "target": "browser",
   "cdnGlobalName": "NewtonSdk",
