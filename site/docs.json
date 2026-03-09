@@ -215,24 +215,14 @@
   },
   "seo": {
     "metatags": {
-      "title": "Docs | Magic Newton Foundation",
-      "description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
-      "keywords": "Magic Newton Foundation, newton protocol, onchain automation, verifiable onchain data, crypto automation protocol, ethereum automation framework, smart contract automation, decentralized finance protocol, defi data verification, web3 automation infrastructure, trustless execution layer, onchain logic verification, modular smart contract system, verifiable computation onchain, programmable compliance, policy engine, policy protocol, agentic economy",
       "author": "Magic Newton Foundation",
-      "og:title": "Docs | Magic Newton Foundation",
       "og:type": "website",
-      "og:url": "https://newt.foundation",
       "og:image": "/og/opengraph-image.jpg",
-      "og:description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
-      "og:site_name": "Docs | Magic Newton Foundation",
+      "og:site_name": "Newton Protocol Docs",
       "og:locale": "en_US",
-      "twitter:card": "https://newt.foundation/twitter-image.png",
       "twitter:site": "@newtfoundation",
       "twitter:creator": "@newtfoundation",
-      "twitter:title": "Docs | Magic Newton Foundation",
-      "twitter:description": "Decentralized Policy Protocol for Programmable Compliance and the Agentic Economy",
-      "twitter:image": "/og/twitter-image.jpg",
-      "twitter:image:alt": "Docs | Magic Newton Foundation"
+      "twitter:image": "/og/twitter-image.jpg"
     }
   },
   "integrations": {

@@ -1,6 +1,12 @@
 ---
-title: "Writing Policies"
-description: "Write Rego policies for Newton Protocol transaction authorization"
+title: "Writing Rego Policies"
+description: "Write Rego policies for blockchain transaction authorization with Newton Protocol. Examples for spend limits, allowlists, and sanctions screening."
+keywords:
+  - rego policy examples
+  - blockchain transaction policy
+  - onchain compliance rules
+  - rego smart contract
+  - policy authorization
 ---
 
 A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.data`).
