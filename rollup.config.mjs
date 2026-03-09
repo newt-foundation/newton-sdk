@@ -8,12 +8,15 @@ import tscAlias from 'rollup-plugin-tsc-alias';
 import typescript from 'rollup-plugin-typescript2';
 
 function createOutput(format) {
+  const isEsm = format === 'es';
   return {
     dir: `dist/${format}`,
     format,
     preserveModules: true,
     exports: 'named',
     assetFileNames: '[name][extname]',
+    entryFileNames: isEsm ? '[name].mjs' : '[name].js',
+    chunkFileNames: isEsm ? '[name].mjs' : '[name].js',
   };
 }
 
