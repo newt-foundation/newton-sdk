@@ -47,7 +47,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "prepare": "simple-git-hooks",
-    "build": "rollup -c rollup.config.mjs && cp dist/types/index.d.ts dist/types/index.d.mts && cp dist/types/types/index.d.ts dist/types/types/index.d.mts",
+    "build": "rollup -c rollup.config.mjs",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",

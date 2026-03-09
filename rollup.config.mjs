@@ -1,4 +1,6 @@
 import builtins from 'builtin-modules';
+import { copyFile, readdir } from 'node:fs/promises';
+import path from 'node:path';
 
 // Rollup plugins
 import resolve from '@rollup/plugin-node-resolve';
@@ -18,6 +20,23 @@ function createOutput(format) {
     entryFileNames: isEsm ? '[name].mjs' : '[name].js',
     chunkFileNames: isEsm ? '[name].mjs' : '[name].js',
   };
+}
+
+async function copyDtsToDmts(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await copyDtsToDmts(fullPath);
+        return;
+      }
+
+      if (entry.isFile() && entry.name.endsWith('.d.ts')) {
+        await copyFile(fullPath, fullPath.replace(/\.d\.ts$/, '.d.mts'));
+      }
+    }),
+  );
 }
 
 export default {
@@ -51,5 +70,11 @@ export default {
     esbuild({
       minify: true,
     }),
+    {
+      name: 'copy-dts-to-dmts',
+      async closeBundle() {
+        await copyDtsToDmts(path.resolve('dist/types'));
+      },
+    },
   ],
 };
