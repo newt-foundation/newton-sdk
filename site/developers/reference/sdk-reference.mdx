@@ -842,7 +842,7 @@ The following methods read individual fields from the policy contract. They all 
 | `factory()`                          | `Promise<Address>`          | Returns the factory address that deployed the contract |
 | `entrypoint()`                       | `Promise<string>`           | Returns the policy entrypoint path                     |
 | `clientToPolicyId({ client })`       | `Promise<\`0x\$string\`\>\` | Maps a client address to its policy ID                 |
-| `policyData()`                       | `Promise<Address[]>`        | Returns the PolicyData contract addresses              |
+| `policyData({ index })`              | `Promise<Address>`          | Returns the PolicyData contract address at the given index |
 | `policyCid()`                        | `Promise<string>`           | Returns the policy CID                                 |
 | `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
 | `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
@@ -1463,9 +1463,7 @@ The SDK provides multiple entry points for tree-shaking and targeted imports.
 | Import Path                                 | Description                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------- |
 | `@magicnewton/newton-protocol-sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
-| `@magicnewton/newton-protocol-sdk/viem`     | viem client extensions (`newtonPublicClientActions`, `newtonWalletClientActions`) |
 | `@magicnewton/newton-protocol-sdk/types`    | Type definitions and interfaces only                                              |
-| `@magicnewton/newton-protocol-sdk/networks` | Network constants, contract addresses, and gateway URLs                           |
 
 <Info>
   Use subpath exports to minimize bundle size when you only need a subset of SDK functionality.

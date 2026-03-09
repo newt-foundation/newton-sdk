@@ -50,6 +50,8 @@ The `http` import provides the `fetch` function for making HTTP requests from wi
 Create `policy.js`:
 
 ```js
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+
 export function run(wasm_args) {
   const args = JSON.parse(wasm_args);
 
@@ -78,7 +80,13 @@ export function run(wasm_args) {
 ```
 
 <Note>
-The `httpFetch` function is provided by the Newton WASM runtime — you do not need to import it. It maps to the `http.fetch` function defined in the WIT interface.
+The `httpFetch` function maps to the `http.fetch` function defined in the WIT interface. Import it at the top of your module:
+
+```js
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+```
+
+ComponentizeJS resolves this virtual specifier at build time. See the [JavaScript WASM Guide](/developers/advanced/javascript-wasm-guide) for details.
 </Note>
 
 ## Build WASM

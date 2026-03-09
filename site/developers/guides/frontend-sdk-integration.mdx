@@ -38,9 +38,13 @@ NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS=0x698C687f86Bc2206AC7C06eA68AC513A2949abA6
 # YOUR deployed wallet address
 NEXT_PUBLIC_POLICY_WALLET_ADDRESS=0xYourDeployedWallet
 
-# Signer private key for client-side signing
-NEXT_PUBLIC_SIGNER_PRIVATE_KEY=0xYourPrivateKey
+# Signer private key — server-side only (do NOT prefix with NEXT_PUBLIC_)
+SIGNER_PRIVATE_KEY=your_private_key_here
 ```
+
+<Warning>
+Never use the `NEXT_PUBLIC_` prefix for private keys. Variables prefixed with `NEXT_PUBLIC_` are bundled into client-side JavaScript and visible to anyone inspecting your app. The `SIGNER_PRIVATE_KEY` above is intentionally server-side only — access it via an API route or server action, not directly in client components.
+</Warning>
 
 <Info>
 `NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS` is the Newton Policy contract (fixed on Sepolia). `NEXT_PUBLIC_POLICY_WALLET_ADDRESS` is YOUR deployed PolicyClient. These are different contracts.
@@ -58,7 +62,8 @@ export const SEPOLIA_ALCHEMY_WS_URL = process.env.NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS
 export const NEWTON_API_KEY = process.env.NEXT_PUBLIC_NEWTON_API_KEY!;
 export const POLICY_WALLET_ADDRESS = process.env.NEXT_PUBLIC_POLICY_WALLET_ADDRESS as Hex;
 export const POLICY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS as Hex;
-export const SIGNER_PRIVATE_KEY = process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY as Hex;
+// Access SIGNER_PRIVATE_KEY server-side only (via API route or server action)
+// Do NOT expose private keys with NEXT_PUBLIC_ prefix
 ```
 
 ## Step 4: Create the Newton Client
