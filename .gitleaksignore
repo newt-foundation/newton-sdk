@@ -7,3 +7,5 @@
 #
 # Add fingerprints of false positives below this line:
 # =====================================================
+# Placeholder private key in docs example (not a real secret)
+cde23559f99e42fd9d6295f9f273b86b8464390a:site/developers/guides/frontend-sdk-integration.mdx:generic-api-key:42
