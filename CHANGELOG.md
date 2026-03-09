@@ -1,3 +1,25 @@
+# v0.3.19 (Mon Mar 09 2026)
+
+#### 🐛 Bug Fix
+
+- docs: fix security issue, stale signatures, and misleading notes in guides [#125](https://github.com/newt-foundation/newton-sdk/pull/125) ([@denniswon](https://github.com/denniswon))
+- docs: remove stale SDK version pins and add demo links [#123](https://github.com/newt-foundation/newton-sdk/pull/123) ([@denniswon](https://github.com/denniswon))
+- docs: optimize funnel to reduce quickstart-to-integration drop-off [#122](https://github.com/newt-foundation/newton-sdk/pull/122) ([@denniswon](https://github.com/denniswon))
+- docs: import foundation-docs into site/ for co-located documentation [#121](https://github.com/newt-foundation/newton-sdk/pull/121) ([@denniswon](https://github.com/denniswon))
+- chore: eliminate all noExplicitAny biome warnings [#120](https://github.com/newt-foundation/newton-sdk/pull/120) ([@denniswon](https://github.com/denniswon))
+- test: add unit tests, type-level tests, and attw CI check [#119](https://github.com/newt-foundation/newton-sdk/pull/119) ([@denniswon](https://github.com/denniswon))
+- chore: add package quality tooling and fix stale configs [#118](https://github.com/newt-foundation/newton-sdk/pull/118) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- docs: update README to reflect current tooling and fix stale content ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.18 (Sat Mar 07 2026)
 
 #### 🐛 Bug Fix
