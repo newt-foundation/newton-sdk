@@ -1,3 +1,19 @@
+# v0.3.20 (Mon Mar 09 2026)
+
+#### 🐛 Bug Fix
+
+- make esm outputs explicit .mjs and update exports [#127](https://github.com/newt-foundation/newton-sdk/pull/127) ([@Dizigen](https://github.com/Dizigen))
+- docs: SEO optimization across docs site [#128](https://github.com/newt-foundation/newton-sdk/pull/128) ([@denniswon](https://github.com/denniswon))
+- docs: fix SEO — unblock per-page titles, add keywords and descriptions [#126](https://github.com/newt-foundation/newton-sdk/pull/126) ([@denniswon](https://github.com/denniswon))
+- chore: standardize auth header to Authorization Bearer [#124](https://github.com/newt-foundation/newton-sdk/pull/124) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.19 (Mon Mar 09 2026)
 
 #### 🐛 Bug Fix
