@@ -19,7 +19,8 @@ The privacy module depends on `@hpke/core`, `@hpke/chacha20poly1305`, and `@nobl
 ## Setup
 
 ```typescript
-import { createWalletClient, http, sepolia } from 'viem'
+import { createWalletClient, http } from 'viem'
+import { sepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk'
 

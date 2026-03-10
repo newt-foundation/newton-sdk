@@ -16,7 +16,8 @@ The Newton SDK privacy module lets applications encrypt sensitive data (PII, cre
 ## Quick Example
 
 ```typescript
-import { createWalletClient, http, sepolia } from 'viem'
+import { createWalletClient, http } from 'viem'
+import { sepolia } from 'viem/chains'
 import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk'
 
 const client = createWalletClient({

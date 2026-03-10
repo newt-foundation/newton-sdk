@@ -5,7 +5,8 @@
 The simplest privacy integration -- encrypt a JSON object and use it in a task.
 
 ```typescript
-import { createWalletClient, http, sepolia, keccak256, encodePacked } from 'viem'
+import { createWalletClient, http, keccak256, encodePacked } from 'viem'
+import { sepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import {
   newtonWalletClientActions,
