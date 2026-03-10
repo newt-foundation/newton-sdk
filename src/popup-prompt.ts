@@ -11,9 +11,9 @@ export const renderPopupPrompt = ({
   ctaText?: string;
   unmountOnContinue?: boolean;
 }) => {
-  const elContainer = document.createElement('div');
+  const elContainer = document.createElement("div");
   elContainer.setAttribute(
-    'style',
+    "style",
     `
           position: fixed;
           display: flex;
@@ -34,12 +34,15 @@ export const renderPopupPrompt = ({
   );
 
   /** STOPS BODY FROM SCROLLING */
-  document.body.setAttribute('style', `${document.body.getAttribute('style') ?? ''} overflow: hidden;height:100%;`);
+  document.body.setAttribute(
+    "style",
+    `${document.body.getAttribute("style") ?? ""} overflow: hidden;height:100%;`,
+  );
 
   elContainer.id = containerId;
-  const elContentContainer = document.createElement('div');
+  const elContentContainer = document.createElement("div");
   elContentContainer.setAttribute(
-    'style',
+    "style",
     `
           max-width: 380px;
           width: 100%;
@@ -53,7 +56,7 @@ export const renderPopupPrompt = ({
   );
 
   /** LOGO */
-  const elLogo = document.createElement('div');
+  const elLogo = document.createElement("div");
   elLogo.innerHTML = `<svg width="252" height="32" viewBox="0 0 252 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M41.0352 3.99805H44.6336L56.3247 21.002V3.99805H60.1987V27.9975H56.6002L44.9092 10.9936V27.9975H41.0352V3.99805Z" fill="white"/>
 <path d="M66.1137 11.3493C67.4041 10.6073 68.8854 10.2363 70.5521 10.2363C72.2189 10.2363 73.7346 10.5782 75.025 11.2645C76.3155 11.9508 77.333 12.9233 78.075 14.1766C78.8169 15.4326 79.2012 16.9086 79.2224 18.5992C79.2224 19.0576 79.1879 19.5266 79.119 20.0063H65.8858V20.2129C65.9759 21.7445 66.4581 22.9555 67.3246 23.8459C68.1938 24.7362 69.3464 25.184 70.788 25.184C71.93 25.184 72.8893 24.9164 73.6683 24.3785C74.4447 23.8406 74.9588 23.0801 75.2105 22.0996H78.9123C78.5917 23.883 77.7305 25.3457 76.3234 26.4877C74.9164 27.6298 73.1648 28.2022 71.0609 28.2022C69.2325 28.2022 67.6373 27.8312 66.2779 27.0892C64.9186 26.3473 63.8666 25.3006 63.1247 23.9518C62.3827 22.6031 62.0117 21.0397 62.0117 19.2537C62.0117 17.4677 62.3721 15.8646 63.0902 14.5052C63.811 13.1458 64.8152 12.0939 66.1084 11.3519L66.1137 11.3493ZM73.9307 14.2985C73.0721 13.5778 71.9936 13.2174 70.6899 13.2174C69.4789 13.2174 68.4323 13.5884 67.5525 14.3303C66.6728 15.0723 66.164 16.0607 66.0262 17.2955H75.4543C75.2953 16.0156 74.7865 15.0166 73.928 14.2959L73.9307 14.2985Z" fill="white"/>
@@ -71,7 +74,7 @@ export const renderPopupPrompt = ({
 </svg>
 `;
   elLogo.setAttribute(
-    'style',
+    "style",
     `
           margin-bottom: 16px;
           `,
@@ -79,33 +82,34 @@ export const renderPopupPrompt = ({
 
   /** IMPORT FONT */
   // Create first <link> element for preconnect to fonts.googleapis.com
-  const link1 = document.createElement('link');
-  link1.rel = 'preconnect';
-  link1.href = 'https://fonts.googleapis.com';
+  const link1 = document.createElement("link");
+  link1.rel = "preconnect";
+  link1.href = "https://fonts.googleapis.com";
   document.head.appendChild(link1);
 
   // Create second <link> element for preconnect to fonts.gstatic.com with crossorigin attribute
-  const link2 = document.createElement('link');
-  link2.rel = 'preconnect';
-  link2.href = 'https://fonts.gstatic.com';
-  link2.setAttribute('crossorigin', ''); // Setting the crossorigin attribute
+  const link2 = document.createElement("link");
+  link2.rel = "preconnect";
+  link2.href = "https://fonts.gstatic.com";
+  link2.setAttribute("crossorigin", ""); // Setting the crossorigin attribute
   document.head.appendChild(link2);
 
   // Create third <link> element to load the Google Fonts CSS
-  const link3 = document.createElement('link');
-  link3.rel = 'stylesheet';
+  const link3 = document.createElement("link");
+  link3.rel = "stylesheet";
   link3.href =
-    'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap';
+    "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
 
   document.head.appendChild(link1);
   document.head.appendChild(link2);
   document.head.appendChild(link3);
 
   /** BODY TEXT */
-  const elBodyText = document.createElement('p');
-  elBodyText.innerText = 'Don’t see the Newton IDP popup? Click continue to re-launch it.';
+  const elBodyText = document.createElement("p");
+  elBodyText.innerText =
+    "Don’t see the Newton Wallet browser? Click continue to re-launch it.";
   elBodyText.setAttribute(
-    'style',
+    "style",
     `
           color: #7E7E7E;
           text-align: center;
@@ -118,10 +122,10 @@ export const renderPopupPrompt = ({
           `,
   );
   /** CONTINUE BUTTON */
-  const elButtonContinue = document.createElement('button');
-  elButtonContinue.innerText = ctaText ?? 'Continue';
+  const elButtonContinue = document.createElement("button");
+  elButtonContinue.innerText = ctaText ?? "Continue";
   elButtonContinue.setAttribute(
-    'style',
+    "style",
     `
           color: #EDEBFF; 
           padding: 8px; 
@@ -157,11 +161,11 @@ export const renderPopupPrompt = ({
 
     // RESTORE SCROLLING IN BODY
     document.body.setAttribute(
-      'style',
-      `${document.body.style ? document.body.getAttribute('style')?.replace('overflow: hidden;height:100%;', '') : ''}`,
+      "style",
+      `${document.body.style ? document.body.getAttribute("style")?.replace("overflow: hidden;height:100%;", "") : ""}`,
     );
   };
-  elButtonContinue.addEventListener('click', () => {
+  elButtonContinue.addEventListener("click", () => {
     onContinue();
     if (unmountOnContinue) {
       unmount();

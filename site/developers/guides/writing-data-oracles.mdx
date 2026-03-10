@@ -1,0 +1,164 @@
+---
+title: "Writing Data Oracles"
+description: "Build WebAssembly data oracles that fetch external data for Newton Protocol policy evaluation. JavaScript, Rust, and Python examples with the WIT component model."
+keywords:
+  - wasm data oracle
+  - webassembly blockchain oracle
+  - web3 data oracle
+  - componentize js wasm
+  - newton policy data
+---
+
+Data oracles are WebAssembly (WASM) components that fetch or compute external data at evaluation time. The Newton network executes your WASM, and the output is fed into your Rego policy as `data.data`.
+
+## What is a Data Oracle?
+
+A data oracle is a JavaScript (or Rust/Python) program compiled to WASM that:
+
+1. Receives input arguments (`wasm_args`) as a JSON string
+2. Optionally fetches external data via HTTP
+3. Returns a JSON string that becomes available to your Rego policy as `data.data`
+
+## WIT Interface
+
+Every data oracle implements the `newton-provider` WIT (WebAssembly Interface Types) contract. Create `newton-provider.wit`:
+
+```
+package newton:provider@0.1.0;
+
+interface http {
+    record http-request {
+        url: string,
+        method: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: list<u8>,
+    }
+
+    fetch: func(request: http-request) -> result<http-response, string>;
+}
+
+world newton-provider {
+    import http;
+    export run: func(input: string) -> result<string, string>;
+}
+```
+
+The `http` import provides the `fetch` function for making HTTP requests from within the WASM sandbox. The `run` export is your oracle's entry point.
+
+## Implement in JavaScript
+
+Create `policy.js`:
+
+```js
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+
+export function run(wasm_args) {
+  const args = JSON.parse(wasm_args);
+
+  // Example: fetch an external API
+  const response = httpFetch({
+    url: `https://api.example.com/data?symbol=${args.base_symbol}`,
+    method: "GET",
+    headers: [["Accept", "application/json"]],
+    body: null,
+  });
+
+  if (response.status !== 200) {
+    return JSON.stringify({ error: "API request failed" });
+  }
+
+  const body = JSON.parse(
+    new TextDecoder().decode(new Uint8Array(response.body))
+  );
+
+  return JSON.stringify({
+    price: body.price,
+    symbol: args.base_symbol,
+    timestamp: Date.now(),
+  });
+}
+```
+
+<Note>
+The `httpFetch` function maps to the `http.fetch` function defined in the WIT interface. Import it at the top of your module:
+
+```js
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+```
+
+ComponentizeJS resolves this virtual specifier at build time. See the [JavaScript WASM Guide](/developers/advanced/javascript-wasm-guide) for details.
+</Note>
+
+## Build WASM
+
+Compile the JavaScript into a WASM component using `jco`:
+
+```bash
+# Install jco globally (if not already)
+npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
+
+# Build the WASM component
+jco componentize -w newton-provider.wit -o policy.wasm policy.js \
+  -d stdio random clocks http fetch-event
+```
+
+This produces `policy.wasm` in the current directory.
+
+<Note>
+If you installed `jco` locally (without `-g`), run it via `npx jco componentize ...` instead.
+</Note>
+
+## Test Locally
+
+Test your WASM oracle before deploying:
+
+```bash
+# Simulate with empty args
+newton-cli policy-data simulate --wasm-file policy.wasm --input-json '{}'
+
+# Simulate with specific args
+newton-cli policy-data simulate \
+  --wasm-file policy.wasm \
+  --input-json '{"base_symbol": "BTC"}'
+```
+
+You can also test via the Gateway RPC:
+
+```bash
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulatePolicyData",
+    "params": {
+      "policy_data_address": "0x...",
+      "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
+    },
+    "id": 1
+  }'
+```
+
+## Alternative Languages
+
+While JavaScript is the most common choice, you can also write data oracles in:
+
+- **Rust** — see the [Rust WASM Guide](/developers/advanced/rust-wasm-guide)
+- **Python** — see the [Python WASM Guide](/developers/advanced/python-wasm-guide)
+
+All languages compile to the same WIT interface and produce interchangeable WASM components.
+
+## Next Steps
+
+<Card icon="file-code" href="/developers/guides/writing-policies" title="Writing Policies">
+  Write a Rego policy that uses your oracle's output
+</Card>
+<Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
+  Deploy your oracle and policy to IPFS and on-chain
+</Card>

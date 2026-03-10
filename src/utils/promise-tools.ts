@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/no-use-before-define: off */
-import { TypedEmitter, EventsDefinition, createTypedEmitter } from './events';
+import { type EventsDefinition, type TypedEmitter, createTypedEmitter } from './events'
 
 /**
  * Extends `Promise` with a polymorphic `this` type to accomodate arbitrary
@@ -8,81 +8,90 @@ import { TypedEmitter, EventsDefinition, createTypedEmitter } from './events';
 interface ExtendedPromise<T> extends Promise<T> {
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null,
+    // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise.then signature
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null,
-  ): ExtendedPromise<TResult1 | TResult2> & this;
+  ): ExtendedPromise<TResult1 | TResult2> & this
 
   catch<TResult = never>(
+    // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise.catch signature
     onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null,
-  ): ExtendedPromise<T | TResult> & this;
+  ): ExtendedPromise<T | TResult> & this
 
-  finally(onfinally?: (() => void) | undefined | null): ExtendedPromise<T> & this;
+  finally(onfinally?: (() => void) | undefined | null): ExtendedPromise<T> & this
 }
 
 /**
  * A `Promise` and `EventEmitter` all in one!
  */
-export type PromiEvent<TResult, TEvents extends EventsDefinition = void> = ExtendedPromise<TResult> &
-  TypedEmitter<TEvents extends void ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>>;
+export type PromiEvent<TResult, TEvents extends EventsDefinition = undefined> = ExtendedPromise<TResult> &
+  TypedEmitter<TEvents extends undefined ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>>
 
 /**
  * Default events attached to every `PromiEvent`.
  */
 type DefaultEvents<TResult> = {
-  done: (result: TResult) => void;
-  error: (reason: any) => void;
-  settled: () => void;
-};
+  done: (result: TResult) => void
+  // biome-ignore lint/suspicious/noExplicitAny: error event can carry any rejection reason
+  error: (reason: any) => void
+  settled: () => void
+}
 
 /**
  * A `Promise` executor with can be optionally asynchronous.
  */
 type AsyncPromiseExecutor<TResult> = (
   resolve: (value: TResult | PromiseLike<TResult>) => void,
+  // biome-ignore lint/suspicious/noExplicitAny: matches standard Promise reject signature
   reject: (reason?: any) => void,
-) => void | Promise<void>;
+) => void | Promise<void>
 
-const promiEventBrand = Symbol('isPromiEvent');
+const promiEventBrand = Symbol('isPromiEvent')
 
 /**
  * Returns `true` if the given `value` is a `PromiEvent`.
  */
+// biome-ignore lint/suspicious/noExplicitAny: type guard must accept any value and return PromiEvent<any>
 export function isPromiEvent(value: any): value is PromiEvent<any> {
-  return !!value[promiEventBrand];
+  return !!value[promiEventBrand]
 }
 
 /**
  * Create a native JavaScript `Promise` overloaded with strongly-typed methods
  * from `EventEmitter`.
  */
-export function createPromiEvent<TResult, TEvents extends EventsDefinition = void>(
+export function createPromiEvent<TResult, TEvents extends EventsDefinition = undefined>(
   executor: AsyncPromiseExecutor<TResult>,
-): PromiEvent<TResult, TEvents extends void ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>> {
-  const promise = createPromise(executor);
+): PromiEvent<TResult, TEvents extends undefined ? DefaultEvents<TResult> : TEvents & DefaultEvents<TResult>> {
+  const promise = createPromise(executor)
   const { createBoundEmitterMethod, createChainingEmitterMethod } = createTypedEmitter<
     TEvents & DefaultEvents<TResult>
-  >();
+  >()
 
   // We save the original `Promise` methods to the following symbols so we can
   // access them internally.
-  const thenSymbol = Symbol('Promise.then');
-  const catchSymbol = Symbol('Promise.catch');
-  const finallySymbol = Symbol('Promise.finally');
+  const thenSymbol = Symbol('Promise.then')
+  const catchSymbol = Symbol('Promise.catch')
+  const finallySymbol = Symbol('Promise.finally')
 
   /**
    * Ensures the next object in the `PromiEvent` chain is overloaded with
    * `EventEmitter` methods.
    */
   const createChainingPromiseMethod =
-    (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<any>) =>
-    (...args: any[]) => {
-      const nextPromise = (source as any)[method].apply(source, args);
-      return promiEvent(nextPromise);
-    };
+    // biome-ignore lint/suspicious/noExplicitAny: internal promise chaining requires type erasure
+      (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<any>) =>
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch requires any args
+      (...args: any[]) => {
+        // biome-ignore lint/suspicious/noExplicitAny: symbol-keyed property access requires type erasure
+        const nextPromise = (source as any)[method].apply(source, args)
+        return promiEvent(nextPromise)
+      }
 
   /**
    * Builds a `PromiEvent` by assigning `EventEmitter` methods to a native
    * `Promise` object.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: PromiEvent builder augments a raw promise with emitter methods
   const promiEvent = (source: any) => {
     return Object.assign(source, {
       [promiEventBrand]: true,
@@ -91,6 +100,7 @@ export function createPromiEvent<TResult, TEvents extends EventsDefinition = voi
       [catchSymbol]: source[catchSymbol] || source.catch,
       [finallySymbol]: source[finallySymbol] || source.finally,
 
+      // biome-ignore lint/suspicious/noThenProperty: intentional thenable for PromiEvent pattern
       then: createChainingPromiseMethod(thenSymbol, source),
       catch: createChainingPromiseMethod(catchSymbol, source),
       finally: createChainingPromiseMethod(finallySymbol, source),
@@ -107,28 +117,28 @@ export function createPromiEvent<TResult, TEvents extends EventsDefinition = voi
       eventNames: createBoundEmitterMethod('eventNames'),
       listeners: createBoundEmitterMethod('listeners'),
       listenerCount: createBoundEmitterMethod('listenerCount'),
-    });
-  };
+    })
+  }
 
   const result = promiEvent(
     promise.then(
       resolved => {
         // Emit default completion events and resolve result.
-        result.emit('done', resolved);
-        result.emit('settled');
-        return resolved;
+        result.emit('done', resolved)
+        result.emit('settled')
+        return resolved
       },
 
       err => {
         // Emit default error events and re-throw.
-        result.emit('error', err);
-        result.emit('settled');
-        throw err;
+        result.emit('error', err)
+        result.emit('settled')
+        throw err
       },
     ),
-  );
+  )
 
-  return result;
+  return result
 }
 
 /**
@@ -142,7 +152,7 @@ export function createPromiEvent<TResult, TEvents extends EventsDefinition = voi
  */
 export function createPromise<TResult>(executor: AsyncPromiseExecutor<TResult>) {
   return new Promise<TResult>((resolve, reject) => {
-    const result = executor(resolve, reject);
-    Promise.resolve(result).catch(reject);
-  });
+    const result = executor(resolve, reject)
+    Promise.resolve(result).catch(reject)
+  })
 }

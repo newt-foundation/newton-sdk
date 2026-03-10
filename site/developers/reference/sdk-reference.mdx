@@ -1,0 +1,1329 @@
+---
+title: "TypeScript SDK Reference"
+description: "Complete API reference for @magicnewton/newton-protocol-sdk. Viem client extensions for policy evaluation, task submission, and attestation verification."
+keywords:
+  - newton sdk
+  - viem client extension
+  - typescript blockchain sdk
+  - newton-protocol-sdk
+  - policy evaluation sdk
+---
+
+# Newton Protocol SDK Reference
+
+Official TypeScript SDK for the Newton Protocol. This page provides a complete reference for all exported methods, types, interfaces, and utilities in the `@magicnewton/newton-protocol-sdk` package.
+
+<Info>
+  The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and `WalletClient` instances with Newton-specific actions. Make sure you are familiar with viem basics before proceeding.
+</Info>
+
+---
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install @magicnewton/newton-protocol-sdk
+```
+
+
+```bash pnpm (recommended)
+pnpm add @magicnewton/newton-protocol-sdk
+```
+
+
+```bash yarn
+yarn add @magicnewton/newton-protocol-sdk
+```
+
+</CodeGroup>
+
+**Requirements:**
+
+- Node.js \>= 20
+- Package manager: pnpm \>= 9 (recommended)
+
+**Dependencies:**
+
+| Package         | Version | Purpose                        |
+| --------------- | ------- | ------------------------------ |
+| `viem`          | ^2.35.1 | Ethereum client library        |
+| `jose`          | ^6.0.13 | JWT / cryptographic operations |
+| `eventemitter3` | ^4.0.4  | Event handling                 |
+
+---
+
+## Overview
+
+The SDK is organized into two main client extensions:
+
+| Extension                   | Purpose                                                | Client Type    |
+| --------------------------- | ------------------------------------------------------ | -------------- |
+| `newtonPublicClientActions` | Read-only operations (query tasks, policy state)       | `PublicClient` |
+| `newtonWalletClientActions` | Write operations (submit evaluations, manage policies) | `WalletClient` |
+
+For a step-by-step walkthrough of integrating these into your application, see the [Integration Guide](/developers/guides/integration-guide). For the underlying JSON-RPC methods the SDK calls, see the [RPC API Reference](/developers/reference/rpc-api).
+
+---
+
+## Setup & Initialization
+
+<Info>
+  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), and **Ethereum Mainnet** (chain ID `1`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+</Info>
+
+### newtonPublicClientActions
+
+Extends a viem `PublicClient` with Newton Protocol read methods.
+
+```ts
+import { createPublicClient, http } from 'viem';
+import { sepolia, baseSepolia } from 'viem/chains';
+import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
+
+const publicClient = createPublicClient({
+  chain: sepolia,        // or baseSepolia for Base Sepolia
+  transport: http('<RPC_URL>'),
+}).extend(
+  newtonPublicClientActions({
+    policyContractAddress: '0x...', // optional
+  })
+);
+```
+
+**Signature:**
+
+```ts
+function newtonPublicClientActions(
+  options?: {
+    policyContractAddress?: Address;
+  },
+  overrides?: SdkOverrides
+): (publicClient: PublicClient) => NewtonPublicClientMethods;
+```
+
+**Parameters:**
+
+| Parameter                       | Type           | Required | Description                                           |
+| ------------------------------- | -------------- | -------- | ----------------------------------------------------- |
+| `options.policyContractAddress` | `Address`      | No       | Scopes all policy read calls to this contract address |
+| `overrides`                     | `SdkOverrides` | No       | Override default SDK configuration                    |
+
+---
+
+### newtonWalletClientActions
+
+Extends a viem `WalletClient` with Newton Protocol write methods.
+
+```ts
+import { createWalletClient, http } from 'viem';
+import { sepolia, baseSepolia } from 'viem/chains';
+import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+
+const walletClient = createWalletClient({
+  chain: sepolia,        // or baseSepolia for Base Sepolia
+  transport: http('<RPC_URL>'),
+}).extend(
+  newtonWalletClientActions({
+    apiKey: '<YOUR_API_KEY>',
+    policyContractAddress: '0x...', // optional
+  })
+);
+```
+
+**Signature:**
+
+```ts
+function newtonWalletClientActions(
+  config: {
+    apiKey: string;
+    policyContractAddress?: Address;
+  },
+  overrides?: SdkOverrides
+): (walletClient: WalletClient) => NewtonWalletClientMethods;
+```
+
+**Parameters:**
+
+| Parameter                      | Type           | Required | Description                                          |
+| ------------------------------ | -------------- | -------- | ---------------------------------------------------- |
+| `config.apiKey`                | `string`       | Yes      | Newton Protocol API key for gateway authentication   |
+| `config.policyContractAddress` | `Address`      | No       | Default policy contract address for write operations |
+| `overrides`                    | `SdkOverrides` | No       | Override default SDK configuration                   |
+
+<Note>
+  Your API key authenticates requests to the Newton Gateway. Keep it secret and never expose it in client-side code.
+</Note>
+
+---
+
+### SdkOverrides
+
+Optional configuration to override default SDK endpoints and contract addresses.
+
+```ts
+interface SdkOverrides {
+  gatewayApiUrl?: string;
+  taskManagerAddress?: Address;
+  attestationValidatorAddress?: Address;
+  newtonIdpUrl?: string;
+}
+```
+
+| Field                         | Type      | Description                                  |
+| ----------------------------- | --------- | -------------------------------------------- |
+| `gatewayApiUrl`               | `string`  | Custom Newton Gateway API URL                |
+| `taskManagerAddress`          | `Address` | Custom TaskManager contract address          |
+| `attestationValidatorAddress` | `Address` | Custom AttestationValidator contract address |
+| `newtonIdpUrl`                | `string`  | Custom Newton identity provider URL          |
+
+---
+
+## Wallet Client Methods (Write)
+
+These methods are available after extending a `WalletClient` with `newtonWalletClientActions`.
+
+### submitEvaluationRequest
+
+Submits an intent evaluation request to the Newton Protocol via the gateway. The task is created on-chain and operators evaluate the intent against the policy. Returns a `PendingTaskBuilder` that can be used to await the task response.
+
+```ts
+const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequest({
+  policyClient: '0x...',
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: '0xaa36a7', // Ethereum Sepolia (11155111)
+    functionSignature: '0x...',
+  },
+  timeout: 60000,
+});
+
+console.log(result.taskId);  // Hex
+console.log(result.txHash);  // Hex
+
+// Optionally wait for the on-chain response
+const response = await waitForTaskResponded({ timeoutMs: 120000 });
+```
+
+**Signature:**
+
+```ts
+submitEvaluationRequest(
+  args: SubmitEvaluationRequestParams
+): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder>
+```
+
+**Parameters:**
+
+| Parameter      | Type               | Required | Description                        |
+| -------------- | ------------------ | -------- | ---------------------------------- |
+| `policyClient` | `Address`          | Yes      | The policy client contract address |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate             |
+| `timeout`      | `number`           | No       | Request timeout in milliseconds    |
+
+**Returns:** An object containing:
+
+- `result.taskId` (`Hex`) -- The unique task identifier
+- `result.txHash` (`Hex`) -- The transaction hash
+- `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
+
+---
+
+### evaluateIntentDirect
+
+Evaluates an intent directly through the gateway without waiting for on-chain task response confirmation. Results are intended for use with `validateAttestationDirect` on `NewtonPolicyClient` (`NewtonProverTaskManagerShared`).
+
+```ts
+const { result } = await walletClient.evaluateIntentDirect({
+  policyClient: '0x...',
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    functionSignature: '0x...',
+  },
+  timeout: 30000,
+});
+
+console.log(result.evaluationResult); // boolean
+console.log(result.task);             // Task object
+console.log(result.taskResponse);     // Raw task response
+console.log(result.blsSignature);     // BLS signature data
+```
+
+**Signature:**
+
+```ts
+evaluateIntentDirect(
+  args: SubmitEvaluationRequestParams
+): Promise<{
+  result: {
+    evaluationResult: boolean;
+    task: Task;
+    taskResponse: any;
+    blsSignature: any;
+  };
+}>
+```
+
+**Parameters:**
+
+| Parameter      | Type               | Required | Description                                                                                        |
+| -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
+| `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia) or `84532` (Base Sepolia). |
+| `timeout`      | `number`           | No       | Request timeout in milliseconds                                                                    |
+
+**Returns:**
+
+- `result.evaluationResult` (`boolean`) -- Whether the intent was allowed by the policy
+- `result.task` (`Task`) -- The full task object
+- `result.taskResponse` -- The raw task response from the operator
+- `result.blsSignature` -- The BLS aggregate signature
+
+---
+
+### submitIntentAndSubscribe
+
+Submits a task via `newt_sendTask` and opens a WebSocket connection to receive the evaluation result. Results are intended for use with `validateAttestation` on `NewtonProverTaskManager` (the on-chain task verification path).
+
+```ts
+const { result, ws } = await walletClient.submitIntentAndSubscribe({
+  policyClient: '0x...',
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: 11155111,
+    functionSignature: '0x...',
+  },
+  timeout: 30,
+});
+
+console.log(result.task_id);             // Hex task identifier
+console.log(result.subscription_topic);  // WebSocket topic
+
+// Listen for the task response
+ws.onmessage = (event) => {
+  const taskResponse = JSON.parse(event.data);
+  console.log(taskResponse);
+};
+```
+
+**Signature:**
+
+```ts
+submitIntentAndSubscribe(
+  args: SubmitEvaluationRequestParams
+): Promise<{
+  result: SubmitIntentResult;
+  ws: WebSocket;
+}>
+```
+
+**Parameters:**
+
+| Parameter      | Type               | Required | Description                                                                                        |
+| -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
+| `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia) or `84532` (Base Sepolia). |
+| `timeout`      | `number`           | No       | Request timeout in seconds                                                                         |
+
+**Returns:**
+
+- `result.message` (`string`) -- Status message from the gateway
+- `result.subscription_topic` (`string`) -- WebSocket topic to subscribe to for task updates
+- `result.task_id` (`Hex`) -- 32-byte task identifier
+- `result.timestamp` (`number`) -- Task creation timestamp
+- `ws` (`WebSocket`) -- Active WebSocket connection subscribed to the task topic
+
+**`SubmitIntentResult` type:**
+
+```ts
+interface SubmitIntentResult {
+  message: string;
+  subscription_topic: string;
+  task_id: Hex;
+  timestamp: number;
+}
+```
+
+<Note>
+Use `submitIntentAndSubscribe` when you need on-chain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via `PolicyClient.validateAttestationDirect`.
+</Note>
+
+---
+
+### simulateTask
+
+Simulates task evaluation (`newt_simulateTask`). Forwards the task to an operator and returns an allow/deny result without executing on-chain. See the [RPC API Reference](/developers/reference/rpc-api) for the underlying JSON-RPC method.
+
+```ts
+const result = await walletClient.simulateTask({
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    functionSignature: '0x...',
+  },
+  policyTaskData: {
+    policyId: '0x...',
+    policyAddress: '0x...',
+    policy: '0x...',
+    policyData: [
+      {
+        wasmArgs: '0x',
+        data: '0x...',
+        attestation: '0x...',
+        policyDataAddress: '0x...',
+        expireBlock: 999999,
+      },
+    ],
+  },
+});
+
+console.log(result.success);
+console.log(result.result?.allow);
+console.log(result.result?.reason);
+console.log(result.error);
+```
+
+**Signature:**
+
+```ts
+simulateTask(args: SimulateTaskParams): Promise<SimulateTaskResult>
+```
+
+---
+
+### simulatePolicy
+
+Simulates full Rego policy evaluation (`newt_simulatePolicy`). Tests a policy with a sample intent and policy data. May require ownership if `PolicyData` uses stored secrets.
+
+```ts
+const result = await walletClient.simulatePolicy({
+  policyClient: '0x...',
+  policy: '<rego-policy-string>',
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    functionSignature: '0x...',
+  },
+  policyData: [
+    { policyDataAddress: '0x...' },
+  ],
+  policyParams: { max_amount: 1000 },
+  entrypoint: 'newton/policy/allow',
+});
+
+console.log(result.success);
+console.log(result.evaluation_result);
+console.log(result.error);
+```
+
+**Signature:**
+
+```ts
+simulatePolicy(args: SimulatePolicyParams): Promise<SimulatePolicyResult>
+```
+
+---
+
+### simulatePolicyData
+
+Simulates PolicyData WASM execution (`newt_simulatePolicyData`) with caller-provided secrets. No ownership verification is required.
+
+```ts
+const result = await walletClient.simulatePolicyData({
+  policyDataAddress: '0x...',
+  secrets: '<secrets-json-string>',
+  wasmArgs: '0x...',
+});
+
+console.log(result.success);
+console.log(result.policy_data?.specifier);
+console.log(result.policy_data?.data);
+```
+
+**Signature:**
+
+```ts
+simulatePolicyData(
+  args: SimulatePolicyDataParams
+): Promise<SimulatePolicyDataResult>
+```
+
+---
+
+### simulatePolicyDataWithClient
+
+Simulates PolicyData WASM execution (`newt_simulatePolicyDataWithClient`) using stored secrets for a policy client. Requires ownership of the policy client.
+
+```ts
+const result = await walletClient.simulatePolicyDataWithClient({
+  policyDataAddress: '0x...',
+  policyClient: '0x...',
+  wasmArgs: '0x...',
+});
+
+console.log(result.success);
+console.log(result.policy_data?.specifier);
+```
+
+**Signature:**
+
+```ts
+simulatePolicyDataWithClient(
+  args: SimulatePolicyDataWithClientParams
+): Promise<SimulatePolicyDataWithClientResult>
+```
+
+---
+
+### initialize
+
+Initializes a Newton Policy contract with the given configuration. This is a one-time setup call.
+
+```ts
+const txHash = await walletClient.initialize({
+  factory: '0x...',
+  entrypoint: 'newton/policy/allow',
+  policyCid: 'bafyrei...',
+  schemaCid: 'bafyrei...',
+  policyData: ['0x...', '0x...'],
+  metadataCid: 'bafyrei...',
+  owner: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+initialize(args: {
+  factory: Address;
+  entrypoint: string;
+  policyCid: string;
+  schemaCid: string;
+  policyData: Address[];
+  metadataCid: string;
+  owner: Address;
+}): Promise<`0x${string}`>
+```
+
+**Parameters:**
+
+| Parameter     | Type        | Required | Description                                            |
+| ------------- | ----------- | -------- | ------------------------------------------------------ |
+| `factory`     | `Address`   | Yes      | Address of the deploying factory contract              |
+| `entrypoint`  | `string`    | Yes      | Policy entrypoint path (e.g., `"newton/policy/allow"`) |
+| `policyCid`   | `string`    | Yes      | Content identifier (CID) of the policy WASM            |
+| `schemaCid`   | `string`    | Yes      | Content identifier (CID) of the policy schema          |
+| `policyData`  | `Address[]` | Yes      | Array of PolicyData contract addresses                 |
+| `metadataCid` | `string`    | Yes      | Content identifier (CID) of the policy metadata        |
+| `owner`       | `Address`   | Yes      | Owner address of the policy contract                   |
+
+**Returns:** `` `0x${string}` `` -- The transaction hash.
+
+---
+
+### renounceOwnership
+
+Renounces ownership of the policy contract. After calling this, no one will be able to perform owner-restricted actions.
+
+<Note>
+  This action is irreversible. Once ownership is renounced, administrative operations on the policy contract can never be performed again.
+</Note>
+
+```ts
+const txHash = await walletClient.renounceOwnership();
+```
+
+**Signature:**
+
+```ts
+renounceOwnership(): Promise<`0x${string}`>
+```
+
+---
+
+### transferOwnership
+
+Transfers ownership of the policy contract to a new address.
+
+```ts
+const txHash = await walletClient.transferOwnership({
+  newOwner: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+transferOwnership(args: {
+  newOwner: Address;
+}): Promise<`0x${string}`>
+```
+
+---
+
+## Public Client Methods (Read)
+
+These methods are available after extending a `PublicClient` with `newtonPublicClientActions`.
+
+### Task Methods
+
+#### waitForTaskResponded
+
+Polls the on-chain `TaskManager` contract for a `TaskResponded` event for the given task ID.
+
+```ts
+const result = await publicClient.waitForTaskResponded({
+  taskId: '0x...',
+  timeoutMs: 120000,
+});
+
+console.log(result.taskResponse.evaluationResult);
+console.log(result.attestation.expiration);
+```
+
+**Signature:**
+
+```ts
+waitForTaskResponded(args: {
+  taskId: TaskId;
+  timeoutMs?: number;
+  abortSignal?: AbortSignal;
+}): Promise<TaskResponseResult>
+```
+
+**Parameters:**
+
+| Parameter     | Type             | Required | Description                       |
+| ------------- | ---------------- | -------- | --------------------------------- |
+| `taskId`      | `TaskId` (`Hex`) | Yes      | The task identifier to monitor    |
+| `timeoutMs`   | `number`         | No       | Maximum wait time in milliseconds |
+| `abortSignal` | `AbortSignal`    | No       | Signal to abort the polling       |
+
+---
+
+#### getTaskStatus
+
+Queries the current status of a task from the on-chain contracts.
+
+```ts
+const status = await publicClient.getTaskStatus({ taskId: '0x...' });
+// status: 'Created' | 'Responded' | 'AttestationSpent'
+//       | 'AttestationExpired' | 'SuccessfullyChallenged'
+```
+
+**Signature:**
+
+```ts
+getTaskStatus(args: {
+  taskId: TaskId;
+}): Promise<TaskStatus>
+```
+
+---
+
+#### getTaskResponseHash
+
+Retrieves the response hash for a given task from the on-chain contract.
+
+```ts
+const hash = await publicClient.getTaskResponseHash({ taskId: '0x...' });
+// hash: '0x...' | null
+```
+
+**Signature:**
+
+```ts
+getTaskResponseHash(args: {
+  taskId: TaskId;
+}): Promise<Hex | null>
+```
+
+---
+
+### Policy Methods
+
+#### getPolicyId
+
+Returns the policy ID associated with a given client address.
+
+```ts
+const policyId = await publicClient.getPolicyId({ client: '0x...' });
+```
+
+**Signature:**
+
+```ts
+getPolicyId(args: { client: Address }): Promise<`0x${string}`>
+```
+
+---
+
+#### getPolicyConfig
+
+Returns the full policy configuration for a given policy ID, including parameters and expiration settings.
+
+```ts
+const config = await publicClient.getPolicyConfig({ policyId: '0x...' });
+console.log(config.policyParams);
+console.log(config.policyParamsHex);
+console.log(config.expireAfter);
+```
+
+**Signature:**
+
+```ts
+getPolicyConfig(args: {
+  policyId: `0x${string}`;
+}): Promise<{
+  policyParams: string | object;
+  policyParamsHex: `0x${string}`;
+  expireAfter: number;
+}>
+```
+
+---
+
+#### getPolicyCid
+
+Returns the content identifier (CID) of the policy WASM stored in the contract.
+
+```ts
+const cid = await publicClient.getPolicyCid();
+```
+
+**Signature:**
+
+```ts
+getPolicyCid(): Promise<string>
+```
+
+---
+
+#### getSchemaCid
+
+Returns the content identifier (CID) of the policy schema.
+
+```ts
+const cid = await publicClient.getSchemaCid();
+```
+
+**Signature:**
+
+```ts
+getSchemaCid(): Promise<string>
+```
+
+---
+
+#### getMetadataCid
+
+Returns the content identifier (CID) of the policy metadata.
+
+```ts
+const cid = await publicClient.getMetadataCid();
+```
+
+**Signature:**
+
+```ts
+getMetadataCid(): Promise<string>
+```
+
+---
+
+#### getEntrypoint
+
+Returns the policy entrypoint string (e.g., `"newton/policy/allow"`).
+
+```ts
+const entrypoint = await publicClient.getEntrypoint();
+```
+
+**Signature:**
+
+```ts
+getEntrypoint(): Promise<string>
+```
+
+---
+
+#### getPolicyData
+
+Returns the array of PolicyData contract addresses associated with the policy.
+
+```ts
+const addresses = await publicClient.getPolicyData();
+```
+
+**Signature:**
+
+```ts
+getPolicyData(): Promise<Address[]>
+```
+
+---
+
+#### isPolicyVerified
+
+Returns whether the policy contract has been verified.
+
+```ts
+const verified = await publicClient.isPolicyVerified();
+```
+
+**Signature:**
+
+```ts
+isPolicyVerified(): Promise<boolean>
+```
+
+---
+
+#### precomputePolicyId
+
+Synchronously computes a policy ID from its constituent parts without making an on-chain call.
+
+```ts
+const policyId = publicClient.precomputePolicyId({
+  policyContract: '0x...',
+  policyData: ['0x...'],
+  params: {
+    admin: '0x...',
+    allowed_actions: {},
+    token_whitelist: {},
+  },
+  client: '0x...',
+  policyUri: 'ipfs://...',
+  schemaUri: 'ipfs://...',
+  entrypoint: 'newton/policy/allow',
+  expireAfter: 3600,
+});
+```
+
+**Signature:**
+
+```ts
+precomputePolicyId(args: {
+  policyContract: Address;
+  policyData: Address[];
+  params: Record<string, any>;
+  client: Address;
+  policyUri: string;
+  schemaUri: string;
+  entrypoint: string;
+  expireAfter: number;
+}): `0x${string}`
+```
+
+<Note>
+  This is a **synchronous** method. It does not make any network or contract calls.
+</Note>
+
+---
+
+#### Additional Policy Contract Readers
+
+The following methods read individual fields from the policy contract. They all require a `policyContractAddress` to have been set during initialization (or passed via overrides).
+
+| Method                               | Return Type                 | Description                                            |
+| ------------------------------------ | --------------------------- | ------------------------------------------------------ |
+| `owner()`                            | `Promise<Address>`          | Returns the owner address of the policy contract       |
+| `factory()`                          | `Promise<Address>`          | Returns the factory address that deployed the contract |
+| `entrypoint()`                       | `Promise<string>`           | Returns the policy entrypoint path                     |
+| `clientToPolicyId({ client })`       | `Promise<\`0x\$string\`\>\` | Maps a client address to its policy ID                 |
+| `policyData({ index })`              | `Promise<Address>`          | Returns the PolicyData contract address at the given index |
+| `policyCid()`                        | `Promise<string>`           | Returns the policy CID                                 |
+| `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
+| `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
+| `supportsInterface({ interfaceId })` | `Promise<boolean>`          | EIP-165 interface support check                        |
+
+---
+
+## Types & Interfaces
+
+### Intent Types
+
+<Expandable title="IntentFromParams">
+  The intent shape accepted by SDK methods before normalization.
+
+  ```ts
+  interface IntentFromParams {
+    from: string;
+    to: string;
+    value: string;
+    data: string;
+    chainId: string | number;
+    functionSignature: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="NormalizedIntent">
+  The intent after internal normalization, with all fields as consistent types.
+
+  ```ts
+  interface NormalizedIntent {
+    from: Address;
+    to: Address;
+    value: Hex;
+    data: Hex;
+    chainId: number;
+    functionSignature: Hex;
+  }
+  ```
+</Expandable>
+
+<Expandable title="HexlifiedIntent">
+  The intent with all fields encoded as hex strings for on-chain use.
+
+  ```ts
+  interface HexlifiedIntent {
+    from: Hex;
+    to: Hex;
+    value: Hex;
+    data: Hex;
+    chainId: Hex;
+    functionSignature: Hex;
+  }
+  ```
+</Expandable>
+
+---
+
+### Task Types
+
+<Expandable title="TaskId">
+  ```ts
+  type TaskId = Hex;
+  ```
+
+  A hex-encoded unique identifier for a task.
+</Expandable>
+
+<Expandable title="TaskStatus">
+  ```ts
+  type TaskStatus =
+    | 'Created'
+    | 'Responded'
+    | 'AttestationSpent'
+    | 'AttestationExpired'
+    | 'SuccessfullyChallenged';
+  ```
+
+  Represents the lifecycle state of a task on-chain.
+</Expandable>
+
+<Expandable title="Task">
+  ```ts
+  interface Task {
+    taskId: TaskId;
+    intent: NormalizedIntent;
+    policyId: Hex;
+    taskCreatedBlock: number;
+    // Additional operator-specific fields
+  }
+  ```
+
+  The full task object returned by evaluation methods.
+</Expandable>
+
+<Expandable title="TaskResponse">
+  ```ts
+  interface TaskResponse {
+    evaluationResult: boolean;
+    referenceTaskId: TaskId;
+    // Additional response metadata
+  }
+  ```
+
+  The operator's response to a task evaluation.
+</Expandable>
+
+<Expandable title="TaskResponseResult">
+  ```ts
+  interface TaskResponseResult {
+    taskResponse: TaskResponse;
+    attestation: {
+      expiration: number;
+      // Additional attestation fields
+    };
+  }
+  ```
+
+  The combined result returned by `waitForTaskResponded`.
+</Expandable>
+
+<Expandable title="SubmitEvaluationRequestParams">
+  ```ts
+  interface SubmitEvaluationRequestParams {
+    policyClient: Address;
+    intent: IntentFromParams;
+    timeout?: number;
+  }
+  ```
+
+  | Field          | Type               | Required | Description                        |
+  | -------------- | ------------------ | -------- | ---------------------------------- |
+  | `policyClient` | `Address`          | Yes      | The policy client contract address |
+  | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate             |
+  | `timeout`      | `number`           | No       | Request timeout in milliseconds    |
+</Expandable>
+
+---
+
+### Simulation Types
+
+<Expandable title="SimulateTaskParams & SimulateTaskResult">
+  ```ts
+  interface SimulateTaskParams {
+    intent: IntentFromParams;
+    policyTaskData: SimulateTaskPolicyTaskData;
+  }
+  
+  interface SimulateTaskPolicyTaskData {
+    policyId: Hex;
+    policyAddress: Address;
+    policy: Hex;
+    policyData: SimulateTaskPolicyData[];
+  }
+  
+  interface SimulateTaskPolicyData {
+    wasmArgs: Hex;
+    data: Hex;
+    attestation: Hex;
+    policyDataAddress: Address;
+    expireBlock: number;
+  }
+  
+  interface SimulateTaskResult {
+    success: boolean;
+    result?: {
+      allow: boolean;
+      reason?: string;
+    };
+    error?: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="SimulatePolicyParams & SimulatePolicyResult">
+  ```ts
+  interface SimulatePolicyParams {
+    policyClient: Address;
+    policy: string;
+    intent: IntentFromParams;
+    policyData: Array<{ policyDataAddress: Address }>;
+    policyParams?: Record<string, any>;
+    entrypoint?: string;
+  }
+  
+  interface SimulatePolicyResult {
+    success: boolean;
+    evaluation_result?: SimulatePolicyEvaluationResult;
+    error?: string;
+  }
+  
+  interface SimulatePolicyEvaluationResult {
+    allow: boolean;
+    reason?: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="SimulatePolicyDataParams & SimulatePolicyDataResult">
+  ```ts
+  interface SimulatePolicyDataParams {
+    policyDataAddress: Address;
+    secrets: string;
+    wasmArgs: Hex;
+  }
+  
+  interface SimulatePolicyDataResult {
+    success: boolean;
+    policy_data?: {
+      specifier: string;
+      data: string;
+    };
+    error?: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="SimulatePolicyDataWithClientParams & SimulatePolicyDataWithClientResult">
+  ```ts
+  interface SimulatePolicyDataWithClientParams {
+    policyDataAddress: Address;
+    policyClient: Address;
+    wasmArgs: Hex;
+  }
+  
+  interface SimulatePolicyDataWithClientResult {
+    success: boolean;
+    policy_data?: {
+      specifier: string;
+      data: string;
+    };
+    error?: string;
+  }
+  ```
+</Expandable>
+
+---
+
+### Policy Types
+
+<Expandable title="PolicyId, PolicyInfo, PolicyCodeInfo, PolicyDataInfo">
+  ```ts
+  type PolicyId = `0x${string}`;
+  
+  interface PolicyInfo {
+    policyId: PolicyId;
+    policyParams: string | object;
+    policyParamsHex: `0x${string}`;
+    expireAfter: number;
+  }
+  
+  interface PolicyCodeInfo {
+    policyCid: string;
+    schemaCid: string;
+    metadataCid: string;
+    entrypoint: string;
+  }
+  
+  interface PolicyDataInfo {
+    addresses: Address[];
+  }
+  ```
+</Expandable>
+
+<Expandable title="PolicyParamsJson, SetPolicyInput, SetPolicyResult, PolicyDataInput">
+  ```ts
+  type PolicyParamsJson = Record<string, any>;
+  
+  interface SetPolicyInput {
+    client: Address;
+    policyUri: string;
+    schemaUri: string;
+    entrypoint: string;
+    params: PolicyParamsJson;
+    policyData: Address[];
+    expireAfter: number;
+  }
+  
+  interface SetPolicyResult {
+    txHash: `0x${string}`;
+    policyId: PolicyId;
+  }
+  
+  interface PolicyDataInput {
+    policyDataAddress: Address;
+  }
+  ```
+</Expandable>
+
+---
+
+### Gateway Types
+
+<Expandable title="GatewayCreateTaskResult & AggregationResponse">
+  ```ts
+  interface GatewayCreateTaskResult {
+    taskId: Hex;
+    txHash: Hex;
+  }
+  
+  interface AggregationResponse {
+    evaluationResult: boolean;
+    task: Task;
+    taskResponse: any;
+    blsSignature: any;
+  }
+  ```
+</Expandable>
+
+---
+
+### JSON-RPC Types
+
+<Expandable title="JsonRpcRequestPayload, JsonRpcResponsePayload, JsonRpcError, NewtonWalletPayloadMethod">
+  ```ts
+  interface JsonRpcRequestPayload {
+    jsonrpc: '2.0';
+    id: number | string;
+    method: NewtonWalletPayloadMethod;
+    params: any[];
+  }
+  
+  interface JsonRpcResponsePayload<T = any> {
+    jsonrpc: '2.0';
+    id: number | string;
+    result?: T;
+    error?: JsonRpcError;
+  }
+  
+  interface JsonRpcError {
+    code: number;
+    message: string;
+    data?: any;
+  }
+  
+  enum NewtonWalletPayloadMethod {
+    ShowUI = 'newton_wallet_wallet',
+    Receive = 'newton_wallet_wallet_receive',
+    PersonalSign = 'personal_sign',
+    SendUserOperation = 'eth_sendUserOperation',
+    Connect = 'newton_wallet_user_connect',
+    Disconnect = 'newton_wallet_user_disconnect',
+    IsConnected = 'newton_wallet_user_is_connected',
+    GetConnectedProfile = 'newton_wallet_user_get_connected_profile',
+  }
+  ```
+</Expandable>
+
+---
+
+### Builder Types
+
+<Expandable title="PendingTaskBuilder">
+  ```ts
+  interface PendingTaskBuilder {
+    waitForTaskResponded(args?: {
+      timeoutMs?: number;
+      abortSignal?: AbortSignal;
+    }): Promise<TaskResponseResult>;
+  }
+  ```
+
+  Returned by `submitEvaluationRequest`. Call `waitForTaskResponded()` to poll for the on-chain attestation.
+</Expandable>
+
+---
+
+## Error Handling
+
+The SDK provides structured error classes with typed error codes for precise error handling.
+
+### SDKError
+
+Thrown when an SDK-level error occurs (e.g., missing API key, invalid arguments).
+
+```ts
+class SDKError extends Error {
+  code: SDKErrorCode;
+  rawMessage: string;
+
+  constructor(code: SDKErrorCode, rawMessage: string);
+}
+```
+
+### MagicRPCError
+
+Thrown when the Newton Gateway returns a JSON-RPC error.
+
+```ts
+class MagicRPCError extends Error {
+  code: RPCErrorCode | number;
+  rawMessage: string;
+  data: unknown;
+
+  constructor(sourceError?: JsonRpcError | null);
+}
+```
+
+### SDKErrorCode
+
+<Expandable title="SDKErrorCode enum values">
+  ```ts
+  enum SDKErrorCode {
+    MissingApiKey = 'MISSING_API_KEY',
+    PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
+    MalformedResponse = 'MALFORMED_RESPONSE',
+    InvalidArgument = 'INVALID_ARGUMENT',
+    ExtensionNotInitialized = 'EXTENSION_NOT_INITIALIZED',
+    IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
+    FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
+    FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
+  }
+  ```
+</Expandable>
+
+### RPCErrorCode
+
+<Expandable title="RPCErrorCode enum values">
+  ```ts
+  enum RPCErrorCode {
+    // Standard JSON-RPC 2.0 error codes
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InternalError = -32603,
+
+    // Custom Newton error codes
+    MagicLinkRateLimited = -10002,
+    UserAlreadyLoggedIn = -10003,
+    AccessDeniedToUser = -10011,
+    UserRejectedAction = -10012,
+    RequestCancelled = -10014,
+    RedirectLoginComplete = -10015,
+    NewtonWalletSessionTerminated = -10016,
+    PopupRequestOverriden = -10017,
+  }
+  ```
+</Expandable>
+
+### SDKWarningCode
+
+<Expandable title="SDKWarningCode enum values">
+  ```ts
+  enum SDKWarningCode {
+    SyncWeb3Method = 'SYNC_WEB3_METHOD',
+    ReactNativeEndpointConfiguration = 'REACT_NATIVE_ENDPOINT_CONFIGURATION',
+    DeprecationNotice = 'DEPRECATION_NOTICE',
+    ProductAnnouncement = 'ANNOUNCEMENT',
+  }
+  ```
+</Expandable>
+
+<Note>
+  `SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
+</Note>
+
+---
+
+## Subpath Exports
+
+The SDK provides multiple entry points for tree-shaking and targeted imports.
+
+| Import Path                                 | Description                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------- |
+| `@magicnewton/newton-protocol-sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
+| `@magicnewton/newton-protocol-sdk/types`    | Type definitions and interfaces only                                              |
+
+<Info>
+  Use subpath exports to minimize bundle size when you only need a subset of SDK functionality.
+</Info>
+
+---
+
+## Related Resources
+
+- [Integration Guide](/developers/guides/integration-guide) -- Step-by-step guide to building with the Newton Protocol SDK
+- [RPC API Reference](/developers/reference/rpc-api) -- Underlying JSON-RPC methods called by the SDK

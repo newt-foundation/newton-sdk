@@ -1,0 +1,206 @@
+---
+title: "Writing Rego Policies"
+description: "Write Rego policies for blockchain transaction authorization with Newton Protocol. Examples for spend limits, allowlists, sanctions screening, and fraud prevention rules."
+keywords:
+  - rego policy examples
+  - blockchain transaction policy
+  - onchain compliance rules
+  - programmable policy engine
+  - crypto compliance rules
+  - transaction risk management
+  - fraud prevention policy
+  - payment authorization rules
+---
+
+A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.data`).
+
+## What Makes Up a Policy
+
+Every policy deployment requires these files:
+
+| File | Purpose |
+|------|---------|
+| `policy.rego` | Rego policy logic — the core evaluation rules |
+| `policy.wasm` | Compiled WASM data oracle (see [Writing Data Oracles](/developers/guides/writing-data-oracles)) |
+| `params_schema.json` | JSON Schema defining configurable parameters |
+| `policy_metadata.json` | Human-readable policy metadata |
+| `policy_data_metadata.json` | Human-readable oracle metadata |
+
+## Data References
+
+Your Rego policy can access three data namespaces:
+
+| Path | Source | Description |
+|------|--------|-------------|
+| `input` | Intent | The transaction intent being evaluated (from, to, value, data, chain_id, function_signature) |
+| `data.params` | PolicyClient | Configuration parameters set by the contract owner (thresholds, allowlists) |
+| `data.data` | PolicyData WASM | Runtime data returned by your WASM oracle (prices, KYC status) |
+
+## Your First Policy
+
+Create `policy.rego`:
+
+```rego
+package sanctions_check
+
+default allow := false
+
+# Allow the transaction if the oracle reports no sanctions match
+allow if {
+    data.data.is_sanctioned == false
+}
+
+# Also allow if the sender is on the explicit allowlist
+allow if {
+    input.from == data.params.admin
+}
+```
+
+This policy:
+1. Defaults to **deny** (`allow := false`)
+2. Allows transactions where the oracle reports no sanctions match
+3. Always allows transactions from the configured admin address
+
+## Using Intent Fields
+
+The `input` object contains the Intent fields:
+
+```rego
+package spend_limit
+
+default allow := false
+
+# Allow if transfer value is under the configured limit
+allow if {
+    input.value <= data.params.max_value
+}
+
+# Block transfers to specific addresses
+deny if {
+    input.to == data.params.blocked_address
+}
+
+allow if {
+    not deny
+    input.chain_id == 11155111
+}
+```
+
+## Using Oracle Data
+
+The `data.data` path contains whatever your WASM oracle returned:
+
+```rego
+package price_check
+
+default allow := false
+
+# Only allow trades when the price is below the configured maximum
+allow if {
+    data.data.price < data.params.max_price
+    data.data.symbol == "BTC"
+}
+```
+
+## Parameter Schema
+
+Create `params_schema.json` to define which parameters contract owners can configure:
+
+```json
+{
+  "type": "object",
+  "description": "Sanctions check policy parameters",
+  "properties": {
+    "admin": {
+      "type": "string",
+      "description": "Admin address that bypasses sanctions check"
+    },
+    "max_value": {
+      "type": "number",
+      "description": "Maximum transfer value in wei"
+    }
+  }
+}
+```
+
+Leave properties empty if your policy has no configurable parameters:
+
+```json
+{
+  "type": "object",
+  "description": "",
+  "properties": {}
+}
+```
+
+## Metadata Files
+
+Create `policy_metadata.json`:
+
+```json
+{
+  "name": "Sanctions Check Policy",
+  "version": "0.0.1",
+  "author": "Your Name",
+  "link": "https://github.com/your-org/your-policy",
+  "description": "Checks transaction counterparties against sanctions lists"
+}
+```
+
+Create `policy_data_metadata.json`:
+
+```json
+{
+  "name": "Sanctions Oracle",
+  "version": "0.0.1",
+  "author": "Your Name",
+  "link": "",
+  "description": "Fetches sanctions data from screening API"
+}
+```
+
+## Directory Structure
+
+Organize all files into a `policy-files/` directory:
+
+```bash
+policy-files/
+├── policy.rego
+├── policy.wasm
+├── params_schema.json
+├── policy_metadata.json
+└── policy_data_metadata.json
+```
+
+```bash
+cp policy.wasm policy.rego params_schema.json \
+   policy_data_metadata.json policy_metadata.json policy-files/
+```
+
+## Testing Locally
+
+Test your policy with the CLI before deploying:
+
+```bash
+newton-cli policy simulate \
+  --wasm-file policy-files/policy.wasm \
+  --rego-file policy-files/policy.rego \
+  --intent-json intent.json \
+  --entrypoint "sanctions_check.allow" \
+  --policy-params-data policy_params.json
+```
+
+<Note>
+The `--entrypoint` value must match your Rego package name + rule name. For `package sanctions_check` with rule `allow`, use `sanctions_check.allow`.
+</Note>
+
+For a full reference on supported Rego syntax, see the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide).
+
+## Next Steps
+
+<Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
+  Deploy your policy to IPFS and register it on-chain
+</Card>
+<Card icon="shield" href="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
+  Integrate the policy into your smart contract
+</Card>

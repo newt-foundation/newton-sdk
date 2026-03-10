@@ -1,0 +1,62 @@
+---
+title: "Contract Addresses"
+description: "Deployed Newton Protocol contract addresses across all supported networks"
+---
+
+This page lists all deployed Newton Protocol contract addresses. Use these when configuring the SDK, interacting with contracts directly, or verifying deployments.
+
+## Ethereum Sepolia (Chain ID: 11155111)
+
+### Production
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0xecb741f4875770f9a5f060cb30f6c9eb5966ed13` |
+| AttestationValidator | `0x26f452e4b9c9c28508cb836ba486cceaa95b429c` |
+
+### Staging
+
+<Note>
+Staging environments are available for development and testing before moving to production. Contact the Newton team for staging access.
+</Note>
+
+## Base Sepolia (Chain ID: 84532)
+
+Base Sepolia serves as a destination chain for cross-chain policy verification.
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0xc3dc89b5e5241ef53c468dfbaa371a7f1d465eb7` |
+| AttestationValidator | `0x4e21b596944ebe8bd3773dd70c6f134bd2840a73` |
+
+## Ethereum Mainnet (Chain ID: 1)
+
+<Warning>
+Mainnet contracts are deployed but not yet active for production use. Mainnet launch is imminent.
+</Warning>
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0x2010dbaa5438801bdc3f08174a799fe344f544ee` |
+| AttestationValidator | `0x263c275c15867a4611a44c600e77144a23012a06` |
+
+## SDK Constants
+
+The SDK resolves the correct contract addresses and gateway URLs based on the chain your client is connected to. You typically do not need to hardcode them. To override defaults, pass custom values via `SdkOverrides` when initializing the client extensions.
+
+## Gateway URLs
+
+| Network | URL |
+|---------|-----|
+| Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
+| Base Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
+| Mainnet | `https://gateway.newton.xyz/rpc` |
+
+## Next Steps
+
+<Card icon="code" href="/developers/reference/sdk-reference" title="SDK Reference">
+  Use these contracts through the TypeScript SDK
+</Card>
+<Card icon="plug" href="/developers/reference/rpc-api" title="RPC API">
+  Interact with the Gateway directly
+</Card>

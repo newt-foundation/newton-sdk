@@ -1,39 +1,41 @@
-import { mainnet, sepolia, baseSepolia } from 'viem/chains';
-import { Address, Hex } from 'viem';
+import type { Address, Hex, PublicClient, WalletClient } from "viem";
+import { baseSepolia, mainnet, sepolia } from "viem/chains";
 import {
-  SubmitEvaluationRequestParams,
-  TaskId,
-  TaskResponseResult,
-  TaskStatus,
-  SubmitIntentResult,
-  SimulateTaskParams,
-  SimulateTaskResult,
-  SimulatePolicyParams,
-  SimulatePolicyResult,
+  type PendingTaskBuilder,
+  evaluateIntentDirect,
+  getTaskResponseHash,
+  getTaskStatus,
+  simulatePolicy,
+  simulatePolicyData,
+  simulatePolicyDataWithClient,
+  simulateTask,
+  submitEvaluationRequest,
+  submitIntentAndSubscribe,
+  waitForTaskResponded,
+} from "./modules/avs";
+import { policyReadFunctions, policyWriteFunctions } from "./modules/policy";
+import type { PolicyParamsJson } from "./types/policy";
+import type {
   SimulatePolicyDataParams,
   SimulatePolicyDataResult,
   SimulatePolicyDataWithClientParams,
   SimulatePolicyDataWithClientResult,
+  SimulatePolicyParams,
+  SimulatePolicyResult,
+  SimulateTaskParams,
+  SimulateTaskResult,
+  SubmitEvaluationRequestParams,
+  SubmitIntentResult,
   Task,
-} from './types/task';
-import {
-  getTaskResponseHash,
-  getTaskStatus,
-  PendingTaskBuilder,
-  submitEvaluationRequest,
-  waitForTaskResponded,
-  evaluateIntentDirect,
-  submitIntentAndSubscribe,
-  simulateTask,
-  simulatePolicy,
-  simulatePolicyData,
-  simulatePolicyDataWithClient,
-} from './modules/avs';
-import { policyReadFunctions, policyWriteFunctions } from './modules/policy';
-import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const';
-import { popupRequest } from './service/popup';
-import { NewtonIdpPayloadMethod } from './types';
-import { getPayloadId } from './utils/get-payload-id';
+  TaskId,
+  TaskResponseResult,
+  TaskStatus,
+} from "./types/task";
+
+import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from "./const";
+import { popupRequest } from "./service/popup";
+import { NewtonIdpPayloadMethod } from "./types";
+import { getPayloadId } from "./utils/get-payload-id";
 
 interface SdkOverrides {
   gatewayApiUrl?: string;
@@ -42,10 +44,14 @@ interface SdkOverrides {
   newtonIdpUrl?: string;
 }
 
-const supportedChains = [mainnet.id, sepolia.id, baseSepolia.id];
+const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id];
 
 const newtonWalletClientActions =
-  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) => (walletClient: any) => {
+  (
+    config: { apiKey: string; policyContractAddress?: Address },
+    overrides?: SdkOverrides,
+  ) =>
+  (walletClient: WalletClient) => {
     const { apiKey, policyContractAddress } = config;
 
     const validatePolicyContractAddress = () => {
@@ -53,50 +59,80 @@ const newtonWalletClientActions =
         throw new Error(
           'Newton SDK: policyContractAddress is required. Ensure you instantiate viem client actions extension with policyContractAddress parameter. Example: newtonWalletClientActions({ policyContractAddress: "0x123..." })',
         );
-      } else {
-        return policyContractAddress;
       }
+      return policyContractAddress;
     };
     if (!supportedChains.includes(walletClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonWalletClientActions. Only ${supportedChains.join(', ')} are supported`,
+        `Newton SDK: Invalid network specified for newtonWalletClientActions. Only ${supportedChains.join(", ")} are supported`,
       );
     }
     const taskManagerAddress =
-      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id];
+      overrides?.taskManagerAddress ??
+      NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id];
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined;
 
-    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs.vercel.app';
+    const idpUrl =
+      overrides?.newtonIdpUrl ?? "https://persona-kyc-nextjs.vercel.app";
 
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
+      ): Promise<
+        { result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder
+      > =>
+        submitEvaluationRequest(
+          walletClient,
+          args,
+          taskManagerAddress,
+          apiKey,
+          gatewayApiUrlOverride,
+        ),
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: any; blsSignature: any } }> =>
+      ): Promise<{
+        result: {
+          evaluationResult: boolean;
+          task: Task;
+          taskResponse: unknown;
+          blsSignature: unknown;
+        };
+      }> =>
         evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
-        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
+        submitIntentAndSubscribe(
+          walletClient,
+          args,
+          apiKey,
+          gatewayApiUrlOverride,
+        ),
       simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
         simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      simulatePolicy: (args: SimulatePolicyParams): Promise<SimulatePolicyResult> =>
+      simulatePolicy: (
+        args: SimulatePolicyParams,
+      ): Promise<SimulatePolicyResult> =>
         simulatePolicy(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      simulatePolicyData: (args: SimulatePolicyDataParams): Promise<SimulatePolicyDataResult> =>
+      simulatePolicyData: (
+        args: SimulatePolicyDataParams,
+      ): Promise<SimulatePolicyDataResult> =>
         simulatePolicyData(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       simulatePolicyDataWithClient: (
         args: SimulatePolicyDataWithClientParams,
       ): Promise<SimulatePolicyDataWithClientResult> =>
-        simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
+        simulatePolicyDataWithClient(
+          walletClient,
+          args,
+          apiKey,
+          gatewayApiUrlOverride,
+        ),
 
       initialize: (args: {
         factory: Address;
@@ -108,15 +144,24 @@ const newtonWalletClientActions =
         owner: Address;
       }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyWriteFunctions.initialize({ walletClient, policyContractAddress: validatedAddress, ...args });
+        return policyWriteFunctions.initialize({
+          walletClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        });
       },
 
       renounceOwnership: (): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyWriteFunctions.renounceOwnership({ walletClient, policyContractAddress: validatedAddress });
+        return policyWriteFunctions.renounceOwnership({
+          walletClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
-      transferOwnership: (args: { newOwner: Address }): Promise<`0x${string}`> => {
+      transferOwnership: (args: {
+        newOwner: Address;
+      }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
         return policyWriteFunctions.transferOwnership({
           walletClient,
@@ -125,7 +170,10 @@ const newtonWalletClientActions =
         });
       },
 
-      connectIdentityWithNewton: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
+      connectIdentityWithNewton: (args: {
+        appWalletAddress: Address;
+        appClientAddress: Address;
+      }): Promise<any> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Connect,
@@ -146,13 +194,21 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.RegisterUserData,
             id: getPayloadId(),
-            params: { apiKey, userData: args.userData, gatewayApiUrlOverride, chainId: walletClient.chain?.id },
+            params: {
+              apiKey,
+              userData: args.userData,
+              gatewayApiUrlOverride,
+              chainId: walletClient.chain?.id,
+            },
           },
           idpUrl,
         );
       },
 
-      linkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
+      linkApp: (args: {
+        appWalletAddress: Address;
+        appClientAddress: Address;
+      }): Promise<any> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.LinkApp,
@@ -168,7 +224,10 @@ const newtonWalletClientActions =
         );
       },
 
-      unlinkApp: (args: { appWalletAddress: Address; appClientAddress: Address }): Promise<any> => {
+      unlinkApp: (args: {
+        appWalletAddress: Address;
+        appClientAddress: Address;
+      }): Promise<any> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Unlink,
@@ -187,10 +246,11 @@ const newtonWalletClientActions =
   };
 
 const newtonPublicClientActions =
-  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: any) => {
+  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (publicClient: PublicClient) => {
     if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported.`,
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(", ")} are supported.`,
       );
     }
 
@@ -205,10 +265,12 @@ const newtonPublicClientActions =
     };
 
     const taskManagerAddress =
-      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id];
+      overrides?.taskManagerAddress ??
+      NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id];
 
     const attestationValidatorAddress =
-      overrides?.attestationValidatorAddress ?? ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id];
+      overrides?.attestationValidatorAddress ??
+      ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id];
 
     return {
       // AVS module functions
@@ -216,99 +278,163 @@ const newtonPublicClientActions =
         taskId: TaskId;
         timeoutMs?: number; // may be short (< 1s) in fast paths
         abortSignal?: AbortSignal;
-      }): Promise<TaskResponseResult> => waitForTaskResponded(publicClient, args, taskManagerAddress),
+      }): Promise<TaskResponseResult> =>
+        waitForTaskResponded(publicClient, args, taskManagerAddress),
 
       getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> =>
         getTaskResponseHash(publicClient, args, taskManagerAddress),
 
       getTaskStatus: (args: { taskId: TaskId }): Promise<TaskStatus> =>
-        getTaskStatus(publicClient, args, taskManagerAddress, attestationValidatorAddress),
+        getTaskStatus(
+          publicClient,
+          args,
+          taskManagerAddress,
+          attestationValidatorAddress,
+        ),
 
       // Policy read functions
 
       clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+        return policyReadFunctions.clientToPolicyId({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        });
       },
 
       entrypoint: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.entrypoint({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.entrypoint({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       factory: (): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.factory({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.factory({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       getEntrypoint: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getEntrypoint({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.getEntrypoint({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       getMetadataCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getMetadataCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.getMetadataCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       getPolicyCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getPolicyCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.getPolicyCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       getPolicyConfig: (args: {
         policyId: `0x${string}`;
-      }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
+      }): Promise<{
+        policyParams: string | object;
+        policyParamsHex: `0x${string}`;
+        expireAfter: number;
+      }> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args });
+        return policyReadFunctions.getPolicyConfig({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        });
       },
 
       getPolicyData: (): Promise<Address[]> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.getPolicyData({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args });
+        return policyReadFunctions.getPolicyId({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        });
       },
 
       getSchemaCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.getSchemaCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.getSchemaCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       isPolicyVerified: (): Promise<boolean> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.isPolicyVerified({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.isPolicyVerified({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       metadataCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.metadataCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.metadataCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       owner: (): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.owner({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.owner({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       policyCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.policyCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.policyCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
       policyData: (args: { index: number }): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args });
+        return policyReadFunctions.policyData({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        });
       },
 
       schemaCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress();
-        return policyReadFunctions.schemaCid({ publicClient, policyContractAddress: validatedAddress });
+        return policyReadFunctions.schemaCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        });
       },
 
-      supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
+      supportsInterface: (args: {
+        interfaceId: `0x${string}`;
+      }): Promise<boolean> => {
         const validatedAddress = validatePolicyContractAddress();
         return policyReadFunctions.supportsInterface({
           publicClient,
@@ -321,7 +447,7 @@ const newtonPublicClientActions =
       precomputePolicyId: (args: {
         policyContract: Address;
         policyData: Address[];
-        params: any; // PolicyParamsJson
+        params: PolicyParamsJson;
         client: Address;
         policyUri: string;
         schemaUri: string;

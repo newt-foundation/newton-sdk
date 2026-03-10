@@ -1,0 +1,211 @@
+---
+title: "Writing Data Oracles in Rust"
+description: "This guide provides step-by-step instructions for building a WASI-compatible WebAssembly component from Rust code using the WebAssembly Interface Types (WIT) format."
+---
+
+## Prerequisites
+
+1. **Rust Toolchain**
+   - Install Rust via [rustup](https://rustup.rs/)
+   - Version: 1.75.0 or later
+2. **WASM Targets**
+
+```bash
+# Install the WASI Preview 1 target
+rustup target add wasm32-wasip1
+
+# Optionally, install WASI Preview 2 target for future compatibility
+rustup target add wasm32-wasip2
+```
+
+3. **Required Tools**
+
+```bash
+# Install cargo-component for building WASM components
+cargo install cargo-component
+
+# Install wasm-tools for validation and inspection
+cargo install wasm-tools
+```
+
+---
+
+## Project Structure
+
+```
+component/
+├── Cargo.toml          # Rust project configuration
+├── src/
+│   └── lib.rs          # Main Rust implementation
+└── wit/
+    └── world.wit       # WebAssembly Interface Types definition
+```
+
+---
+
+## Step-by-Step Build Process
+
+### Step 1: Define the WIT Interface
+
+Create a WIT file (`wit/world.wit`) compatible with Newton Protocol:
+
+```wit
+package newton:provider@0.1.0;
+
+interface http {
+    record http-request {
+        url: string,
+        method: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: list<u8>,
+    }
+
+    fetch: func(request: http-request) -> result<http-response, string>;
+}
+
+world newton-provider {
+    import http;
+    export run: func(input: string) -> result<string, string>;
+}
+```
+
+---
+
+### Step 2: Configure Cargo.toml
+
+Set up your `Cargo.toml` for WASM component compilation:
+
+```toml
+[package]
+name = "eligibility-checker"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]  # Required for WASM components
+
+[dependencies]
+wit-bindgen = "0.36"     # WIT bindings generator
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[package.metadata.component]
+package = "newton:provider"
+
+[package.metadata.component.dependencies]
+# Add any WIT dependencies here
+```
+
+---
+
+### Step 3: Implement the Rust Code
+
+In `src/lib.rs`, generate bindings and implement your functionality:
+
+```rust
+use serde::{Deserialize, Serialize};
+use serde_json;
+
+// Generate bindings from the WIT file
+wit_bindgen::generate!({
+    world: "newton-provider",  // Must match the world name in WIT
+    path: "wit",               // Path to WIT files
+});
+
+// Export the implementation
+export!(YourImplementation);
+
+struct YourImplementation;
+
+impl Guest for YourImplementation {
+    fn run(input: String) -> Result<String, String> {
+        // Fetch ETH price from CoinGecko
+        let request = newton::provider::http::HttpRequest {
+            url: "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+                .to_string(),
+            method: "GET".to_string(),
+            headers: vec![],
+            body: None,
+        };
+
+        let response = newton::provider::http::fetch(&request)
+            .map_err(|e| format!("HTTP fetch failed: {e}"))?;
+
+        let body = String::from_utf8(response.body)
+            .map_err(|e| format!("Invalid UTF-8: {e}"))?;
+
+        let data: serde_json::Value = serde_json::from_str(&body)
+            .map_err(|e| format!("JSON parse error: {e}"))?;
+
+        let price = data["ethereum"]["usd"]
+            .as_f64()
+            .ok_or("Missing price field")?;
+
+        Ok(serde_json::json!({
+            "eth_price_usd": price
+        }).to_string())
+    }
+}
+```
+
+---
+
+### Step 4: Build the WASM Component
+
+#### Option A: Using cargo-component (Recommended)
+
+```bash
+# Build the component
+cargo component build --release
+
+# Output location:
+# target/wasm32-wasip1/release/<package_name>.wasm
+```
+
+#### Option B: Using standard cargo
+
+```bash
+# Build for WASI Preview 1
+cargo build --target wasm32-wasip1 --release
+
+# Output location:
+# target/wasm32-wasip1/release/<package_name>.wasm
+```
+
+---
+
+### Step 5: Validate the WASM Component
+
+```bash
+# Validate the WASM module
+wasm-tools validate target/wasm32-wasip1/release/<package_name>.wasm
+
+# Inspect the component's WIT interface
+wasm-tools component wit target/wasm32-wasip1/release/<package_name>.wasm
+
+# Check the component's imports and exports
+wasm-tools component new target/wasm32-wasip1/release/<package_name>.wasm \
+  -o component.wasm --adapt wasi_snapshot_preview1.wasm
+```
+
+---
+
+### Step 6: Test your component
+
+Use the Newton CLI to simulate your WASM data provider locally without deploying to the blockchain:
+
+```bash
+newton-cli --chain-id 11155111 policy-data simulate \
+  --wasm-file target/wasm32-wasip1/release/<package_name>.wasm \
+  --input-json '{}'
+```
+
+Replace `<package_name>` with your crate name and `--input-json` with your component's expected input schema.
+
+For more options, see the [Newton CLI reference](/developers/reference/command-line-tool#simulate).

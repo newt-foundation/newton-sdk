@@ -49,8 +49,26 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Validate package exports
+        run: pnpm check:exports
+
+      - name: Check bundle size
+        run: pnpm check:size
+
+      - name: Check types resolution (CJS/ESM)
+        run: pnpm check:types-resolution
+
+      - name: Unit Tests
+        run: pnpm test
+
+      - name: Verify docs code samples
+        run: pnpm docs:check
+
       - name: Audit Prod Dependencies
         run: pnpm audit --prod || exit 0
-
-      # - name: Unit Tests
-      #   run: pnpm test

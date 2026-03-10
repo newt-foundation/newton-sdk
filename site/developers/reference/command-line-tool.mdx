@@ -1,0 +1,565 @@
+---
+title: "Command Line Tool"
+description: "Newton CLI reference for deploying policies, managing policy data, and submitting evaluation requests"
+---
+
+## Overview
+
+The Newton CLI (`newton-cli`) is a command-line interface for interacting with the Newton Policy Protocol AVS. It provides tools for deploying policies, managing policy data, configuring policy clients, and submitting evaluation requests.
+
+With the Newton CLI you can:
+
+- **Generate CIDs** for policy files and upload them to IPFS via Pinata
+- **Deploy and simulate** policy data contracts
+- **Deploy and simulate** policy contracts
+- **Configure policy clients** with parameters and expiration settings
+- **Submit evaluation requests** to the prover AVS
+
+For a walkthrough of how these commands fit into a full deployment workflow, see the [Integration Guide](/developers/guides/integration-guide).
+
+## Installation
+
+```bash
+cargo install newton-cli@0.2.0
+```
+
+## Configuration
+
+Most commands accept configuration through environment variables or command-line arguments. Create a `.env` file in your working directory to set common values:
+
+```bash
+CHAIN_ID=11155111
+PRIVATE_KEY="your_private_key"
+RPC_URL="https://eth-sepolia.g.alchemy.com/v2/apiKey"
+PINATA_JWT="your_pinata_jwt"
+PINATA_GATEWAY="your_pinata_gateway"
+```
+
+### Global Flags
+
+The following flags can be used with any command:
+
+| Flag | Environment Variable | Description |
+| --- | --- | --- |
+| `--chain-id` | `CHAIN_ID` | The chain ID to use |
+| `--log-format` | — | Log format: `full`, `compact`, `pretty`, `json`, or `minimal` |
+
+## Commands
+
+### Policy Files
+
+#### `generate-cids`
+
+Generates CIDs for policy files and uploads them to IPFS via Pinata.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--directory` | Yes | Directory containing policy files |
+| `--output` | Yes | Output path for the generated CID JSON file |
+| `--entrypoint` | Yes | Policy entrypoint (e.g. `max_gas_price.allow`) |
+| `--pinata-jwt` | No | Pinata JWT (falls back to `PINATA_JWT` env var) |
+| `--pinata-gateway` | No | Pinata gateway (falls back to `PINATA_GATEWAY` env var) |
+
+**Usage**
+
+<CodeGroup>
+```bash Inline Arguments
+newton-cli --chain-id 11155111 policy-files generate-cids \
+    --directory policy-files \
+    --output policy-files/policy_cids.json \
+    --pinata-jwt "your pinata jwt" \
+    --pinata-gateway "your pinata gateway" \
+    --entrypoint "max_gas_price.allow"
+```
+
+```bash Environment Variables
+# .env
+# CHAIN_ID=11155111
+# PINATA_JWT="your pinata jwt"
+# PINATA_GATEWAY="your pinata gateway"
+
+newton-cli policy-files generate-cids \
+    --directory policy-files \
+    --output policy-files/policy_cids.json \
+    --entrypoint "max_gas_price.allow"
+```
+</CodeGroup>
+
+---
+
+### Policy Data
+
+#### `deploy`
+
+Deploys a policy data contract with the specified policy CIDs.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--policy-cids` | Yes | Path to the policy CIDs JSON file |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+<CodeGroup>
+```bash Inline Arguments
+newton-cli --chain-id 11155111 policy-data deploy \
+  --private-key "development_pk" \
+  --rpc-url "https://eth-sepolia.g.alchemy.com/v2/apiKey" \
+  --policy-cids policy-files/policy_cids.json
+```
+
+```bash Environment Variables
+# .env
+# CHAIN_ID=11155111
+# PRIVATE_KEY="development_pk"
+# RPC_URL="https://eth-sepolia.g.alchemy.com/v2/apiKey"
+
+newton-cli policy-data deploy --policy-cids policy-files/policy_cids.json
+```
+</CodeGroup>
+
+#### `simulate`
+
+Simulates policy data execution locally without deploying to the blockchain.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--wasm-file` | Yes | Path to the compiled policy WASM file |
+| `--input-json` | Yes | JSON input for the simulation |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-data simulate \
+  --wasm-file policy-files/policy.wasm \
+  --input-json "{}"
+```
+
+---
+
+### Policy
+
+#### `deploy`
+
+Deploys a policy contract with the specified policy CIDs and policy data address.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--policy-cids` | Yes | Path to the policy CIDs JSON file |
+| `--policy-data-address` | Yes | Address of the deployed policy data contract |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+<CodeGroup>
+```bash Inline Arguments
+newton-cli --chain-id 11155111 policy deploy \
+  --private-key "development_pk" \
+  --rpc-url "https://eth-sepolia.g.alchemy.com/v2/apiKey" \
+  --policy-cids policy-files/policy_cids.json \
+  --policy-data-address "0xdB9578b6c719122ECd30667D84D1fb483c789BC8"
+```
+
+```bash Environment Variables
+# .env
+# CHAIN_ID=11155111
+# PRIVATE_KEY="development_pk"
+# RPC_URL="https://eth-sepolia.g.alchemy.com/v2/apiKey"
+
+newton-cli policy deploy \
+  --policy-cids policy-files/policy_cids.json \
+  --policy-data-address "0xab23A45365F0BF660887B54b42787fA5519eb574"
+```
+</CodeGroup>
+
+#### `simulate`
+
+Simulates policy evaluation locally without deploying to the blockchain.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--wasm-file` | Yes | Path to the compiled policy WASM file |
+| `--rego-file` | Yes | Path to the Rego policy file |
+| `--intent-json` | Yes | Path to the intent JSON file |
+| `--entrypoint` | Yes | Policy entrypoint (e.g. `max_gas_price.allow`) |
+| `--wasm-args` | No | Path to WASM args JSON file (defaults to `{}`) |
+| `--policy-params-data` | No | Path to policy params data JSON file (defaults to `{}`) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy simulate \
+  --wasm-file policy-files/policy.wasm \
+  --rego-file policy-files/policy.rego \
+  --intent-json policy-files/intent.json \
+  --entrypoint "max_gas_price.allow" \
+  --wasm-args policy-files/wasm_args.json \
+  --policy-params-data policy-files/policy_params_data.json
+```
+
+<Note>
+- The `data.` prefix is automatically added to the entrypoint if not already present.
+- The `--wasm-args` flag is optional. If omitted, an empty JSON object `{}` is used.
+- The `--policy-params-data` flag is optional. If omitted, an empty JSON object `{}` is used.
+</Note>
+
+---
+
+### Policy Client
+
+Most `policy-client` subcommands require `--registry` (the `PolicyClientRegistry` contract address) and `--client` (the `PolicyClient` contract address). The exception is `set-policy-params`, which uses `--policy-client` directly.
+
+#### `set-policy-params`
+
+Sets policy parameters for a policy client contract, including expiration settings.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--policy-client` | Yes | Address of the policy client contract |
+| `--policy-params` | Yes | Path to the policy params data JSON file |
+| `--expire-after` | Yes | Number of blocks after which the policy params expire |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client set-policy-params \
+  --policy-client "0x..." \
+  --policy-params policy-files/policy_params_data.json \
+  --expire-after 1000 \
+  --private-key "development_pk" \
+  --rpc-url "https://eth-sepolia.g.alchemy.com/v2/apiKey"
+```
+
+---
+
+### Task
+
+#### `submit-evaluation-request`
+
+Submits a task for policy evaluation to the prover AVS.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--task-json` | Yes | Path to the task JSON file |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--api-key` | No | API key for gateway authentication (falls back to `API_KEY` env var) |
+
+The task JSON file should contain the following fields:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `policyClient` | Yes | Address of the policy client contract |
+| `intent` | Yes | Intent object to evaluate |
+| `timeout` | Yes | Timeout for the evaluation |
+| `quorumNumber` | No | Quorum number |
+| `quorumThresholdPercentage` | No | Quorum threshold percentage |
+| `wasmArgs` | No | Additional WASM arguments |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 task submit-evaluation-request \
+  --task-json path/to/task.json \
+  --private-key "development_pk"
+```
+
+<Note>
+- The `DEPLOYMENT_ENV` environment variable defaults to `prod` if not set. Valid values are `stagef` or `prod`.
+- The command normalizes the intent (converts `value`/`chainId` to hex), signs the task, and submits it to the prover AVS.
+</Note>
+
+#### `register`
+
+Registers a PolicyClient contract with the PolicyClientRegistry.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--client` | Yes | Address of the policy client contract |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client register \
+  --registry "0x..." \
+  --client "0x..."
+```
+
+#### `deactivate`
+
+Deactivates a registered PolicyClient.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--client` | Yes | Address of the policy client contract |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client deactivate \
+  --registry "0x..." \
+  --client "0x..."
+```
+
+#### `activate`
+
+Reactivates a previously deactivated PolicyClient.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--client` | Yes | Address of the policy client contract |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client activate \
+  --registry "0x..." \
+  --client "0x..."
+```
+
+#### `transfer-ownership`
+
+Transfers registry ownership of a PolicyClient contract.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--client` | Yes | Address of the policy client contract |
+| `--new-owner` | Yes | Address of the new owner |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client transfer-ownership \
+  --registry "0x..." \
+  --client "0x..." \
+  --new-owner "0x..."
+```
+
+#### `status`
+
+Checks the registration status of a PolicyClient.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--client` | Yes | Address of the policy client contract |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client status \
+  --registry "0x..." \
+  --client "0x..."
+```
+
+#### `list`
+
+Lists all PolicyClients owned by an address.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--registry` | Yes | Address of the PolicyClientRegistry contract |
+| `--owner` | Yes | Owner address to query |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client list \
+  --registry "0x..." \
+  --owner "0x..."
+```
+
+#### `set-policy`
+
+Sets or updates the policy on a PolicyClient contract (owner-only).
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--client` | Yes | Address of the policy client contract |
+| `--policy` | Yes | Address of the deployed policy contract |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli --chain-id 11155111 policy-client set-policy \
+  --client "0x..." \
+  --policy "0x..."
+```
+
+---
+
+### Version
+
+#### `info`
+
+Shows protocol version information.
+
+```bash
+newton-cli version info
+```
+
+#### `check-compatibility`
+
+Checks if a PolicyClient contract is compatible with the current protocol version or if migration is needed.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--policy-client` | Yes | Address of the PolicyClient contract to check |
+| `--chain-id` | Yes | Chain ID where the contract is deployed |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+
+**Usage**
+
+```bash
+newton-cli version check-compatibility \
+  --policy-client "0x..." \
+  --chain-id 11155111
+```
+
+#### `migrate`
+
+Runs automated migration for PolicyClient contracts that are incompatible with the current protocol version.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--policy-client` | Yes | Address of the PolicyClient contract to migrate |
+| `--chain-id` | Yes | Chain ID where the contract is deployed |
+| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
+| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
+| `--skip-check` | No | Skip compatibility check before migrating |
+| `--dry-run` | No | Simulate the migration without executing it |
+
+**Usage**
+
+```bash
+newton-cli version migrate \
+  --policy-client "0x..." \
+  --chain-id 11155111 \
+  --private-key "development_pk"
+```
+
+---
+
+### Regorus
+
+The `regorus` command wraps the Regorus Rego policy engine with Newton-specific crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`).
+
+#### `eval`
+
+Evaluates a Rego query locally.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `query` (positional) | Yes | Rego query to evaluate (e.g., `data.policy.allow`) |
+| `-d`, `--data` | Yes | Policy or data files (Rego, JSON, or YAML). Can be specified multiple times. |
+| `-i`, `--input` | No | Input file (JSON or YAML) |
+| `-b`, `--bundles` | No | Directories containing Rego bundles |
+| `-t`, `--trace` | No | Enable tracing |
+| `-n`, `--non-strict` | No | Perform non-strict evaluation (OPA default behavior) |
+| `-c`, `--coverage` | No | Display coverage information |
+
+**Usage**
+
+```bash
+newton-cli regorus eval \
+  -d policy.rego \
+  -d data.json \
+  -i intent.json \
+  "data.policy.allow"
+```
+
+#### `lex`
+
+Tokenizes a Rego policy file. Useful for debugging policy syntax.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `file` (positional) | Yes | Path to the Rego policy file |
+| `-v`, `--verbose` | No | Verbose output |
+
+**Usage**
+
+```bash
+newton-cli regorus lex policy.rego
+```
+
+#### `parse`
+
+Parses a Rego policy file and validates its syntax.
+
+**Usage**
+
+```bash
+newton-cli regorus parse policy.rego
+```
+
+#### `ast`
+
+Parses a Rego policy file and dumps the abstract syntax tree (AST).
+
+**Usage**
+
+```bash
+newton-cli regorus ast policy.rego
+```
+
+---
+
+## Next Steps
+
+See the [Integration Guide](/developers/guides/integration-guide) for a complete walkthrough of deploying a policy end-to-end using these commands.

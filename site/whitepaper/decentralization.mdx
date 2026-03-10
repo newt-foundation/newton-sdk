@@ -1,0 +1,66 @@
+---
+title: "Decentralization Guarantees"
+description: "Operator set model, BLS quorum requirements, deterministic evaluation, and mechanisms ensuring no single point of failure in the Newton Protocol."
+---
+
+## Decentralization Guarantees
+
+### Operator Set Model
+
+Newton operators are permissioned for quality and accountability but decentralized for neutrality and resilience. The operator set is not permissionless: operators must meet operational requirements (uptime, response time, geographic distribution) and compliance requirements (legal entity, jurisdiction). This creates a "credibly vetted decentralized operator set" -- no single entity operates enough stake to unilaterally determine outcomes.
+
+### BLS Quorum Requirement
+
+No single operator (or small coalition below the quorum threshold) can produce a valid attestation. The BLS aggregation mechanism requires a configurable majority of staked operators to agree. With a 67% quorum threshold and no operator controlling more than 33% of total stake, at least three independent operator entities must agree for any attestation to be valid.
+
+### Deterministic Evaluation
+
+Policy evaluation is deterministic: the same Rego policy evaluated against the same policy task data always produces the same result. This property is foundational to Newton's security model:
+
+- **Verifiability.** Any party can independently verify an evaluation by fetching the same policy (by IPFS CID) and the same data (from the on-chain task response).
+- **Challengeability.** Incorrect evaluations are provable via zero-knowledge proofs because the circuit can re-execute the same deterministic computation.
+- **Auditability.** Regulators can replay evaluations to verify that policies were applied correctly.
+
+### Geographic and Jurisdictional Distribution
+
+Operators are encouraged to distribute across multiple geographic regions and legal jurisdictions. This distribution provides resilience against:
+
+- Regional network outages or partitions.
+- Jurisdiction-specific regulatory actions that might compel a subset of operators to behave differently.
+- Physical access attacks targeting a single data center.
+
+The protocol automatically routes around unavailable operators, maintaining service continuity even if a geographic cluster becomes unreachable.
+
+### Trustless Dispute Resolution
+
+The challenge mechanism does not rely on any trusted party. Any entity (not just registered operators) can submit a challenge with a valid zero-knowledge proof. The on-chain verification is purely mathematical: the contract verifies the ZK proof, compares the result, and executes slashing if a mismatch is confirmed. No governance vote, multi-sig approval, or human judgment is required.
+
+### EigenLayer Restaking Security
+
+Economic security scales with the total stake restaked through EigenLayer. As more ETH/LSTs are delegated to Newton operators, the cost of a 33% attack (controlling enough stake to produce false attestations) increases proportionally. This creates a quantifiable security parameter: the economic cost of attacking Newton equals the value of stake that must be accumulated and would be slashed.
+
+### Compliance Receipt as Public Good
+
+Every policy evaluation produces an immutable compliance receipt on-chain: a record binding the transaction intent, the policy evaluated, the operator responses, the aggregate signature, and the block number. These receipts are publicly verifiable. Any party -- regulators, auditors, counterparties, or the public -- can inspect the receipt to confirm that a specific policy was evaluated for a specific transaction and what the outcome was. This transparency is a structural property of the system, not an administrative decision. The on-chain audit trail cannot be selectively edited or suppressed because it is replicated across all Ethereum nodes.
+
+### Rotating Gateway via VRF/VDF Leader Selection
+
+The gateway role — orchestrating task distribution, collecting responses, and triggering BLS aggregation — is not a permanent infrastructure position held by a single entity. Newton implements a rotating gateway model where operators take turns serving as the gateway for each epoch, selected through a verifiable random process analogous to Ethereum's consensus leader selection.
+
+**Epoch-based rotation.** Time is divided into epochs of configurable length (measured in blocks on the source chain). At the start of each epoch, a new gateway operator is selected from the active operator set. The selected operator assumes the gateway role for the duration of the epoch: it runs the NATS orchestration layer, publishes task requests, collects operator responses, and coordinates BLS aggregation. At epoch boundaries, the role transitions to the next selected operator.
+
+**VRF leader selection.** The gateway for each epoch is determined by a Verifiable Random Function (VRF). Each operator computes a VRF output using its private key and the epoch number as input: `(output, proof) = VRF(sk_operator, epoch_number)`. The operator with the lowest VRF output is selected as the gateway for that epoch. The VRF proof is published on-chain, allowing any party to verify that the selection was correct without learning other operators' VRF outputs in advance. This provides:
+
+- **Unpredictability.** No party can predict the next gateway before the epoch boundary, preventing targeted DoS attacks against the upcoming gateway.
+- **Unbiasability.** No operator can influence the selection outcome without abandoning their VRF output (which would forfeit their chance to be selected).
+- **Verifiability.** Any observer can verify the VRF proof on-chain, ensuring the selection is legitimate.
+
+**VDF time-lock (optional hardening).** For additional security against adversaries who might precompute VRF outputs across multiple operator keys, a Verifiable Delay Function (VDF) can be composed with the VRF output. The VDF introduces a sequential computation barrier — a minimum wall-clock time that must elapse to compute the final selection value — preventing an adversary from evaluating all possible selections faster than real time.
+
+**Failover.** If the selected gateway fails to publish heartbeats within a configurable timeout, the operator with the next-lowest VRF output assumes the gateway role for the remainder of the epoch. This provides automatic failover without manual intervention or governance action. The failover sequence is fully determined by the VRF outputs, so all operators independently agree on the backup gateway without coordination.
+
+**Operator as gateway candidate.** Every registered operator is a gateway candidate. The gateway role requires no additional infrastructure beyond what operators already run — the NATS orchestration, response collection, and aggregation coordination are lightweight stateless functions that any operator can perform. This ensures that the gateway role adds no centralization pressure and scales naturally with the operator set.
+
+### No Single Point of Failure
+
+Newton's architecture eliminates single points of failure at every layer. The gateway is a rotating orchestration role assigned to operators via VRF-based leader selection ([Rotating Gateway](#rotating-gateway-via-vrfvdf-leader-selection)), ensuring that no single entity permanently controls task distribution. Operators are independent processes run by different entities across different infrastructure providers. The NATS messaging layer supports clustered deployment with automatic failover and partition tolerance. Privacy data is protected by threshold decryption — no single operator or gateway holds the complete decryption key. Policy storage uses content-addressed distribution with built-in redundancy. The only centralized components are the Ethereum smart contracts themselves, which inherit Ethereum's own decentralization and availability guarantees.

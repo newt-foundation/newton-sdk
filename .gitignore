@@ -36,3 +36,11 @@ yarn.lock
 
 # output files
 dist
+
+**/AGENTS.md
+**/CLAUDE.md
+**/.claude
+**/.cursor
+**/PLAN.md
+.claude-sessions/
+.omc/

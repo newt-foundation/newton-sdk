@@ -1,0 +1,86 @@
+---
+title: "Building policies"
+description: "Write Rego policies and data oracles for Newton Protocol transaction authorization"
+---
+
+A policy consists of **policy code** and a **data oracle**. The policy code is written in rego, and contains the logic of the task evaluation returning true or false. The data oracle runs arbitrary code, including api calls, to return custom data fields that can be used by the policy code. These 2 components together make a policy. Below you will find a reference implementation for policy code, syntax and guides on how to write data oracles.
+
+### Referencing attributes in the Data Oracle
+
+```rego
+# Policy parameters set on the policy client
+data.params.attribute_policy_parameter1
+
+# Data WASM attributes
+# e.g., if your data WASM returns {attribute_wasm_data1: string}
+data.data.attribute_datawasm_data1
+
+# Intent attributes
+input.from
+input.to
+input.value
+input.decoded_function_arguments[0]   # Get first parameter in the data field
+input.chain_id                        # String
+input.function.name
+```
+
+---
+
+### Reference Policy Code implementation
+
+```rego
+# MockERC20 Token Buy Policy
+# --------------------------------
+#
+# For more information see:
+#   * Rego comparison to other systems: https://www.openpolicyagent.org/docs/latest/comparison-to-other-systems/
+#   * Rego Iteration: https://www.openpolicyagent.org/docs/latest/#iteration
+
+package mockerc20
+
+# By default, deny requests
+default allow := false
+
+# Allow admins to do anything
+allow if user_is_admin
+
+# user_is_admin is true if sender is the admin
+user_is_admin if {
+    data.params.admin == input.from
+}
+
+# Allow the action if the user is granted permission
+allow if {
+    base_symbol == "BTC"
+    price > amount_out
+    quote_symbol == "USD"
+    token == lower(whitelist_token.address)
+    function_name == allowed_action.function_name
+    token == lower(allowed_action.address)
+    allowed_action.max_limit > amount_out
+}
+
+# Derived fields
+function_name := input.function.name
+token := input.decoded_function_arguments[0]
+amount_out := to_number(input.decoded_function_arguments[1])
+allowed_action := data.params.allowed_actions[input.chain_id]
+whitelist_token := data.params.token_whitelist[input.chain_id]
+base_symbol := data.data.base_symbol
+price := to_number(data.data.price)
+quote_symbol := data.data.quote_symbol
+```
+
+---
+
+## Writing Policy Data Oracles
+
+Data oracles are used to data from offchain sources. The source code can be written in Python, Javascript or Rust as long as its compiled into Web Assembly (WASM). See below for guides on how to write and integrate this data.
+
+- [Python guide](/developers/advanced/python-wasm-guide)
+- [Javascript guide](/developers/advanced/javascript-wasm-guide)
+- [Rust guide](/developers/advanced/rust-wasm-guide)
+
+### Policy Code Rego syntax reference
+
+[Reference](/developers/advanced/rego-syntax-guide)

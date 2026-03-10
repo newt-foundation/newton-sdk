@@ -1,6 +1,13 @@
 # Welcome to Newton SDK
 
-TypeScript SDK for the Newton Protocol
+TypeScript SDK for the [Newton Protocol](https://docs.newton.xyz/developers/overview/about) — a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.
+
+## Documentation
+
+- [Quickstart](https://docs.newton.xyz/developers/overview/quickstart) — simulate your first policy evaluation in 5 minutes
+- [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide) — full end-to-end integration with policy, contract, and frontend
+- [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) — complete API documentation
+- [Core Concepts](https://docs.newton.xyz/developers/overview/core-concepts) — policies, intents, tasks, and attestations
 
 ## Prerequisites
 
@@ -20,30 +27,33 @@ The SDK provides several entry points:
 ```typescript
 // Public Client Actions
 import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
-import { createPublicClient, sepolia } from 'viem';
+import { createPublicClient, webSocket } from 'viem';
+import { sepolia } from 'viem/chains';
 
 const newtonPublicClient = createPublicClient({
   chain: sepolia,
-  transport: webSocket(alchemyRpcWSUrls[network.id]),
+  transport: webSocket('wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY'),
 }).extend(
   newtonPublicClientActions({
     policyContractAddress: '0xpolicyContractAddress',
   }),
 );
 
-newtonPublicClient.getTaskStatus();
+newtonPublicClient.getTaskStatus({ taskId: '0x...' });
 
 // Wallet Client Actions
 import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
-import { createWalletClient, sepolia } from 'viem';
+import { createWalletClient, webSocket } from 'viem';
+import { sepolia } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
 
 const newtonWalletClient = createWalletClient({
   chain: sepolia,
   transport: webSocket('wss://alchemyWebsocketUrl'),
-  account: signer,
-}).extend(newtonWalletClientActions());
+  account: privateKeyToAccount('0xYOUR_PRIVATE_KEY'),
+}).extend(newtonWalletClientActions({ apiKey: '<YOUR_API_KEY>' }));
 
-newtonWalletClient.evaluateIntent({...})
+newtonWalletClient.evaluateIntentDirect({...})
 ```
 
 ## Development
@@ -88,27 +98,31 @@ npx tsc --noEmit
 pnpm lint
 ```
 
+## Privacy Module
+
+The SDK includes a privacy module for client-side HPKE encryption used in privacy-preserving policy evaluation. Key exports:
+
+- `createSecureEnvelope` — HPKE encrypt plaintext into a SecureEnvelope (offline, zero network calls)
+- `generateSigningKeyPair` — generate a random Ed25519 key pair
+- `signPrivacyAuthorization` — compute dual Ed25519 signatures for privacy-enabled task creation
+- `getPrivacyPublicKey` — fetch the gateway's X25519 HPKE public key
+- `uploadEncryptedData` — encrypt and upload data to the gateway in one call
+- `storeEncryptedSecrets` — upload KMS-encrypted secrets for a PolicyClient's PolicyData
+
+See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.
+
 ## Testing
 
-Currently, the project doesn't have unit tests implemented yet. The test script outputs:
+The project uses Vitest for unit testing:
 
 ```bash
-pnpm test
-# Output: "No unit tests... yet :("
-```
-
-### Future Testing Setup
-
-When tests are added, they will likely be configured to run with:
-
-```bash
-# Run tests (when implemented)
+# Run tests
 pnpm test
 
-# Run tests in watch mode (when implemented)
+# Run tests in watch mode
 pnpm test:watch
 
-# Run tests with coverage (when implemented)
+# Run tests with coverage
 pnpm test:coverage
 ```
 
@@ -138,7 +152,7 @@ To test the locally built SDK from a different local project, you can use one of
 3. **Import and use in your test project:**
 
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
    // Your test code here
    ```
 
@@ -158,7 +172,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-sdk": "file:../path/to/newton-protocol-sdk"
+       "@magicnewton/newton-protocol-sdk": "file:../path/to/newton-protocol-sdk"
      }
    }
    ```
@@ -171,7 +185,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { NewtonSDK } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -232,7 +246,8 @@ The build process generates multiple module formats:
 2. **Make changes** to source files in `src/`
 3. **Build**: `pnpm build` (or `pnpm build --watch` for development)
 4. **Lint**: `pnpm lint` to check code quality
-5. **Type check**: `npx tsc --noEmit` for TypeScript validation
+5. **Type check**: `pnpm typecheck` for TypeScript validation
+6. **Quality checks**: `pnpm check:all` to validate exports and bundle size
 
 ## Troubleshooting
 
@@ -271,9 +286,12 @@ This repository uses automated releases with the `auto` tool for both production
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Ensure the build passes: `pnpm build`
-5. Ensure linting passes: `pnpm lint`
-6. Submit a pull request
+4. Ensure linting passes: `pnpm lint`
+5. Ensure types check: `pnpm typecheck`
+6. Ensure the build passes: `pnpm build`
+7. Run quality checks: `pnpm check:all`
+8. Run tests: `pnpm test`
+9. Submit a pull request
 
 ## License
 

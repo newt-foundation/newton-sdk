@@ -1,8 +1,8 @@
 {
   "name": "@magicnewton/newton-protocol-sdk",
-  "version": "0.3.16",
+  "version": "0.3.21",
   "description": "Official SDK for the Newton Protocol.",
-  "author": "Newton Foundation <https://x.com/newtfoundation> (https://newton.foundation)",
+  "author": "Newton Protocol <https://x.com/newton_xyz> (https://newton.xyz)",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -11,31 +11,30 @@
     "type": "git",
     "url": "git+https://github.com/newt-foundation/newton-sdk.git"
   },
-  "license": "MIT",
-  "homepage": "https://newton.foundation",
+  "license": "Apache-2.0",
+  "homepage": "https://newton.xyz",
+  "type": "commonjs",
   "target": "browser",
   "cdnGlobalName": "NewtonSdk",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/es/index.mjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/es/index.js",
+      "types": {
+        "import": "./dist/types/index.d.mts",
+        "require": "./dist/types/index.d.ts"
+      },
+      "import": "./dist/es/index.mjs",
       "require": "./dist/cjs/index.js"
     },
     "./types": {
-      "types": "./dist/types/types/index.d.ts",
-      "import": "./dist/es/types/index.js",
+      "types": {
+        "import": "./dist/types/types/index.d.mts",
+        "require": "./dist/types/types/index.d.ts"
+      },
+      "import": "./dist/es/types/index.mjs",
       "require": "./dist/cjs/types/index.js"
-    },
-    "./viem": {
-      "types": "./dist/types/viem/index.d.ts",
-      "import": "./dist/es/viem/index.js",
-      "require": "./dist/cjs/viem/index.js"
-    },
-    "./networks": {
-      "types": "./dist/types/networks/index.d.ts",
-      "import": "./dist/es/networks/index.js",
-      "require": "./dist/cjs/networks/index.js"
     }
   },
   "files": [
@@ -47,13 +46,27 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "prepare": "husky",
+    "prepare": "simple-git-hooks",
     "build": "rollup -c rollup.config.mjs",
-    "lint": "eslint --fix --ext .ts,.tsx .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "echo \"No unit tests... yet :(\" && exit 0",
-    "clean": "rimraf dist && rimraf node_modules"
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/",
+    "format:check": "biome format src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:typecheck": "vitest --config vitest.typecheck.config.ts --passWithNoTests",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "sync-abis": "./scripts/sync-abis.sh",
+    "clean": "rimraf dist && rimraf node_modules",
+    "check:exports": "publint",
+    "check:size": "size-limit",
+    "check:unused": "knip",
+    "check:types-resolution": "attw --pack . --entrypoints . --ignore-rules=unexpected-module-syntax",
+    "check:all": "pnpm check:exports && pnpm check:size && pnpm check:types-resolution",
+    "docs:dev": "cd site && mintlify dev",
+    "docs:check": "./scripts/check-docs-twoslash.sh",
+    "docs:broken-links": "cd site && mintlify broken-links"
   },
   "auto": {
     "plugins": [
@@ -63,42 +76,56 @@
     ]
   },
   "devDependencies": {
-    "@auto-it/conventional-commits": "^11.2.1",
+    "@arethetypeswrong/cli": "^0.17.4",
+    "@auto-it/conventional-commits": "^11.3.0",
+    "@biomejs/biome": "^1.9.4",
     "@rollup/plugin-node-resolve": "^16.0.1",
+    "@size-limit/file": "^11.2.0",
     "@types/rimraf": "^4.0.5",
-    "@typescript-eslint/eslint-plugin": "^7.12.0",
-    "@typescript-eslint/parser": "^7.12.0",
-    "auto": "^11.1.2",
+    "auto": "^11.3.0",
     "builtin-modules": "^4.0.0",
-    "eslint": "^8.56.0",
-    "eslint-config-airbnb-typescript": "^18.0.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-prettier": "^5.1.3",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "husky": "^9.1.6",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.6.2",
+    "knip": "^5.86.0",
+    "publint": "^0.3.18",
     "rimraf": "^6.0.1",
     "rollup": "^4.48.1",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-node-externals": "^8.1.0",
     "rollup-plugin-tsc-alias": "^1.1.4",
     "rollup-plugin-typescript2": "^0.36.0",
+    "simple-git-hooks": "^2.11.1",
+    "size-limit": "^11.2.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "twoslash-cli": "^1.3.24",
+    "typescript": "^5.4.5",
+    "vitest": "^3.1.1"
   },
   "dependencies": {
     "eventemitter3": "^4.0.4",
     "jose": "^6.0.13",
     "viem": "^2.35.1"
   },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint"
+  },
   "externals": {
     "exclude": [
       "eventemitter3",
       "localforage"
     ]
-  }
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "^6.0.0"
+    }
+  },
+  "size-limit": [
+    {
+      "path": "dist/es/index.mjs",
+      "limit": "50 kB"
+    },
+    {
+      "path": "dist/cjs/index.js",
+      "limit": "50 kB"
+    }
+  ]
 }

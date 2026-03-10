@@ -1,51 +1,59 @@
-import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, TaskRespondedLog } from '@core/abis/newtonAbi';
-import { GATEWAY_METHODS } from '@core/const';
 import {
-  GatewayCreateTaskResult,
-  SubmitEvaluationRequestParams,
-  TaskId,
-  SubmitIntentResult,
-  TaskResponseResult,
+  AttestationValidatorAbi,
+  NewtonProverTaskManagerAbi,
+  type TaskRespondedLog,
+} from "@core/abis/newtonAbi";
+import { GATEWAY_METHODS } from "@core/const";
+import {
+  type GatewayCreateTaskResult,
+  type SimulatePolicyDataParams,
+  type SimulatePolicyDataResult,
+  type SimulatePolicyDataWithClientParams,
+  type SimulatePolicyDataWithClientResult,
+  type SimulatePolicyParams,
+  type SimulatePolicyResult,
+  type SimulateTaskParams,
+  type SimulateTaskResult,
+  type SubmitEvaluationRequestParams,
+  type SubmitIntentResult,
+  type Task,
+  type TaskId,
+  type TaskResponseResult,
   TaskStatus,
-  SimulateTaskParams,
-  SimulateTaskResult,
-  SimulatePolicyParams,
-  SimulatePolicyResult,
-  SimulatePolicyDataParams,
-  SimulatePolicyDataResult,
-  SimulatePolicyDataWithClientParams,
-  SimulatePolicyDataWithClientResult,
-  Task,
-} from '@core/types/task';
-import { AvsHttpService } from '@core/utils/https';
-import { sanitizeIntentForRequest, removeHexPrefix } from '@core/utils/intent';
-import { convertLogToTaskResponse } from '@core/utils/task';
-import { getTaskEventsWebSocket } from '@core/utils/task-events';
+} from "@core/types/task";
+import { AvsHttpService } from "@core/utils/https";
+import { removeHexPrefix, sanitizeIntentForRequest } from "@core/utils/intent";
+import { convertLogToTaskResponse } from "@core/utils/task";
+import { getTaskEventsWebSocket } from "@core/utils/task-events";
 import {
+  type Address,
+  type PublicClient as Client,
+  type Hex,
+  type PublicClient,
+  type WalletClient,
+  bytesToHex,
   hexToBigInt,
   padHex,
-  PublicClient as Client,
-  WalletClient,
-  Hex,
   publicActions,
-  PublicClient,
-  Address,
-  bytesToHex,
-} from 'viem';
-import { mainnet, sepolia } from 'viem/chains';
+} from "viem";
+import { mainnet, sepolia } from "viem/chains";
 
 export interface CreateTaskResult {
   task_id: Hex;
-  task_request: any;
-  status: 'Completed' | 'Failed';
-  aggregation_response: any;
+  task_request: unknown;
+  status: "Completed" | "Failed";
+  aggregation_response: unknown;
   timestamp: number;
   error?: unknown;
 }
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId;
-  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponseResult>;
+  waitForTaskResponded: ({
+    timeoutMs,
+  }: {
+    timeoutMs?: number;
+  }) => Promise<TaskResponseResult>;
 }
 
 interface TaskIdRef {
@@ -69,7 +77,7 @@ const waitForTaskResponded = async (
   taskRequestedAtBlock?: bigint,
 ): Promise<TaskResponseResult> => {
   if (!args.taskId) {
-    throw new Error('Newton SDK: waitForTaskResponded requires taskId');
+    throw new Error("Newton SDK: waitForTaskResponded requires taskId");
   }
   // Ensure 32-byte hex (0x + 64 nibbles) for reliable equality checks.
   const targetTaskId = padHex(args.taskId, { size: 32 });
@@ -81,13 +89,14 @@ const waitForTaskResponded = async (
   const past = await publicClient.getContractEvents({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
-    eventName: 'TaskResponded',
+    eventName: "TaskResponded",
     fromBlock: fromBlockParam,
-    toBlock: 'latest',
+    toBlock: "latest",
   });
 
   const match = (past as TaskRespondedLog[]).find(
-    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
+    (log) =>
+      padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
   );
   if (match) return convertLogToTaskResponse(match);
 
@@ -103,24 +112,31 @@ const waitForTaskResponded = async (
     };
 
     if (args.timeoutMs && args.timeoutMs > 0) {
-      timeoutId = setTimeout(() => cleanup(new Error('waitForTaskResponded: timeout')), args.timeoutMs);
+      timeoutId = setTimeout(
+        () => cleanup(new Error("waitForTaskResponded: timeout")),
+        args.timeoutMs,
+      );
     }
 
     if (args.abortSignal) {
       if (args.abortSignal.aborted) {
-        cleanup(new Error('waitForTaskResponded: aborted'));
+        cleanup(new Error("waitForTaskResponded: aborted"));
         return;
       }
-      args.abortSignal.addEventListener('abort', () => cleanup(new Error('waitForTaskResponded: aborted')), {
-        once: true,
-      });
+      args.abortSignal.addEventListener(
+        "abort",
+        () => cleanup(new Error("waitForTaskResponded: aborted")),
+        {
+          once: true,
+        },
+      );
     }
 
     unsub = publicClient.watchContractEvent({
       address: taskManagerAddress,
       abi: NewtonProverTaskManagerAbi,
-      eventName: 'TaskResponded',
-      onLogs: logs => {
+      eventName: "TaskResponded",
+      onLogs: (logs) => {
         for (const log of logs as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 });
           if (id === targetTaskId) {
@@ -131,7 +147,7 @@ const waitForTaskResponded = async (
           }
         }
       },
-      onError: err => {
+      onError: (err) => {
         cleanup(err);
       },
     });
@@ -146,7 +162,7 @@ const getTaskResponseHash = (
   return publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
-    functionName: 'allTaskHashes',
+    functionName: "allTaskHashes",
     args: [args.taskId],
   }) as Promise<Hex | null>;
 };
@@ -160,16 +176,17 @@ const getTaskStatus = async (
   const allTaskHashes = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
-    functionName: 'allTaskHashes',
+    functionName: "allTaskHashes",
     args: [args.taskId],
   })) as Hex;
   const doesTaskIdExist = !!hexToBigInt(allTaskHashes); // returns 0x0...0 if taskId does not exist
-  if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
+  if (!doesTaskIdExist)
+    throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
 
   const allTaskResponses = (await publicClient.readContract({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
-    functionName: 'allTaskResponses',
+    functionName: "allTaskResponses",
     args: [args.taskId],
   })) as Hex;
   const isTaskResponded = !!hexToBigInt(allTaskResponses);
@@ -181,13 +198,13 @@ const getTaskStatus = async (
   const past = await publicClient.getContractEvents({
     address: taskManagerAddress,
     abi: NewtonProverTaskManagerAbi,
-    eventName: 'TaskResponded',
+    eventName: "TaskResponded",
     fromBlock: SafeFromBlock[publicClient.chain?.id ?? 1],
-    toBlock: 'latest',
+    toBlock: "latest",
   });
 
   const match = (past as TaskRespondedLog[]).find(
-    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId,
+    (log) => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId,
   );
   if (!match) {
     throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`);
@@ -205,7 +222,7 @@ const getTaskStatus = async (
   const attestationHash = await publicClient.readContract({
     address: attestationValidatorAddress,
     abi: AttestationValidatorAbi,
-    functionName: 'attestations',
+    functionName: "attestations",
     args: [args.taskId],
   });
 
@@ -227,23 +244,36 @@ async function submitEvaluationRequest(
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions);
 
-  const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() };
+  const taskIdRef: TaskIdRef = {
+    taskRequestedAtBlock: await walletWithPublic.getBlockNumber(),
+  };
 
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
     intent: sanitiziedIntent,
-    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
-    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    intent_signature: args.intentSignature
+      ? removeHexPrefix(args.intentSignature)
+      : null,
+    quorum_number: args.quorumNumber
+      ? removeHexPrefix(args.quorumNumber)
+      : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
   };
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.createTask,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
@@ -267,7 +297,10 @@ async function submitEvaluationRequest(
     },
   };
 
-  return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder };
+  return {
+    result: { taskId: res.result.task_id, txHash: res.result.tx_hash },
+    ...builder,
+  };
 }
 
 /**
@@ -289,19 +322,26 @@ async function evaluateIntentDirect(
   result: {
     evaluationResult: boolean;
     task: Task;
-    taskResponse: any;
-    blsSignature: any;
+    taskResponse: unknown;
+    blsSignature: unknown;
   };
 }> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
     intent: sanitiziedIntent,
-    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
-    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    intent_signature: args.intentSignature
+      ? removeHexPrefix(args.intentSignature)
+      : null,
+    quorum_number: args.quorumNumber
+      ? removeHexPrefix(args.quorumNumber)
+      : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
@@ -309,13 +349,19 @@ async function evaluateIntentDirect(
     identity_domain: args.identityDomain ?? null,
   };
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.createTask,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
   const createTaskResult = res.result as GatewayCreateTaskResult;
   const taskResponse = {
-    evaluationResult: bytesToHex(Uint8Array.from(createTaskResult.task_response.evaluation_result)),
+    evaluationResult: bytesToHex(
+      Uint8Array.from(createTaskResult.task_response.evaluation_result),
+    ),
     intent: createTaskResult.task_response.intent,
     intentSignature: createTaskResult.task_response.intent_signature,
     policyAddress: createTaskResult.task_response.policy_address,
@@ -354,21 +400,32 @@ async function submitIntentAndSubscribe(
 ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> {
   const walletWithPublic = walletClient.extend(publicActions);
 
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent);
   const requestBody = {
     policy_client: args.policyClient,
     intent: sanitiziedIntent,
-    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
-    quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
+    intent_signature: args.intentSignature
+      ? removeHexPrefix(args.intentSignature)
+      : null,
+    quorum_number: args.quorumNumber
+      ? removeHexPrefix(args.quorumNumber)
+      : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
   };
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.sendTask,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   if (res.result.error) throw new Error(res.result.error);
 
@@ -376,7 +433,11 @@ async function submitIntentAndSubscribe(
 
   const WS_URL = `wss://${new URL(avsHttpService.baseUrl).hostname}/ws`;
 
-  const ws = getTaskEventsWebSocket(WS_URL, submitIntentResult.subscription_topic, apiKey);
+  const ws = getTaskEventsWebSocket(
+    WS_URL,
+    submitIntentResult.subscription_topic,
+    apiKey,
+  );
 
   return { result: submitIntentResult, ws };
 }
@@ -391,14 +452,17 @@ async function simulateTask(
   gatewayApiUrlOverride?: string,
 ): Promise<SimulateTaskResult> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
   const requestBody = {
     intent: sanitizeIntentForRequest(args.intent),
     policy_task_data: {
       policyId: args.policyTaskData.policyId,
       policyAddress: args.policyTaskData.policyAddress,
       policy: args.policyTaskData.policy,
-      policyData: args.policyTaskData.policyData.map(pd => ({
+      policyData: args.policyTaskData.policyData.map((pd) => ({
         wasmArgs: pd.wasmArgs,
         data: pd.data,
         attestation: pd.attestation,
@@ -407,7 +471,11 @@ async function simulateTask(
       })),
     },
   };
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulateTask, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.simulateTask,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   return res.result as SimulateTaskResult;
 }
@@ -422,20 +490,29 @@ async function simulatePolicy(
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyResult> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
   const requestBody = {
     policy_client: args.policyClient,
     policy: args.policy,
     intent: sanitizeIntentForRequest(args.intent),
     entrypoint: args.entrypoint ?? undefined,
-    policy_data: args.policyData.map(pd => ({
+    policy_data: args.policyData.map((pd) => ({
       policy_data_address: pd.policyDataAddress,
       wasm_args: pd.wasmArgs,
     })),
     policy_params: args.policyParams ?? {},
-    intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : undefined,
+    intent_signature: args.intentSignature
+      ? removeHexPrefix(args.intentSignature)
+      : undefined,
   };
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.simulatePolicy,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   return res.result as SimulatePolicyResult;
 }
@@ -450,13 +527,20 @@ async function simulatePolicyData(
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyDataResult> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
   const requestBody = {
     policy_data_address: args.policyDataAddress,
     secrets: args.secrets,
     wasm_args: args.wasmArgs,
   };
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.simulatePolicyData,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   return res.result as SimulatePolicyDataResult;
 }
@@ -471,13 +555,20 @@ async function simulatePolicyDataWithClient(
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyDataWithClientResult> {
   const walletWithPublic = walletClient.extend(publicActions);
-  const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride);
+  const avsHttpService = new AvsHttpService(
+    walletWithPublic?.chain?.id ?? sepolia.id,
+    gatewayApiUrlOverride,
+  );
   const requestBody = {
     policy_data_address: args.policyDataAddress,
     policy_client: args.policyClient,
     wasm_args: args.wasmArgs,
   };
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyDataWithClient, requestBody, apiKey);
+  const res = await avsHttpService.Post(
+    GATEWAY_METHODS.simulatePolicyDataWithClient,
+    requestBody,
+    apiKey,
+  );
   if (res.error) throw res.error;
   return res.result as SimulatePolicyDataWithClientResult;
 }

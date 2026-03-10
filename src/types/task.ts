@@ -1,4 +1,4 @@
-import { Address, Hex } from 'viem';
+import type { Address, Hex } from "viem";
 
 export type TaskId = Hex;
 
@@ -84,11 +84,11 @@ export interface TaskResponseResult {
 }
 
 export enum TaskStatus {
-  AttestationSpent = 'AttestationSpent',
-  SuccessfullyChallenged = 'SuccessfullyChallenged',
-  Responded = 'Responded',
-  Created = 'Created',
-  AttestationExpired = 'AttestationExpired',
+  AttestationSpent = "AttestationSpent",
+  SuccessfullyChallenged = "SuccessfullyChallenged",
+  Responded = "Responded",
+  Created = "Created",
+  AttestationExpired = "AttestationExpired",
 }
 
 export interface AggregationResponse {
@@ -180,7 +180,10 @@ export interface SimulatePolicyResult {
   evaluation_result: SimulatePolicyEvaluationResult | null;
   error: string | null;
   error_details: {
-    missing_secrets?: Array<{ policy_data_address: Address; has_secrets_schema: boolean }>;
+    missing_secrets?: Array<{
+      policy_data_address: Address;
+      has_secrets_schema: boolean;
+    }>;
     suggested_actions?: string[];
   } | null;
 }
@@ -222,7 +225,7 @@ export interface GatewayCreateTaskResult {
   error: null;
   expiration: number;
   reference_block: number;
-  status: 'success' | 'failed';
+  status: "success" | "failed";
   task: Task;
   task_id: Hex;
   task_response: {

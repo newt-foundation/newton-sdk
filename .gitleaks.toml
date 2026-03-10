@@ -25,6 +25,7 @@ paths = [
     '''(?i)\.(?:bmp|gif|jpe?g|png|svg|tiff?)$''',
     '''(?i)\.(?:eot|[ot]tf|woff2?)$''',
     '''(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|.dll|pdb|exe|gltf)$''',
+    '''site/.*\.mdx?$''',
 ]
 regexes = [
     '''(?i)^true|false|null$''',

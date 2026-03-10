@@ -1,0 +1,71 @@
+---
+title: "Technology & Infrastructure"
+---
+
+### Network Overview
+
+Newton Protocol is designed to serve as a verifiable automation layer for onchain finance. It provides a mechanism for publishing, verifying, and executing automation intents—trigger-action programs—through a modular architecture that separates intent definition, execution, and validation.
+
+The Protocol is designed around three core components:
+
+- Newton Model Registry: a canonical onchain registry where agent models (trigger-action contracts) are published and referenced.
+- Newton Keystore: a specialized rollup responsible for storing and updating user permissions (e.g., session keys, zkPermissions) that define which agents can act on a user's behalf.
+- Automation Intents: user-defined instructions submitted to the network that execute actions when specific onchain or offchain conditions are met.
+
+Newton Protocol will use a delegated proof-of-stake (dPoS) consensus mechanism to support its rollup, with validators participating in block production and state finalization. Validators contribute to automation integrity by verifying that actions are executed only by permissioned agents and under valid conditions.
+
+To improve transparency and accessibility, a public network dashboard is under development and will provide real-time visibility into validator performance, automation volume, key network metrics, and tokenomics.
+
+### Smart Contracts and Codebase
+
+Newton Protocol is governed and operated via smart contracts that manage staking, permission control, agent registration, and governance voting. The NEWT token itself is deployed as an ERC-20 token and will migrate to a rollup-native token standard once mainnet infrastructure is fully deployed.
+
+Code related to the Newton Protocol—including the Newton Model Registry, the Keystore rollup components, and staking and governance modules—will be published and maintained in public repositories. Once development is complete and published, the codebase will be available at: https://github.com/newt-foundation
+
+Newton Protocol’s token, staking, and airdrop smart contracts have undergone third-party security audits by independent firms. Additional audits—such as for verifiable agent execution and core chain infrastructure—are anticipated as those components progress toward production readiness.  Full audit reports are provided in <u>Exhibit B: Audit Reports and Code Repositories</u>.  The Foundation will publish future audit reports in its quarterly transparency reports.
+
+### Protocol Upgradeability
+
+Newton Protocol follows a dual-layered upgrade model that distinguishes between governance-controlled parameters and core protocol infrastructure.
+
+Governance-related changes—which may include staking reward rates, validator incentives, fee distribution percentages, and other configurable protocol parameters—can be modified only through proposals and voting by holders that have staked their NEWT tokens. See <u>Section 11: Protocol Governance</u> for more details on governance.
+
+However, core protocol upgrades, which may include changes to the rollup logic, Keystore architecture, consensus implementation, or validator coordination mechanisms, are not upgradeable via governance vote alone. These changes will require explicit coordination and adoption by validators and must be implemented through protocol-level hard forks, similar to upgrade processes in networks like Ethereum. This ensures that critical infrastructure updates are subject to decentralized consensus among the network’s validator operators.
+
+This separation between configurable parameters and core protocol logic is designed to maintain system integrity and prevent governance overreach into low-level infrastructure, while still allowing the community to shape the evolution of the Protocol at the economic and coordination layers.
+
+### Third-Party Dependencies
+
+Newton Protocol incorporates several open-source and third-party components critical to its function. These include:
+
+- Trusted Execution Environments (TEEs): Used for attestation of agent execution integrity. The protocol currently leverages Phala’s cloud environments to run confidential compute tasks in a decentralized and verifiable manner.  Additional cloud environments and redundancy may be added when available and suitable for use.  
+- Zero-Knowledge Proof Systems: Newton supports zk-based permissioning and proof generation as part of its permission model and agent validation. The Protocol integrates with emerging zk-VM frameworks such as Succinct and Risc Zero to enable verifiable offchain computation and scalable cryptographic proofs.
+- zk-SNARKs and Permission Libraries: Used for constructing and validating granular access controls (e.g., zkPermissions and session keys), ensuring that only authorized agents can take automated actions on behalf of users.
+- Ethereum Layer 1 and Layer 2 Ecosystems: The Newton Protocol posts finality proofs and permission state roots to Ethereum and is designed for cross-chain interoperability with additional chains.  
+
+The Protocol builds on battle-tested open-source libraries where applicable and contributes improvements upstream where possible.
+
+### Security Measures
+
+The Protocol’s design prioritizes cryptographic accountability and resistance to common attack vectors. Security measures currently include or are on the development roadmap:
+
+- TEE attestation validation to ensure verifiable agent execution
+- Decentralized validator participation, reducing the risk of collusion or 51% control
+- Permission scoping via the Newton Keystore, preventing unauthorized agent activity
+- Rate-limiting and batching of permission updates and intent executions to prevent overload or manipulation
+
+Magic Newton Foundation will establish a bug bounty program to incentivize responsible vulnerability disclosure and will conduct regular reviews of validator behavior and agent activity to identify anomalies.
+
+### Staking and Network Security
+
+NEWT staking will be available to enable network participants to participate in the security and uptime of Newton Protocol. NEWT will be used for two forms of staking within the Protocol: (1) Validators staking NEWT to secure the Newton Keystore rollup, verify agent execution, and finalize cross-chain state changes, earning protocol rewards in return; and (2) Once third-party registration of agent models is available on the Protocol as part of the Newton Model Registry, agent operators will run nodes that execute the agent models and stake NEWT as collateral to earn fees or be slashed for misbehavior or failed validation of their agents.
+
+Staking rewards will be determined by Newton Protocol and distributed programmatically by the Protocol in NEWT based on validator performance and participation. Initially, stakers will be able to claim their staking rewards every week, subject to change as the Protocol continues to develop. Partial withdrawal of staked NEWT is not available. Staked NEWT (but not accrued NEWT validator rewards) will be subject to a 14-day unstaking (cool-down) period, during which the tokens remain locked and non-transferable. This mechanism is designed to support Protocol stability and prevent rapid stake withdrawals that could undermine network security.
+
+At a Protocol level, until validator(s) are operational on the Protocol, NEWT tokens will not be required to pay for Protocol gas fees.  To bootstrap and secure Newton Protocol and incentivize early staking participation, the Foundation is allocating 8.5% of the NEWT token supply as Network Rewards (See [<u>Section 6: Token Characteristics and Utility</u>](https://docs.newt.foundation/newton-protocol/token-characteristics-and-utility) for more details). These rewards will be programmatically set by the Protocol and are designed to gradually decrease over time as onchain activity and fee-based compensation grow. As the Newton Protocol ecosystem matures, Protocol activity will generate transaction fees paid in NEWT. A portion of these fee revenues will be distributed to validators and stakers, subject to governance. This dual rewards model (foundation-funded \+ fee-based) is designed to transition validator compensation from Foundation-subsidized to self-sustainable mechanisms.
+
+To further support network integrity, the Protocol will include slashing mechanisms. Validators found to act maliciously or negligently may have a portion of their staked NEWT slashed. The slashing mechanism is a critical safeguard to uphold trust in the system. By penalizing bad actors, the Protocol will reinforce responsible validator behaviour, thereby protecting good actors and maintaining the overall security, reliability, and fairness of the network. Slashed tokens from Protocol validators will be redistributed programatically included as part of the rewards pool smart contracts, available to claim by stakers and validators.  For agent operators running validators for their agent models, slashed tokens will be redistributed programatically to end users impacted by the faulty or misbehaving agent model.
+
+To ensure the smooth rollout and security of Newton Protocol, the network will initially operate under a Foundation-controlled validator(s). Once onchain verification capabilities of the Newton Keystore rollup are enabled, NEWT holders will be able to delegate tokens via delegated proof-of-stake (dPoS) to the Foundation’s validator(s). The validator set will expand gradually: starting with Foundation validator(s), followed by a permissioned group of third-party validators, and ultimately a fully permissionless validator set.
+
+Note that tokens held within Internal Allocations (defined in <u>Section 7: Token Distribution and Vestin</u>g) are not eligible for staking until the tokens are vested and unlocked.

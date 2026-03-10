@@ -1,0 +1,110 @@
+---
+title: "Security Properties"
+description: "Formal threat model, rogue key attack prevention, cryptographic security reductions, post-quantum readiness, and performance characteristics of the Newton Protocol."
+---
+
+## Security Properties
+
+### Threat Model
+
+Newton's security analysis is grounded in a formal threat model that defines the system's actors, adversary capabilities, and security goals.
+
+**Actors.** The system comprises three actor classes:
+
+| Actor                       | Role                                                                                                                         | Trust Assumption                                                                                                                                                 |
+|-----------------------------|------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Policy Client (Application) | Submits transaction intents and policy evaluation requests                                                                   | Semi-trusted: may attempt to bypass policies but cannot forge operator signatures                                                                                |
+| Operator                    | Evaluates policies, signs responses with BLS keys, participates in MPC evaluation                                            | Honest-majority: fewer than 1/3 of staked operators are adversarial                                                                                              |
+| Gateway (rotating)          | Orchestrates task distribution via NATS, coordinates BLS aggregation; role rotates among operators each epoch via VRF ([Rotating Gateway](/whitepaper/decentralization#rotating-gateway-via-vrfvdf-leader-selection)) | Trusted for liveness and routing during its epoch; not trusted with data confidentiality (threshold decryption ensures no single party holds the decryption key) |
+
+Additional actors include credential issuers (trusted for attribute correctness), the EigenLayer protocol (trusted for stake accounting and slashing execution), and end users (untrusted — all user inputs are validated).
+
+**Adversary capabilities.** The threat model considers an adversary with the following capabilities:
+
+1. **Network eavesdropping.** The adversary can observe all messages between clients, gateway, and operators on public networks.
+2. **Message replay.** The adversary can capture and retransmit valid messages to any endpoint.
+3. **Message modification.** The adversary can alter message contents in transit (active MITM).
+4. **Operator compromise.** The adversary can compromise up to `t - 1` operators (below the quorum threshold `t`), obtaining their BLS private keys and ECDSA keys.
+5. **Key compromise (targeted).** The adversary may obtain a single operator's or user's long-term private key through side-channel or social engineering.
+6. **Collusion.** Compromised operators may collude to reconstruct secret-shared data or produce coordinated false attestations.
+7. **Replay across contexts.** The adversary may attempt to reuse valid cryptographic artifacts (signatures, ciphertexts, attestations) across different policy clients, chains, or intents.
+
+**Security goals.** The protocol is designed to satisfy the following properties under the adversary model above:
+
+| Goal                           | Property                                                                                       | Defended By                                        |
+|--------------------------------|------------------------------------------------------------------------------------------------|----------------------------------------------------|
+| **Confidentiality**            | Encrypted policy inputs remain secret from any party without the decryption key                | HPKE (IND-CCA2), MPC secret sharing                |
+| **Attestation unforgeability** | No adversary can produce a valid BLS aggregate signature without quorum agreement              | BLS (EUF-CMA on BN254), stake-weighted quorum      |
+| **Authorization integrity**    | Privacy data cannot be accessed without both user and application consent                      | Dual Ed25519 signatures (EUF-CMA)                  |
+| **Context binding**            | Cryptographic artifacts cannot be replayed across policy clients, chains, or intents           | AAD binding (keccak256), intent hash in signatures |
+| **Evaluation correctness**     | Policy evaluations are deterministic and verifiable; incorrect results are provably detectable | ZK challenge proofs, deterministic Rego evaluation |
+| **Accountability**             | Operators who sign incorrect responses face economic penalties                                 | Slashing (10% of stake), challenge window          |
+
+The following subsections detail how each security property is achieved.
+
+### Rogue Key Attack Prevention
+
+Rogue key attacks exploit BLS aggregation: an attacker chooses a public key that, when aggregated with honest keys, allows them to forge aggregate signatures. Newton prevents this through:
+
+- **Individual signature verification before aggregation.** Every operator's BLS signature is verified against their registered public key before being accepted by the aggregator. A rogue key that does not correspond to a valid private key cannot produce a valid individual signature.
+- **Gamma randomization for multi-quorum.** The pairing equation includes a gamma factor that binds each quorum's signature to its public key, preventing cross-quorum rogue key construction.
+- **Proof of possession at registration.** Operators prove possession of their BLS private key during EigenLayer registration, preventing key-only attacks.
+
+**Security reduction.** The unforgeability of BLS aggregate signatures reduces to the computational Diffie-Hellman (co-CDH) assumption on BN254. Under co-CDH, an adversary controlling fewer than `t` operators cannot produce a valid aggregate signature for any message not signed by the honest quorum. The proof-of-possession registration requirement eliminates the rogue key attack vector that would otherwise weaken the plain aggregate BLS scheme.
+
+### Constant-Time Cryptographic Operations
+
+All signature verification and key derivation operations use constant-time implementations from audited cryptographic libraries (secp256k1 for ECDSA, Ed25519 for signing, X25519 for key agreement, and RFC 9180 for HPKE). This prevents timing side-channel attacks that could leak key material through operation duration.
+
+### BLS Subgroup Validation
+
+BLS public keys and signatures are validated to be in the correct subgroups of G1 and G2 during deserialization. Points not in the correct subgroup would compromise the security of the pairing equation. The BLS libraries perform subgroup checks on all incoming points.
+
+### HPKE AAD Binding
+
+The AAD computation (`keccak256(abi.encodePacked(policy_client, chain_id))`) cryptographically binds each SecureEnvelope to a specific policy client and chain. This prevents:
+
+- **Cross-context ciphertext reuse.** An encrypted envelope created for policy client A on chain X cannot be decrypted in the context of policy client B or chain Y, because the AAD mismatch causes the ChaCha20-Poly1305 authentication check to fail.
+- **Chain replay attacks.** An envelope encrypted for a testnet chain ID cannot be replayed on mainnet.
+- **Policy client impersonation.** An envelope encrypted for one policy client cannot be used by another, even if both share the same gateway.
+
+**Security reduction.** The confidentiality of HPKE in Base mode reduces to the IND-CCA2 security of the underlying AEAD (ChaCha20-Poly1305) and the CDH assumption on Curve25519. An adversary who cannot solve CDH on Curve25519 cannot distinguish HPKE ciphertexts from random, even with access to a decryption oracle (excluding the challenge ciphertext). The AAD binding extends this guarantee: any modification to `policy_client` or `chain_id` produces an AAD mismatch that the AEAD authentication check rejects with overwhelming probability.
+
+### Dual-Signature Authorization Binding
+
+The dual-signature scheme for privacy authorization prevents several attack classes:
+
+- **Unauthorized data access.** Encrypted data references require both user and application signatures, preventing either party from unilaterally accessing encrypted data.
+- **Cross-intent replay.** Both signatures bind the intent hash, preventing reuse of authorization across different transactions.
+- **Cross-client replay.** Both signatures bind the policy client address, preventing reuse across different applications.
+- **Signature ordering.** The application signature covers the user's signature bytes, creating an unforgeable chain of authorization.
+
+**Security reduction.** The unforgeability of the dual-signature scheme reduces to the EUF-CMA (Existential Unforgeability under Chosen Message Attack) security of Ed25519. An adversary who cannot break Ed25519's EUF-CMA property cannot forge either the user signature or the application signature. The chained structure — where the application signature covers the user's signature bytes — ensures that forging authorization requires breaking EUF-CMA for both keys independently: a valid application signature over a forged user signature is computationally infeasible, and vice versa.
+
+### Composed Security of the Newton Privacy Envelope
+
+The Newton Privacy Envelope (NPE) composes three independently secure primitives: HPKE encryption (IND-CCA2), Ed25519 dual-signature authorization (EUF-CMA), and BLS attestation (co-CDH on BN254). The composed protocol satisfies the following properties:
+
+1. **Confidentiality.** Under the CDH assumption on Curve25519 and the IND-CCA2 security of ChaCha20-Poly1305, no adversary without the recipient's X25519 private key can recover the plaintext content of an NPE, even with access to a decryption oracle for other ciphertexts.
+
+2. **Authorization unforgeability.** Under EUF-CMA of Ed25519, no adversary can produce a valid dual-signature authorization without both the user's and application's Ed25519 signing keys. The intent hash and policy client binding in both signatures prevent cross-context reuse.
+
+3. **Attestation integrity.** Under co-CDH on BN254 and the honest-majority assumption (adversary controls fewer than `t` of `n` staked operators), no adversary can produce a valid BLS aggregate signature for an incorrect policy evaluation result.
+
+These reductions are modular: compromising one primitive does not weaken the others. For example, if an adversary compromises HPKE confidentiality (breaking CDH on Curve25519), they learn plaintext data but cannot forge attestations (BLS) or authorization signatures (Ed25519). If an adversary compromises a single operator's BLS key, they cannot decrypt NPE ciphertexts (HPKE) or forge user authorization (Ed25519).
+
+### Post-Quantum Readiness
+
+Newton's cryptographic primitives rely on elliptic curve assumptions (CDH on Curve25519, co-CDH on BN254, DLP on secp256k1) that are vulnerable to quantum computers running Shor's algorithm. The protocol's design mitigates future quantum risk through HPKE's KEM-agnostic architecture:
+
+| Component                | Current Primitive | Post-Quantum Replacement           | Standardization Status       |
+|--------------------------|-------------------|------------------------------------|------------------------------|
+| NPE encryption           | X25519 (DHKEM)    | ML-KEM-768 (FIPS 203)              | NIST standardized (2024)     |
+| Authorization signatures | Ed25519           | ML-DSA-65 (FIPS 204)               | NIST standardized (2024)     |
+| BLS aggregate signatures | BN254             | Lattice-based aggregate signatures | Active research, no standard |
+
+HPKE's modular KEM/KDF/AEAD composition means that replacing X25519 with ML-KEM requires changing only the KEM instantiation — the KDF, AEAD, and application-layer protocol remain unchanged. Ed25519 can be replaced with ML-DSA in the dual-signature scheme without structural changes. BLS aggregate signatures present the most significant migration challenge, as no standardized post-quantum aggregate signature scheme with comparable compactness exists. Until such schemes mature, BLS remains the practical choice given Ethereum's BN254 precompile support.
+
+### Performance Characteristics
+
+The cryptographic operations underlying Newton's protocol have been benchmarked to validate that sub-second consensus is achievable under production workloads. Detailed benchmark data — including per-operation latencies for HPKE encrypt/decrypt, Ed25519 sign/verify, BLS sign/verify/aggregate, and end-to-end task flow timing — is maintained in a companion performance report. The protocol's latency budget is dominated by network round-trips and policy evaluation rather than cryptographic operations, which complete in microsecond-to-low-millisecond ranges on commodity hardware.

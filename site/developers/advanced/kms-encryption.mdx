@@ -1,0 +1,130 @@
+---
+title: "Encrypting Secrets"
+description: "Securely store API keys and credentials for Newton Protocol PolicyData oracles"
+---
+
+PolicyData oracles often need access to API keys and credentials to fetch external data. Newton Protocol's [Privacy Layer](/developers/concepts/privacy-layer) encrypts these secrets so they are never exposed on-chain or to unauthorized parties.
+
+## Overview
+
+The secret storage flow:
+
+1. **Prepare your secrets** as a JSON object matching your PolicyData's schema
+2. **Upload via RPC** using `newt_storeEncryptedSecrets`
+3. **Operators decrypt** during task evaluation to run your WASM oracle
+
+Secrets are validated against the on-chain schema (`secretsSchemaCid`) defined on your PolicyData contract.
+
+<Note>
+The developer-facing encryption SDK for client-side secret encryption is in active development. For guidance on encrypting and uploading secrets, contact `product@magicnewton.com`.
+</Note>
+
+## Secrets Format
+
+Prepare a JSON object matching your PolicyData's secrets schema:
+
+```json
+{
+  "API_KEY": "sk-xxxxxxxxxxxxx",
+  "ENDPOINT": "https://api.example.com"
+}
+```
+
+## Store via RPC
+
+Upload encrypted secrets to the Newton Gateway:
+
+```bash
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_storeEncryptedSecrets",
+    "params": {
+      "policy_client": "0xYourPolicyClientAddress",
+      "policy_data_address": "0xYourPolicyDataAddress",
+      "secrets": "<base64-encoded-encrypted-secrets>"
+    },
+    "id": 1
+  }'
+```
+
+Secrets are validated against the on-chain schema before storing.
+
+## Reference in PolicyData
+
+Your WASM oracle accesses secrets at runtime through the Newton execution environment. Secrets are decrypted by operators and passed to your WASM component automatically — you do not need to handle decryption in your code.
+
+```js
+// In your WASM oracle (policy.js)
+import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+
+export function run(wasm_args) {
+  // The Newton runtime injects decrypted API keys into the execution environment
+  const response = httpFetch({
+    url: "https://api.example.com/data",
+    method: "GET",
+    headers: [["Authorization", `Bearer ${getSecret("API_KEY")}`]],
+    body: null,
+  });
+
+  if (response.tag === "err") {
+    return JSON.stringify({ error: response.val });
+  }
+
+  const body = new TextDecoder().decode(new Uint8Array(response.val.body));
+  return JSON.stringify(JSON.parse(body));
+}
+```
+
+## Secrets Schema
+
+The `secretsSchemaCid` on your PolicyData contract points to a JSON Schema that defines the required shape of your secrets:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "API_KEY": { "type": "string" },
+    "ENDPOINT": { "type": "string", "format": "uri" }
+  },
+  "required": ["API_KEY", "ENDPOINT"]
+}
+```
+
+If your uploaded secrets do not match this schema, `newt_storeEncryptedSecrets` returns a validation error.
+
+## Security
+
+- Secrets are encrypted at rest — the Gateway never sees plaintext secrets
+- Only the on-chain owner of the PolicyClient can upload or update secrets
+- Operators decrypt secrets in memory during evaluation — secrets are never persisted by operators
+- Key rotation is supported — upload new secrets at any time via `newt_storeEncryptedSecrets`
+
+For a deeper look at Newton's encryption architecture, see the [Privacy Layer](/developers/concepts/privacy-layer).
+
+## Testing
+
+Test your secrets work correctly before deploying:
+
+1. **Test with inline secrets** (no ownership required):
+   ```bash
+   # newt_simulatePolicyData — provide secrets directly
+   ```
+
+2. **Test with stored secrets** (requires ownership):
+   ```bash
+   # newt_simulatePolicyDataWithClient — uses stored secrets
+   ```
+
+See the [RPC API](/developers/reference/rpc-api) for full parameter details.
+
+## Next Steps
+
+<Card icon="lock" href="/developers/concepts/privacy-layer" title="Privacy Layer">
+  Full privacy architecture overview
+</Card>
+<Card icon="plug" href="/developers/reference/rpc-api" title="RPC API">
+  newt_storeEncryptedSecrets and related methods
+</Card>

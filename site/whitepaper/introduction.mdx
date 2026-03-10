@@ -1,0 +1,26 @@
+---
+title: "Technical Whitepaper"
+description: "Technical specification of Newton Protocol — an EigenLayer Actively Validated Service (AVS) for policy-based authorization of blockchain transactions. Covers cryptographic primitives, consensus, and security model."
+keywords:
+  - newton protocol whitepaper
+  - eigenlayer avs whitepaper
+  - blockchain policy authorization
+  - bls signature consensus
+  - onchain compliance protocol
+  - zero knowledge proof
+  - multi-party computation
+  - fully homomorphic encryption
+  - trusted execution environment
+---
+
+## Introduction
+
+This document provides a comprehensive technical specification of the Newton Protocol, an Autonomous Verifiable Service (AVS) built on EigenLayer for policy-based authorization of blockchain transactions. The intended audience is protocol engineers, security auditors, and system integrators who require precise understanding of Newton's cryptographic primitives, consensus mechanisms, cross-chain architecture, and security model.
+
+Newton Protocol operates as an authorization layer between transaction intent and on-chain execution. Applications submit transaction intents to a decentralized operator network. Operators independently evaluate those intents against Rego policies, fetch external data through sandboxed WASM plugins, and produce BLS signatures over the evaluation result. The protocol uses NATS streaming messaging for non-blocking, pipelined communication between the gateway and operators, enabling sub-second consensus with early quorum exit. An aggregation layer collects these signatures, verifies stake-weighted quorum, and produces a compact aggregate BLS signature that smart contracts can verify on-chain. A challenge mechanism backed by zero-knowledge proofs provides cryptographic dispute resolution, and a slashing mechanism enforces economic accountability.
+
+The system comprises off-chain services (gateway, operators, aggregator, challenger, and data providers), on-chain smart contracts (TaskManager, ServiceManager, PolicyFactory, PolicyClientRegistry, IdentityRegistry, and cross-chain registries), and a Rego policy engine with Newton-specific cryptographic extensions. The gateway orchestrates the authorization flow by publishing tasks to operators via NATS streaming, collecting responses as they arrive, computing median-based consensus over divergent numeric fields, and aggregating BLS signatures with early quorum exit. Operators are stateless validators that fetch policies from IPFS, execute WASM data providers, evaluate Rego rules, and sign responses with BLS keys. The challenger monitors on-chain responses and generates zero-knowledge proofs when discrepancies are detected.
+
+This document covers privacy architecture, the BLS attestation protocol, the streaming consensus protocol, cross-chain interoperability, slashing and challenge mechanisms, the policy engine, decentralization guarantees, and security properties.
+
+For protocol vision, market context, and use cases, see the [Newton Protocol Whitepaper](https://newton.xyz/whitepaper). For developer integration details (JSON-RPC API, simulation modes, attestation validation paths), see the [RPC API Reference](/developers/reference/rpc-api) and the [Policy Client Integration Guide](/developers/advanced/policy-client-guide).

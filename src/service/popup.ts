@@ -1,22 +1,28 @@
-import { renderPopupPrompt } from '@core/popup-prompt';
-import { createRpcError, MagicRPCError, SDKError } from '@core/sdk-exceptions';
-import { JsonRpcResponsePayload, NewtonIdpPayloadMethod, RPCErrorCode, SDKErrorCode } from '@core/types';
-import { createPromiEvent } from '@core/utils/promise-tools';
+import { renderPopupPrompt } from "@core/popup-prompt";
+import { MagicRPCError, SDKError, createRpcError } from "@core/sdk-exceptions";
+import {
+  type JsonRpcRequestPayload,
+  type JsonRpcResponsePayload,
+  NewtonIdpPayloadMethod,
+  RPCErrorCode,
+  SDKErrorCode,
+} from "@core/types";
+import { createPromiEvent } from "@core/utils/promise-tools";
 
-const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app';
+const defaultEndpoint = "https://persona-kyc-nextjs-bf5a.vercel.app";
 
 enum NewtonIdpIncomingWindowMessage {
-  NEWTON_VC_POPUP_READY = 'NEWTON_VC_POPUP_READY',
-  NEWTON_VC_POPUP_RESPONSE = 'NEWTON_VC_POPUP_RESPONSE',
-  NEWTON_VC_POPUP_EVENT = 'NEWTON_VC_POPUP_EVENT',
+  NEWTON_VC_POPUP_READY = "NEWTON_VC_POPUP_READY",
+  NEWTON_VC_POPUP_RESPONSE = "NEWTON_VC_POPUP_RESPONSE",
+  NEWTON_VC_POPUP_EVENT = "NEWTON_VC_POPUP_EVENT",
 }
 
 enum NewtonIdpOutgoingWindowMessage {
-  NEWTON_VC_HANDLE_REQUEST = 'NEWTON_VC_HANDLE_REQUEST',
+  NEWTON_VC_HANDLE_REQUEST = "NEWTON_VC_HANDLE_REQUEST",
 }
 
 enum PopupIntermediaryEventName {
-  POPUP_RHINESTONE_USER_ID_FOUND = 'POPUP_RHINESTONE_USER_ID_FOUND',
+  POPUP_RHINESTONE_USER_ID_FOUND = "POPUP_RHINESTONE_USER_ID_FOUND",
 }
 
 let popupReady = false;
@@ -36,16 +42,20 @@ function isPopupResolve(msgType: string) {
 }
 
 const POPUP_ERROR_MESSAGES = {
-  USER_CLOSED_POPUP: 'User closed the popup before a response was received',
-  POP_WINDOW_ALREADY_EXISTS: 'Popup window already exists for this request',
-  FAILED_TO_OPEN_POPUP: 'Failed to open popup window',
+  USER_CLOSED_POPUP: "User closed the popup before a response was received",
+  POP_WINDOW_ALREADY_EXISTS: "Popup window already exists for this request.",
+  FAILED_TO_OPEN_POPUP: "Failed to open popup window",
 };
 
-export function popupRequest<ResultType = any>(payload: any, endpointOverride?: string) {
+export function popupRequest<ResultType = unknown>(
+  payload: JsonRpcRequestPayload,
+  endpointOverride?: string,
+) {
   // Popup window constants
   const popupWidth = 448;
   const popupHeight = 620;
-  const popupLeft = window.screenLeft + (window.outerWidth / 2 - popupWidth / 2);
+  const popupLeft =
+    window.screenLeft + (window.outerWidth / 2 - popupWidth / 2);
   const popupTop = window.screenTop + window.outerHeight * 0.15;
   const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`;
   const endpoint = endpointOverride || defaultEndpoint;
@@ -54,7 +64,7 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
   const isPopupOpen = () => popup && popup?.window !== null && !popup.closed;
 
   const openPopup = () => {
-    setPopup(window.open(`${endpoint}/handle`, '_blank', popupPosition));
+    setPopup(window.open(`${endpoint}/handle`, "_blank", popupPosition));
   };
 
   const promiEvent = createPromiEvent<ResultType>((resolve, reject) => {
@@ -87,10 +97,21 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
     if (isPopupOpen() && popupReady) {
       // Override current action or enqueue the new one
       focusPopup();
-      popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST, payload }, '*');
+      popup?.postMessage(
+        {
+          msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST,
+          payload,
+        },
+        "*",
+      );
     } else if (isPopupOpen() || popupPromptModalExists) {
       fulfillPromiEvent(() =>
-        reject(new SDKError(SDKErrorCode.PopupAlreadyExists, POPUP_ERROR_MESSAGES.POP_WINDOW_ALREADY_EXISTS)),
+        reject(
+          new SDKError(
+            SDKErrorCode.PopupAlreadyExists,
+            POPUP_ERROR_MESSAGES.POP_WINDOW_ALREADY_EXISTS,
+          ),
+        ),
       );
       return;
     } else {
@@ -129,10 +150,15 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
         if (!isPopupOpen() || popup?.closed) {
           if (popupCheckInterval) clearInterval(popupCheckInterval);
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          window.removeEventListener('message', messageListener);
+          window.removeEventListener("message", messageListener);
           setPopup(null);
           fulfillPromiEvent(() =>
-            reject(createRpcError(RPCErrorCode.UserRejectedAction, POPUP_ERROR_MESSAGES.USER_CLOSED_POPUP)),
+            reject(
+              createRpcError(
+                RPCErrorCode.UserRejectedAction,
+                POPUP_ERROR_MESSAGES.USER_CLOSED_POPUP,
+              ),
+            ),
           );
           return;
         }
@@ -150,16 +176,24 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
       }, 1000);
       if (isPopupReady(event.data?.msgType)) {
         popupReady = true;
-        popup?.postMessage({ msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST, payload }, '*');
+        popup?.postMessage(
+          {
+            msgType: NewtonIdpOutgoingWindowMessage.NEWTON_VC_HANDLE_REQUEST,
+            payload,
+          },
+          "*",
+        );
         setPopupCheckInterval();
       } else if (isPopupResolve(event.data?.msgType)) {
-        window.removeEventListener('message', messageListener);
+        window.removeEventListener("message", messageListener);
         const response = event?.data?.response as JsonRpcResponsePayload;
         if (response?.error) {
           // If user logs out from the pop up, clear the local storage.
-          if (response.error.code === RPCErrorCode.NewtonWalletSessionTerminated) {
-            localStorage.removeItem('newtonWalletIdToken');
-            localStorage.removeItem('newtonWalletPublicAddress');
+          if (
+            response.error.code === RPCErrorCode.NewtonWalletSessionTerminated
+          ) {
+            localStorage.removeItem("newtonWalletIdToken");
+            localStorage.removeItem("newtonWalletPublicAddress");
           }
           if (!RPCErrorCode.PopupRequestOverriden) {
             setPopup(null);
@@ -168,22 +202,30 @@ export function popupRequest<ResultType = any>(payload: any, endpointOverride?: 
         } else {
           fulfillPromiEvent(() => resolve(response?.result as ResultType));
         }
-      } else if (event.data?.msgType === NewtonIdpIncomingWindowMessage.NEWTON_VC_POPUP_EVENT) {
+      } else if (
+        event.data?.msgType ===
+        NewtonIdpIncomingWindowMessage.NEWTON_VC_POPUP_EVENT
+      ) {
         const intermediaryEventName = event.data?.response?.result?.event;
         if (!intermediaryEventName) return;
         const intermediaryEventParams = event.data?.response?.result?.params;
         if (
-          intermediaryEventName === PopupIntermediaryEventName.POPUP_RHINESTONE_USER_ID_FOUND &&
+          intermediaryEventName ===
+            PopupIntermediaryEventName.POPUP_RHINESTONE_USER_ID_FOUND &&
           !!intermediaryEventParams[0]
         ) {
           const rhinestoneUserId = intermediaryEventParams[0];
-          if (rhinestoneUserId) localStorage.setItem('newtonWalletRhinestoneUserId', rhinestoneUserId);
+          if (rhinestoneUserId)
+            localStorage.setItem(
+              "newtonWalletRhinestoneUserId",
+              rhinestoneUserId,
+            );
         }
         setPopupCheckInterval();
       }
     };
 
-    window.addEventListener('message', messageListener);
+    window.addEventListener("message", messageListener);
   });
   return promiEvent;
 

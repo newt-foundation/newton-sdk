@@ -1,0 +1,159 @@
+---
+title: "Writing Data Oracles in Python"
+description: "This guide walks you through building a Python newton-provider WebAssembly data oracle using componentize-py."
+---
+
+## 0) Prerequisites
+
+- **Python 3.10+** and **pip** installed
+- A terminal on macOS/Linux/WSL (Windows PowerShell also works)
+
+> **Tip:** Use a virtual environment to keep dependencies isolated:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate    # Windows
+```
+
+---
+
+## 1) Create a project folder
+
+```bash
+mkdir my_project
+cd my_project
+```
+
+---
+
+## 2) Install the CLI
+
+```bash
+pip install componentize-py
+```
+
+---
+
+## 3) Add the WIT world
+
+Create **`newton-provider.wit`** in the project root:
+
+```wit
+package newton:provider@0.1.0;
+
+interface http {
+    record http-request {
+        url: string,
+        method: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: list<u8>,
+    }
+
+    fetch: func(request: http-request) -> result<http-response, string>;
+}
+
+world newton-provider {
+    import http;
+    export run: func(input: string) -> result<string, string>;
+}
+```
+
+---
+
+## 4) Generate Python bindings
+
+This produces a `wit_world` package with types and imports for your WIT:
+
+```bash
+componentize-py -d newton-provider.wit -w newton-provider bindings py_bindings
+```
+
+Resulting project structure (key parts):
+
+```
+my_project/
+├─ newton-provider.wit
+└─ py_bindings/
+   ├─ wit_world/           # generated Python bindings
+   └─ app.py               # (you will add this file next)
+```
+
+---
+
+## 5) Implement your component logic
+
+Create **`py_bindings/app.py`**:
+
+```python
+from json import loads, dumps
+import wit_world
+from wit_world.imports import http
+from wit_world.imports.http import HttpRequest, HttpResponse
+
+# WIT: export run: func(input: string) -> result<string, string>
+# We return a JSON string on success AND on "errors"
+# (i.e., we don't surface WIT Err<string> — we encode error info in JSON)
+class WitWorld(wit_world.WitWorld):
+    def run(self, input: str) -> str:
+        req = loads(input)
+
+        # Fetch ETH price from CoinGecko
+        request = HttpRequest(
+            url="https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+            method="GET",
+            headers=[],
+            body=None,
+        )
+        result = http.fetch(request)
+
+        if isinstance(result, http.Err):
+            return dumps({"error": str(result)})
+
+        body = bytes(result.value.body).decode("utf-8")
+        data = loads(body)
+
+        return dumps({
+            "eth_price_usd": data["ethereum"]["usd"],
+        })
+```
+
+> **Note:** Keep all imports at the top of the file; don’t import inside functions.
+
+---
+
+## 6) Build the component
+
+From inside the **`py_bindings/`** directory, build the component:
+
+```bash
+cd py_bindings
+componentize-py -d ../newton-provider.wit -w newton-provider componentize --stub-wasi app -o ../policy.wasm
+```
+
+You’ll get `policy.wasm` in the project root — a component that:
+
+- **Imports** `newton:provider/http.fetch` from the host
+- **Exports** `run(input: string) -> result<string, string>`
+
+---
+
+## 7) Test your component
+
+Use the Newton CLI to simulate your WASM data provider locally without deploying to the blockchain:
+
+```bash
+newton-cli --chain-id 11155111 policy-data simulate \
+  --wasm-file policy.wasm \
+  --input-json '{"inquiry_id": "inq_xRZrQFKg7rqZ5UZGLhnvb2ympshE"}'
+```
+
+The `--input-json` value is passed directly to your component's `run` function as the `input` string argument. Replace the example JSON with your own input schema.
+
+For more options, see the [Newton CLI reference](/developers/reference/command-line-tool#simulate).

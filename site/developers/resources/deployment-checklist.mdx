@@ -1,0 +1,178 @@
+---
+title: "Deployment Checklist"
+description: "Pre-launch verification checklist for deploying Newton Protocol policies, oracles, and PolicyClient contracts"
+---
+
+Use this checklist to verify your Newton Protocol integration before going to production.
+
+## Policy Development
+
+<Steps>
+  <Step title="Rego policy passes local evaluation">
+    ```bash
+    newton-cli regorus eval \
+      --policy policy.rego \
+      --input '{"from":"0x...","to":"0x...","value":"0x0","data":"0x","chainId":"0xaa36a7","functionSignature":"0x"}' \
+      --data '{"params":{...},"data":{...}}'
+    ```
+    Verify `allow`, `deny`, and `cap` paths all produce expected results.
+  </Step>
+  <Step title="Data oracle returns valid JSON">
+    ```bash
+    newton-cli --chain-id 11155111 policy-data simulate \
+      --wasm-file policy.wasm \
+      --input-json '{...}'
+    ```
+    Confirm the output matches your policy's `data.data` expectations.
+  </Step>
+  <Step title="Gateway simulation succeeds">
+    Run `newt_simulateTask` with realistic intent parameters and verify the response includes a valid attestation.
+  </Step>
+  <Step title="Edge cases tested">
+    - Zero-value transactions
+    - Maximum-value transactions
+    - Addresses not on allowlists
+    - Expired or missing data
+    - Invalid function signatures
+  </Step>
+</Steps>
+
+## On-Chain Deployment
+
+<Steps>
+  <Step title="PolicyData contract deployed">
+    ```bash
+    newton-cli --chain-id 11155111 policy-data deploy \
+      --wasm-cid bafyrei... \
+      --secrets-schema-cid bafyrei...
+    ```
+    Record the deployed `PolicyData` address.
+  </Step>
+  <Step title="Policy contract deployed">
+    ```bash
+    newton-cli --chain-id 11155111 policy deploy \
+      --rego-cid bafyrei... \
+      --policy-data-address 0x...
+    ```
+    Record the deployed `Policy` address.
+  </Step>
+  <Step title="PolicyClient contract deployed">
+    Deploy your contract that inherits `NewtonPolicyClient`. Verify it compiles with Solidity ^0.8.x and the correct foundry remappings.
+  </Step>
+  <Step title="PolicyClient registered">
+    ```bash
+    newton-cli --chain-id 11155111 policy-client register \
+      --policy-client-address 0x...
+    ```
+  </Step>
+  <Step title="Policy set on PolicyClient">
+    ```bash
+    newton-cli --chain-id 11155111 policy-client set-policy \
+      --policy-client-address 0x... \
+      --policy-address 0x...
+    ```
+  </Step>
+  <Step title="Policy parameters configured">
+    ```bash
+    newton-cli --chain-id 11155111 policy-client set-policy-params \
+      --policy-client-address 0x... \
+      --params '{"max_amount":"10000","allowed_tokens":["0x..."]}'
+    ```
+  </Step>
+  <Step title="Verify registration status">
+    ```bash
+    newton-cli --chain-id 11155111 policy-client status \
+      --policy-client-address 0x...
+    ```
+    Confirm `active: true` and policy reference is correct.
+  </Step>
+</Steps>
+
+## API & Secrets
+
+<Steps>
+  <Step title="API key created with correct permissions">
+    Verify your key has `rpc_read` for task submission and simulation, `rpc_write` if you need to manage secrets. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
+  </Step>
+  <Step title="Encrypted secrets stored (if applicable)">
+    If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/kms-encryption).
+  </Step>
+  <Step title="Secrets match schema">
+    Confirm your uploaded secrets match the `secretsSchemaCid` defined on your PolicyData contract. Schema mismatches produce validation errors.
+  </Step>
+</Steps>
+
+## Frontend Integration
+
+<Steps>
+  <Step title="SDK installed and configured">
+    ```bash
+    pnpm add @magicnewton/newton-protocol-sdk viem
+    ```
+    Verify `newtonPublicClientActions` and `newtonWalletClientActions` are properly extended on your viem clients.
+  </Step>
+  <Step title="Environment variables set">
+    - `NEWTON_API_KEY` — your Gateway API key
+    - `NEWTON_GATEWAY_URL` — the correct Gateway URL for your environment
+    - PolicyClient address for your target chain
+  </Step>
+  <Step title="End-to-end flow verified">
+    1. Submit an evaluation via `evaluateIntentDirect` or `submitEvaluationRequest`
+    2. Receive attestation
+    3. Execute the attested transaction on-chain
+    4. Verify the transaction succeeds
+  </Step>
+  <Step title="Error handling implemented">
+    Handle all SDK error codes: `TASK_TIMEOUT`, `POLICY_NOT_FOUND`, `ATTESTATION_EXPIRED`, `UNAUTHORIZED`. See [Error Reference](/developers/reference/error-reference).
+  </Step>
+</Steps>
+
+## Security
+
+- [ ] PolicyClient ownership verified on-chain (not just in your local config)
+- [ ] API keys stored in environment variables, never committed to source control
+- [ ] WASM oracle does not log or expose secrets
+- [ ] Attestation expiration is checked before on-chain submission
+- [ ] Challenge window (100 blocks) is accounted for in your UX
+- [ ] Contract uses `_validateAttestation` or `_validateAttestationDirect` correctly
+- [ ] Intent fields (`from`, `to`, `value`, `data`, `chainId`) are validated before submission
+
+## Pre-Launch Verification
+
+```bash
+# Verify CLI version
+newton-cli version info
+
+# Check compatibility
+newton-cli version check-compatibility
+
+# Run a final simulation
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulateTask",
+    "params": {
+      "policy_client": "0xYourPolicyClientAddress",
+      "intent": {
+        "from": "0xCallerAddress",
+        "to": "0xTargetAddress",
+        "value": "0x0",
+        "data": "0x",
+        "chain_id": "0xaa36a7",
+        "function_signature": "0x"
+      }
+    },
+    "id": 1
+  }'
+```
+
+## Next Steps
+
+<Card icon="question" href="/developers/resources/faq" title="FAQ & Troubleshooting">
+  Common questions and error solutions
+</Card>
+<Card icon="code" href="/developers/reference/contract-addresses" title="Contract Addresses">
+  Deployed contracts on all networks
+</Card>
