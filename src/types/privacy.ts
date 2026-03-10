@@ -78,7 +78,7 @@ export interface UploadEncryptedDataRpcRequest {
   policy_client: Address
   envelope: string
   signature: string
-  recipient_pubkey: string
+  sender_pubkey: string
   ttl: number | null
   chain_id: number
 }

@@ -204,7 +204,7 @@ export async function uploadEncryptedData(
     policy_client: params.policyClient,
     envelope: JSON.stringify(envelope),
     signature,
-    recipient_pubkey: senderPublicKey,
+    sender_pubkey: senderPublicKey,
     ttl: params.ttl ?? null,
     chain_id: params.chainId,
   }
