@@ -335,6 +335,10 @@ interface SubmitEvaluationRequestParams {
   userSignature?: string
   /** Application Ed25519 signature for privacy authorization (hex-encoded) */
   appSignature?: string
+  /** User Ed25519 public key for signature verification (hex-encoded, 32 bytes) */
+  userPublicKey?: string
+  /** Application Ed25519 public key for signature verification (hex-encoded, 32 bytes) */
+  appPublicKey?: string
 }
 ```
 
@@ -343,4 +347,4 @@ These fields are forwarded in:
 - `evaluateIntentDirect` -- synchronous gateway evaluation
 - `submitIntentAndSubscribe` -- WebSocket subscription-based evaluation
 
-When `encryptedDataRefs` is provided, `userSignature` and `appSignature` are required. The gateway validates the signatures before decrypting the referenced data.
+When `encryptedDataRefs` is provided, `userSignature` and `appSignature` are required. Pass the `userPublicKey` and `appPublicKey` returned by `signPrivacyAuthorization()` so the gateway can verify the signatures.

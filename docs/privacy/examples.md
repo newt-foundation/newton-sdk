@@ -103,6 +103,8 @@ async function submitPrivateTask() {
     encryptedDataRefs: [upload.data_ref_id],
     userSignature: auth.userSignature,
     appSignature: auth.appSignature,
+    userPublicKey: auth.userPublicKey,
+    appPublicKey: auth.appPublicKey,
   })
 
   console.log('Policy evaluation result:', result.result.evaluationResult)
@@ -328,7 +330,9 @@ const result = await newton.evaluateIntentDirect({
   encryptedDataRefs: [identityRef.data_ref_id!, financialRef.data_ref_id!],
   userSignature: auth.userSignature,
   appSignature: auth.appSignature,
+  userPublicKey: auth.userPublicKey,
+  appPublicKey: auth.appPublicKey,
 })
 ```
 
-The Rego policy receives all decrypted data merged into its evaluation context, so it can cross-reference identity and financial information in a single evaluation pass.
+The Rego policy receives all decrypted data under `data.data.privacy` in the evaluation context, so it can cross-reference identity and financial information in a single evaluation pass.
