@@ -5,15 +5,15 @@ export const renderPopupPrompt = ({
   ctaText,
   unmountOnContinue,
 }: {
-  onDone: () => void;
-  onContinue: () => void;
-  containerId: string;
-  ctaText?: string;
-  unmountOnContinue?: boolean;
+  onDone: () => void
+  onContinue: () => void
+  containerId: string
+  ctaText?: string
+  unmountOnContinue?: boolean
 }) => {
-  const elContainer = document.createElement("div");
+  const elContainer = document.createElement('div')
   elContainer.setAttribute(
-    "style",
+    'style',
     `
           position: fixed;
           display: flex;
@@ -31,18 +31,15 @@ export const renderPopupPrompt = ({
           background-color: rgba(0,0,0,0.85);
           backdrop-filter: blur(6px);
         `,
-  );
+  )
 
   /** STOPS BODY FROM SCROLLING */
-  document.body.setAttribute(
-    "style",
-    `${document.body.getAttribute("style") ?? ""} overflow: hidden;height:100%;`,
-  );
+  document.body.setAttribute('style', `${document.body.getAttribute('style') ?? ''} overflow: hidden;height:100%;`)
 
-  elContainer.id = containerId;
-  const elContentContainer = document.createElement("div");
+  elContainer.id = containerId
+  const elContentContainer = document.createElement('div')
   elContentContainer.setAttribute(
-    "style",
+    'style',
     `
           max-width: 380px;
           width: 100%;
@@ -53,10 +50,10 @@ export const renderPopupPrompt = ({
           align-items: center;
           justify-content: center;
           `,
-  );
+  )
 
   /** LOGO */
-  const elLogo = document.createElement("div");
+  const elLogo = document.createElement('div')
   elLogo.innerHTML = `<svg width="252" height="32" viewBox="0 0 252 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M41.0352 3.99805H44.6336L56.3247 21.002V3.99805H60.1987V27.9975H56.6002L44.9092 10.9936V27.9975H41.0352V3.99805Z" fill="white"/>
 <path d="M66.1137 11.3493C67.4041 10.6073 68.8854 10.2363 70.5521 10.2363C72.2189 10.2363 73.7346 10.5782 75.025 11.2645C76.3155 11.9508 77.333 12.9233 78.075 14.1766C78.8169 15.4326 79.2012 16.9086 79.2224 18.5992C79.2224 19.0576 79.1879 19.5266 79.119 20.0063H65.8858V20.2129C65.9759 21.7445 66.4581 22.9555 67.3246 23.8459C68.1938 24.7362 69.3464 25.184 70.788 25.184C71.93 25.184 72.8893 24.9164 73.6683 24.3785C74.4447 23.8406 74.9588 23.0801 75.2105 22.0996H78.9123C78.5917 23.883 77.7305 25.3457 76.3234 26.4877C74.9164 27.6298 73.1648 28.2022 71.0609 28.2022C69.2325 28.2022 67.6373 27.8312 66.2779 27.0892C64.9186 26.3473 63.8666 25.3006 63.1247 23.9518C62.3827 22.6031 62.0117 21.0397 62.0117 19.2537C62.0117 17.4677 62.3721 15.8646 63.0902 14.5052C63.811 13.1458 64.8152 12.0939 66.1084 11.3519L66.1137 11.3493ZM73.9307 14.2985C73.0721 13.5778 71.9936 13.2174 70.6899 13.2174C69.4789 13.2174 68.4323 13.5884 67.5525 14.3303C66.6728 15.0723 66.164 16.0607 66.0262 17.2955H75.4543C75.2953 16.0156 74.7865 15.0166 73.928 14.2959L73.9307 14.2985Z" fill="white"/>
@@ -72,44 +69,43 @@ export const renderPopupPrompt = ({
 <path d="M197.43 28.3976C196.377 28.3976 195.415 28.193 194.544 27.7839C193.672 27.3672 192.979 26.7688 192.464 25.9885C191.949 25.2006 191.691 24.246 191.691 23.1248C191.691 22.2612 191.854 21.5339 192.18 20.943C192.506 20.3521 192.968 19.8672 193.566 19.4885C194.165 19.1097 194.873 18.8104 195.691 18.5907C196.51 18.371 197.411 18.2006 198.396 18.0794C199.373 17.9582 200.199 17.8521 200.873 17.7612C201.555 17.6703 202.074 17.5263 202.43 17.3294C202.786 17.1324 202.964 16.8142 202.964 16.3748V15.9657C202.964 14.7763 202.608 13.8407 201.896 13.1589C201.191 12.4695 200.176 12.1248 198.85 12.1248C197.593 12.1248 196.566 12.4013 195.771 12.9544C194.983 13.5074 194.43 14.1589 194.112 14.9089L192.191 14.2157C192.585 13.2612 193.131 12.4998 193.828 11.9316C194.525 11.3559 195.305 10.943 196.169 10.693C197.032 10.4354 197.907 10.3066 198.794 10.3066C199.46 10.3066 200.154 10.3938 200.873 10.568C201.6 10.7422 202.275 11.0453 202.896 11.4771C203.517 11.9013 204.021 12.496 204.407 13.2612C204.794 14.0188 204.987 14.9809 204.987 16.1475V27.9998H202.964V25.2385H202.839C202.597 25.7536 202.237 26.2536 201.76 26.7385C201.282 27.2233 200.684 27.621 199.964 27.9316C199.244 28.2422 198.4 28.3976 197.43 28.3976ZM197.703 26.5453C198.779 26.5453 199.71 26.3066 200.498 25.8294C201.286 25.3521 201.892 24.7195 202.316 23.9316C202.748 23.1362 202.964 22.2612 202.964 21.3066V18.7839C202.813 18.9279 202.559 19.0566 202.203 19.1703C201.854 19.2839 201.449 19.3862 200.987 19.4771C200.532 19.5604 200.078 19.6324 199.623 19.693C199.169 19.7536 198.76 19.8066 198.396 19.8521C197.411 19.9733 196.57 20.1627 195.873 20.4203C195.176 20.6779 194.642 21.0339 194.271 21.4885C193.9 21.9354 193.714 22.5112 193.714 23.2157C193.714 24.2763 194.093 25.0983 194.85 25.6816C195.608 26.2574 196.559 26.5453 197.703 26.5453Z" fill="white"/>
 <path d="M168.896 27.9993L162.521 4.72656H164.681L169.953 24.7379H170.135L175.408 4.72656H177.862L183.135 24.7379H183.317L188.59 4.72656H190.76L184.385 27.9993H182.112L176.715 8.26065H176.567L171.169 27.9993H168.896Z" fill="white"/>
 </svg>
-`;
+`
   elLogo.setAttribute(
-    "style",
+    'style',
     `
           margin-bottom: 16px;
           `,
-  );
+  )
 
   /** IMPORT FONT */
   // Create first <link> element for preconnect to fonts.googleapis.com
-  const link1 = document.createElement("link");
-  link1.rel = "preconnect";
-  link1.href = "https://fonts.googleapis.com";
-  document.head.appendChild(link1);
+  const link1 = document.createElement('link')
+  link1.rel = 'preconnect'
+  link1.href = 'https://fonts.googleapis.com'
+  document.head.appendChild(link1)
 
   // Create second <link> element for preconnect to fonts.gstatic.com with crossorigin attribute
-  const link2 = document.createElement("link");
-  link2.rel = "preconnect";
-  link2.href = "https://fonts.gstatic.com";
-  link2.setAttribute("crossorigin", ""); // Setting the crossorigin attribute
-  document.head.appendChild(link2);
+  const link2 = document.createElement('link')
+  link2.rel = 'preconnect'
+  link2.href = 'https://fonts.gstatic.com'
+  link2.setAttribute('crossorigin', '') // Setting the crossorigin attribute
+  document.head.appendChild(link2)
 
   // Create third <link> element to load the Google Fonts CSS
-  const link3 = document.createElement("link");
-  link3.rel = "stylesheet";
+  const link3 = document.createElement('link')
+  link3.rel = 'stylesheet'
   link3.href =
-    "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
+    'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap'
 
-  document.head.appendChild(link1);
-  document.head.appendChild(link2);
-  document.head.appendChild(link3);
+  document.head.appendChild(link1)
+  document.head.appendChild(link2)
+  document.head.appendChild(link3)
 
   /** BODY TEXT */
-  const elBodyText = document.createElement("p");
-  elBodyText.innerText =
-    "Don’t see the Newton Wallet browser? Click continue to re-launch it.";
+  const elBodyText = document.createElement('p')
+  elBodyText.innerText = 'Don’t see the Newton Wallet browser? Click continue to re-launch it.'
   elBodyText.setAttribute(
-    "style",
+    'style',
     `
           color: #7E7E7E;
           text-align: center;
@@ -120,12 +116,12 @@ export const renderPopupPrompt = ({
           font-weight: 400;
           line-height: 24px; /* 171.429% */
           `,
-  );
+  )
   /** CONTINUE BUTTON */
-  const elButtonContinue = document.createElement("button");
-  elButtonContinue.innerText = ctaText ?? "Continue";
+  const elButtonContinue = document.createElement('button')
+  elButtonContinue.innerText = ctaText ?? 'Continue'
   elButtonContinue.setAttribute(
-    "style",
+    'style',
     `
           color: #EDEBFF; 
           padding: 8px; 
@@ -148,33 +144,33 @@ export const renderPopupPrompt = ({
           line-height: 24px; /* 171.429% */
           width: fit-content;
           `,
-  );
+  )
   const unmount = () => {
     try {
-      document.body.removeChild(elContainer);
-      document.head.removeChild(link1);
-      document.head.removeChild(link2);
-      document.head.removeChild(link3);
+      document.body.removeChild(elContainer)
+      document.head.removeChild(link1)
+      document.head.removeChild(link2)
+      document.head.removeChild(link3)
     } catch (e) {
       // do nothing
     }
 
     // RESTORE SCROLLING IN BODY
     document.body.setAttribute(
-      "style",
-      `${document.body.style ? document.body.getAttribute("style")?.replace("overflow: hidden;height:100%;", "") : ""}`,
-    );
-  };
-  elButtonContinue.addEventListener("click", () => {
-    onContinue();
+      'style',
+      `${document.body.style ? document.body.getAttribute('style')?.replace('overflow: hidden;height:100%;', '') : ''}`,
+    )
+  }
+  elButtonContinue.addEventListener('click', () => {
+    onContinue()
     if (unmountOnContinue) {
-      unmount();
+      unmount()
     }
-  });
-  elContentContainer.appendChild(elLogo);
-  elContentContainer.appendChild(elBodyText);
-  elContentContainer.appendChild(elButtonContinue);
-  elContainer.appendChild(elContentContainer);
+  })
+  elContentContainer.appendChild(elLogo)
+  elContentContainer.appendChild(elBodyText)
+  elContentContainer.appendChild(elButtonContinue)
+  elContainer.appendChild(elContentContainer)
   // const elButtonStop = document.createElement('button');
   // elButtonStop.innerText = 'Cancel';
   // elButtonStop.setAttribute('style', 'background-color: white; color: black; padding: 8px; border-radius: 4px;');
@@ -183,8 +179,8 @@ export const renderPopupPrompt = ({
   //   reject(new SDKError(SDKErrorCode.FailedToOpenPopup, 'Failed to open popup window'));
   // });
   // elContainer.appendChild(elButtonStop);
-  document.body.appendChild(elContainer);
-  onDone();
+  document.body.appendChild(elContainer)
+  onDone()
 
-  return { unmount };
-};
+  return { unmount }
+}

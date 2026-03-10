@@ -1,5 +1,5 @@
-import type { Address, Hex, PublicClient, WalletClient } from "viem"
-import { baseSepolia, mainnet, sepolia } from "viem/chains"
+import type { Address, Hex, PublicClient, WalletClient } from 'viem'
+import { baseSepolia, mainnet, sepolia } from 'viem/chains'
 import {
   type PendingTaskBuilder,
   evaluateIntentDirect,
@@ -12,9 +12,9 @@ import {
   submitEvaluationRequest,
   submitIntentAndSubscribe,
   waitForTaskResponded,
-} from "./modules/avs"
-import { policyReadFunctions, policyWriteFunctions } from "./modules/policy"
-import type { PolicyParamsJson } from "./types/policy"
+} from './modules/avs'
+import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
+import type { PolicyParamsJson } from './types/policy'
 import type {
   SimulatePolicyDataParams,
   SimulatePolicyDataResult,
@@ -30,12 +30,12 @@ import type {
   TaskId,
   TaskResponseResult,
   TaskStatus,
-} from "./types/task"
+} from './types/task'
 
-import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from "./const"
-import { popupRequest } from "./service/popup"
-import { NewtonIdpPayloadMethod } from "./types"
-import { getPayloadId } from "./utils/get-payload-id"
+import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const'
+import { popupRequest } from './service/popup'
+import { NewtonIdpPayloadMethod } from './types'
+import { getPayloadId } from './utils/get-payload-id'
 
 interface SdkOverrides {
   gatewayApiUrl?: string
@@ -47,10 +47,7 @@ interface SdkOverrides {
 const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id]
 
 const newtonWalletClientActions =
-  (
-    config: { apiKey: string; policyContractAddress?: Address },
-    overrides?: SdkOverrides,
-  ) =>
+  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
   (walletClient: WalletClient) => {
     const { apiKey, policyContractAddress } = config
 
@@ -64,31 +61,21 @@ const newtonWalletClientActions =
     }
     if (!supportedChains.includes(walletClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonWalletClientActions. Only ${supportedChains.join(", ")} are supported`,
+        `Newton SDK: Invalid network specified for newtonWalletClientActions. Only ${supportedChains.join(', ')} are supported`,
       )
     }
     const taskManagerAddress =
-      overrides?.taskManagerAddress ??
-      NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id]
+      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id]
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
-    const idpUrl =
-      overrides?.newtonIdpUrl ?? "https://persona-kyc-nextjs.vercel.app"
+    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs.vercel.app'
 
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<
-        { result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder
-      > =>
-        submitEvaluationRequest(
-          walletClient,
-          args,
-          taskManagerAddress,
-          apiKey,
-          gatewayApiUrlOverride,
-        ),
+      ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
@@ -99,40 +86,25 @@ const newtonWalletClientActions =
           taskResponse: unknown
           blsSignature: unknown
         }
-      }> =>
-        evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
+      }> => evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
-        submitIntentAndSubscribe(
-          walletClient,
-          args,
-          apiKey,
-          gatewayApiUrlOverride,
-        ),
+        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
       simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
         simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      simulatePolicy: (
-        args: SimulatePolicyParams,
-      ): Promise<SimulatePolicyResult> =>
+      simulatePolicy: (args: SimulatePolicyParams): Promise<SimulatePolicyResult> =>
         simulatePolicy(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      simulatePolicyData: (
-        args: SimulatePolicyDataParams,
-      ): Promise<SimulatePolicyDataResult> =>
+      simulatePolicyData: (args: SimulatePolicyDataParams): Promise<SimulatePolicyDataResult> =>
         simulatePolicyData(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       simulatePolicyDataWithClient: (
         args: SimulatePolicyDataWithClientParams,
       ): Promise<SimulatePolicyDataWithClientResult> =>
-        simulatePolicyDataWithClient(
-          walletClient,
-          args,
-          apiKey,
-          gatewayApiUrlOverride,
-        ),
+        simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       initialize: (args: {
         factory: Address
@@ -178,7 +150,7 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.Connect,
             id: getPayloadId(),
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             params: {
               apiKey,
               chainId: walletClient.chain?.id,
@@ -195,7 +167,7 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.RegisterUserData,
             id: getPayloadId(),
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             params: {
               apiKey,
               userData: args.userData,
@@ -215,7 +187,7 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.LinkApp,
             id: getPayloadId(),
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             params: {
               apiKey,
               appWalletAddress: args.appWalletAddress,
@@ -235,7 +207,7 @@ const newtonWalletClientActions =
           {
             method: NewtonIdpPayloadMethod.Unlink,
             id: getPayloadId(),
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             params: {
               apiKey,
               appWalletAddress: args.appWalletAddress,
@@ -250,11 +222,10 @@ const newtonWalletClientActions =
   }
 
 const newtonPublicClientActions =
-  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) =>
-  (publicClient: PublicClient) => {
+  (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: PublicClient) => {
     if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(", ")} are supported.`,
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported.`,
       )
     }
 
@@ -269,12 +240,10 @@ const newtonPublicClientActions =
     }
 
     const taskManagerAddress =
-      overrides?.taskManagerAddress ??
-      NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id]
+      overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id]
 
     const attestationValidatorAddress =
-      overrides?.attestationValidatorAddress ??
-      ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id]
+      overrides?.attestationValidatorAddress ?? ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id]
 
     return {
       // AVS module functions
@@ -282,19 +251,13 @@ const newtonPublicClientActions =
         taskId: TaskId
         timeoutMs?: number // may be short (< 1s) in fast paths
         abortSignal?: AbortSignal
-      }): Promise<TaskResponseResult> =>
-        waitForTaskResponded(publicClient, args, taskManagerAddress),
+      }): Promise<TaskResponseResult> => waitForTaskResponded(publicClient, args, taskManagerAddress),
 
       getTaskResponseHash: (args: { taskId: TaskId }): Promise<Hex | null> =>
         getTaskResponseHash(publicClient, args, taskManagerAddress),
 
       getTaskStatus: (args: { taskId: TaskId }): Promise<TaskStatus> =>
-        getTaskStatus(
-          publicClient,
-          args,
-          taskManagerAddress,
-          attestationValidatorAddress,
-        ),
+        getTaskStatus(publicClient, args, taskManagerAddress, attestationValidatorAddress),
 
       // Policy read functions
 
