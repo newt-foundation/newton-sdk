@@ -152,7 +152,7 @@ export const renderPopupPrompt = ({
       document.head.removeChild(link2)
       document.head.removeChild(link3)
     } catch (e) {
-      // do nothing
+      console.error('Error unmounting popup prompt', e)
     }
 
     // RESTORE SCROLLING IN BODY
