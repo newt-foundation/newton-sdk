@@ -244,6 +244,8 @@ async function submitEvaluationRequest(
     encrypted_data_refs: args.encryptedDataRefs ?? null,
     user_signature: args.userSignature ?? null,
     app_signature: args.appSignature ?? null,
+    user_pubkey: args.userPublicKey ?? null,
+    app_pubkey: args.appPublicKey ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -312,6 +314,8 @@ async function evaluateIntentDirect(
     encrypted_data_refs: args.encryptedDataRefs ?? null,
     user_signature: args.userSignature ?? null,
     app_signature: args.appSignature ?? null,
+    user_pubkey: args.userPublicKey ?? null,
+    app_pubkey: args.appPublicKey ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -374,6 +378,8 @@ async function submitIntentAndSubscribe(
     encrypted_data_refs: args.encryptedDataRefs ?? null,
     user_signature: args.userSignature ?? null,
     app_signature: args.appSignature ?? null,
+    user_pubkey: args.userPublicKey ?? null,
+    app_pubkey: args.appPublicKey ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)

@@ -25,6 +25,10 @@ export interface SubmitEvaluationRequestParams {
   userSignature?: string
   /** Application Ed25519 signature for privacy authorization (hex-encoded) */
   appSignature?: string
+  /** User Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  userPublicKey?: string
+  /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  appPublicKey?: string
 }
 
 export interface SubmitIntentResult {
