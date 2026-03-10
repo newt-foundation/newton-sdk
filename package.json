@@ -76,7 +76,7 @@
     ]
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.17.4",
+    "@arethetypeswrong/cli": "^0.18.2",
     "@auto-it/conventional-commits": "^11.3.0",
     "@biomejs/biome": "^1.9.4",
     "@rollup/plugin-node-resolve": "^16.0.1",
