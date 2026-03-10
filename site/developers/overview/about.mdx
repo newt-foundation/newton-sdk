@@ -40,7 +40,7 @@ const client = createWalletClient({
 
 // Simulate a policy evaluation against a transaction intent
 const result = await client.simulateTask({
-  intent: { from: sender, to: recipient, value: '0x0', data: calldata, chainId: 11155111 },
+  intent: { from: sender, to: recipient, value: '0x0', data: calldata, chainId: 11155111, functionSignature: '0x' },
   policyTaskData: { policyId, policyAddress, policy: '0x', policyData: [] },
 })
 

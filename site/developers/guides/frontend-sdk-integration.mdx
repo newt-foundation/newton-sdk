@@ -35,8 +35,8 @@ Create `.env.local`:
 NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 
-# Newton API key
-NEXT_PUBLIC_NEWTON_API_KEY=your_newton_api_key
+# Newton API key — server-side only (do NOT prefix with NEXT_PUBLIC_)
+NEWTON_API_KEY=your_newton_api_key
 
 # Newton Policy Contract address (fixed on Sepolia)
 NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS=0x698C687f86Bc2206AC7C06eA68AC513A2949abA6
@@ -65,7 +65,8 @@ import { Hex } from "viem";
 
 export const SEPOLIA_ALCHEMY_URL = process.env.NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL!;
 export const SEPOLIA_ALCHEMY_WS_URL = process.env.NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL!;
-export const NEWTON_API_KEY = process.env.NEXT_PUBLIC_NEWTON_API_KEY!;
+// Access NEWTON_API_KEY server-side only (via API route or server action)
+// Do NOT expose API keys with NEXT_PUBLIC_ prefix
 export const POLICY_WALLET_ADDRESS = process.env.NEXT_PUBLIC_POLICY_WALLET_ADDRESS as Hex;
 export const POLICY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS as Hex;
 // Access SIGNER_PRIVATE_KEY server-side only (via API route or server action)
@@ -84,16 +85,16 @@ import { createWalletClient, webSocket, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { newtonWalletClientActions } from "@magicnewton/newton-protocol-sdk";
-import { SEPOLIA_ALCHEMY_WS_URL, NEWTON_API_KEY } from "@/const/config";
+import { SEPOLIA_ALCHEMY_WS_URL } from "@/const/config";
 
-export const useNewtonClient = (privateKey: Hex) => {
+export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
   const client = useMemo(() => {
     const account = privateKeyToAccount(privateKey);
     const walletClient = createWalletClient({
       account,
       chain: sepolia,
       transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
-    }).extend(newtonWalletClientActions({ apiKey: NEWTON_API_KEY }));
+    }).extend(newtonWalletClientActions({ apiKey }));
 
     return { walletClient, account };
   }, [privateKey]);

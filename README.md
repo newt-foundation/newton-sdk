@@ -27,27 +27,30 @@ The SDK provides several entry points:
 ```typescript
 // Public Client Actions
 import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
-import { createPublicClient, sepolia } from 'viem';
+import { createPublicClient, webSocket } from 'viem';
+import { sepolia } from 'viem/chains';
 
 const newtonPublicClient = createPublicClient({
   chain: sepolia,
-  transport: webSocket(alchemyRpcWSUrls[network.id]),
+  transport: webSocket('wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY'),
 }).extend(
   newtonPublicClientActions({
     policyContractAddress: '0xpolicyContractAddress',
   }),
 );
 
-newtonPublicClient.getTaskStatus();
+newtonPublicClient.getTaskStatus({ taskId: '0x...' });
 
 // Wallet Client Actions
 import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
-import { createWalletClient, sepolia } from 'viem';
+import { createWalletClient, webSocket } from 'viem';
+import { sepolia } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
 
 const newtonWalletClient = createWalletClient({
   chain: sepolia,
   transport: webSocket('wss://alchemyWebsocketUrl'),
-  account: signer,
+  account: privateKeyToAccount('0xYOUR_PRIVATE_KEY'),
 }).extend(newtonWalletClientActions({ apiKey: '<YOUR_API_KEY>' }));
 
 newtonWalletClient.evaluateIntentDirect({...})
@@ -94,6 +97,19 @@ npx tsc --noEmit
 # Lint and auto-fix code
 pnpm lint
 ```
+
+## Privacy Module
+
+The SDK includes a privacy module for client-side HPKE encryption used in privacy-preserving policy evaluation. Key exports:
+
+- `createSecureEnvelope` — HPKE encrypt plaintext into a SecureEnvelope (offline, zero network calls)
+- `generateSigningKeyPair` — generate a random Ed25519 key pair
+- `signPrivacyAuthorization` — compute dual Ed25519 signatures for privacy-enabled task creation
+- `getPrivacyPublicKey` — fetch the gateway's X25519 HPKE public key
+- `uploadEncryptedData` — encrypt and upload data to the gateway in one call
+- `storeEncryptedSecrets` — upload KMS-encrypted secrets for a PolicyClient's PolicyData
+
+See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.
 
 ## Testing
 
@@ -156,7 +172,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-sdk": "file:../path/to/newton-protocol-sdk"
+       "@magicnewton/newton-protocol-sdk": "file:../path/to/newton-protocol-sdk"
      }
    }
    ```
