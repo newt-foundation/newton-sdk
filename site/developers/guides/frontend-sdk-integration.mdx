@@ -125,7 +125,6 @@ export type EvaluationRequestParams = {
   targetAddress: Hex;
   value: bigint;
   data: Hex;
-  wasmArgs: Record<string, unknown>;
 };
 
 export const createEvaluationRequest = ({
@@ -133,7 +132,6 @@ export const createEvaluationRequest = ({
   targetAddress,
   value,
   data,
-  wasmArgs,
 }: EvaluationRequestParams) => {
   const functionSignature = stringToHexBytes(
     "validateAndExecuteDirect(address,uint256,bytes,(bytes32,address,uint32,uint32,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,bytes),(bytes32,address,bytes32,address,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,(bytes32,address,bytes,(bytes,bytes,bytes,address,uint32)[]),(bytes,uint32)),bytes)"
@@ -149,7 +147,6 @@ export const createEvaluationRequest = ({
       chainId: sepolia.id,
       functionSignature: functionSignature,
     },
-    wasmArgs: stringToHexBytes(JSON.stringify(wasmArgs)),
     timeout: 60,
   };
 };
