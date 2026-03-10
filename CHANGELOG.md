@@ -1,3 +1,22 @@
+# v0.3.21 (Tue Mar 10 2026)
+
+#### 🐛 Bug Fix
+
+- Mintlify Docs Edits [#130](https://github.com/newt-foundation/newton-sdk/pull/130) ([@mintlify[bot]](https://github.com/mintlify[bot]) [@denniswon](https://github.com/denniswon))
+- docs: Search Console verification, image alt text, README links [#129](https://github.com/newt-foundation/newton-sdk/pull/129) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- chore: update package.json author and homepage to newton.xyz ([@denniswon](https://github.com/denniswon))
+- docs: fix SDK reference accuracy, migrate gateway URLs, correct license ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 2
+
+- [@mintlify[bot]](https://github.com/mintlify[bot])
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.20 (Mon Mar 09 2026)
 
 #### 🐛 Bug Fix
