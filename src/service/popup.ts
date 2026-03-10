@@ -55,7 +55,7 @@ export function popupRequest<ResultType = unknown>(payload: JsonRpcRequestPayloa
   const popupTop = window.screenTop + window.outerHeight * 0.15
   const popupPosition = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop}`
   const endpoint = endpointOverride || defaultEndpoint
-  const containerId = `newton-idp-popup-action-modal-container`
+  const containerId = 'newton-idp-popup-action-modal-container'
 
   const isPopupOpen = () => popup && popup?.window !== null && !popup.closed
 
@@ -67,8 +67,8 @@ export function popupRequest<ResultType = unknown>(payload: JsonRpcRequestPayloa
     const focusPopup = () => {
       popup?.focus?.()
     }
-    const refocusPromptContainerId = `newton-idp-popup-refocus-modal-container`
-    let unmountRefocusPrompt: () => void | undefined
+    const refocusPromptContainerId = 'newton-idp-popup-refocus-modal-container'
+    let unmountRefocusPrompt: (() => void) | undefined
     const showRefocusPrompt = () => {
       const { unmount } = renderPopupPrompt({
         onContinue: () => {

@@ -32,7 +32,7 @@ import type {
   TaskStatus,
 } from './types/task'
 
-import { NEWTON_PROVER_TASK_MANAGER, ATTESTATION_VALIDATOR } from './const'
+import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
 import { popupRequest } from './service/popup'
 import { NewtonIdpPayloadMethod } from './types'
 import { getPayloadId } from './utils/get-payload-id'
@@ -145,7 +145,7 @@ const newtonWalletClientActions =
       connectIdentityWithNewton: (args: {
         appWalletAddress: Address
         appClientAddress: Address
-      }): Promise<any> => {
+      }): Promise<unknown> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Connect,
@@ -162,7 +162,7 @@ const newtonWalletClientActions =
         )
       },
 
-      registerUserData: (args: { userData: any }): Promise<any> => {
+      registerUserData: (args: { userData: unknown }): Promise<unknown> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.RegisterUserData,
@@ -182,7 +182,7 @@ const newtonWalletClientActions =
       linkApp: (args: {
         appWalletAddress: Address
         appClientAddress: Address
-      }): Promise<any> => {
+      }): Promise<unknown> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.LinkApp,
@@ -202,7 +202,7 @@ const newtonWalletClientActions =
       unlinkApp: (args: {
         appWalletAddress: Address
         appClientAddress: Address
-      }): Promise<any> => {
+      }): Promise<unknown> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.Unlink,
