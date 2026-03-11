@@ -171,7 +171,10 @@ const newtonWalletClientActions =
         )
       },
 
-      registerUserData: (args: { userData: unknown }): Promise<unknown> => {
+      registerUserData: (args: {
+        userData: unknown
+        appIdentityDomain: Hex
+      }): Promise<unknown> => {
         return popupRequest(
           {
             method: NewtonIdpPayloadMethod.RegisterUserData,
@@ -182,6 +185,7 @@ const newtonWalletClientActions =
               userData: args.userData,
               gatewayApiUrlOverride,
               chainId: walletClient.chain?.id,
+              appIdentityDomain: args.appIdentityDomain,
             },
           },
           idpUrl,
