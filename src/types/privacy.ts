@@ -54,6 +54,16 @@ export interface UploadEncryptedDataParams {
   ttl?: number
 }
 
+/** Parameters for uploading a pre-built SecureEnvelope to the gateway. */
+export interface UploadSecureEnvelopeParams {
+  /** EVM address of the end user (intent sender) */
+  senderAddress: Address
+  /** Pre-built envelope result from createSecureEnvelope */
+  envelopeResult: SecureEnvelopeResult
+  /** Optional TTL in seconds (data expires after this duration) */
+  ttl?: number
+}
+
 /** Response from the gateway after uploading encrypted data. */
 export interface UploadEncryptedDataResponse {
   success: boolean

@@ -19,6 +19,7 @@ import type {
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
   UploadEncryptedDataRpcRequest,
+  UploadSecureEnvelopeParams,
 } from '@core/types/privacy'
 import { AvsHttpService } from '@core/utils/https'
 import { Chacha20Poly1305 } from '@hpke/chacha20poly1305'
@@ -218,6 +219,44 @@ export async function uploadEncryptedData(
     chain_id: params.chainId,
   }
 
+  return sendEnvelopeToGateway(chainId, apiKey, rpcRequest, gatewayApiUrlOverride)
+}
+
+/**
+ * Upload a pre-built SecureEnvelope to the gateway.
+ *
+ * Use this when you've already created an envelope via createSecureEnvelope
+ * and want to control the upload separately — e.g., offline-first apps that
+ * encrypt now and upload later, or batching multiple envelopes.
+ */
+export async function uploadSecureEnvelope(
+  chainId: number,
+  apiKey: string,
+  params: UploadSecureEnvelopeParams,
+  gatewayApiUrlOverride?: string,
+): Promise<UploadEncryptedDataResponse> {
+  const { envelope, signature, senderPublicKey } = params.envelopeResult
+
+  const rpcRequest: UploadEncryptedDataRpcRequest = {
+    sender_address: params.senderAddress,
+    policy_client: envelope.policy_client,
+    envelope: JSON.stringify(envelope),
+    signature,
+    sender_pubkey: senderPublicKey,
+    ttl: params.ttl ?? null,
+    chain_id: envelope.chain_id,
+  }
+
+  return sendEnvelopeToGateway(chainId, apiKey, rpcRequest, gatewayApiUrlOverride)
+}
+
+/** Shared upload logic for both uploadEncryptedData and uploadSecureEnvelope. */
+async function sendEnvelopeToGateway(
+  chainId: number,
+  apiKey: string,
+  rpcRequest: UploadEncryptedDataRpcRequest,
+  gatewayApiUrlOverride?: string,
+): Promise<UploadEncryptedDataResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.uploadEncryptedData, rpcRequest, apiKey)
   if (res.error) throw res.error

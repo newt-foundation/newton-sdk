@@ -15,7 +15,7 @@ import {
   waitForTaskResponded,
 } from './modules/avs'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
-import { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData } from './modules/privacy'
+import { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope } from './modules/privacy'
 import type { PolicyParamsJson } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
@@ -23,6 +23,7 @@ import type {
   SecureEnvelopeResult,
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
+  UploadSecureEnvelopeParams,
 } from './types/privacy'
 import type {
   SimulatePolicyDataParams,
@@ -138,6 +139,9 @@ const newtonWalletClientActions =
 
       uploadEncryptedData: (args: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse> =>
         uploadEncryptedData(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      uploadSecureEnvelope: (args: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse> =>
+        uploadSecureEnvelope(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
 
       connectIdentityWithNewton: (): Promise<unknown> => {
         return Promise.resolve({ foo: 'bar ' })
@@ -299,4 +303,4 @@ const newtonPublicClientActions =
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
-export { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData }
+export { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope }
