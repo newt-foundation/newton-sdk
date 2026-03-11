@@ -191,6 +191,7 @@ const newtonWalletClientActions =
       linkApp: (args: {
         appWalletAddress: Address
         appClientAddress: Address
+        appIdentityDomain: Hex
       }): Promise<unknown> => {
         return popupRequest(
           {
@@ -201,6 +202,7 @@ const newtonWalletClientActions =
               apiKey,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
+              appIdentityDomain: args.appIdentityDomain,
               chainId: walletClient.chain?.id,
             },
           },
@@ -211,6 +213,7 @@ const newtonWalletClientActions =
       unlinkApp: (args: {
         appWalletAddress: Address
         appClientAddress: Address
+        appIdentityDomain: Hex
       }): Promise<unknown> => {
         return popupRequest(
           {
@@ -222,6 +225,7 @@ const newtonWalletClientActions =
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
               chainId: walletClient.chain?.id,
+              appIdentityDomain: args.appIdentityDomain,
             },
           },
           idpUrl,
