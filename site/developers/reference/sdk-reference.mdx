@@ -856,6 +856,155 @@ The following methods read individual fields from the policy contract. They all 
 
 ---
 
+## Privacy Methods
+
+Client-side HPKE encryption for privacy-preserving policy evaluation. These methods are available as wallet client actions and as standalone exports.
+
+<Info>
+  The privacy module uses X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, Base mode) and is compatible with the Rust gateway implementation.
+</Info>
+
+### `createSecureEnvelope`
+
+Encrypt plaintext into a SecureEnvelope using HPKE. This is a pure offline function — zero network calls. The ephemeral HPKE key is generated internally and zeroed after use.
+
+**Standalone signature:**
+
+```ts
+createSecureEnvelope(
+  params: CreateSecureEnvelopeParams,
+  signingKey: Uint8Array
+): Promise<SecureEnvelopeResult>
+```
+
+**Wallet client signature:**
+
+```ts
+client.createSecureEnvelope(params: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt |
+| `params.policyClient` | `Address` | Policy client address this data is scoped to |
+| `params.chainId` | `number` | Chain ID for AAD context binding |
+| `params.recipientPublicKey` | `string` | Gateway's X25519 public key (hex, no 0x prefix) |
+| `signingKey` | `Uint8Array` | Ed25519 private key seed (32 bytes). Caller owns the buffer lifecycle. |
+
+**Returns:** `SecureEnvelopeResult` containing the encrypted envelope, Ed25519 signature, and sender public key.
+
+<Warning>
+  The caller is responsible for zeroing the `signingKey` buffer when done. The function copies the key internally and zeroes the copy after signing, but the original buffer remains in the caller's control.
+</Warning>
+
+---
+
+### `getPrivacyPublicKey`
+
+Fetch the gateway's X25519 HPKE public key. Call this once and cache the result — the key only changes on gateway restart or key rotation.
+
+**Standalone signature:**
+
+```ts
+getPrivacyPublicKey(
+  chainId: number,
+  apiKey: string,
+  gatewayApiUrlOverride?: string
+): Promise<PrivacyPublicKeyResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
+```
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `public_key` | `string` | X25519 public key (hex, no 0x prefix) |
+| `key_type` | `string` | Always `"x25519"` |
+| `encryption_suite` | `string` | Encryption suite identifier |
+
+---
+
+### `uploadEncryptedData`
+
+Encrypt data and upload to the gateway in a single call. If `recipientPublicKey` is not provided, it is fetched from the gateway first.
+
+**Standalone signature:**
+
+```ts
+uploadEncryptedData(
+  chainId: number,
+  apiKey: string,
+  params: UploadEncryptedDataParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadEncryptedDataResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadEncryptedData(params: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.senderAddress` | `Address` | EVM address of the end user |
+| `params.policyClient` | `Address` | Policy client address |
+| `params.chainId` | `number` | Chain ID the policy client lives on |
+| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
+| `params.recipientPublicKey` | `string?` | Gateway's X25519 key. If omitted, fetched via RPC. |
+| `params.signingKey` | `Uint8Array` | Ed25519 private key seed (32 bytes) |
+| `params.ttl` | `number?` | Optional TTL in seconds |
+
+---
+
+### `uploadSecureEnvelope`
+
+Upload a pre-built SecureEnvelope to the gateway. Use this when you have already created an envelope via `createSecureEnvelope` and want to control the upload separately — for example, offline-first apps that encrypt now and upload later, or batching multiple envelopes.
+
+**Standalone signature:**
+
+```ts
+uploadSecureEnvelope(
+  chainId: number,
+  apiKey: string,
+  params: UploadSecureEnvelopeParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadEncryptedDataResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.senderAddress` | `Address` | EVM address of the end user |
+| `params.envelopeResult` | `SecureEnvelopeResult` | Pre-built envelope from `createSecureEnvelope` |
+| `params.ttl` | `number?` | Optional TTL in seconds |
+
+**Returns (both upload methods):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Whether the upload succeeded |
+| `data_ref_id` | `string \| null` | UUID of the stored data reference |
+| `error` | `string \| null` | Error message if upload failed |
+
+---
+
 ## Types & Interfaces
 
 ### Intent Types
