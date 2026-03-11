@@ -9,7 +9,7 @@ import {
 } from '@core/types'
 import { createPromiEvent } from '@core/utils/promise-tools'
 
-const defaultEndpoint = 'https://persona-kyc-nextjs-bf5a.vercel.app'
+const defaultEndpoint = 'https://id.newton.xyz'
 
 enum NewtonIdpIncomingWindowMessage {
   NEWTON_VC_POPUP_READY = 'NEWTON_VC_POPUP_READY',

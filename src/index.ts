@@ -69,7 +69,7 @@ const newtonWalletClientActions =
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
-    const idpUrl = overrides?.newtonIdpUrl ?? 'https://persona-kyc-nextjs.vercel.app'
+    const idpUrl = overrides?.newtonIdpUrl
 
     return {
       submitEvaluationRequest: (
