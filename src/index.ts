@@ -14,7 +14,16 @@ import {
   waitForTaskResponded,
 } from './modules/avs'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
+import { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope } from './modules/privacy'
 import type { PolicyParamsJson } from './types/policy'
+import type {
+  CreateSecureEnvelopeParams,
+  PrivacyPublicKeyResponse,
+  SecureEnvelopeResult,
+  UploadEncryptedDataParams,
+  UploadEncryptedDataResponse,
+  UploadSecureEnvelopeParams,
+} from './types/privacy'
 import type {
   SimulatePolicyDataParams,
   SimulatePolicyDataResult,
@@ -218,6 +227,18 @@ const newtonWalletClientActions =
           idpUrl,
         )
       },
+      // Privacy module functions
+      getPrivacyPublicKey: (): Promise<PrivacyPublicKeyResponse> =>
+        getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
+
+      createSecureEnvelope: (args: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult> =>
+        createSecureEnvelope(args, signingKey),
+
+      uploadEncryptedData: (args: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse> =>
+        uploadEncryptedData(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      uploadSecureEnvelope: (args: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse> =>
+        uploadSecureEnvelope(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
     }
   }
 
@@ -433,3 +454,4 @@ const newtonPublicClientActions =
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
+export { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope }

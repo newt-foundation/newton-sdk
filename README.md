@@ -103,11 +103,9 @@ pnpm lint
 The SDK includes a privacy module for client-side HPKE encryption used in privacy-preserving policy evaluation. Key exports:
 
 - `createSecureEnvelope` — HPKE encrypt plaintext into a SecureEnvelope (offline, zero network calls)
-- `generateSigningKeyPair` — generate a random Ed25519 key pair
-- `signPrivacyAuthorization` — compute dual Ed25519 signatures for privacy-enabled task creation
 - `getPrivacyPublicKey` — fetch the gateway's X25519 HPKE public key
 - `uploadEncryptedData` — encrypt and upload data to the gateway in one call
-- `storeEncryptedSecrets` — upload KMS-encrypted secrets for a PolicyClient's PolicyData
+- `uploadSecureEnvelope` — upload a pre-built SecureEnvelope to the gateway
 
 See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.
 

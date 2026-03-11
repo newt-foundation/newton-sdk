@@ -1,3 +1,20 @@
+# v0.4.0 (Wed Mar 11 2026)
+
+#### 🚀 Enhancement
+
+- Merge pull request #115 from newt-foundation/feature/sdk-privacy-module [#115](https://github.com/newt-foundation/newton-sdk/pull/115) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- chore: update gitignore ([@denniswon](https://github.com/denniswon))
+- docs: fix broken README examples, secure API key exposure, add missing intent field ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.21 (Tue Mar 10 2026)
 
 #### 🐛 Bug Fix
