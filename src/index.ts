@@ -51,6 +51,7 @@ interface SdkOverrides {
   taskManagerAddress?: Address
   attestationValidatorAddress?: Address
   newtonIdpUrl?: string
+  identityRegistry?: Address
 }
 
 const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id]
@@ -79,6 +80,8 @@ const newtonWalletClientActions =
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
     const idpUrl = overrides?.newtonIdpUrl
+
+    const identityRegistryOverride = overrides?.identityRegistry ?? undefined
 
     return {
       submitEvaluationRequest: (
@@ -186,6 +189,7 @@ const newtonWalletClientActions =
               gatewayApiUrlOverride,
               chainId: walletClient.chain?.id,
               appIdentityDomain: args.appIdentityDomain,
+              identityRegistryOverride,
             },
           },
           idpUrl,
@@ -208,6 +212,7 @@ const newtonWalletClientActions =
               appClientAddress: args.appClientAddress,
               appIdentityDomain: args.appIdentityDomain,
               chainId: walletClient.chain?.id,
+              identityRegistryOverride,
             },
           },
           idpUrl,
@@ -230,6 +235,7 @@ const newtonWalletClientActions =
               appClientAddress: args.appClientAddress,
               chainId: walletClient.chain?.id,
               appIdentityDomain: args.appIdentityDomain,
+              identityRegistryOverride,
             },
           },
           idpUrl,
