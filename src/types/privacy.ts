@@ -7,7 +7,7 @@ export interface SecureEnvelope {
   /** HPKE ciphertext including Poly1305 auth tag (hex-encoded, no 0x prefix) */
   ciphertext: string
   /** Policy client address (0x-prefixed) */
-  policy_client: string
+  policy_client: Address
   /** Chain ID for AAD context binding */
   chain_id: number
   /** Recipient X25519 public key (hex-encoded, no 0x prefix) */
@@ -48,8 +48,8 @@ export interface UploadEncryptedDataParams {
   plaintext: Uint8Array | string | Record<string, unknown>
   /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
   recipientPublicKey?: string
-  /** Ed25519 private key for signing (32-byte seed, hex-encoded, no 0x prefix) */
-  signingKey: string
+  /** Ed25519 private key seed (32 bytes as Uint8Array). Caller owns the buffer lifecycle. */
+  signingKey: Uint8Array
   /** Optional TTL in seconds (data expires after this duration) */
   ttl?: number
 }

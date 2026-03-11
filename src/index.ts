@@ -133,7 +133,7 @@ const newtonWalletClientActions =
       getPrivacyPublicKey: (): Promise<PrivacyPublicKeyResponse> =>
         getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
 
-      createSecureEnvelope: (args: CreateSecureEnvelopeParams, signingKey: string): Promise<SecureEnvelopeResult> =>
+      createSecureEnvelope: (args: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult> =>
         createSecureEnvelope(args, signingKey),
 
       uploadEncryptedData: (args: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse> =>

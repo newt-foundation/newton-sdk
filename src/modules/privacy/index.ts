@@ -4,7 +4,7 @@
  * Encryption suite: X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, Base mode).
  * Compatible with the Rust gateway's `crates/core/src/crypto/hpke.rs`.
  *
- * Key design constraints (NEWT-627):
+ * Key design constraints:
  * - Zero network calls during encrypt/createSecureEnvelope
  * - Offline capable once the gateway public key is known
  * - Ephemeral keys zeroed after encryption
@@ -24,7 +24,7 @@ import { AvsHttpService } from '@core/utils/https'
 import { Chacha20Poly1305 } from '@hpke/chacha20poly1305'
 import { CipherSuite, DhkemX25519HkdfSha256, HkdfSha256 } from '@hpke/core'
 import { ed25519 } from '@noble/curves/ed25519.js'
-import { keccak256 } from 'viem'
+import { type Hex, hexToBytes, isAddress, isHex, keccak256, toHex } from 'viem'
 
 // ---------------------------------------------------------------------------
 // HPKE ciphersuite (matches Rust: X25519 + HKDF-SHA256 + ChaCha20Poly1305)
@@ -40,40 +40,36 @@ const suite = new CipherSuite({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function toBytes(input: Uint8Array | string | Record<string, unknown>): Uint8Array {
+/** Convert plaintext input to bytes for encryption. */
+function plaintextToBytes(input: Uint8Array | string | Record<string, unknown>): Uint8Array {
   if (input instanceof Uint8Array) return input
   const str = typeof input === 'string' ? input : JSON.stringify(input)
   return new TextEncoder().encode(str)
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
+/** Normalize a hex string to 0x-prefixed Hex. */
+function ensureHexPrefix(hex: string): Hex {
+  const prefixed = hex.startsWith('0x') ? hex : `0x${hex}`
+  if (!isHex(prefixed)) throw new Error(`invalid hex string: ${hex}`)
+  return prefixed as Hex
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith('0x') ? hex.slice(2) : hex
-  if (clean.length % 2 !== 0) throw new Error('hex string must have even length')
-  const bytes = new Uint8Array(clean.length / 2)
-  for (let i = 0; i < clean.length; i += 2) {
-    bytes[i / 2] = Number.parseInt(clean.substring(i, i + 2), 16)
-  }
-  return bytes
+/** Convert bytes to hex without 0x prefix (for envelope fields). */
+function bytesToUnprefixedHex(bytes: Uint8Array): string {
+  return toHex(bytes).slice(2)
 }
 
 /**
  * Compute AAD as keccak256(abi.encodePacked(policy_client_bytes, chain_id_be_bytes)).
  * Must match the Rust implementation in `crates/core/src/crypto/envelope.rs`.
  */
-function computeAad(policyClient: string, chainId: number): Uint8Array {
+function computeAad(policyClient: Hex, chainId: number): Uint8Array {
+  if (!isAddress(policyClient)) throw new Error(`invalid policy client address: ${policyClient}`)
   const clientBytes = hexToBytes(policyClient)
-  // chain_id as big-endian u64 (8 bytes)
+  // chain_id as big-endian u64 (8 bytes) — use BigInt for correctness parity with Rust's u64
   const chainIdBytes = new Uint8Array(8)
   const view = new DataView(chainIdBytes.buffer)
-  // Use two 32-bit writes for full u64 range without BigInt
-  view.setUint32(0, Math.floor(chainId / 0x100000000))
-  view.setUint32(4, chainId >>> 0)
+  view.setBigUint64(0, BigInt(chainId))
 
   const packed = new Uint8Array(clientBytes.length + 8)
   packed.set(clientBytes, 0)
@@ -100,54 +96,67 @@ function zeroize(arr: Uint8Array): void {
  * This is a pure, offline function — zero network calls.
  * The ephemeral HPKE key is generated internally and zeroed after use.
  *
+ * The caller owns the signingKey buffer lifecycle. This function creates an
+ * internal copy for signing and zeroes it immediately after use, but the
+ * caller is responsible for zeroing the original Uint8Array when done.
+ *
  * @param params - Encryption parameters
- * @param signingKey - Ed25519 private key seed (32 bytes, hex-encoded, no 0x prefix)
+ * @param signingKey - Ed25519 private key seed (32 bytes as Uint8Array)
  * @returns Envelope + Ed25519 signature over the serialized envelope
  */
 export async function createSecureEnvelope(
   params: CreateSecureEnvelopeParams,
-  signingKey: string,
+  signingKey: Uint8Array,
 ): Promise<SecureEnvelopeResult> {
   const { policyClient, chainId, recipientPublicKey } = params
-  const plaintext = toBytes(params.plaintext)
+
+  // Validate inputs
+  if (!isAddress(policyClient)) throw new Error(`invalid policy client address: ${policyClient}`)
+  if (signingKey.length !== 32) throw new Error('signingKey must be exactly 32 bytes (Ed25519 seed)')
+
+  const recipientPkHex = ensureHexPrefix(recipientPublicKey)
+  const recipientPkBytes = hexToBytes(recipientPkHex)
+  if (recipientPkBytes.length !== 32) throw new Error('recipientPublicKey must be exactly 32 bytes (X25519 key)')
+
+  const plaintext = plaintextToBytes(params.plaintext)
 
   // Compute AAD (matches Rust: keccak256(abi.encodePacked(policy_client, chain_id)))
   const aad = computeAad(policyClient, chainId)
 
   // Deserialize recipient's X25519 public key
-  const recipientPkBytes = hexToBytes(recipientPublicKey)
-  const recipientKey = await suite.kem.deserializePublicKey(recipientPkBytes)
+  const recipientKey = await suite.kem.deserializePublicKey(recipientPkBytes.buffer as ArrayBuffer)
 
   // HPKE single-shot seal (Base mode, empty info)
-  const sender = await suite.createSenderContext({ recipientPublicKey: recipientKey, info: new Uint8Array(0) })
-  const ciphertext = await sender.seal(plaintext, aad)
+  const emptyInfo = new ArrayBuffer(0)
+  const sender = await suite.createSenderContext({ recipientPublicKey: recipientKey, info: emptyInfo })
+  const ciphertext = await sender.seal(plaintext.buffer as ArrayBuffer, aad.buffer as ArrayBuffer)
 
   // Extract the encapsulated key
   const encBytes = new Uint8Array(sender.enc)
 
   // Build the envelope
   const envelope: SecureEnvelope = {
-    enc: bytesToHex(encBytes),
-    ciphertext: bytesToHex(new Uint8Array(ciphertext)),
+    enc: bytesToUnprefixedHex(encBytes),
+    ciphertext: bytesToUnprefixedHex(new Uint8Array(ciphertext)),
     policy_client: policyClient,
     chain_id: chainId,
     recipient_pubkey: recipientPublicKey,
   }
 
   // Sign the serialized envelope with Ed25519
-  const signingKeyBytes = hexToBytes(signingKey)
+  const signingKeyCopy = new Uint8Array(signingKey)
   const envelopeJson = JSON.stringify(envelope)
   const envelopeBytes = new TextEncoder().encode(envelopeJson)
-  const signature = ed25519.sign(envelopeBytes, signingKeyBytes)
-  const senderPublicKey = ed25519.getPublicKey(signingKeyBytes)
+  const signature = ed25519.sign(envelopeBytes, signingKeyCopy)
+  const senderPublicKey = ed25519.getPublicKey(signingKeyCopy)
 
-  // Zeroize ephemeral key material
-  zeroize(signingKeyBytes)
+  // Zeroize our internal copy of the signing key
+  zeroize(signingKeyCopy)
 
   return {
     envelope,
-    signature: bytesToHex(signature),
-    senderPublicKey: bytesToHex(senderPublicKey),
+    signature: bytesToUnprefixedHex(signature),
+    senderPublicKey: bytesToUnprefixedHex(senderPublicKey),
   }
 }
 
