@@ -57,6 +57,7 @@ import type {
 import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
 import { popupRequest } from './service/popup'
 import { NewtonIdpPayloadMethod } from './types'
+import type { KycUserData } from './types/identity'
 import { getPayloadId } from './utils/get-payload-id'
 
 interface SdkOverrides {
@@ -188,7 +189,7 @@ const newtonWalletClientActions =
       },
 
       registerUserData: (args: {
-        userData: unknown
+        userData: KycUserData
         appIdentityDomain: Hex
       }): Promise<unknown> => {
         return popupRequest(
