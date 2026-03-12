@@ -57,8 +57,8 @@ import type {
 import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
 import { popupRequest } from './service/popup'
 import { NewtonIdpPayloadMethod } from './types'
+import type { KycUserData } from './types/identity'
 import { getPayloadId } from './utils/get-payload-id'
-import { KycUserData } from './types/identity'
 
 interface SdkOverrides {
   gatewayApiUrl?: string
