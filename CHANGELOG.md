@@ -1,3 +1,15 @@
+# v0.5.1 (Thu Mar 12 2026)
+
+#### 🐛 Bug Fix
+
+- feat: implement newton vc methods [#112](https://github.com/newt-foundation/newton-sdk/pull/112) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.5.0 (Wed Mar 11 2026)
 
 #### 🚀 Enhancement
