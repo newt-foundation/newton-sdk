@@ -19,6 +19,7 @@ export interface SubmitEvaluationRequestParams {
   quorumThresholdPercentage?: number
   wasmArgs?: Hex
   timeout: number // in seconds
+  identityDomain?: Hex
   /** Encrypted data reference UUIDs for privacy-preserving evaluation */
   encryptedDataRefs?: string[]
   /** User Ed25519 signature for privacy authorization (hex-encoded) */
@@ -189,7 +190,10 @@ export interface SimulatePolicyResult {
   evaluation_result: SimulatePolicyEvaluationResult | null
   error: string | null
   error_details: {
-    missing_secrets?: Array<{ policy_data_address: Address; has_secrets_schema: boolean }>
+    missing_secrets?: Array<{
+      policy_data_address: Address
+      has_secrets_schema: boolean
+    }>
     suggested_actions?: string[]
   } | null
 }

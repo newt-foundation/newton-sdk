@@ -45,7 +45,11 @@ export interface CreateTaskResult {
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId
-  waitForTaskResponded: ({ timeoutMs }: { timeoutMs?: number }) => Promise<TaskResponseResult>
+  waitForTaskResponded: ({
+    timeoutMs,
+  }: {
+    timeoutMs?: number
+  }) => Promise<TaskResponseResult>
 }
 
 interface TaskIdRef {
@@ -227,7 +231,9 @@ async function submitEvaluationRequest(
 ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions)
 
-  const taskIdRef: TaskIdRef = { taskRequestedAtBlock: await walletWithPublic.getBlockNumber() }
+  const taskIdRef: TaskIdRef = {
+    taskRequestedAtBlock: await walletWithPublic.getBlockNumber(),
+  }
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
 
@@ -272,7 +278,10 @@ async function submitEvaluationRequest(
     },
   }
 
-  return { result: { taskId: res.result.task_id, txHash: res.result.tx_hash }, ...builder }
+  return {
+    result: { taskId: res.result.task_id, txHash: res.result.tx_hash },
+    ...builder,
+  }
 }
 
 /**
@@ -311,6 +320,7 @@ async function evaluateIntentDirect(
     wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
     timeout: args.timeout,
     direct_broadcast: true,
+    identity_domain: args.identityDomain ?? null,
     encrypted_data_refs: args.encryptedDataRefs ?? null,
     user_signature: args.userSignature ?? null,
     app_signature: args.appSignature ?? null,

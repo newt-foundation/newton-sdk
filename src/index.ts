@@ -1,6 +1,5 @@
 import type { Address, Hex, PublicClient, WalletClient } from 'viem'
 import { baseSepolia, mainnet, sepolia } from 'viem/chains'
-import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
 import {
   type PendingTaskBuilder,
   evaluateIntentDirect,
@@ -55,11 +54,17 @@ import type {
   TaskStatus,
 } from './types/task'
 
+import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
+import { popupRequest } from './service/popup'
+import { NewtonIdpPayloadMethod } from './types'
+import { getPayloadId } from './utils/get-payload-id'
+
 interface SdkOverrides {
   gatewayApiUrl?: string
   taskManagerAddress?: Address
   attestationValidatorAddress?: Address
   newtonIdpUrl?: string
+  identityRegistry?: Address
 }
 
 const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id]
@@ -87,6 +92,10 @@ const newtonWalletClientActions =
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
+    const idpUrl = overrides?.newtonIdpUrl
+
+    const identityRegistryOverride = overrides?.identityRegistry ?? undefined
+
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
@@ -95,8 +104,14 @@ const newtonWalletClientActions =
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { evaluationResult: boolean; task: Task; taskResponse: unknown; blsSignature: unknown } }> =>
-        evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
+      ): Promise<{
+        result: {
+          evaluationResult: boolean
+          task: Task
+          taskResponse: unknown
+          blsSignature: unknown
+        }
+      }> => evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
         args: SubmitEvaluationRequestParams,
@@ -126,15 +141,24 @@ const newtonWalletClientActions =
         owner: Address
       }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyWriteFunctions.initialize({ walletClient, policyContractAddress: validatedAddress, ...args })
+        return policyWriteFunctions.initialize({
+          walletClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
       },
 
       renounceOwnership: (): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyWriteFunctions.renounceOwnership({ walletClient, policyContractAddress: validatedAddress })
+        return policyWriteFunctions.renounceOwnership({
+          walletClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
-      transferOwnership: (args: { newOwner: Address }): Promise<`0x${string}`> => {
+      transferOwnership: (args: {
+        newOwner: Address
+      }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
         return policyWriteFunctions.transferOwnership({
           walletClient,
@@ -143,6 +167,93 @@ const newtonWalletClientActions =
         })
       },
 
+      connectIdentityWithNewton: (args: {
+        appWalletAddress: Address
+        appClientAddress: Address
+      }): Promise<unknown> => {
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.Connect,
+            id: getPayloadId(),
+            jsonrpc: '2.0',
+            params: {
+              apiKey,
+              chainId: walletClient.chain?.id,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+            },
+          },
+          idpUrl,
+        )
+      },
+
+      registerUserData: (args: {
+        userData: unknown
+        appIdentityDomain: Hex
+      }): Promise<unknown> => {
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.RegisterUserData,
+            id: getPayloadId(),
+            jsonrpc: '2.0',
+            params: {
+              apiKey,
+              userData: args.userData,
+              gatewayApiUrlOverride,
+              chainId: walletClient.chain?.id,
+              appIdentityDomain: args.appIdentityDomain,
+              identityRegistryOverride,
+            },
+          },
+          idpUrl,
+        )
+      },
+
+      linkApp: (args: {
+        appWalletAddress: Address
+        appClientAddress: Address
+        appIdentityDomain: Hex
+      }): Promise<unknown> => {
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.LinkApp,
+            id: getPayloadId(),
+            jsonrpc: '2.0',
+            params: {
+              apiKey,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+              appIdentityDomain: args.appIdentityDomain,
+              chainId: walletClient.chain?.id,
+              identityRegistryOverride,
+            },
+          },
+          idpUrl,
+        )
+      },
+
+      unlinkApp: (args: {
+        appWalletAddress: Address
+        appClientAddress: Address
+        appIdentityDomain: Hex
+      }): Promise<unknown> => {
+        return popupRequest(
+          {
+            method: NewtonIdpPayloadMethod.Unlink,
+            id: getPayloadId(),
+            jsonrpc: '2.0',
+            params: {
+              apiKey,
+              appWalletAddress: args.appWalletAddress,
+              appClientAddress: args.appClientAddress,
+              chainId: walletClient.chain?.id,
+              appIdentityDomain: args.appIdentityDomain,
+              identityRegistryOverride,
+            },
+          },
+          idpUrl,
+        )
+      },
       // Privacy module functions
       getPrivacyPublicKey: (): Promise<PrivacyPublicKeyResponse> =>
         getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
@@ -163,10 +274,6 @@ const newtonWalletClientActions =
 
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
-
-      connectIdentityWithNewton: (): Promise<unknown> => {
-        return Promise.resolve({ foo: 'bar ' })
-      },
     }
   }
 
@@ -174,7 +281,7 @@ const newtonPublicClientActions =
   (options?: { policyContractAddress?: Address }, overrides?: SdkOverrides) => (publicClient: PublicClient) => {
     if (!supportedChains.includes(publicClient?.chain?.id ?? sepolia.id)) {
       throw new Error(
-        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported`,
+        `Newton SDK: Invalid network specified for newtonPublicActions. Only ${supportedChains.join(', ')} are supported.`,
       )
     }
 
@@ -212,87 +319,145 @@ const newtonPublicClientActions =
 
       clientToPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.clientToPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args })
+        return policyReadFunctions.clientToPolicyId({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
       },
 
       entrypoint: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.entrypoint({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.entrypoint({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       factory: (): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.factory({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.factory({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       getEntrypoint: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getEntrypoint({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.getEntrypoint({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       getMetadataCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getMetadataCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.getMetadataCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       getPolicyCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getPolicyCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.getPolicyCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       getPolicyConfig: (args: {
         policyId: `0x${string}`
-      }): Promise<{ policyParams: string | object; policyParamsHex: `0x${string}`; expireAfter: number }> => {
+      }): Promise<{
+        policyParams: string | object
+        policyParamsHex: `0x${string}`
+        expireAfter: number
+      }> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getPolicyConfig({ publicClient, policyContractAddress: validatedAddress, ...args })
+        return policyReadFunctions.getPolicyConfig({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
       },
 
       getPolicyData: (): Promise<Address[]> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getPolicyData({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.getPolicyData({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       getPolicyId: (args: { client: Address }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getPolicyId({ publicClient, policyContractAddress: validatedAddress, ...args })
+        return policyReadFunctions.getPolicyId({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
       },
 
       getSchemaCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getSchemaCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.getSchemaCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       isPolicyVerified: (): Promise<boolean> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.isPolicyVerified({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.isPolicyVerified({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       metadataCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.metadataCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.metadataCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       owner: (): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.owner({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.owner({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       policyCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.policyCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.policyCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
       policyData: (args: { index: number }): Promise<Address> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.policyData({ publicClient, policyContractAddress: validatedAddress, ...args })
+        return policyReadFunctions.policyData({
+          publicClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
       },
 
       schemaCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.schemaCid({ publicClient, policyContractAddress: validatedAddress })
+        return policyReadFunctions.schemaCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
       },
 
-      supportsInterface: (args: { interfaceId: `0x${string}` }): Promise<boolean> => {
+      supportsInterface: (args: {
+        interfaceId: `0x${string}`
+      }): Promise<boolean> => {
         const validatedAddress = validatePolicyContractAddress()
         return policyReadFunctions.supportsInterface({
           publicClient,
