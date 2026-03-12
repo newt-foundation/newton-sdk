@@ -13,9 +13,15 @@
 import { GATEWAY_METHODS } from '@core/const'
 import type {
   CreateSecureEnvelopeParams,
+  Ed25519KeyPair,
+  PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
   SecureEnvelope,
   SecureEnvelopeResult,
+  SignPrivacyAuthorizationParams,
+  StoreEncryptedSecretsParams,
+  StoreEncryptedSecretsResponse,
+  StoreEncryptedSecretsRpcRequest,
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
   UploadEncryptedDataRpcRequest,
@@ -261,4 +267,112 @@ async function sendEnvelopeToGateway(
   const res = await avsHttpService.Post(GATEWAY_METHODS.uploadEncryptedData, rpcRequest, apiKey)
   if (res.error) throw res.error
   return res.result as UploadEncryptedDataResponse
+}
+
+/**
+ * Generate a random Ed25519 key pair for signing envelopes and privacy authorization.
+ *
+ * This is a pure offline function. The private key is generated from 32 bytes of
+ * cryptographically secure randomness via `crypto.getRandomValues`.
+ */
+export function generateSigningKeyPair(): Ed25519KeyPair {
+  const privateKeyBytes = new Uint8Array(32)
+  crypto.getRandomValues(privateKeyBytes)
+  const publicKeyBytes = ed25519.getPublicKey(privateKeyBytes)
+  const keyPair: Ed25519KeyPair = {
+    privateKey: bytesToUnprefixedHex(privateKeyBytes),
+    publicKey: bytesToUnprefixedHex(publicKeyBytes),
+  }
+  zeroize(privateKeyBytes)
+  return keyPair
+}
+
+/**
+ * Upload KMS-encrypted secrets for a policy client's PolicyData.
+ *
+ * The gateway decrypts via AWS KMS, validates against the PolicyData schema,
+ * and stores the secrets for use during policy evaluation.
+ */
+export async function storeEncryptedSecrets(
+  chainId: number,
+  apiKey: string,
+  params: StoreEncryptedSecretsParams,
+  gatewayApiUrlOverride?: string,
+): Promise<StoreEncryptedSecretsResponse> {
+  const rpcRequest: StoreEncryptedSecretsRpcRequest = {
+    policy_client: params.policyClient,
+    policy_data_address: params.policyDataAddress,
+    secrets: params.secrets,
+    chain_id: params.chainId,
+  }
+
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.storeEncryptedSecrets, rpcRequest, apiKey)
+  if (res.error) throw res.error
+  return res.result as StoreEncryptedSecretsResponse
+}
+
+/**
+ * Compute dual Ed25519 signatures for privacy-enabled task creation.
+ *
+ * The gateway validates these signatures when `encrypted_data_refs` are present
+ * in a `newt_createTask` request. This prevents unauthorized use of encrypted
+ * data references across policy contexts.
+ *
+ * Signature scheme (must match `crates/gateway/src/processor/privacy_auth.rs`):
+ * - User signs: keccak256(abi.encodePacked(policy_client, intent_hash, ref_id_1, ref_id_2, ...))
+ * - App signs: keccak256(abi.encodePacked(policy_client, intent_hash, user_signature))
+ *
+ * This is a pure offline function — zero network calls.
+ */
+export function signPrivacyAuthorization(params: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult {
+  const { policyClient, intentHash, encryptedDataRefs, userSigningKey, appSigningKey } = params
+
+  const policyClientBytes = hexToBytes(ensureHexPrefix(policyClient))
+  const intentHashBytes = hexToBytes(ensureHexPrefix(intentHash))
+
+  // Build user message: encodePacked(policy_client, intent_hash, ref_ids...)
+  const userParts: Uint8Array[] = [policyClientBytes, intentHashBytes]
+  for (const refId of encryptedDataRefs) {
+    userParts.push(new TextEncoder().encode(refId))
+  }
+  const userMessage = concatBytes(userParts)
+  const userDigest = hexToBytes(keccak256(userMessage))
+
+  // User signs the digest
+  const userKeyBytes = hexToBytes(ensureHexPrefix(userSigningKey))
+  const userSignature = ed25519.sign(userDigest, userKeyBytes)
+  const userPublicKey = ed25519.getPublicKey(userKeyBytes)
+  zeroize(userKeyBytes)
+
+  // Build app message: encodePacked(policy_client, intent_hash, user_signature)
+  const appMessage = concatBytes([policyClientBytes, intentHashBytes, userSignature])
+  const appDigest = hexToBytes(keccak256(appMessage))
+
+  // App signs the digest
+  const appKeyBytes = hexToBytes(ensureHexPrefix(appSigningKey))
+  const appSignature = ed25519.sign(appDigest, appKeyBytes)
+  const appPublicKey = ed25519.getPublicKey(appKeyBytes)
+  zeroize(appKeyBytes)
+
+  return {
+    userSignature: bytesToUnprefixedHex(userSignature),
+    appSignature: bytesToUnprefixedHex(appSignature),
+    userPublicKey: bytesToUnprefixedHex(userPublicKey),
+    appPublicKey: bytesToUnprefixedHex(appPublicKey),
+  }
+}
+
+/**
+ * Concatenate multiple Uint8Arrays into one.
+ */
+function concatBytes(arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
+  const result = new Uint8Array(totalLength)
+  let offset = 0
+  for (const arr of arrays) {
+    result.set(arr, offset)
+    offset += arr.length
+  }
+  return result
 }

@@ -1,7 +1,7 @@
 import type { Address } from 'viem'
 import { hexToBytes } from 'viem'
 import { describe, expect, it } from 'vitest'
-import { createSecureEnvelope } from './index'
+import { createSecureEnvelope, generateSigningKeyPair, signPrivacyAuthorization } from './index'
 
 // Deterministic test keys (not real secrets — test-only Ed25519 seed)
 const TEST_ED25519_SEED = hexToBytes(`0x${'aa'.repeat(32)}`) // 32 bytes of 0xaa
@@ -161,6 +161,84 @@ describe('privacy module', () => {
           TEST_ED25519_SEED,
         ),
       ).rejects.toThrow('invalid policy client address')
+    })
+  })
+
+  describe('generateSigningKeyPair', () => {
+    it('returns a valid Ed25519 key pair', () => {
+      const keyPair = generateSigningKeyPair()
+
+      expect(keyPair.privateKey).toMatch(/^[0-9a-f]{64}$/) // 32 bytes hex
+      expect(keyPair.publicKey).toMatch(/^[0-9a-f]{64}$/) // 32 bytes hex
+    })
+
+    it('generates different key pairs each call', () => {
+      const kp1 = generateSigningKeyPair()
+      const kp2 = generateSigningKeyPair()
+
+      expect(kp1.privateKey).not.toBe(kp2.privateKey)
+      expect(kp1.publicKey).not.toBe(kp2.publicKey)
+    })
+  })
+
+  describe('signPrivacyAuthorization', () => {
+    it('produces valid dual signatures with correct lengths', () => {
+      const userKeyPair = generateSigningKeyPair()
+      const appKeyPair = generateSigningKeyPair()
+
+      const result = signPrivacyAuthorization({
+        policyClient: TEST_POLICY_CLIENT,
+        intentHash: 'ab'.repeat(32), // 32-byte hash
+        encryptedDataRefs: ['ref-uuid-1', 'ref-uuid-2'],
+        userSigningKey: userKeyPair.privateKey,
+        appSigningKey: appKeyPair.privateKey,
+      })
+
+      // Ed25519 signatures are 64 bytes = 128 hex chars
+      expect(result.userSignature).toMatch(/^[0-9a-f]{128}$/)
+      expect(result.appSignature).toMatch(/^[0-9a-f]{128}$/)
+
+      // Public keys are 32 bytes = 64 hex chars
+      expect(result.userPublicKey).toBe(userKeyPair.publicKey)
+      expect(result.appPublicKey).toBe(appKeyPair.publicKey)
+    })
+
+    it('produces different signatures for different intent hashes', () => {
+      const userKeyPair = generateSigningKeyPair()
+      const appKeyPair = generateSigningKeyPair()
+
+      const baseParams = {
+        policyClient: TEST_POLICY_CLIENT,
+        encryptedDataRefs: ['ref-1'],
+        userSigningKey: userKeyPair.privateKey,
+        appSigningKey: appKeyPair.privateKey,
+      }
+
+      const result1 = signPrivacyAuthorization({ ...baseParams, intentHash: 'aa'.repeat(32) })
+      const result2 = signPrivacyAuthorization({ ...baseParams, intentHash: 'bb'.repeat(32) })
+
+      expect(result1.userSignature).not.toBe(result2.userSignature)
+      expect(result1.appSignature).not.toBe(result2.appSignature)
+    })
+
+    it('produces different signatures for different encrypted data refs', () => {
+      const userKeyPair = generateSigningKeyPair()
+      const appKeyPair = generateSigningKeyPair()
+
+      const baseParams = {
+        policyClient: TEST_POLICY_CLIENT,
+        intentHash: 'cc'.repeat(32),
+        userSigningKey: userKeyPair.privateKey,
+        appSigningKey: appKeyPair.privateKey,
+      }
+
+      const result1 = signPrivacyAuthorization({ ...baseParams, encryptedDataRefs: ['ref-a'] })
+      const result2 = signPrivacyAuthorization({ ...baseParams, encryptedDataRefs: ['ref-b'] })
+
+      // User signature differs (refs are part of user message)
+      expect(result1.userSignature).not.toBe(result2.userSignature)
+      // App signature also differs (it signs over user_signature which changed)
+      expect(result1.appSignature).not.toBe(result2.appSignature)
     })
   })
 })

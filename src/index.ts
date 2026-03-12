@@ -14,12 +14,25 @@ import {
   waitForTaskResponded,
 } from './modules/avs'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
-import { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope } from './modules/privacy'
+import {
+  createSecureEnvelope,
+  generateSigningKeyPair,
+  getPrivacyPublicKey,
+  signPrivacyAuthorization,
+  storeEncryptedSecrets,
+  uploadEncryptedData,
+  uploadSecureEnvelope,
+} from './modules/privacy'
 import type { PolicyParamsJson } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
+  Ed25519KeyPair,
+  PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
   SecureEnvelopeResult,
+  SignPrivacyAuthorizationParams,
+  StoreEncryptedSecretsParams,
+  StoreEncryptedSecretsResponse,
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
   UploadSecureEnvelopeParams,
@@ -253,6 +266,14 @@ const newtonWalletClientActions =
 
       uploadSecureEnvelope: (args: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse> =>
         uploadSecureEnvelope(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      generateSigningKeyPair: (): Ed25519KeyPair => generateSigningKeyPair(),
+
+      storeEncryptedSecrets: (args: StoreEncryptedSecretsParams): Promise<StoreEncryptedSecretsResponse> =>
+        storeEncryptedSecrets(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
+        signPrivacyAuthorization(args),
     }
   }
 
@@ -468,4 +489,12 @@ const newtonPublicClientActions =
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
-export { createSecureEnvelope, getPrivacyPublicKey, uploadEncryptedData, uploadSecureEnvelope }
+export {
+  createSecureEnvelope,
+  generateSigningKeyPair,
+  getPrivacyPublicKey,
+  signPrivacyAuthorization,
+  storeEncryptedSecrets,
+  uploadEncryptedData,
+  uploadSecureEnvelope,
+}
