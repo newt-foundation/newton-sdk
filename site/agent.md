@@ -1,112 +1,36 @@
-# Newton integration
+# Newton Policy Creation Guide
 
-This guide is an updated, end-to-end "soup to nuts" walkthrough for:
+This guide walks you through writing a Newton Policy (WASM oracle + Rego rules), simulating it locally, deploying it to the Newton network, deploying and configuring a Newton Policy Wallet smart contract, and building a Next.js frontend that submits evaluation requests via the Newton SDK.
 
-- Writing a Newton Policy (WASM + Rego)
-- Uploading policy files to IPFS via `newton-cli`
-- Deploying a generic Newton Policy Wallet on Sepolia
-- Building a Next.js application with the Newton SDK to interact with the policy
-
----
-
-## Quick Start (Automated Deployment)
-
-If you want to deploy everything with a single command, use the automated deployment scripts.
-
-### Step 1: Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your values:
-
-| Variable | Description |
-|----------|-------------|
-| `CHAIN_ID` | Target chain ID (11155111 for Sepolia) |
-| `PINATA_JWT` | Your Pinata API JWT token |
-| `PINATA_GATEWAY` | Your Pinata gateway URL |
-| `PRIVATE_KEY` | Wallet private key (with 0x prefix) |
-| `RPC_URL` | Sepolia RPC endpoint |
-| `NEXT_PUBLIC_NEWTON_API_KEY` | Newton Protocol API key |
-| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL` | Alchemy HTTP RPC URL |
-| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` | Alchemy WebSocket RPC URL |
-
-### Step 2: Deploy Everything
-
-```bash
-./deploy.sh
-```
-
-This single command:
-1. Builds the WASM policy component
-2. Uploads policy files to IPFS
-3. Deploys policy to Newton network
-4. Deploys Newton Policy Wallet to Sepolia
-5. Sets the policy on the wallet
-6. Configures the Next.js app with deployed addresses
-
-### Step 3: Run the App
-
-```bash
-cd newton-sdk-app
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**What this guide covers:**
+- Writing a WASM data oracle component in JavaScript
+- Writing and understanding Rego policy rules
+- Simulating both the WASM oracle and the full policy locally before deploying
+- Uploading policy files to IPFS and deploying via `newton-cli`
+- Deploying a `NewtonPolicyWallet` smart contract on Sepolia
+- Setting the policy on the deployed wallet
+- Building a Next.js frontend using the Newton SDK
 
 ---
 
-## Manual Deployment (Step-by-Step)
-
-The sections below provide detailed manual deployment instructions. Use these if you need fine-grained control over each step, or if you're learning how Newton policies work.
-
----
-
-## Environment Variables
-
-Before starting, gather the following environment variables. You'll use them throughout this guide.
-
-### Policy Deployment Variables
-
-| Variable | Description | Developer Must Provide |
-|----------|-------------|------------------------|
-| `CHAIN_ID` | Target chain ID (11155111 for Sepolia) | Yes |
-| `PINATA_JWT` | Pinata API JWT with write access | Yes |
-| `PINATA_GATEWAY` | Your Pinata gateway URL | Yes |
-| `PRIVATE_KEY` | Deployer wallet private key | Yes |
-| `RPC_URL` | Sepolia RPC endpoint URL | Yes |
-
-### SDK Integration Variables
-
-| Variable | Description | Developer Must Provide |
-|----------|-------------|------------------------|
-| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL` | Alchemy HTTP RPC URL | Yes |
-| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` | Alchemy WebSocket RPC URL | Yes |
-| `DEVELOPER_PRIVATE_KEY` | Same private key used for wallet deployment | No (reuse from Step 4) |
-| `NEXT_PUBLIC_NEWTON_API_KEY` | Newton Protocol API key | Yes |
-| `NEXT_PUBLIC_POLICY_WALLET_ADDRESS` | Deployed wallet address | No (from Step 4 output) |
-
----
-
-## 0. Prerequisites
+## Prerequisites
 
 ### Tooling
 
 You'll need:
 
 - **Rust + Cargo** (for `newton-cli`)
-- **Node.js + npm** (for `@bytecodealliance/jco` and Next.js)
+- **Node.js + npm** (for `@bytecodealliance/jco` and building the WASM component)
 - **Foundry** (for deploying the Solidity contracts)
 
-On macOS, a straightforward setup is:
+On macOS:
 
 ```bash
 # Rust (includes cargo)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # restart shell
 
-# Node + npm (this repo expects Node >= 18)
+# Node + npm (Node >= 18 required)
 brew install node
 # restart shell
 
@@ -118,35 +42,54 @@ foundryup
 ### Install `newton-cli`
 
 ```bash
-cargo install newton-cli@0.2.0
+cargo install newton-cli@0.1.35
 newton-cli --help
 ```
 
-### Install `@bytecodealliance/jco`
+### Install `@bytecodealliance/jco` (pinned versions)
 
-The `jco` CLI provides the `componentize` subcommand for building WASM components from JavaScript.
-
-You have two common options:
-
-#### Option A (recommended for a one-off guide): install globally
+The `jco` CLI provides the `componentize` subcommand for building WASM components from JavaScript. **Always install locally with pinned versions** — do not install globally without pinning.
 
 ```bash
-npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
-jco componentize --help
-```
-
-#### Option B: keep it local + run via `npx`
-
-```bash
-mkdir policy-workspace && cd policy-workspace
+# In your policy directory
 npm init -y
-npm install --save-dev @bytecodealliance/jco @bytecodealliance/componentize-js
-npx jco componentize --help
+npm install --save-dev @bytecodealliance/jco@1.0.0 @bytecodealliance/componentize-js@0.4.1
 ```
+
+> **Important:** Use `componentize-js@0.4.1` and `jco@1.0.0` specifically. Newer versions of `componentize-js` (0.9+) inject a `wasi:http/types@0.2.3` dependency that `newton-cli` does not support, causing `failed to instantiate wasm component` errors. Pin these versions locally in your policy directory rather than installing globally.
+
+### Get a Newton API key
+
+Go to [dashboard.newton.xyz](https://dashboard.newton.xyz/), sign in, and click **API Keys** in the left navigation — your key is already generated and ready to use.
 
 ---
 
-## 1. Write and build the policy WASM component
+## Environment Variables
+
+Gather the following environment variables before starting. You'll use them throughout this guide.
+
+### Policy Deployment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CHAIN_ID` | Target chain ID (`11155111` for Sepolia) |
+| `PINATA_JWT` | Pinata API JWT with write access |
+| `PINATA_GATEWAY` | Your Pinata gateway URL |
+| `PRIVATE_KEY` | Deployer wallet private key (with `0x` prefix) |
+| `RPC_URL` | Sepolia RPC endpoint URL |
+
+### SDK Integration Variables
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL` | Alchemy HTTP RPC URL |
+| `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` | Alchemy WebSocket RPC URL |
+| `NEXT_PUBLIC_NEWTON_API_KEY` | Newton Protocol API key |
+| `NEXT_PUBLIC_POLICY_WALLET_ADDRESS` | Deployed wallet address (from Step 4 output) |
+
+---
+
+## Step 1 – Write and build the WASM policy component
 
 Create a working directory:
 
@@ -157,7 +100,7 @@ mkdir -p policy-files
 
 ### 1.1 Create `newton-provider.wit`
 
-Create `newton-provider.wit`:
+The WIT (WebAssembly Interface Types) file defines the interface your WASM component implements. Create `newton-provider.wit`:
 
 ```
 package newton:provider@0.1.0;
@@ -187,14 +130,16 @@ world newton-provider {
 
 ### 1.2 Create `policy.js`
 
-Create `policy.js` (example skeleton):
+The WASM oracle is a JavaScript file that exports a `run` function. Its sole responsibility is **data retrieval** — fetch external data and return it as structured JSON. Do not encode policy decisions here; all allow/deny logic belongs in Rego. The return value becomes available in Rego as `data.data.*`.
+
+Create `policy.js` (skeleton — replace the body with your actual data fetching logic):
 
 ```js
-export function run(/* wasm_args */) {
-  /*const wasmArgs = JSON.parse(wasm_args);
+export function run(wasm_args) {
+  const wasmArgs = JSON.parse(wasm_args);
 
   const response = httpFetch({
-    url: `https://fetch-request-url?param=${wasmArgs.param}`,
+    url: `https://api.example.com/price?token=${wasmArgs.token_address}`,
     method: "GET",
     headers: [],
     body: null
@@ -202,67 +147,286 @@ export function run(/* wasm_args */) {
 
   const body = JSON.parse(
     new TextDecoder().decode(new Uint8Array(response.body))
-  );*/
+  );
 
+  // Return raw data only — no decisions, no boolean flags
   return JSON.stringify({
-    success: true
+    price_usd: body.price_usd,
+    last_updated: body.last_updated
   });
 }
 ```
 
+The `httpFetch` built-in is provided by the Newton WASM runtime (imported from the WIT interface). Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
+
 ### 1.3 Build `policy.wasm` using `jco componentize`
 
-Build the component:
-
 ```bash
-# if installed globally:
-jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
-
-# if using Option B (local dev dependency):
-# npx jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
+npx jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
 ```
 
 This produces `policy.wasm` in the current directory.
 
-### 1.4 (Optional) Simulate the WASM with `newton-cli`
-
-**Note:** The `CHAIN_ID` environment variable must be set (e.g. `export CHAIN_ID=11155111` for Sepolia).
-
-```bash
-export CHAIN_ID=11155111
-newton-cli policy-data simulate --wasm-file policy.wasm --input-json ''
-```
-
-If your WASM expects inputs:
-
-```bash
-newton-cli policy-data simulate --wasm-file policy.wasm --input-json '{"param": "foo"}'
-```
-
 ---
 
-## 2. Write the policy Rego + metadata files
+## Step 2 – Write the Rego policy
 
-### 2.1 Create `policy.rego`
+The Rego policy is where all business logic lives. The WASM oracle only supplies raw data; Rego decides whether to allow or deny a transaction based on that data, policy parameters, and the transaction intent.
 
-Create `policy.rego`:
+### 2.1 Understanding available attributes
 
+In your Rego policy, you have access to three categories of data:
+
+#### Policy parameters (`data.params.*`)
+
+Parameters that the policy client (your wallet) sets when calling `setPolicy()`. These are encoded as JSON in the `policyParams` field of `PolicyConfig`. Use them to configure policy behavior per wallet (e.g., spending limits, whitelisted addresses).
+
+```rego
+# Access policy parameters set by the wallet owner
+max_value := data.params.max_value_wei
+allowed_recipients := data.params.allowed_recipients
 ```
-package your_policy
-default allow := false
 
-is_success = data.data.success # Result of running the WASM component
+#### WASM data output (`data.data.*`)
 
+The JSON object returned by your WASM oracle's `run` function. Newton runs the WASM component before evaluating Rego, and the returned fields are available under `data.data`.
+
+```rego
+# Access data fetched by your WASM oracle
+token_price := data.data.price_usd
+last_updated := data.data.last_updated
+```
+
+#### Intent attributes (`input.*`)
+
+The transaction intent submitted by the user. These fields describe the transaction that the wallet wants to execute:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `input.from` | address | The signer/sender address |
+| `input.to` | address | The target contract/address |
+| `input.value` | uint256 | ETH value in wei |
+| `input.decoded_function_arguments[0]` | any | First decoded argument of the target function call |
+| `input.chain_id` | uint256 | Chain ID (e.g., 11155111 for Sepolia) |
+| `input.function.name` | string | Name of the function being called on the target |
+
+### 2.2 Rego syntax reference
+
+Newton uses a subset of the Open Policy Agent (OPA) Rego language. This section covers the key constructs you'll use.
+
+#### Module structure
+
+Every policy file must start with a `package` declaration. The package name determines the entrypoint path.
+
+```rego
+package your_policy          # defines the namespace
+
+import future.keywords       # enables modern keyword syntax (optional)
+```
+
+The entrypoint rule is typically `allow`. When you deploy, you specify it as `your_policy.allow`.
+
+#### Rule types
+
+**Value rules** — assign a computed value:
+
+```rego
+is_admin := input.from == "0xAdminAddress"
+token_limit := data.params.max_tokens * 1000000
+```
+
+**Default rules** — provide a fallback when no other rule matches:
+
+```rego
+default allow := false      # deny by default (recommended)
+default is_valid := false
+```
+
+**Conditional rules** — evaluate to true when all conditions in the body are met:
+
+```rego
 allow if {
-    is_success
+    is_admin
+    input.chain_id == 11155111
 }
 ```
 
-If you're new to Rego, see the Open Policy Agent language docs: `https://www.openpolicyagent.org/docs/latest/policy-language/`
+Multiple rule bodies for the same name are combined with OR:
 
-### 2.2 Create `params_schema.json`
+```rego
+allow if { is_admin }       # allow if admin
+allow if { is_whitelisted } # OR if whitelisted
+```
 
-This schema controls what policy parameters clients are allowed to set.
+**Function rules** — reusable parameterized rules:
+
+```rego
+within_limit(amount, limit) if {
+    amount <= limit
+}
+```
+
+**Set comprehensions** — build a set from a collection:
+
+```rego
+allowed_set := {addr | addr := data.params.whitelist[_]}
+```
+
+**Object comprehensions** — build a key-value map:
+
+```rego
+addr_map := {addr: true | addr := data.params.whitelist[_]}
+```
+
+#### Key expressions
+
+```rego
+# Iteration
+some i; item := array[i]
+
+# Universal quantification
+every addr in data.params.whitelist {
+    addr != input.to
+}
+
+# Membership test
+input.from in data.params.whitelist
+
+# Negation
+not is_blocked
+
+# Walrus assignment
+address := input.from
+```
+
+#### Supported built-in functions
+
+| Function | Description |
+|----------|-------------|
+| `count(collection)` | Number of elements in array, set, or object |
+| `sum(array)` | Sum of numeric array elements |
+| `min(array)` | Minimum value in array |
+| `array.slice(arr, start, stop)` | Slice of array from start to stop |
+| `union(set_of_sets)` | Union of a set of sets |
+| `object.keys(obj)` | Keys of an object as a set |
+| `contains(str, substr)` | True if string contains substring |
+| `ceil(number)` | Ceiling of a number |
+| `time.parse_rfc3339_ns(str)` | Parse RFC3339 timestamp to nanoseconds |
+| `regex.match(pattern, str)` | True if string matches regex pattern |
+| `semver.is_valid(str)` | True if string is a valid semver |
+
+#### Unsupported features
+
+The following OPA features are **not supported** by Newton and must not be used:
+
+- Cryptography functions (`crypto.*`)
+- JWT functions (`io.jwt.*`)
+- HTTP requests (`http.send`) — use the WASM oracle for external data instead
+- Glob matching (`glob.*`)
+- GraphQL (`graphql.*`)
+- Any networking built-ins
+
+### 2.3 Full example: token buy policy
+
+This example shows all three attribute categories in action. It enforces:
+- Admin bypass (owner can always transact)
+- Recipient whitelist check
+- Token price ceiling (from WASM oracle)
+- Per-transaction value limit (from policy params)
+
+```rego
+package mock_erc20_policy
+
+import future.keywords
+
+default allow := false
+
+# Admin always allowed
+is_admin if {
+    input.from == data.params.admin_address
+}
+
+# Check recipient is in the whitelist
+is_whitelisted_recipient if {
+    some addr in data.params.allowed_recipients
+    addr == input.to
+}
+
+# Check token price from WASM oracle is below max
+price_acceptable if {
+    data.data.price_usd <= data.params.max_price_usd
+}
+
+# Check transaction value is within limit
+value_within_limit if {
+    input.value <= data.params.max_value_wei
+}
+
+# Admin bypass
+allow if {
+    is_admin
+}
+
+# Standard allow path: whitelist + price + value limit
+allow if {
+    is_whitelisted_recipient
+    price_acceptable
+    value_within_limit
+    input.chain_id == 11155111
+}
+```
+
+### 2.4 Create `policy.rego` for this guide
+
+The WASM oracle returns raw data (e.g., a token price). Rego contains all the decision logic — the oracle should never return a boolean flag that the policy blindly trusts.
+
+```rego
+package your_policy
+
+import future.keywords
+
+default allow := false
+
+# All conditions must hold for a transaction to be allowed
+
+price_acceptable if {
+    data.data.price_usd <= data.params.max_price_usd
+}
+
+value_within_limit if {
+    input.value <= data.params.max_value_wei
+}
+
+recipient_allowed if {
+    some addr in data.params.allowed_recipients
+    addr == input.to
+}
+
+allow if {
+    price_acceptable
+    value_within_limit
+    recipient_allowed
+    input.chain_id == 11155111
+}
+```
+
+Save this as `policy.rego` in `policy-workspace/`.
+
+The matching `policy_params.json` for simulation:
+
+```json
+{
+  "max_price_usd": 100,
+  "max_value_wei": "1000000000000000000",
+  "allowed_recipients": ["0xAddress1", "0xAddress2"]
+}
+```
+
+### 2.5 Create metadata files
+
+#### `params_schema.json`
+
+Defines what policy parameters clients are allowed to set. Use an empty object for no parameters:
 
 ```json
 {
@@ -272,7 +436,7 @@ This schema controls what policy parameters clients are allowed to set.
 }
 ```
 
-### 2.3 Create `policy_data_metadata.json`
+#### `policy_data_metadata.json`
 
 ```json
 {
@@ -284,7 +448,7 @@ This schema controls what policy parameters clients are allowed to set.
 }
 ```
 
-### 2.4 Create `policy_metadata.json`
+#### `policy_metadata.json`
 
 ```json
 {
@@ -296,17 +460,15 @@ This schema controls what policy parameters clients are allowed to set.
 }
 ```
 
-### 2.5 Put files into `policy-files/`
+### 2.6 Organize files into `policy-files/`
 
-The `newton-cli policy-files generate-cids --directory policy-files` step expects your files under `policy-files/`.
-
-Move/copy:
+The `newton-cli policy-files generate-cids` command expects all files under `policy-files/`:
 
 ```bash
 cp policy.wasm policy.rego params_schema.json policy_data_metadata.json policy_metadata.json policy-files/
 ```
 
-Checkpoint: `policy-files/` should contain:
+Checkpoint — `policy-files/` should contain:
 
 - `policy.wasm`
 - `policy.rego`
@@ -316,17 +478,112 @@ Checkpoint: `policy-files/` should contain:
 
 ---
 
-## 3. Upload policy files to IPFS + deploy policy (via `newton-cli`)
+## Step 3 – Simulate the policy locally
 
-### 3.1 Prepare IPFS pinning credentials
+Before deploying, simulate both the WASM oracle and the full policy (WASM + Rego) to confirm they behave as expected.
 
-You'll need a Pinata JWT with write access (or equivalent pinning provider credentials).
+**Note:** The `CHAIN_ID` environment variable must be set before running any `newton-cli` simulation commands:
 
-- Pinata docs: `https://docs.pinata.cloud/`
+```bash
+export CHAIN_ID=11155111
+```
 
-### 3.2 Load env vars (policy deployment)
+### 3.1 Simulate the WASM oracle alone (`policy-data simulate`)
 
-Create a file (example) named `.env.policy`:
+Test that your WASM component runs and returns the expected raw data. This is where you verify the oracle is fetching the right fields before wiring them into Rego:
+
+```bash
+newton-cli policy-data simulate \
+  --wasm-file policy.wasm \
+  --input-json '{"token_address": "0xAbCd..."}'
+```
+
+Expected output (for the skeleton `policy.js`):
+
+```json
+{
+  "price_usd": 42.50,
+  "last_updated": "2024-01-15T10:00:00Z"
+}
+```
+
+This output is what becomes `data.data.*` in your Rego rules. Verify the field names match exactly what your Rego policy references before moving on.
+
+### 3.2 Simulate the full policy (`policy simulate`)
+
+The full simulation runs the WASM oracle and then evaluates the Rego policy against a sample intent.
+
+#### Create `intent.json`
+
+```json
+{
+  "from": "0xYourSignerAddress",
+  "to": "0xTargetContractAddress",
+  "value": "0x0",
+  "data": "0x",
+  "chain_id": 11155111,
+  "function": {
+    "name": "transfer"
+  },
+  "decoded_function_arguments": []
+}
+```
+
+#### Create `wasm_args.json`
+
+```json
+{
+  "token_address": "0xAbCd..."
+}
+```
+
+#### Create `policy_params.json`
+
+```json
+{
+  "max_price_usd": 100,
+  "max_value_wei": "1000000000000000000",
+  "allowed_recipients": ["0xYourSignerAddress"]
+}
+```
+
+#### Run the full simulation
+
+```bash
+newton-cli policy simulate \
+  --wasm-file policy-files/policy.wasm \
+  --rego-file policy-files/policy.rego \
+  --intent-json intent.json \
+  --entrypoint "your_policy.allow" \
+  --wasm-args wasm_args.json \
+  --policy-params-data policy_params.json
+```
+
+**Note on entrypoint:** Specify the entrypoint as `<package_name>.<rule_name>` (e.g., `your_policy.allow`). The `newton-cli` automatically adds the `data.` prefix internally — do not include it here.
+
+### 3.3 Interpreting simulation output
+
+A successful allow:
+
+```json
+{ "allow": true }
+```
+
+A blocked transaction:
+
+```json
+{ "allow": false }
+```
+
+Confirm your policy returns the expected result for your test cases before proceeding to deploy.
+
+---
+
+## Step 4 – Upload to IPFS and deploy
+
+### 4.1 Load environment variables
+
+Create a file named `.env.policy`:
 
 ```bash
 CHAIN_ID=11155111
@@ -339,12 +596,10 @@ RPC_URL=https://your-sepolia-rpc-url
 Load it into your shell:
 
 ```bash
-set -a
-source .env.policy
-set +a
+set -a && source .env.policy && set +a
 ```
 
-### 3.3 Generate CIDs for `policy-files/`
+### 4.2 Generate CIDs for `policy-files/`
 
 ```bash
 newton-cli policy-files generate-cids \
@@ -353,9 +608,9 @@ newton-cli policy-files generate-cids \
   --entrypoint "your_policy.allow"
 ```
 
-Note: the entrypoint must match your Rego package + rule name (e.g. `package your_policy` + `allow`).
+The `--entrypoint` must match your Rego `package` name + rule name (e.g., `package your_policy` + `allow` → `your_policy.allow`).
 
-### 3.4 Deploy the Policy Data (WASM)
+### 4.3 Deploy the policy data (WASM)
 
 ```bash
 newton-cli policy-data deploy --policy-cids policy_cids.json
@@ -367,7 +622,7 @@ Save the output address:
 Policy data deployed successfully at address: 0xPolicy_Data_Address
 ```
 
-### 3.5 Deploy the Policy (points at Policy Data)
+### 4.4 Deploy the policy
 
 ```bash
 newton-cli policy deploy \
@@ -375,29 +630,24 @@ newton-cli policy deploy \
   --policy-data-address "0xPolicy_Data_Address"
 ```
 
-Save the Policy address; you'll use it when deploying the Newton Policy Wallet next.
+Save the Policy address — you'll use it in Step 5 when deploying the Newton Policy Wallet.
 
 ---
 
-## 4. Deploy the Newton Policy Wallet (Sepolia)
+## Step 5 – Deploy the Newton Policy Wallet
 
-This step deploys a generic smart contract wallet that requires Newton attestations before executing transactions.
+This step deploys a smart contract wallet that requires Newton attestations before executing transactions.
 
-### 4.1 Create the wallet contract directory
+### 5.1 Create the wallet contract directory
 
 ```bash
 mkdir newton-policy-wallet && cd newton-policy-wallet
 forge init --no-git
-```
-
-### 4.2 Create the Solidity contract
-
-First, initialize git (required by `forge install`) and install the newton-contracts dependency:
-
-```bash
 git init
 forge install newt-foundation/newton-contracts
 ```
+
+### 5.2 Create the Solidity contract
 
 Create `src/NewtonPolicyWallet.sol`:
 
@@ -413,7 +663,11 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
     error InvalidAttestation();
     error ExecutionFailed();
 
-    constructor() {}
+    address public constant NEWTON_TASK_MANAGER = 0xecb741F4875770f9A5F060cb30F6c9eb5966eD13;
+
+    constructor(address owner) {
+        _initNewtonPolicyClient(NEWTON_TASK_MANAGER, owner);
+    }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         // Support INewtonPolicyClient interface (expected by Newton Policy contract)
@@ -421,16 +675,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
         return interfaceId == 0xdbdcaa9c || super.supportsInterface(interfaceId);
     }
 
-    function initialize(
-        address policyTaskManager,
-        address policy,
-        address owner
-    ) external {
-        _initNewtonPolicyClient(policyTaskManager, policy, owner);
-    }
-
-    // setPolicy is inherited from NewtonPolicyClient - no need to redefine!
-    // Just call: wallet.setPolicy(INewtonPolicy.PolicyConfig({policyParams: "{}", expireAfter: 31536000}))
+    // setPolicy and setPolicyAddress are inherited from NewtonPolicyClient — do not redefine them
 
     function validateAndExecuteDirect(
         address to,
@@ -453,7 +698,16 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
 }
 ```
 
-**Important:** Update `foundry.toml` to enable `via_ir` compilation (required for newton-contracts due to stack depth):
+**Key implementation notes:**
+- `NEWTON_TASK_MANAGER` is a constant in the contract — no need to pass it from deployment scripts
+- `_initNewtonPolicyClient(taskManager, owner)` takes 2 params (task manager + owner) — policy address is set separately via `setPolicyAddress()`
+- Uses constructor instead of a separate `initialize()` — no proxy/upgradeable pattern needed
+- `setPolicyAddress` and `setPolicy` are both inherited from `NewtonPolicyClient` — do not redefine them
+- Must override `supportsInterface` to include `0xdbdcaa9c` (required by the deployed Newton Policy contract)
+- Uses `_validateAttestationDirect()` for direct attestation verification (no need to wait for aggregator)
+- Requires `via_ir = true` in `foundry.toml` due to stack depth constraints in newton-contracts
+
+Update `foundry.toml`:
 
 ```toml
 [profile.default]
@@ -467,7 +721,11 @@ optimizer_runs = 200
 
 remappings = [
     "newton-contracts/=lib/newton-contracts/",
-    "forge-std/=lib/forge-std/src/"
+    "forge-std/=lib/forge-std/src/",
+    "@eigenlayer-middleware/=lib/newton-contracts/lib/eigenlayer-middleware/",
+    "@openzeppelin/=lib/newton-contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts/",
+    "@openzeppelin-upgrades/=lib/newton-contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/",
+    "@sp1-contracts/=lib/newton-contracts/lib/sp1-contracts/contracts/src/",
 ]
 
 fs_permissions = [{ access = "read", path = "./policy_params.json" }]
@@ -476,16 +734,7 @@ fs_permissions = [{ access = "read", path = "./policy_params.json" }]
 sepolia = "${RPC_URL}"
 ```
 
-**Key differences from a manual implementation:**
-- Inherits from `NewtonPolicyClient` which handles policy registration with the Newton Policy contract
-- Must override `supportsInterface` to include `0xdbdcaa9c` (the interface ID expected by the deployed Newton Policy contract)
-- Uses `initialize()` pattern instead of constructor args for proper policy client setup
-- The `setPolicy` function is inherited - no custom wrapper needed
-- Uses `_validateAttestationDirect()` for direct attestation verification (evaluates intent without waiting for on-chain task response confirmation)
-- Imports `INewtonProverTaskManager` for `Task` and `TaskResponse` struct types used by the direct validation flow
-- Requires `via_ir = true` in foundry.toml due to stack depth of newton-contracts
-
-### 4.3 Create the deployment script
+### 5.3 Create the deployment script
 
 Create `script/Deploy.s.sol`:
 
@@ -497,35 +746,23 @@ import {Script, console} from "forge-std/Script.sol";
 import {NewtonPolicyWallet} from "../src/NewtonPolicyWallet.sol";
 
 contract DeployScript is Script {
-    // Newton Task Manager on Sepolia (MUST match the SDK gateway's task manager)
-    // BLS signatures are bound to this address - using the wrong one causes InvalidAttestation
-    address constant NEWTON_TASK_MANAGER = 0xecb741F4875770f9A5F060cb30F6c9eb5966eD13;
-
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address policy = vm.envAddress("POLICY");
-        address owner = vm.addr(deployerPrivateKey);  // Derive from private key
+        address owner = vm.addr(deployerPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy the wallet
-        NewtonPolicyWallet wallet = new NewtonPolicyWallet();
-
-        // Initialize with Newton Policy system
-        wallet.initialize(NEWTON_TASK_MANAGER, policy, owner);
+        NewtonPolicyWallet wallet = new NewtonPolicyWallet(owner);
 
         console.log("NewtonPolicyWallet deployed at:", address(wallet));
-        console.log("Initialized with:");
-        console.log("  - Task Manager:", NEWTON_TASK_MANAGER);
-        console.log("  - Policy:", policy);
-        console.log("  - Owner:", owner);
+        console.log("Owner:", owner);
 
         vm.stopBroadcast();
     }
 }
 ```
 
-### 4.4 Create the set policy script
+### 5.4 Create the set-policy script
 
 Create `script/SetPolicy.s.sol`:
 
@@ -541,43 +778,42 @@ contract SetPolicyScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address walletAddress = vm.envAddress("WALLET_ADDRESS");
-        uint32 expireAfter = uint32(vm.envUint("EXPIRE_AFTER"));
-
-        // Read policy params from file (empty JSON object by default)
-        string memory paramsJson = vm.readFile("policy_params.json");
-        bytes memory policyParams = bytes(paramsJson);
-
-        vm.startBroadcast(deployerPrivateKey);
+        address policyAddress = vm.envAddress("POLICY_ADDRESS");
+        uint32 expireAfter = uint32(vm.envOr("EXPIRE_AFTER", uint256(1 days)));
 
         NewtonPolicyWallet wallet = NewtonPolicyWallet(payable(walletAddress));
 
-        // Call the inherited setPolicy function with PolicyConfig struct
-        bytes32 newPolicyId = wallet.setPolicy(
+        vm.startBroadcast(deployerPrivateKey);
+
+        // First set the policy contract address (with version compatibility check)
+        wallet.setPolicyAddress(policyAddress);
+
+        // Then set the policy config (params + expiration)
+        bytes32 policyId = wallet.setPolicy(
             INewtonPolicy.PolicyConfig({
-                policyParams: policyParams,
+                policyParams: bytes("{}"),
                 expireAfter: expireAfter
             })
         );
 
-        console.log("Policy set with ID:");
-        console.logBytes32(newPolicyId);
+        console.log("Policy address set:", policyAddress);
+        console.logBytes32(policyId);
 
         vm.stopBroadcast();
     }
 }
 ```
 
-### 4.5 Deploy the wallet
+### 5.5 Deploy the wallet
 
 Create `.env` in the `newton-policy-wallet` directory:
 
 ```bash
 PRIVATE_KEY=0xYourWalletDeployerPrivateKey
-POLICY=<paste Policy address from Step 3.5>
 RPC_URL=https://your-sepolia-rpc-url
 ```
 
-Note: The wallet owner is automatically derived from the `PRIVATE_KEY`, so no separate `OWNER` variable is needed.
+The wallet owner is automatically derived from `PRIVATE_KEY`. The Newton Task Manager address is hardcoded as a constant in the contract.
 
 Deploy:
 
@@ -586,21 +822,16 @@ source .env
 forge script script/Deploy.s.sol:DeployScript --rpc-url $RPC_URL --broadcast
 ```
 
-Save the deployed wallet address - you'll use it in Step 5.
+Save the deployed wallet address from the output.
 
-### 4.6 Set the policy on the wallet
-
-Create `policy_params.json`:
-
-```json
-{}
-```
+### 5.6 Set the policy on the wallet
 
 Add to your `.env`:
 
 ```bash
 WALLET_ADDRESS=0xYourWalletAddress
-EXPIRE_AFTER=31536000
+POLICY_ADDRESS=<paste Policy address from Step 4.4>
+# EXPIRE_AFTER is optional — defaults to 1 day (86400 seconds)
 ```
 
 Run:
@@ -610,30 +841,59 @@ source .env
 forge script script/SetPolicy.s.sol:SetPolicyScript --rpc-url $RPC_URL --broadcast
 ```
 
-After this:
+After this completes:
 - Newton can generate attestations for your `NewtonPolicyWallet`
-- The wallet will only execute transactions with valid attestations
+- The wallet will only execute transactions that pass your Rego policy
+
+### 5.7 Register the PolicyClient
+
+Register your deployed wallet with the PolicyClientRegistry (required for identity linking):
+
+```bash
+newton-cli policy-client register \
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
+  --client "0xYourWalletAddress" \
+  --private-key $PRIVATE_KEY \
+  --rpc-url $RPC_URL
+```
+
+Check registration status:
+
+```bash
+newton-cli policy-client status \
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
+  --client "0xYourWalletAddress" \
+  --rpc-url $RPC_URL
+```
+
+Contract addresses on Sepolia:
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0xecb741f4875770f9a5f060cb30f6c9eb5966ed13` |
+| PolicyClientRegistry | `0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd` |
+| AttestationValidator | `0x26f452e4b9c9c28508cb836ba486cceaa95b429c` |
 
 ---
 
-## 5. Newton SDK Integration via Next.js App
+## Step 6 – Newton SDK Integration via Next.js
 
 Build a complete Next.js application to interact with your deployed Newton Policy Wallet.
 
-### 5.1 Create the Next.js project
+### 6.1 Create the Next.js project
 
 ```bash
 npx create-next-app@latest newton-sdk-app --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 cd newton-sdk-app
 ```
 
-### 5.2 Install dependencies
+### 6.2 Install dependencies
 
 ```bash
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
 ```
 
-### 5.3 Set up environment variables
+### 6.3 Set up environment variables
 
 Create `.env.local`:
 
@@ -642,42 +902,31 @@ Create `.env.local`:
 NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 
-# Newton API key
+# Newton API key (from dashboard.newton.xyz)
 NEXT_PUBLIC_NEWTON_API_KEY=your_newton_api_key
 
-# Newton Policy Contract address (fixed on Sepolia)
-# Note: This is the Newton Policy contract, NOT your wallet address
-NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS=0x698C687f86Bc2206AC7C06eA68AC513A2949abA6
+# Wallet address from Step 5.5 deployment output
+NEXT_PUBLIC_POLICY_WALLET_ADDRESS=<paste wallet address from Step 5.5>
 
-# Wallet address from Step 4.5 deployment output
-NEXT_PUBLIC_POLICY_WALLET_ADDRESS=<paste wallet address from Step 4.5>
-
-# Signer private key for client-side signing (same as PRIVATE_KEY from Step 4)
-NEXT_PUBLIC_SIGNER_PRIVATE_KEY=<same as PRIVATE_KEY from Step 4>
+# Signer private key for client-side signing
+NEXT_PUBLIC_SIGNER_PRIVATE_KEY=<same as PRIVATE_KEY>
 ```
 
-**Important clarifications:**
-- `NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS` is the Newton Policy contract (fixed address)
-- `NEXT_PUBLIC_POLICY_WALLET_ADDRESS` is YOUR deployed wallet contract
-- These are different! The Policy contract manages policy registration; your wallet is a client of it.
-
-### 5.4 Create the configuration file
+### 6.4 Create the configuration file
 
 Create `src/const/config.ts`:
 
 ```typescript
 import { Hex } from "viem";
 
-// Environment variables
 export const SEPOLIA_ALCHEMY_URL = process.env.NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL!;
 export const SEPOLIA_ALCHEMY_WS_URL = process.env.NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL!;
 export const NEWTON_API_KEY = process.env.NEXT_PUBLIC_NEWTON_API_KEY!;
 export const POLICY_WALLET_ADDRESS = process.env.NEXT_PUBLIC_POLICY_WALLET_ADDRESS as Hex;
-export const POLICY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS as Hex;
 export const SIGNER_PRIVATE_KEY = process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY as Hex;
 ```
 
-### 5.5 Create the ABI file
+### 6.5 Create the ABI file
 
 Create `src/lib/abi.ts`:
 
@@ -685,18 +934,7 @@ Create `src/lib/abi.ts`:
 export const newtonPolicyWalletAbi = [
   {
     type: "constructor",
-    inputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "initialize",
-    inputs: [
-      { name: "policyTaskManager", type: "address", internalType: "address" },
-      { name: "policy", type: "address", internalType: "address" },
-      { name: "owner", type: "address", internalType: "address" },
-    ],
-    outputs: [],
+    inputs: [{ name: "owner", type: "address", internalType: "address" }],
     stateMutability: "nonpayable",
   },
   {
@@ -796,23 +1034,6 @@ export const newtonPolicyWalletAbi = [
     stateMutability: "nonpayable",
   },
   {
-    type: "function",
-    name: "setPolicy",
-    inputs: [
-      {
-        name: "policyConfig",
-        type: "tuple",
-        internalType: "struct INewtonPolicy.PolicyConfig",
-        components: [
-          { name: "policyParams", type: "bytes", internalType: "bytes" },
-          { name: "expireAfter", type: "uint32", internalType: "uint32" },
-        ],
-      },
-    ],
-    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
-    stateMutability: "nonpayable",
-  },
-  {
     type: "event",
     name: "Executed",
     inputs: [
@@ -829,9 +1050,7 @@ export const newtonPolicyWalletAbi = [
 ] as const;
 ```
 
-Note: The ABI above is simplified. The full ABI from compilation will include additional functions inherited from `NewtonPolicyClient` like `policyClientOwner()`, `policyId()`, etc.
-
-### 5.6 Create the evaluation request helper
+### 6.6 Create the evaluation request helper
 
 Create `src/lib/evaluation-request.ts`:
 
@@ -863,7 +1082,6 @@ export const createEvaluationRequest = ({
   data,
   wasmArgs,
 }: EvaluationRequestParams) => {
-  // Function signature for validateAndExecuteDirect
   const functionSignature = stringToHexBytes(
     "validateAndExecuteDirect(address,uint256,bytes,(bytes32,address,uint32,uint32,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,bytes),(bytes32,address,bytes32,address,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,(bytes32,address,bytes,(bytes,bytes,bytes,address,uint32)[]),(bytes,uint32)),bytes)"
   );
@@ -884,7 +1102,7 @@ export const createEvaluationRequest = ({
 };
 ```
 
-### 5.7 Create the transaction execution helper
+### 6.7 Create the transaction execution helper
 
 Create `src/lib/execute-with-attestation.ts`:
 
@@ -955,50 +1173,11 @@ export const executeWithAttestationDirect = async ({
     gasPrice,
   });
 
-  const txHash = await publicClient.sendRawTransaction({ serializedTransaction: signedTx });
-
-  return txHash;
+  return publicClient.sendRawTransaction({ serializedTransaction: signedTx });
 };
 ```
 
-### 5.8 Create the Newton client hook
-
-Create `src/lib/use-newton-client.ts`:
-
-```typescript
-"use client";
-
-import { useMemo } from "react";
-import { createWalletClient, webSocket, Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
-import { newtonWalletClientActions } from "@magicnewton/newton-protocol-sdk";
-import { SEPOLIA_ALCHEMY_WS_URL, NEWTON_API_KEY } from "@/const/config";
-
-export const useNewtonClient = (privateKey: Hex) => {
-  const client = useMemo(() => {
-    const account = privateKeyToAccount(privateKey);
-
-    // Initialize the wallet client with Newton SDK actions
-    // The apiKey is required for SDK initialization
-    const walletClient = createWalletClient({
-      account,
-      chain: sepolia,
-      transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
-    }).extend(newtonWalletClientActions({ apiKey: NEWTON_API_KEY }));
-
-    return {
-      walletClient,
-      account,
-      signer: account,
-    };
-  }, [privateKey]);
-
-  return client;
-};
-```
-
-### 5.9 Create the main page
+### 6.8 Create the main page
 
 Replace `src/app/page.tsx`:
 
@@ -1006,8 +1185,7 @@ Replace `src/app/page.tsx`:
 "use client";
 
 import { useState } from "react";
-import { Hex } from "viem";
-import { createWalletClient, webSocket } from "viem";
+import { Hex, createWalletClient, webSocket } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { newtonWalletClientActions } from "@magicnewton/newton-protocol-sdk";
@@ -1023,7 +1201,7 @@ import { executeWithAttestationDirect } from "@/lib/execute-with-attestation";
 type Status = "idle" | "evaluating" | "executing" | "success" | "error";
 
 export default function Home() {
-  const [targetAddress, setTargetAddress] = useState<string>("0x31386C6a234AbF509579bDBA4854e9925fac1Ffa");
+  const [targetAddress, setTargetAddress] = useState<string>("");
   const [value, setValue] = useState<string>("0");
   const [data, setData] = useState<string>("0x");
   const [wasmArgs, setWasmArgs] = useState<string>("{}");
@@ -1042,8 +1220,6 @@ export default function Home() {
     setTxHash("");
 
     try {
-      // Create the wallet client with Newton SDK
-      // Initialize with apiKey for SDK authentication
       const account = privateKeyToAccount(SIGNER_PRIVATE_KEY);
       const walletClient = createWalletClient({
         account,
@@ -1051,7 +1227,6 @@ export default function Home() {
         transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
       }).extend(newtonWalletClientActions({ apiKey: NEWTON_API_KEY }));
 
-      // Create the evaluation request
       const evalRequest = createEvaluationRequest({
         signerAddress: account.address,
         targetAddress: targetAddress as Hex,
@@ -1060,7 +1235,6 @@ export default function Home() {
         wasmArgs: JSON.parse(wasmArgs),
       });
 
-      // Evaluate intent directly (no on-chain task submission wait)
       const evalResponse = await walletClient.evaluateIntentDirect(evalRequest);
       const { evaluationResult: allowed, task, taskResponse: evalTaskResponse, blsSignature } = evalResponse.result;
       setTaskId(task.taskId);
@@ -1068,11 +1242,10 @@ export default function Home() {
 
       if (!allowed) {
         setStatus("error");
-        setError("Policy evaluation failed - transaction blocked");
+        setError("Policy evaluation failed — transaction blocked");
         return;
       }
 
-      // Execute the transaction with the direct attestation
       setStatus("executing");
       const hash = await executeWithAttestationDirect({
         to: targetAddress as Hex,
@@ -1119,7 +1292,6 @@ export default function Home() {
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Value (wei)</label>
           <input
@@ -1130,7 +1302,6 @@ export default function Home() {
             className="w-full p-2 border rounded"
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Data (hex)</label>
           <input
@@ -1141,7 +1312,6 @@ export default function Home() {
             className="w-full p-2 border rounded"
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">WASM Args (JSON)</label>
           <textarea
@@ -1151,11 +1321,7 @@ export default function Home() {
             className="w-full p-2 border rounded font-mono text-sm"
             rows={3}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Arguments passed to your policy WASM component
-          </p>
         </div>
-
         <button
           type="submit"
           disabled={status === "evaluating" || status === "executing"}
@@ -1169,7 +1335,6 @@ export default function Home() {
         </button>
       </form>
 
-      {/* Status Display */}
       {status !== "idle" && (
         <div className="mt-8 space-y-4">
           {taskId && (
@@ -1178,13 +1343,8 @@ export default function Home() {
               <code className="text-xs break-all">{taskId}</code>
             </div>
           )}
-
           {evaluationResult !== null && (
-            <div
-              className={`p-4 rounded ${
-                evaluationResult ? "bg-green-100" : "bg-red-100"
-              }`}
-            >
+            <div className={`p-4 rounded ${evaluationResult ? "bg-green-100" : "bg-red-100"}`}>
               <p className="font-medium">
                 Evaluation Result:{" "}
                 <span className={evaluationResult ? "text-green-700" : "text-red-700"}>
@@ -1193,23 +1353,19 @@ export default function Home() {
               </p>
             </div>
           )}
-
           {txHash && (
             <div className="p-4 bg-green-100 rounded">
               <p className="font-medium text-green-700">Transaction Successful!</p>
-              <p className="text-sm mt-2">
-                <a
-                  href={`https://sepolia.etherscan.io/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  View on Etherscan: {txHash}
-                </a>
-              </p>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline break-all text-sm"
+              >
+                View on Etherscan: {txHash}
+              </a>
             </div>
           )}
-
           {error && (
             <div className="p-4 bg-red-100 rounded">
               <p className="font-medium text-red-700">Error</p>
@@ -1223,36 +1379,7 @@ export default function Home() {
 }
 ```
 
-### 5.10 Update the layout
-
-Ensure `src/app/layout.tsx` exists with basic setup:
-
-```tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Newton Policy Wallet Demo",
-  description: "Execute transactions with Newton Policy attestations",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-  );
-}
-```
-
-### 5.11 Run the application
+### 6.9 Run the application
 
 ```bash
 npm run dev
@@ -1262,262 +1389,103 @@ Open `http://localhost:3000` in your browser.
 
 ---
 
-## 6. Verification Steps
+## Step 7 – Verify end-to-end
 
-Verify your complete setup works end-to-end:
+1. Submit a transaction through the UI with target address, value, and WASM args
+2. **Task ID appears** — Newton network received the evaluation request
+3. **Evaluation Result** — shows "Allowed" or "Blocked" based on your policy
+4. **If Allowed** — transaction is signed and submitted with the BLS attestation
+5. **Transaction hash** — click the Etherscan link and verify the `Executed` event in logs
 
-### 6.1 Run the Next.js app locally
-
-```bash
-cd newton-sdk-app
-npm run dev
-```
-
-### 6.2 Submit an evaluation request through the UI
-
-1. Enter a valid private key with some Sepolia ETH for gas
-2. Enter a target address (can be any valid address for testing)
-3. Set value to `0` (or a small amount if sending ETH)
-4. Set data to `0x` (or encoded function call data)
-5. Configure WASM args based on your policy requirements
-6. Click "Submit Transaction"
-
-### 6.3 Observe the flow
-
-1. **Task ID appears**: The Newton network has received your evaluation request
-2. **Evaluation Result**: Shows "Allowed" or "Blocked" based on your policy logic
-3. **If Allowed**: Transaction is signed and submitted with the attestation
-4. **Transaction Hash**: Link to view on Sepolia Etherscan
-
-### 6.4 Verify on Sepolia Etherscan
-
-1. Click the Etherscan link in the success message
-2. Verify the transaction was sent to your Newton Policy Wallet
-3. Check the `Executed` event in the transaction logs
-4. Confirm the `taskId` in the event matches your evaluation request
-
-### 6.5 Test policy rejection
-
-1. Modify your WASM args to trigger a policy failure
-2. Submit the transaction
-3. Verify the evaluation returns "Blocked"
-4. Confirm no transaction is submitted to the chain
+To test policy rejection, modify `wasmArgs` to return data that would cause a Rego condition to fail (e.g., a price above `max_price_usd`).
 
 ---
 
-## 7. Create Project README
+## Gateway URLs
 
-After completing your deployment, create a `README.md` file in your project root to document your Newton Policy Wallet demo for future reference and collaboration.
+| Network | Environment | URL |
+|---------|-------------|-----|
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
+| Mainnet | Production | `https://gateway.newton.xyz` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
 
-### 7.1 Create `README.md`
-
-Create a `README.md` file in your project root with the following template:
-
-```markdown
-# Newton Policy Wallet Demo
-
-## Overview
-
-This repository contains a complete Newton Policy Wallet integration demo with three main components:
-
-1. **WASM Policy** (`policy-workspace/`): A WebAssembly policy component that defines custom transaction validation logic using JavaScript/Rego
-2. **Solidity Wallet** (`newton-policy-wallet/`): A smart contract wallet deployed on Sepolia that enforces Newton attestations before executing transactions
-3. **Next.js Frontend** (`newton-sdk-app/`): A web application that demonstrates how to submit transactions through the Newton Policy Wallet using the Newton SDK
-
-The demo showcases how to build policy-gated smart contract wallets where transactions are only executed after passing through Newton's decentralized policy evaluation network.
-
-## Quickstart
-
-### Prerequisites
-
-- Node.js >= 18
-- A Sepolia RPC URL (e.g., from Alchemy)
-- A wallet with Sepolia ETH for gas
-- A Newton API key
-
-### Running the Demo
-
-1. Navigate to the Next.js app directory:
-
-   ```bash
-   cd newton-sdk-app
-   ```
-
-2. Configure environment variables by creating `.env.local`:
-
-   ```bash
-   # Alchemy RPC URLs
-   NEXT_PUBLIC_SEPOLIA_ALCHEMY_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-   NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-
-   # Same private key used for wallet deployment
-   DEVELOPER_PRIVATE_KEY=<same as PRIVATE_KEY from wallet deployment>
-
-   # Newton API key
-   NEXT_PUBLIC_NEWTON_API_KEY=your_newton_api_key
-
-   # Wallet address from deployment output
-   NEXT_PUBLIC_POLICY_WALLET_ADDRESS=<paste wallet address from deployment>
-   ```
-
-3. Install dependencies and start the development server:
-
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-5. Enter your private key, target address, and transaction parameters, then click "Submit Transaction" to test the policy evaluation flow
-
-## Customizing Your Policy
-
-To modify the policy logic and redeploy:
-
-### 1. Update the Policy Logic
-
-Edit `policy-workspace/policy.js` to change your WASM policy logic:
-
-```js
-export function run(wasm_args) {
-  const args = JSON.parse(wasm_args);
-
-  // Add your custom validation logic here
-  const isValid = /* your validation */;
-
-  return JSON.stringify({
-    success: isValid
-  });
-}
-```
-
-Optionally update `policy-workspace/policy.rego` for additional Rego-based rules:
-
-```rego
-package your_policy
-default allow := false
-
-allow if {
-    data.data.success
-    # Add additional conditions here
-}
-```
-
-### 2. Rebuild the WASM Component
+Example curl against the production testnet gateway:
 
 ```bash
-cd policy-workspace
-jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
-cp policy.wasm policy-files/
+curl -X POST https://gateway.testnet.newton.xyz \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "newt_simulateTask",
+    "params": {
+      "policy_client": "0xYourPolicyClientAddress",
+      "intent": {
+        "from": "0xCallerAddress",
+        "to": "0xTargetAddress",
+        "value": "0x0",
+        "data": "0x",
+        "chain_id": "0xaa36a7",
+        "function_signature": "0x"
+      }
+    },
+    "id": 1
+  }'
 ```
-
-### 3. Redeploy the Policy
-
-```bash
-# Load your deployment environment
-source .env.policy
-
-# Generate new CIDs
-newton-cli policy-files generate-cids \
-  --directory policy-files \
-  --output policy_cids.json \
-  --entrypoint "your_policy.allow"
-
-# Deploy the updated policy data
-newton-cli policy-data deploy --policy-cids policy_cids.json
-
-# Deploy the updated policy (use the new policy data address)
-newton-cli policy deploy \
-  --policy-cids policy_cids.json \
-  --policy-data-address "0xNewPolicyDataAddress"
-```
-
-### 4. Update the Wallet (if needed)
-
-If the policy address changed, update your Newton Policy Wallet to point to the new policy, or deploy a new wallet with the updated policy address.
-```
-
-### 7.2 Customize the README
-
-Update the README template with:
-
-- Your specific policy logic description
-- Any additional environment variables your policy requires
-- Custom WASM arguments your policy expects
-- Links to your deployed contracts on Sepolia Etherscan
 
 ---
 
-## Appendix: Common pitfalls
+## Appendix: Common Pitfalls
 
-### "command not found" after installing tools
+### `jco componentize` version incompatibility
 
-Restart your shell after installing `rustup`, Homebrew Node, or Foundry, or re-source your shell config (e.g. `source ~/.zshrc`).
+Use `@bytecodealliance/jco@1.0.0` and `@bytecodealliance/componentize-js@0.4.1` specifically. Newer `componentize-js` (0.9+) injects a `wasi:http/types@0.2.3` dependency that `newton-cli` does not support, producing `failed to instantiate wasm component` errors. Always pin locally:
 
-### `jco componentize` installed locally but command fails
+```bash
+npm install --save-dev @bytecodealliance/jco@1.0.0 @bytecodealliance/componentize-js@0.4.1
+npx jco componentize ...
+```
 
-If you did `npm install @bytecodealliance/jco` without `-g`, run it via `npx jco componentize ...` instead of `jco componentize ...`. Note: you also need `@bytecodealliance/componentize-js` as a peer dependency.
+### Simulation failures
+
+- Ensure `CHAIN_ID` is exported: `export CHAIN_ID=11155111`
+- Verify field names in `data.data.*` match exactly what your WASM returns — run `policy-data simulate` first and inspect the output
+- The `--entrypoint` flag should be `package_name.rule_name` (e.g., `your_policy.allow`) — do not include the `data.` prefix
+
+### Foundry deployment issues
+
+- Verify `PRIVATE_KEY` is prefixed with `0x`
+- Ensure the deployer wallet has sufficient Sepolia ETH
+- Check `RPC_URL` is valid and reachable
+- Run `forge build` first to catch compilation errors before deploying
+- If `forge init --no-commit` fails, use `forge init --no-git` instead (flag name varies by Foundry version)
+- `forge install` requires a git repository — run `git init` first if you used `--no-git`
+- Compilation requires `via_ir = true` in `foundry.toml` due to newton-contracts stack depth
+
+### Invalid attestation on wrong task manager
+
+The wallet MUST use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` as the Newton Task Manager on Sepolia. BLS signatures are bound to this specific address — using any other address will always produce `InvalidAttestation` errors.
+
+### Rego policy always returns `allow: false`
+
+- Verify rule conditions use the correct attribute paths (`data.params.*`, `data.data.*`, `input.*`)
+- Run `policy-data simulate` first and inspect the oracle output — confirm exact field names and value types
+- Do not write decision logic in the oracle and check a boolean flag in Rego (e.g., `allow if { data.data.success }`) — all conditions belong in Rego
+- Run `policy simulate` to test the full pipeline with your specific intent values
+- Remember Rego uses `==` for equality checks, not `=`
+
+### "ExecutionFailed" error (`0xacfdb444`)
+
+The attestation passed but the inner `to.call{value: value}(data)` reverted. Common causes:
+- **Wallet contract has no ETH** — if sending value > 0, fund the wallet contract address directly
+- The target contract reverted — debug the target transaction independently
+- Malformed calldata
 
 ### WebSocket connection fails
 
-Ensure your `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` uses the `wss://` protocol, not `https://`. The Newton SDK uses a WebSocket connection for the wallet client transport.
+Ensure `NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL` uses the `wss://` protocol, not `https://`. The Newton SDK uses a WebSocket connection for the wallet client transport.
 
-### "Invalid attestation" error on execution (`0xbd8ba84d`)
+### "command not found" after installing tools
 
-This usually means:
-- **Wrong task manager address** (most common): The wallet was initialized with a different task manager than the one the Newton SDK gateway signs against. The wallet MUST use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to the specific task manager address — using any other address will always fail.
-- The intent parameters don't match exactly (to, value, data, chainId)
-- The policyId doesn't match the wallet's configured policy
-- The task or taskResponse structs were not passed correctly from the `evaluateIntentDirect` result
-
-### "ExecutionFailed" error on execution (`0xacfdb444`)
-
-This means the attestation **passed** but the inner `to.call{value: value}(data)` reverted. Common causes:
-- **Wallet contract has no ETH**: If you're sending value > 0, the wallet contract itself needs ETH (not just the signer EOA). Fund the wallet contract address directly.
-- The target contract reverted (check the target's logic)
-- The calldata is malformed for the target function
-
-**Tip:** You can decode the revert reason with `cast`:
-```bash
-cast call <WALLET_ADDRESS> "0x<calldata>" --from <SIGNER> --rpc-url <RPC_URL>
-```
-Then match the error selector: `cast sig "ExecutionFailed()"` → `0xacfdb444`, `cast sig "InvalidAttestation()"` → `0xbd8ba84d`.
-
-### Environment variables not loading
-
-For Next.js:
-- Client-side variables must be prefixed with `NEXT_PUBLIC_`
-- Server-side only variables should NOT have this prefix
-- Restart the dev server after modifying `.env.local`
-
-### Gas estimation fails
-
-The gas estimation step (`estimateGas`) simulates the transaction on-chain. If it reverts, the error message from viem is often unhelpful ("execution reverted for an unknown reason"). To debug:
-
-1. Extract the calldata from the error message
-2. Run `cast call <wallet> "0x<calldata>" --from <signer> --rpc-url <rpc>` to get the revert selector
-3. Match the selector: `0xacfdb444` = `ExecutionFailed()`, `0xbd8ba84d` = `InvalidAttestation()`
-
-Common causes:
-- The signer doesn't have sufficient Sepolia ETH for gas
-- The wallet contract has no ETH but value > 0 is being sent (fund the wallet contract, not just the signer)
-- Wrong task manager address (see "Invalid attestation" above)
-- The attestation has expired
-
-### Policy evaluation times out
-
-- Check that your policy WASM builds correctly
-- Verify the `wasmArgs` are in the expected format
-- Increase the `timeout` value in the evaluation request if needed
-- Ensure your policy's external API calls (if any) are responding
-
-### Foundry deployment fails
-
-- Verify `PRIVATE_KEY` is prefixed with `0x`
-- Ensure the deployer has sufficient Sepolia ETH
-- Check `RPC_URL` is valid and accessible
-- Run `forge build` first to catch compilation errors
-- If `forge init --no-commit` fails, use `forge init --no-git` instead (flag varies by Foundry version)
-- `forge install` requires a git repository — run `git init` first if you used `--no-git`
-- Compilation requires `via_ir = true` in `foundry.toml` due to newton-contracts stack depth
+Restart your shell after installing `rustup`, Homebrew Node, or Foundry, or re-source your shell config (`source ~/.zshrc`).

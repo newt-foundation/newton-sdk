@@ -1,19 +1,13 @@
 ---
 title: "Deploying with CLI"
-description: "Deploy Newton Protocol policies and WASM data oracles to IPFS and register them on-chain using the newton-cli command line tool."
-keywords:
-  - newton cli
-  - deploy policy to ipfs
-  - newton protocol deployment
-  - wasm oracle deployment
-  - blockchain policy deployment
+description: "Deploy Newton Protocol policies and data oracles to IPFS and on-chain using newton-cli"
 ---
 
 This guide walks through deploying your policy files to IPFS and registering them on-chain using `newton-cli`. By the end, you will have a deployed PolicyData contract, a deployed Policy contract, and a registered PolicyClient.
 
 ## Prerequisites
 
-- **newton-cli** installed: `cargo install newton-cli@0.2.0`
+- **newton-cli** installed: `cargo install newton-cli@0.1.35`
 - **Pinata account** for IPFS pinning ([pinata.cloud](https://pinata.cloud))
 - **Sepolia ETH** in your deployer wallet
 - Completed [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies)
@@ -77,16 +71,21 @@ newton-cli policy deploy \
 
 Save the output address — you will use it when deploying your PolicyClient contract.
 
-## Step 4: Register PolicyClient
+## Step 4: Deploy Your Smart Contract
 
-After deploying your smart contract (see [Smart Contract Integration](/developers/guides/smart-contract-integration)), register it with the PolicyClientRegistry:
+Before registering a PolicyClient, you need a deployed contract that inherits `NewtonPolicyClient`. Follow the [Smart Contract Integration](/developers/guides/smart-contract-integration) guide, then return here with your deployed contract address.
+
+## Step 5: Register PolicyClient
+
+Register your deployed contract with the PolicyClientRegistry:
 
 ```bash
 newton-cli policy-client register \
-  --policy-client "0xYourPolicyClientAddress"
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
+  --client "0xYourPolicyClientAddress"
 ```
 
-## Step 5: Set Policy on Client
+## Step 6: Set Policy on Client
 
 Configure the policy and parameters on your PolicyClient:
 
@@ -105,19 +104,20 @@ newton-cli policy-client set-policy-params \
   --expire-after 1000
 ```
 
-## Step 6: Verify
+## Step 7: Verify
 
 Check that your PolicyClient is registered and active:
 
 ```bash
 newton-cli policy-client status \
-  --policy-client "0xYourPolicyClientAddress"
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
+  --client "0xYourPolicyClientAddress"
 ```
 
 You can also test the full policy via the Gateway:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -143,9 +143,6 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 
 ## Next Steps
 
-<Card icon="shield" href="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
-  Deploy a PolicyClient smart contract
-</Card>
 <Card icon="window" href="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
   Build a frontend that submits tasks via the SDK
 </Card>

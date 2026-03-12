@@ -16,11 +16,6 @@ This page lists all deployed Newton Protocol contract addresses. Use these when 
 | PolicyClientRegistry | `0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd` |
 | IdentityRegistry | `0xbb688f4ad1bd896197db9a20e04abe8c6344625a` |
 
-### Staging
-
-<Note>
-Staging contracts are deployed at `gateway.stagef.testnet.newton.xyz`. Use staging for development and testing before moving to production.
-</Note>
 
 ## Base Sepolia (Chain ID: 84532)
 
@@ -41,23 +36,6 @@ Mainnet support is forthcoming. These contracts are deployed but not yet active 
 |----------|---------|
 | NewtonProverTaskManager | `0x2010dbaa5438801bdc3f08174a799fe344f544ee` |
 | AttestationValidator | `0x263c275c15867a4611a44c600e77144a23012a06` |
-
-## SDK Constants
-
-The SDK exports these addresses as constants. You typically do not need to hardcode them — the SDK resolves the correct address based on the chain your client is connected to.
-
-```typescript
-import {
-  NEWTON_PROVER_TASK_MANAGER,
-  ATTESTATION_VALIDATOR,
-  GATEWAY_API_URLS,
-} from '@magicnewton/newton-protocol-sdk/networks';
-
-// Access by chain ID (uses viem chain IDs as keys)
-const taskManager = NEWTON_PROVER_TASK_MANAGER[11155111]; // Sepolia
-const validator = ATTESTATION_VALIDATOR[11155111];
-const gatewayUrl = GATEWAY_API_URLS[11155111];
-```
 
 ## Gateway URLs
 

@@ -31,7 +31,7 @@ authorized if {
 }
 ```
 
-Set the policy params to include your identity domain:
+Set the policy params to include your identity domain, in addition to another other params that you may need:
 
 ```json
 {
@@ -40,7 +40,7 @@ Set the policy params to include your identity domain:
 ```
 
 <Note>
-The `identity_domain` value is the `keccak256` hash of your domain string encoded as a `bytes32` hex value. For example: `keccak256(bytes("my.dev.domain.co"))`. This scopes the identity data to your application.
+The `identity_domain` value is the `keccak256` hash of your domain string encoded as a `bytes32` hex value. For example: `keccak256(bytes("my.dev.domain.co"))`. This scopes the identity data to your application. An example value of this is 0x70013f8147873660b512807fffa46355f43463c571a0b05eea4ede282dfcf523
 </Note>
 
 See the [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for all available built-in functions.
@@ -107,6 +107,7 @@ Submit a task with a signed intent from the user's dapp wallet (the same wallet 
 await walletClient.submitEvaluationRequest({
   intent: signedIntent,
   policyId: yourPolicyId,
+  intentSignature: intentSignature,
   // ...other task params
 })
 ```

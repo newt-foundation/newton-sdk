@@ -24,21 +24,21 @@ Simulate a policy evaluation in under 5 minutes. The example policy performs **O
 ```bash pnpm (recommended)
 mkdir newton-quickstart && cd newton-quickstart
 pnpm init
-pnpm add @magicnewton/newton-protocol-sdk viem
+pnpm add @magicnewton/newton-protocol-sdk@0.3.15 viem
 ```
 
 
 ```bash npm
 mkdir newton-quickstart && cd newton-quickstart
 npm init -y
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
 ```
 
 
 ```bash yarn
 mkdir newton-quickstart && cd newton-quickstart
 yarn init -y
-yarn add @magicnewton/newton-protocol-sdk viem
+yarn add @magicnewton/newton-protocol-sdk@0.3.15 viem
 ```
 
 </CodeGroup>
@@ -193,7 +193,7 @@ In production, the same flow produces a [**BLS attestation**](/developers/overvi
   ```bash
   # Policy guide (WASM oracles, Rego, newton-cli)
   curl -o newton-policy-guide.md "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
-  
+
   # TypeScript SDK guide (Next.js frontend integration)
   curl -o newton-sdk-guide.md "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
   ```
@@ -230,15 +230,15 @@ In production, the same flow produces a [**BLS attestation**](/developers/overvi
   ```bash
   # Build the WASM component
   jco componentize -w newton-provider.wit -o policy.wasm policy.js -d stdio random clocks http fetch-event
-  
+
   # Deploy policy via newton-cli
   newton-cli policy-files generate-cids --directory policy-files --output policy_cids.json --entrypoint "your_policy.allow"
   newton-cli policy-data deploy --policy-cids policy_cids.json
   newton-cli policy deploy --policy-cids policy_cids.json --policy-data-address "0x..."
-  
+
   # Deploy the wallet contract
   forge script script/Deploy.s.sol:DeployScript --rpc-url $RPC_URL --broadcast
-  
+
   # Run the Next.js app
   cd newton-sdk-app && npm install && npm run dev
   ```

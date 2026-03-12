@@ -39,7 +39,7 @@ Simulate a full policy evaluation via the Gateway RPC without any on-chain inter
 Tests the complete evaluation pipeline (data oracle + policy) for a specific PolicyClient:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -65,7 +65,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 Test Rego policy evaluation with provided inputs (no oracle execution):
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -88,7 +88,7 @@ Test a WASM oracle execution via the Gateway:
 <Tabs>
   <Tab title="With inline secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz/rpc \
+    curl -X POST https://gateway.testnet.newton.xyz \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
@@ -105,7 +105,7 @@ Test a WASM oracle execution via the Gateway:
   </Tab>
   <Tab title="With stored secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz/rpc \
+    curl -X POST https://gateway.testnet.newton.xyz \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
@@ -165,7 +165,7 @@ const client = createPublicClient({
   transport: http(),
 }).extend(newtonPublicClientActions({
   apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
+  gatewayUrl: 'https://gateway.testnet.newton.xyz',
 }));
 
 // Simulate first to debug
