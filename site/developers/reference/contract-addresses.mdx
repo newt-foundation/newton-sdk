@@ -13,12 +13,9 @@ This page lists all deployed Newton Protocol contract addresses. Use these when 
 |----------|---------|
 | NewtonProverTaskManager | `0xecb741f4875770f9a5f060cb30f6c9eb5966ed13` |
 | AttestationValidator | `0x26f452e4b9c9c28508cb836ba486cceaa95b429c` |
+| PolicyClientRegistry | `0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd` |
+| IdentityRegistry | `0xbb688f4ad1bd896197db9a20e04abe8c6344625a` |
 
-### Staging
-
-<Note>
-Staging environments are available for development and testing before moving to production. Contact the Newton team for staging access.
-</Note>
 
 ## Base Sepolia (Chain ID: 84532)
 
@@ -32,7 +29,7 @@ Base Sepolia serves as a destination chain for cross-chain policy verification.
 ## Ethereum Mainnet (Chain ID: 1)
 
 <Warning>
-Mainnet contracts are deployed but not yet active for production use. Mainnet launch is imminent.
+Mainnet support is forthcoming. These contracts are deployed but not yet active for production use.
 </Warning>
 
 | Contract | Address |
@@ -40,17 +37,14 @@ Mainnet contracts are deployed but not yet active for production use. Mainnet la
 | NewtonProverTaskManager | `0x2010dbaa5438801bdc3f08174a799fe344f544ee` |
 | AttestationValidator | `0x263c275c15867a4611a44c600e77144a23012a06` |
 
-## SDK Constants
-
-The SDK resolves the correct contract addresses and gateway URLs based on the chain your client is connected to. You typically do not need to hardcode them. To override defaults, pass custom values via `SdkOverrides` when initializing the client extensions.
-
 ## Gateway URLs
 
-| Network | URL |
-|---------|-----|
-| Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
-| Base Sepolia | `https://gateway.testnet.newton.xyz/rpc` |
-| Mainnet | `https://gateway.newton.xyz/rpc` |
+| Network | Environment | URL |
+|---------|-------------|-----|
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
+| Mainnet | Production | `https://gateway.newton.xyz` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
 
 ## Next Steps
 

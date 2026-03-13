@@ -1,12 +1,6 @@
 ---
 title: "Frontend SDK Integration"
-description: "Build a Next.js frontend that submits Newton Protocol evaluation requests and executes attested transactions. Full walkthrough with viem, TypeScript, and Sepolia testnet."
-keywords:
-  - newton sdk nextjs
-  - viem wallet client
-  - policy evaluation frontend
-  - typescript blockchain dapp
-  - attested transaction execution
+description: "Build a Next.js frontend that submits Newton Protocol evaluation requests and executes attested transactions"
 ---
 
 This guide walks through building a Next.js application that uses the Newton SDK to evaluate transaction intents against your policy, then executes them through your deployed PolicyClient contract.
@@ -14,7 +8,7 @@ This guide walks through building a Next.js application that uses the Newton SDK
 ## Prerequisites
 
 - A deployed PolicyClient contract (see [Smart Contract Integration](/developers/guides/smart-contract-integration))
-- A Newton API key (see [Dashboard & API Keys](/developers/overview/dashboard-api-keys))
+- A Newton API key (see [Getting an API Key](/developers/overview/dashboard-api-keys))
 - Node.js >= 20
 
 ## Step 1: Create the Project
@@ -23,7 +17,7 @@ This guide walks through building a Next.js application that uses the Newton SDK
 npx create-next-app@latest newton-sdk-app \
   --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 cd newton-sdk-app
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
 ```
 
 ## Step 2: Environment Variables

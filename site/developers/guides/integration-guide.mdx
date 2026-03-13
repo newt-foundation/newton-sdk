@@ -45,24 +45,24 @@ Install only what you need for the steps you plan to follow:
 | **Newton API key**                     | 4–5   | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
 | **Rust + Cargo**                       | 1–3   | Building and running `newton-cli`                                                      |
-| **newton-cli 0.2.0**                   | 3     | Uploading policy files, generating CIDs, deploying policies                            |
+| **newton-cli 0.1.35**                  | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 | **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
 <Accordion title="Install all tooling (Steps 1–5)">
   ```bash
   # Rust (includes cargo)
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  
+
   # Node.js (macOS — or use your preferred method)
   brew install node
-  
+
   # Foundry
   curl -L https://foundry.paradigm.xyz | bash
   foundryup
-  
+
   # newton-cli
-  cargo install newton-cli@0.2.0
-  
+  cargo install newton-cli@0.1.35
+
   # jco (WASM componentization)
   npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
   ```
@@ -179,20 +179,20 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```solidity
   // SPDX-License-Identifier: MIT
   pragma solidity ^0.8.27;
-  
+
   import {NewtonPolicyWallet} from "./NewtonPolicyWallet.sol";
-  
+
   contract WalletFactory {
       address public immutable taskManager;
       address public immutable policy;
-  
+
       event WalletCreated(address indexed owner, address wallet);
-  
+
       constructor(address _taskManager, address _policy) {
           taskManager = _taskManager;
           policy = _policy;
       }
-  
+
       function createWallet() external returns (address) {
           NewtonPolicyWallet wallet = new NewtonPolicyWallet();
           wallet.initialize(taskManager, policy, msg.sender);

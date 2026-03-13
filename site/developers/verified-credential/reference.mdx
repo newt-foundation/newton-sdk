@@ -1,0 +1,210 @@
+---
+title: "SDK & Contract Reference"
+description: "SDK methods and contract functions for Newton Verifiable Credentials."
+---
+
+This page covers the SDK methods and contract functions used to register, link, and manage user identity data with Newton.
+
+## SDK Methods
+
+The following methods are available on the wallet client actions extension (`newtonWalletClientActions`).
+
+### `registerUserData`
+
+Registers KYC data for a user, scoped to your application's identity domain. Opens the Newton identity popup to securely store the data.
+
+**Signature:**
+
+```typescript
+registerUserData(args: {
+  userData: KycUserData
+  appIdentityDomain: Hex
+}): Promise<unknown>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userData` | `KycUserData` | KYC data object from your identity vendor |
+| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string (keccak256 of your domain string) |
+
+**Example:**
+
+```typescript
+await walletClient.registerUserData({
+  userData: kycDataFromVendor,
+  appIdentityDomain: '0xabc123...', // keccak256(bytes("my.dev.domain.co"))
+})
+```
+
+---
+
+### `linkApp`
+
+Links a user's registered identity to your policy client contract. The user must confirm the link in the Newton identity popup, which triggers a signed transaction from their wallet.
+
+**Signature:**
+
+```typescript
+linkApp(args: {
+  appWalletAddress: Address
+  appClientAddress: Address
+  appIdentityDomain: Hex
+}): Promise<unknown>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `appWalletAddress` | `Address` | The user's dapp wallet address |
+| `appClientAddress` | `Address` | Your deployed policy client contract address |
+| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string |
+
+**Example:**
+
+```typescript
+await walletClient.linkApp({
+  appWalletAddress: '0xUserWallet...',
+  appClientAddress: '0xYourPolicyClient...',
+  appIdentityDomain: '0xabc123...',
+})
+```
+
+---
+
+### `unlinkApp`
+
+Removes a user's identity link from your policy client contract.
+
+**Signature:**
+
+```typescript
+unlinkApp(args: {
+  appWalletAddress: Address
+  appClientAddress: Address
+  appIdentityDomain: Hex
+}): Promise<unknown>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `appWalletAddress` | `Address` | The user's dapp wallet address |
+| `appClientAddress` | `Address` | Your deployed policy client contract address |
+| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string |
+
+**Example:**
+
+```typescript
+await walletClient.unlinkApp({
+  appWalletAddress: '0xUserWallet...',
+  appClientAddress: '0xYourPolicyClient...',
+  appIdentityDomain: '0xabc123...',
+})
+```
+
+---
+
+## Contract Functions
+
+### `linkIdentityAsUser`
+
+Called on the `IdentityRegistry` contract to link a user's identity to a policy client. This is invoked under the hood when the user confirms the link via `linkApp`. See [Contract Addresses](/developers/reference/contract-addresses) for the `IdentityRegistry` address.
+
+**Signature:**
+
+```solidity
+function linkIdentityAsUser(
+    address _identityOwner,
+    address _policyClient,
+    bytes32[] calldata _identityDomains,
+    bytes calldata _signature,
+    uint256 _nonce,
+    uint256 _deadline
+)
+```
+
+**Parameters:**
+
+The following are the output of the link SDK method.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `_identityOwner` | `address` | The identity owner being used to authorize access to the existing identity |
+| `_policyClient` | `address` | The policy client where the data is to be associated |
+| `_identityDomains` | `bytes32[]` | The identity domains specifying what type of data is associated |
+| `_signature` | `bytes` | Signature by the `_identityOwner` to authorize the link |
+| `_nonce` | `uint256` | Nonce for the signature |
+| `_deadline` | `uint256` | Deadline for the signature |
+
+---
+
+## Sample Policy Client
+
+Your policy client contract must inherit both `NewtonPolicyClient` and `EIP712`. Below is a complete example:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+
+import {NewtonPolicyClient} from "newton-contracts/src/mixins/NewtonPolicyClient.sol";
+import {INewtonProverTaskManager} from "newton-contracts/src/interfaces/INewtonProverTaskManager.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+
+contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
+    event Executed(address indexed to, uint256 value, bytes data, bytes32 taskId);
+    error InvalidAttestation();
+    error ExecutionFailed();
+
+    constructor(
+        address policyTaskManager,
+        address owner
+    ) EIP712("NewtonPolicyWallet", "1") {
+        _initNewtonPolicyClient(policyTaskManager, owner);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == 0xdbdcaa9c || super.supportsInterface(interfaceId);
+    }
+
+    function validateAndExecuteDirect(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        INewtonProverTaskManager.Task calldata task,
+        INewtonProverTaskManager.TaskResponse calldata taskResponse,
+        bytes calldata signatureData
+    ) external returns (bytes memory) {
+        require(
+            _validateAttestationDirect(task, taskResponse, signatureData),
+            InvalidAttestation()
+        );
+
+        (bool success, bytes memory result) = to.call{value: value}(data);
+        if (!success) revert ExecutionFailed();
+
+        emit Executed(to, value, data, task.taskId);
+        return result;
+    }
+
+    receive() external payable {}
+}
+```
+
+<Note>
+After deploying, register this contract with the `PolicyClientRegistry`. See [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration) for instructions.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
+    Rego built-in functions for writing identity-aware policies
+  </Card>
+  <Card icon="map" href="/developers/reference/contract-addresses" title="Contract Addresses">
+    IdentityRegistry and other deployed contract addresses
+  </Card>
+</CardGroup>

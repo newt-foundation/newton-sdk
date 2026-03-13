@@ -21,9 +21,18 @@
             "group": "Getting Started",
             "pages": [
               "developers/overview/about",
-              "developers/overview/quickstart",
               "developers/overview/core-concepts",
+              "developers/overview/quickstart",
               "developers/overview/dashboard-api-keys"
+            ]
+          },
+          {
+            "group": "Verifiable Credential",
+            "pages": [
+              "developers/verified-credential/overview",
+              "developers/verified-credential/integration-guide",
+              "developers/verified-credential/reference",
+              "developers/verified-credential/identity-policy-reference"
             ]
           },
           {

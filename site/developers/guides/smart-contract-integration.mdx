@@ -122,18 +122,14 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
     error InvalidAttestation();
     error ExecutionFailed();
 
-    constructor() {}
+    address constant NEWTON_TASK_MANAGER = 0xecb741F4875770f9A5F060cb30F6c9eb5966eD13;
+
+    constructor(address owner) {
+        _initNewtonPolicyClient(NEWTON_TASK_MANAGER, owner);
+    }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return interfaceId == 0xdbdcaa9c || super.supportsInterface(interfaceId);
-    }
-
-    function initialize(
-        address policyTaskManager,
-        address policy,
-        address owner
-    ) external {
-        _initNewtonPolicyClient(policyTaskManager, policy, owner);
     }
 
     function validateAndExecuteDirect(
@@ -348,18 +344,13 @@ import {Script, console} from "forge-std/Script.sol";
 import {NewtonPolicyWallet} from "../src/NewtonPolicyWallet.sol";
 
 contract DeployScript is Script {
-    // Newton Task Manager on Sepolia
-    address constant NEWTON_TASK_MANAGER = 0xecb741F4875770f9A5F060cb30F6c9eb5966eD13;
-
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address policy = vm.envAddress("POLICY");
         address owner = vm.addr(deployerPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        NewtonPolicyWallet wallet = new NewtonPolicyWallet();
-        wallet.initialize(NEWTON_TASK_MANAGER, policy, owner);
+        NewtonPolicyWallet wallet = new NewtonPolicyWallet(owner);
 
         console.log("Deployed at:", address(wallet));
         vm.stopBroadcast();
@@ -465,23 +456,23 @@ All registry operations are available via `newton-cli policy-client`:
 ```bash
 # Register a client
 newton-cli policy-client register \
-  --registry 0x... --client 0x... --private-key $KEY --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --private-key $KEY --rpc-url $RPC
 
 # Check registration status
 newton-cli policy-client status \
-  --registry 0x... --client 0x... --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --rpc-url $RPC
 
 # List clients by owner
 newton-cli policy-client list \
-  --registry 0x... --owner 0x... --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --owner 0x... --rpc-url $RPC
 
 # Deactivate / activate / transfer ownership
 newton-cli policy-client deactivate \
-  --registry 0x... --client 0x... --private-key $KEY --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --private-key $KEY --rpc-url $RPC
 newton-cli policy-client activate \
-  --registry 0x... --client 0x... --private-key $KEY --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --private-key $KEY --rpc-url $RPC
 newton-cli policy-client transfer-ownership \
-  --registry 0x... --client 0x... --new-owner 0x... --private-key $KEY --rpc-url $RPC
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --new-owner 0x... --private-key $KEY --rpc-url $RPC
 ```
 
 ### IdentityRegistry Integration

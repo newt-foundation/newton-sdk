@@ -1,0 +1,341 @@
+---
+title: "Identity Policy Reference"
+description: "Newton identity Rego built-in functions for writing policies that check user identity data."
+---
+
+Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements—like age, country, and document status—directly in your Rego policies.
+
+## IdentityData Fields
+
+The following fields are available from the identity data passed into the policy engine:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | One of: `created`, `pending`, `completed`, `approved`, `failed`, `expired`, `declined`, `needs review` |
+| `selected_country_code` | `string` | The country code selected by the user during the KYC process |
+| `address_subdivision` | `string` | The state/subdivision from the document address |
+| `address_country_code` | `string` | The country from the document address |
+| `birthdate` | `string` | The user's birthdate as a `YYYY-MM-DD` string |
+| `expiration_date` | `string` | The expiration date of the identity document |
+| `issue_date` | `string` | The issuance date of the identity document |
+| `issuing_authority` | `string` | The country or state that issued the document |
+
+## Built-in Functions
+
+| Function | Description |
+|----------|-------------|
+| [`newton.identity.check_approved`](#newtonidentitycheck_approved) | Check that the identity data has been approved |
+| [`newton.identity.address_in_countries`](#newtonidentityaddress_in_countries) | Check that the document country is in an allowed list |
+| [`newton.identity.address_in_subdivision`](#newtonidentityaddress_in_subdivision) | Check that the document address is in an allowed list of subdivisions |
+| [`newton.identity.address_not_in_subdivision`](#newtonidentityaddress_not_in_subdivision) | Check that the document address is not in an excluded list of subdivisions |
+| [`newton.identity.age_gte`](#newtonidentityage_gte) | Check that the user is at least a minimum age |
+| [`newton.identity.not_expired`](#newtonidentitynot_expired) | Check that the identity document has not expired |
+| [`newton.identity.valid_for`](#newtonidentityvalid_for) | Check that the document remains valid for a minimum number of days |
+| [`newton.identity.issued_since`](#newtonidentityissued_since) | Check that the document was issued at least a minimum number of days ago |
+
+---
+
+### `newton.identity.check_approved`
+
+Requires `identity_data.status` to equal `"approved"`.
+
+**Signature:**
+
+```rego
+result := newton.identity.check_approved()
+```
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if `identity_data.status` is `"approved"`, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the identity data is approved
+authorized if {
+    newton.identity.check_approved()
+}
+```
+
+---
+
+### `newton.identity.address_in_countries`
+
+Requires `identity_data.address_country_code` to be found within the provided list of country codes.
+
+**Signature:**
+
+```rego
+result := newton.identity.address_in_countries(country_code_array)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `country_code_array` | `string[]` | Array of 2-letter ISO country codes to check against |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the address country is within the list, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the identity data matches address requirements
+authorized if {
+    newton.identity.address_in_countries(["US","DE","CA"])
+}
+```
+
+---
+
+### `newton.identity.address_in_subdivision`
+
+Requires the ISO subdivision location code (combining `address_country_code` and `address_subdivision`) to be found within the provided list.
+
+**Signature:**
+
+```rego
+result := newton.identity.address_in_subdivision(iso_code_array)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `iso_code_array` | `string[]` | Array of `XX-XX` or `XX-XXX` ISO subdivision codes to match against |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the address is within the list, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the identity data matches address requirements
+authorized if {
+    newton.identity.address_in_subdivision(["US-CA","US-OR","US-WA"])
+}
+```
+
+---
+
+### `newton.identity.address_not_in_subdivision`
+
+Requires the ISO subdivision location code to **not** be found within the provided list. Useful for excluding specific subdivisions while allowing all others in a country (avoids submitting a long allowlist).
+
+**Signature:**
+
+```rego
+result := newton.identity.address_not_in_subdivision(iso_code_array)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `iso_code_array` | `string[]` | Array of `XX-XX` or `XX-XXX` ISO subdivision codes to exclude |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the address is not in the list, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Allow all US users except specific states
+authorized if {
+    newton.identity.address_in_countries(["US"])
+    newton.identity.address_not_in_subdivision(["US-NY","US-NC","US-HI"])
+}
+```
+
+---
+
+### `newton.identity.age_gte`
+
+Requires `identity_data.birthdate` to be at least the required number of years ago, relative to `reference_date`.
+
+**Signature:**
+
+```rego
+result := newton.identity.age_gte(min_age)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `min_age` | `number` | Minimum age in years |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the user's age meets the minimum, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the user meets age requirements
+authorized if {
+    newton.identity.age_gte(21)
+}
+```
+
+---
+
+### `newton.identity.not_expired`
+
+Requires `identity_data.expiration_date` to be after the current date (`reference_date`).
+
+**Signature:**
+
+```rego
+result := newton.identity.not_expired()
+```
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the document expiration date is in the future, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the identity document isn't expired
+authorized if {
+    newton.identity.not_expired()
+}
+```
+
+---
+
+### `newton.identity.valid_for`
+
+Requires `identity_data.expiration_date` to be at least the required number of days in the future, relative to `reference_date`.
+
+**Signature:**
+
+```rego
+result := newton.identity.valid_for(min_days)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `min_days` | `number` | Minimum number of days the document must still be valid |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the document will be valid for at least `min_days`, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the document is valid for at least one more year
+authorized if {
+    newton.identity.valid_for(365)
+}
+```
+
+---
+
+### `newton.identity.issued_since`
+
+Requires `identity_data.issue_date` to be at least the required number of days in the past, relative to `reference_date`.
+
+**Signature:**
+
+```rego
+result := newton.identity.issued_since(min_days)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `min_days` | `number` | Minimum number of days since the document was issued |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| `bool` | `true` if the document was issued at least `min_days` ago, otherwise `false` |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Verify the document was issued at least 90 days ago
+authorized if {
+    newton.identity.issued_since(90)
+}
+```
+
+---
+
+## Error Handling
+
+- **Address functions** (`address_in_countries`, `address_in_subdivision`, `address_not_in_subdivision`) return an error (and the rule evaluates to `undefined`) when:
+  - Provided an empty array
+  - Provided full country/state names instead of ISO codes
+- **Date functions** (`age_gte`, `valid_for`, `issued_since`) return an error if given negative numbers.
+
+When a built-in function errors, the policy rule containing it evaluates to `undefined`, which Newton treats as a denial.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card icon="list-check" href="/developers/verified-credential/integration-guide" title="Integration Guide">
+    Step-by-step walkthrough for integrating Newton VC
+  </Card>
+  <Card icon="code" href="/developers/verified-credential/reference" title="SDK & Contract Reference">
+    SDK methods and contract function signatures
+  </Card>
+</CardGroup>
