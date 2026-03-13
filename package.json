@@ -1,6 +1,6 @@
 {
   "name": "@magicnewton/newton-protocol-sdk",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Official SDK for the Newton Protocol.",
   "author": "Newton Protocol <https://x.com/newton_xyz> (https://newton.xyz)",
   "private": false,
