@@ -168,6 +168,7 @@ interface SdkOverrides {
   taskManagerAddress?: Address;
   attestationValidatorAddress?: Address;
   newtonIdpUrl?: string;
+  identityRegistry?: Address;
 }
 ```
 
@@ -177,6 +178,7 @@ interface SdkOverrides {
 | `taskManagerAddress`          | `Address` | Custom TaskManager contract address          |
 | `attestationValidatorAddress` | `Address` | Custom AttestationValidator contract address |
 | `newtonIdpUrl`                | `string`  | Custom Newton identity provider URL          |
+| `identityRegistry`            | `Address` | Custom IdentityRegistry contract address     |
 
 ---
 
@@ -578,6 +580,111 @@ transferOwnership(args: {
 
 ---
 
+### Identity Methods
+
+These methods interact with the Newton Identity Provider for verified credential flows. They open a popup window for user interaction.
+
+#### connectIdentityWithNewton
+
+Connects the user's identity with Newton via the identity provider popup.
+
+```ts
+await walletClient.connectIdentityWithNewton({
+  appWalletAddress: '0x...',
+  appClientAddress: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+connectIdentityWithNewton(args: {
+  appWalletAddress: Address;
+  appClientAddress: Address;
+}): Promise<unknown>
+```
+
+---
+
+#### registerUserData
+
+Registers KYC user data through the identity provider popup.
+
+```ts
+await walletClient.registerUserData({
+  userData: {
+    status: 'approved',
+    selected_country_code: 'US',
+    address_subdivision: 'CA',
+    address_country_code: 'US',
+    birthdate: '1990-01-15',
+    expiration_date: '2030-01-15',
+    issue_date: '2020-01-15',
+    issuing_authority: 'US_DL',
+  },
+  appIdentityDomain: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+registerUserData(args: {
+  userData: KycUserData;
+  appIdentityDomain: Hex;
+}): Promise<unknown>
+```
+
+---
+
+#### linkApp
+
+Links an application to the user's Newton identity.
+
+```ts
+await walletClient.linkApp({
+  appWalletAddress: '0x...',
+  appClientAddress: '0x...',
+  appIdentityDomain: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+linkApp(args: {
+  appWalletAddress: Address;
+  appClientAddress: Address;
+  appIdentityDomain: Hex;
+}): Promise<unknown>
+```
+
+---
+
+#### unlinkApp
+
+Unlinks an application from the user's Newton identity.
+
+```ts
+await walletClient.unlinkApp({
+  appWalletAddress: '0x...',
+  appClientAddress: '0x...',
+  appIdentityDomain: '0x...',
+});
+```
+
+**Signature:**
+
+```ts
+unlinkApp(args: {
+  appWalletAddress: Address;
+  appClientAddress: Address;
+  appIdentityDomain: Hex;
+}): Promise<unknown>
+```
+
+---
+
 ### Privacy Methods
 
 These methods are available on the wallet client for privacy-preserving policy evaluation using client-side HPKE encryption. They are also exported as standalone functions from the package.
@@ -609,6 +716,7 @@ getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
 Creates an HPKE-encrypted envelope from plaintext. Runs entirely offline with zero network calls.
 
 ```ts
+const signingKeyPair = walletClient.generateSigningKeyPair();
 const { envelope, signature, senderPublicKey } = await walletClient.createSecureEnvelope(
   {
     plaintext: { secret: 'value' },
@@ -616,7 +724,7 @@ const { envelope, signature, senderPublicKey } = await walletClient.createSecure
     chainId: 11155111,
     recipientPublicKey: '<gateway-public-key>',
   },
-  '<signing-key-hex>'
+  signingKeyPair.privateKey // Uint8Array from generateSigningKeyPair()
 );
 ```
 
@@ -625,7 +733,7 @@ const { envelope, signature, senderPublicKey } = await walletClient.createSecure
 ```ts
 createSecureEnvelope(
   args: CreateSecureEnvelopeParams,
-  signingKey: string
+  signingKey: Uint8Array
 ): Promise<SecureEnvelopeResult>
 ```
 
@@ -637,7 +745,7 @@ createSecureEnvelope(
 | `args.policyClient`    | `Address`| Yes      | PolicyClient address (bound via AAD)           |
 | `args.chainId`         | `number` | Yes      | Chain ID (bound via AAD)                       |
 | `args.recipientPublicKey` | `string` | Yes   | Gateway's X25519 public key                    |
-| `signingKey`           | `string` | Yes      | Ed25519 private key for signing (hex, no 0x)   |
+| `signingKey`           | `Uint8Array` | Yes  | Ed25519 private key seed (32 bytes)            |
 
 ---
 

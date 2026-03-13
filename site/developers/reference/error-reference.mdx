@@ -67,12 +67,14 @@ This page documents all error codes and messages you may encounter when interact
 
 | Code | Description |
 |------|-------------|
-| `INVALID_PARAMS` | Invalid parameters passed to SDK method |
-| `TIMEOUT` | Request exceeded timeout threshold |
-| `NETWORK_ERROR` | Network connectivity issue |
-| `CONTRACT_ERROR` | On-chain contract interaction failed |
-| `GATEWAY_ERROR` | Newton Gateway returned an error |
-| `UNKNOWN` | Unexpected error |
+| `MISSING_API_KEY` | API key was not provided when initializing wallet client actions |
+| `POPUP_ALREADY_EXISTS` | A Newton identity popup is already open |
+| `MALFORMED_RESPONSE` | Gateway returned an unparseable response |
+| `INVALID_ARGUMENT` | Invalid argument passed to an SDK method |
+| `EXTENSION_NOT_INITIALIZED` | Client extension was not properly initialized |
+| `INCOMPATIBLE_EXTENSIONS` | Conflicting client extensions detected |
+| `FAILED_TO_OPEN_POPUP` | Browser blocked or failed to open the Newton popup |
+| `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE` | Could not read native token balance from the chain |
 
 ```typescript
 import { SDKError, SDKErrorCode } from '@magicnewton/newton-protocol-sdk';
@@ -82,11 +84,11 @@ try {
 } catch (error) {
   if (error instanceof SDKError) {
     switch (error.code) {
-      case SDKErrorCode.TIMEOUT:
-        // Increase timeout or retry
+      case SDKErrorCode.MissingApiKey:
+        // Provide an API key when initializing newtonWalletClientActions
         break;
-      case SDKErrorCode.GATEWAY_ERROR:
-        // Check API key and Gateway connectivity
+      case SDKErrorCode.MalformedResponse:
+        // Check gateway connectivity and API key validity
         break;
     }
   }
