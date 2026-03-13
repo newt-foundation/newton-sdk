@@ -1,3 +1,15 @@
+# v0.5.3 (Fri Mar 13 2026)
+
+#### 🐛 Bug Fix
+
+- add initialization timestamp to task and task response [#138](https://github.com/newt-foundation/newton-sdk/pull/138) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v0.5.2 (Thu Mar 12 2026)
 
 #### 🐛 Bug Fix
