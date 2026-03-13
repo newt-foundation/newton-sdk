@@ -343,6 +343,7 @@ async function evaluateIntentDirect(
     policyId: createTaskResult.task_response.policy_id,
     policyTaskData: createTaskResult.task_response.policy_task_data,
     taskId: createTaskResult.task_id,
+    initializationTimestamp: createTaskResult.task_response.initialization_timestamp,
   }
 
   return {

@@ -114,6 +114,7 @@ export interface AggregationResponse {
 }
 
 export interface Task {
+  initializationTimestamp: Hex
   intent: {
     chainId: Hex
     data: Hex
@@ -240,6 +241,7 @@ export interface GatewayCreateTaskResult {
   task_id: Hex
   task_response: {
     evaluation_result: number[]
+    initialization_timestamp: Hex
     intent: {
       chainId: Hex
       data: Hex
