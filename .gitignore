@@ -37,6 +37,7 @@ yarn.lock
 # output files
 dist
 
+**/.mcp.json
 **/AGENTS.md
 **/CLAUDE.md
 **/.claude

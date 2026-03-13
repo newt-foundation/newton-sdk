@@ -1,3 +1,76 @@
+# v0.5.3 (Fri Mar 13 2026)
+
+#### 🐛 Bug Fix
+
+- add initialization timestamp to task and task response [#138](https://github.com/newt-foundation/newton-sdk/pull/138) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.5.2 (Thu Mar 12 2026)
+
+#### 🐛 Bug Fix
+
+- enforce typing for kyc user data [#137](https://github.com/newt-foundation/newton-sdk/pull/137) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.5.1 (Thu Mar 12 2026)
+
+#### 🐛 Bug Fix
+
+- feat: implement newton vc methods [#112](https://github.com/newt-foundation/newton-sdk/pull/112) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
+# v0.5.0 (Wed Mar 11 2026)
+
+#### 🚀 Enhancement
+
+- Merge pull request #116 from newt-foundation/feature/sdk-privacy-apis [#116](https://github.com/newt-foundation/newton-sdk/pull/116) ([@denniswon](https://github.com/denniswon))
+
+#### 🐛 Bug Fix
+
+- docs: restore wasmArgs in frontend integration example [#117](https://github.com/newt-foundation/newton-sdk/pull/117) ([@denniswon](https://github.com/denniswon))
+- docs: fix viem imports and plaintext type accuracy in privacy docs [#117](https://github.com/newt-foundation/newton-sdk/pull/117) ([@denniswon](https://github.com/denniswon))
+- docs: add privacy API reference, fix console.log leak, correct sdk-reference types [#117](https://github.com/newt-foundation/newton-sdk/pull/117) ([@denniswon](https://github.com/denniswon))
+- docs: add pubkey fields and fix stale privacy data flow descriptions [#117](https://github.com/newt-foundation/newton-sdk/pull/117) ([@denniswon](https://github.com/denniswon))
+- docs: add privacy layer developer integration guide (NEWT-179) [#117](https://github.com/newt-foundation/newton-sdk/pull/117) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
+# v0.4.0 (Wed Mar 11 2026)
+
+#### 🚀 Enhancement
+
+- Merge pull request #115 from newt-foundation/feature/sdk-privacy-module [#115](https://github.com/newt-foundation/newton-sdk/pull/115) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- chore: update gitignore ([@denniswon](https://github.com/denniswon))
+- docs: fix broken README examples, secure API key exposure, add missing intent field ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.3.21 (Tue Mar 10 2026)
 
 #### 🐛 Bug Fix

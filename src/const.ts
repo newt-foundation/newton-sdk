@@ -15,6 +15,9 @@ export const GATEWAY_METHODS = {
   simulateTask: 'newt_simulateTask',
   simulatePolicyData: 'newt_simulatePolicyData',
   simulatePolicyDataWithClient: 'newt_simulatePolicyDataWithClient',
+  getPrivacyPublicKey: 'newt_getPrivacyPublicKey',
+  uploadEncryptedData: 'newt_uploadEncryptedData',
+  storeEncryptedSecrets: 'newt_storeEncryptedSecrets',
 }
 
 export const NEWTON_PROVER_TASK_MANAGER: Record<number, Hex> = {

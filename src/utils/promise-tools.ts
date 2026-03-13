@@ -78,14 +78,13 @@ export function createPromiEvent<TResult, TEvents extends EventsDefinition = und
    * `EventEmitter` methods.
    */
   const createChainingPromiseMethod =
-    // biome-ignore lint/suspicious/noExplicitAny: internal promise chaining requires type erasure
-      (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<any>) =>
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch requires any args
-      (...args: any[]) => {
-        // biome-ignore lint/suspicious/noExplicitAny: symbol-keyed property access requires type erasure
-        const nextPromise = (source as any)[method].apply(source, args)
-        return promiEvent(nextPromise)
-      }
+    (method: typeof thenSymbol | typeof catchSymbol | typeof finallySymbol, source: Promise<unknown>) =>
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch requires any args
+    (...args: any[]) => {
+      // biome-ignore lint/suspicious/noExplicitAny: symbol-keyed property access requires type erasure
+      const nextPromise = (source as any)[method].apply(source, args)
+      return promiEvent(nextPromise)
+    }
 
   /**
    * Builds a `PromiEvent` by assigning `EventEmitter` methods to a native

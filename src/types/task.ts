@@ -19,6 +19,17 @@ export interface SubmitEvaluationRequestParams {
   quorumThresholdPercentage?: number
   wasmArgs?: Hex
   timeout: number // in seconds
+  identityDomain?: Hex
+  /** Encrypted data reference UUIDs for privacy-preserving evaluation */
+  encryptedDataRefs?: string[]
+  /** User Ed25519 signature for privacy authorization (hex-encoded) */
+  userSignature?: string
+  /** Application Ed25519 signature for privacy authorization (hex-encoded) */
+  appSignature?: string
+  /** User Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  userPublicKey?: string
+  /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  appPublicKey?: string
 }
 
 export interface SubmitIntentResult {
@@ -103,6 +114,7 @@ export interface AggregationResponse {
 }
 
 export interface Task {
+  initializationTimestamp: Hex
   intent: {
     chainId: Hex
     data: Hex
@@ -179,7 +191,10 @@ export interface SimulatePolicyResult {
   evaluation_result: SimulatePolicyEvaluationResult | null
   error: string | null
   error_details: {
-    missing_secrets?: Array<{ policy_data_address: Address; has_secrets_schema: boolean }>
+    missing_secrets?: Array<{
+      policy_data_address: Address
+      has_secrets_schema: boolean
+    }>
     suggested_actions?: string[]
   } | null
 }
@@ -226,6 +241,7 @@ export interface GatewayCreateTaskResult {
   task_id: Hex
   task_response: {
     evaluation_result: number[]
+    initialization_timestamp: Hex
     intent: {
       chainId: Hex
       data: Hex

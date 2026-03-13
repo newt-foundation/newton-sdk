@@ -266,8 +266,8 @@ evaluateIntentDirect(
   result: {
     evaluationResult: boolean;
     task: Task;
-    taskResponse: any;
-    blsSignature: any;
+    taskResponse: unknown;
+    blsSignature: unknown;
   };
 }>
 ```
@@ -578,6 +578,171 @@ transferOwnership(args: {
 
 ---
 
+### Privacy Methods
+
+These methods are available on the wallet client for privacy-preserving policy evaluation using client-side HPKE encryption. They are also exported as standalone functions from the package.
+
+#### getPrivacyPublicKey
+
+Fetches the Newton Gateway's X25519 HPKE public key for encrypting data.
+
+```ts
+const { public_key, key_type, encryption_suite } = await walletClient.getPrivacyPublicKey();
+```
+
+**Signature:**
+
+```ts
+getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
+```
+
+**Returns:**
+
+- `public_key` (`string`) -- The gateway's X25519 public key (hex-encoded)
+- `key_type` (`string`) -- Key type identifier
+- `encryption_suite` (`string`) -- HPKE suite identifier
+
+---
+
+#### createSecureEnvelope
+
+Creates an HPKE-encrypted envelope from plaintext. Runs entirely offline with zero network calls.
+
+```ts
+const { envelope, signature, senderPublicKey } = await walletClient.createSecureEnvelope(
+  {
+    plaintext: { secret: 'value' },
+    policyClient: '0x...',
+    chainId: 11155111,
+    recipientPublicKey: '<gateway-public-key>',
+  },
+  '<signing-key-hex>'
+);
+```
+
+**Signature:**
+
+```ts
+createSecureEnvelope(
+  args: CreateSecureEnvelopeParams,
+  signingKey: string
+): Promise<SecureEnvelopeResult>
+```
+
+**Parameters:**
+
+| Parameter              | Type     | Required | Description                                    |
+| ---------------------- | -------- | -------- | ---------------------------------------------- |
+| `args.plaintext`       | `Uint8Array \| string \| Record<string, unknown>` | Yes | Data to encrypt (objects are JSON-stringified) |
+| `args.policyClient`    | `Address`| Yes      | PolicyClient address (bound via AAD)           |
+| `args.chainId`         | `number` | Yes      | Chain ID (bound via AAD)                       |
+| `args.recipientPublicKey` | `string` | Yes   | Gateway's X25519 public key                    |
+| `signingKey`           | `string` | Yes      | Ed25519 private key for signing (hex, no 0x)   |
+
+---
+
+#### uploadEncryptedData
+
+Encrypts data with HPKE and uploads it to the Newton Gateway in a single call.
+
+```ts
+const { success, data_ref_id } = await walletClient.uploadEncryptedData({
+  senderAddress: '0x...',
+  policyClient: '0x...',
+  chainId: 11155111,
+  plaintext: { secret: 'value' },
+  signingKey: '<ed25519-private-key>',
+});
+```
+
+**Signature:**
+
+```ts
+uploadEncryptedData(
+  args: UploadEncryptedDataParams
+): Promise<UploadEncryptedDataResponse>
+```
+
+**Returns:**
+
+- `success` (`boolean`) -- Whether the upload succeeded
+- `data_ref_id` (`string`) -- Reference ID for the uploaded data (use in `encryptedDataRefs`)
+
+---
+
+#### generateSigningKeyPair
+
+Generates a random Ed25519 key pair for privacy authorization signatures.
+
+```ts
+const { privateKey, publicKey } = walletClient.generateSigningKeyPair();
+// Both are 32-byte hex strings without 0x prefix
+```
+
+**Signature:**
+
+```ts
+generateSigningKeyPair(): Ed25519KeyPair
+```
+
+<Note>
+  This is a **synchronous** method. Keys are generated locally and never sent to any server.
+</Note>
+
+---
+
+#### storeEncryptedSecrets
+
+Uploads KMS-encrypted secrets for a PolicyClient's PolicyData oracle.
+
+```ts
+const { success } = await walletClient.storeEncryptedSecrets({
+  policyClient: '0x...',
+  policyDataAddress: '0x...',
+  secrets: '{"API_KEY": "sk-..."}',
+  chainId: 11155111,
+});
+```
+
+**Signature:**
+
+```ts
+storeEncryptedSecrets(
+  args: StoreEncryptedSecretsParams
+): Promise<StoreEncryptedSecretsResponse>
+```
+
+---
+
+#### signPrivacyAuthorization
+
+Computes dual Ed25519 signatures (user + app) for privacy-enabled task creation. Runs entirely offline.
+
+```ts
+const { userSignature, appSignature, userPublicKey, appPublicKey } =
+  walletClient.signPrivacyAuthorization({
+    policyClient: '0x...',
+    intentHash: '0x...',
+    encryptedDataRefs: ['ref-id-1', 'ref-id-2'],
+    userSigningKey: '<user-ed25519-private-key>',
+    appSigningKey: '<app-ed25519-private-key>',
+  });
+```
+
+**Signature:**
+
+```ts
+signPrivacyAuthorization(
+  args: SignPrivacyAuthorizationParams
+): PrivacyAuthorizationResult
+```
+
+<Note>
+  This is a **synchronous** method. Signatures are computed locally.
+</Note>
+
+---
+
 ## Public Client Methods (Read)
 
 These methods are available after extending a `PublicClient` with `newtonPublicClientActions`.
@@ -828,7 +993,8 @@ precomputePolicyId(args: {
   policyUri: string;
   schemaUri: string;
   entrypoint: string;
-  expireAfter: number;
+  expireAfter?: number;
+  blockTimestamp?: bigint;
 }): `0x${string}`
 ```
 
@@ -853,6 +1019,155 @@ The following methods read individual fields from the policy contract. They all 
 | `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
 | `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
 | `supportsInterface({ interfaceId })` | `Promise<boolean>`          | EIP-165 interface support check                        |
+
+---
+
+## Privacy Methods
+
+Client-side HPKE encryption for privacy-preserving policy evaluation. These methods are available as wallet client actions and as standalone exports.
+
+<Info>
+  The privacy module uses X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, Base mode) and is compatible with the Rust gateway implementation.
+</Info>
+
+### `createSecureEnvelope`
+
+Encrypt plaintext into a SecureEnvelope using HPKE. This is a pure offline function — zero network calls. The ephemeral HPKE key is generated internally and zeroed after use.
+
+**Standalone signature:**
+
+```ts
+createSecureEnvelope(
+  params: CreateSecureEnvelopeParams,
+  signingKey: Uint8Array
+): Promise<SecureEnvelopeResult>
+```
+
+**Wallet client signature:**
+
+```ts
+client.createSecureEnvelope(params: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt |
+| `params.policyClient` | `Address` | Policy client address this data is scoped to |
+| `params.chainId` | `number` | Chain ID for AAD context binding |
+| `params.recipientPublicKey` | `string` | Gateway's X25519 public key (hex, no 0x prefix) |
+| `signingKey` | `Uint8Array` | Ed25519 private key seed (32 bytes). Caller owns the buffer lifecycle. |
+
+**Returns:** `SecureEnvelopeResult` containing the encrypted envelope, Ed25519 signature, and sender public key.
+
+<Warning>
+  The caller is responsible for zeroing the `signingKey` buffer when done. The function copies the key internally and zeroes the copy after signing, but the original buffer remains in the caller's control.
+</Warning>
+
+---
+
+### `getPrivacyPublicKey`
+
+Fetch the gateway's X25519 HPKE public key. Call this once and cache the result — the key only changes on gateway restart or key rotation.
+
+**Standalone signature:**
+
+```ts
+getPrivacyPublicKey(
+  chainId: number,
+  apiKey: string,
+  gatewayApiUrlOverride?: string
+): Promise<PrivacyPublicKeyResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
+```
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `public_key` | `string` | X25519 public key (hex, no 0x prefix) |
+| `key_type` | `string` | Always `"x25519"` |
+| `encryption_suite` | `string` | Encryption suite identifier |
+
+---
+
+### `uploadEncryptedData`
+
+Encrypt data and upload to the gateway in a single call. If `recipientPublicKey` is not provided, it is fetched from the gateway first.
+
+**Standalone signature:**
+
+```ts
+uploadEncryptedData(
+  chainId: number,
+  apiKey: string,
+  params: UploadEncryptedDataParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadEncryptedDataResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadEncryptedData(params: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.senderAddress` | `Address` | EVM address of the end user |
+| `params.policyClient` | `Address` | Policy client address |
+| `params.chainId` | `number` | Chain ID the policy client lives on |
+| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
+| `params.recipientPublicKey` | `string?` | Gateway's X25519 key. If omitted, fetched via RPC. |
+| `params.signingKey` | `Uint8Array` | Ed25519 private key seed (32 bytes) |
+| `params.ttl` | `number?` | Optional TTL in seconds |
+
+---
+
+### `uploadSecureEnvelope`
+
+Upload a pre-built SecureEnvelope to the gateway. Use this when you have already created an envelope via `createSecureEnvelope` and want to control the upload separately — for example, offline-first apps that encrypt now and upload later, or batching multiple envelopes.
+
+**Standalone signature:**
+
+```ts
+uploadSecureEnvelope(
+  chainId: number,
+  apiKey: string,
+  params: UploadSecureEnvelopeParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadEncryptedDataResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.senderAddress` | `Address` | EVM address of the end user |
+| `params.envelopeResult` | `SecureEnvelopeResult` | Pre-built envelope from `createSecureEnvelope` |
+| `params.ttl` | `number?` | Optional TTL in seconds |
+
+**Returns (both upload methods):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Whether the upload succeeded |
+| `data_ref_id` | `string \| null` | UUID of the stored data reference |
+| `error` | `string \| null` | Error message if upload failed |
 
 ---
 
@@ -1152,8 +1467,8 @@ The following methods read individual fields from the policy contract. They all 
   interface AggregationResponse {
     evaluationResult: boolean;
     task: Task;
-    taskResponse: any;
-    blsSignature: any;
+    taskResponse: unknown;
+    blsSignature: unknown;
   }
   ```
 </Expandable>
@@ -1212,6 +1527,110 @@ The following methods read individual fields from the policy contract. They all 
   ```
 
   Returned by `submitEvaluationRequest`. Call `waitForTaskResponded()` to poll for the on-chain attestation.
+</Expandable>
+
+---
+
+### Privacy Types
+
+<Expandable title="SecureEnvelope & CreateSecureEnvelopeParams">
+  ```ts
+  interface SecureEnvelope {
+    enc: string;
+    ciphertext: string;
+    policy_client: string;
+    chain_id: number;
+    recipient_pubkey: string;
+  }
+
+  interface CreateSecureEnvelopeParams {
+    plaintext: Uint8Array | string | Record<string, unknown>;
+    policyClient: Address;
+    chainId: number;
+    recipientPublicKey: string;
+  }
+
+  interface SecureEnvelopeResult {
+    envelope: SecureEnvelope;
+    signature: string;
+    senderPublicKey: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="Ed25519KeyPair">
+  ```ts
+  interface Ed25519KeyPair {
+    privateKey: string;  // 32-byte hex, no 0x prefix
+    publicKey: string;   // 32-byte hex, no 0x prefix
+  }
+  ```
+</Expandable>
+
+<Expandable title="UploadEncryptedDataParams & Response">
+  ```ts
+  interface UploadEncryptedDataParams {
+    senderAddress: Address;
+    policyClient: Address;
+    chainId: number;
+    plaintext: Uint8Array | string | Record<string, unknown>;
+    recipientPublicKey?: string;
+    signingKey: string;
+    ttl?: number;
+  }
+
+  interface UploadEncryptedDataResponse {
+    success: boolean;
+    data_ref_id: string;
+    error?: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="StoreEncryptedSecretsParams & Response">
+  ```ts
+  interface StoreEncryptedSecretsParams {
+    policyClient: Address;
+    policyDataAddress: Address;
+    secrets: string;
+    chainId: number;
+  }
+
+  interface StoreEncryptedSecretsResponse {
+    success: boolean;
+    schema?: string;
+    error?: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="SignPrivacyAuthorizationParams & PrivacyAuthorizationResult">
+  ```ts
+  interface SignPrivacyAuthorizationParams {
+    policyClient: Address;
+    intentHash: Hex;
+    encryptedDataRefs: string[];
+    userSigningKey: string;
+    appSigningKey: string;
+  }
+
+  interface PrivacyAuthorizationResult {
+    userSignature: string;
+    appSignature: string;
+    userPublicKey: string;
+    appPublicKey: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="PrivacyPublicKeyResponse">
+  ```ts
+  interface PrivacyPublicKeyResponse {
+    public_key: string;
+    key_type: string;
+    encryption_suite: string;
+  }
+  ```
 </Expandable>
 
 ---
