@@ -1,3 +1,16 @@
+# v0.5.4 (Fri Mar 13 2026)
+
+#### 🐛 Bug Fix
+
+- Add Newton Verifiable Credential documentation [#136](https://github.com/newt-foundation/newton-sdk/pull/136) ([@vmathur](https://github.com/vmathur) [@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v0.5.3 (Fri Mar 13 2026)
 
 #### 🐛 Bug Fix
