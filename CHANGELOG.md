@@ -1,3 +1,15 @@
+# v0.6.1 (Sat Mar 14 2026)
+
+#### ⚠️ Pushed to `main`
+
+- Revert "feat: add identity module with sendIdentityEncrypted and identityDomainHash" ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.6.0 (Sat Mar 14 2026)
 
 #### 🚀 Enhancement
