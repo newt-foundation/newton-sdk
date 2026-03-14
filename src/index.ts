@@ -13,7 +13,6 @@ import {
   submitIntentAndSubscribe,
   waitForTaskResponded,
 } from './modules/avs'
-import { identityDomainHash, sendIdentityEncrypted } from './modules/identity'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
 import {
   createSecureEnvelope,
@@ -24,7 +23,6 @@ import {
   uploadEncryptedData,
   uploadSecureEnvelope,
 } from './modules/privacy'
-import type { SendIdentityEncryptedParams, SendIdentityEncryptedResponse } from './types/identity'
 import type { PolicyParamsJson } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
@@ -277,9 +275,6 @@ const newtonWalletClientActions =
 
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
-
-      sendIdentityEncrypted: (args: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse> =>
-        sendIdentityEncrypted(walletClient, args, apiKey, gatewayApiUrlOverride),
     }
   }
 
@@ -495,7 +490,6 @@ const newtonPublicClientActions =
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
-export { identityDomainHash, sendIdentityEncrypted }
 export {
   createSecureEnvelope,
   generateSigningKeyPair,

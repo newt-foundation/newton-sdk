@@ -7,10 +7,6 @@ export enum SDKErrorCode {
   IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
   FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
   FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
-  MissingChain = 'MISSING_CHAIN',
-  MissingAccount = 'MISSING_ACCOUNT',
-  InvalidAddress = 'INVALID_ADDRESS',
-  IdentityOwnerMismatch = 'IDENTITY_OWNER_MISMATCH',
 }
 
 export enum SDKWarningCode {

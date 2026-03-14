@@ -851,53 +851,6 @@ signPrivacyAuthorization(
 
 ---
 
-### Identity Methods
-
-These methods are available on the wallet client for submitting EIP-712 signed identity data to the on-chain IdentityRegistry. They are also exported as standalone functions from the package.
-
-#### sendIdentityEncrypted
-
-Sign encrypted identity data with EIP-712 and submit to the gateway via `newt_sendIdentityEncrypted`. The wallet client signs `EncryptedIdentityData { string data }` using EIP-712 domain `{name: "IdentityRegistry", version: "1", chainId, verifyingContract}`.
-
-```ts
-const result = await walletClient.sendIdentityEncrypted({
-  identityOwner: '0xYourAddress',
-  identityData: 'encrypted-blob',
-  identityDomain: 'kyc',
-  identityRegistryAddress: '0xRegistryAddress',
-});
-```
-
-**Signature:**
-
-```ts
-sendIdentityEncrypted(args: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse>
-```
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `identityOwner` | `Address` | The identity owner's address (must match the wallet signer) |
-| `identityData` | `string` | The encrypted identity data blob |
-| `identityDomain` | `IdentityDomainName \| string` | Domain name (e.g., `"kyc"`). Hashed to bytes32 via keccak256 |
-| `identityRegistryAddress` | `Address` | IdentityRegistry contract address for the EIP-712 domain |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
-
-**Errors:**
-
-- `MISSING_CHAIN` -- wallet client has no chain configured
-- `MISSING_ACCOUNT` -- wallet client has no account configured
-- `INVALID_ADDRESS` -- invalid `identityOwner` or `identityRegistryAddress`
-- `IDENTITY_OWNER_MISMATCH` -- wallet signer does not match `identityOwner`
-
----
-
 ## Public Client Methods (Read)
 
 These methods are available after extending a `PublicClient` with `newtonPublicClientActions`.
@@ -1323,71 +1276,6 @@ client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadE
 | `success` | `boolean` | Whether the upload succeeded |
 | `data_ref_id` | `string \| null` | UUID of the stored data reference |
 | `error` | `string \| null` | Error message if upload failed |
-
----
-
-## Identity Methods
-
-EIP-712 signed identity data submission to the on-chain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
-
-<Info>
-  The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
-</Info>
-
-### `sendIdentityEncrypted`
-
-Sign encrypted identity data with EIP-712 and submit to the gateway. The gateway validates the signature and submits the data to the on-chain IdentityRegistry.
-
-**Standalone signature:**
-
-```ts
-sendIdentityEncrypted(
-  walletClient: WalletClient,
-  params: SendIdentityEncryptedParams,
-  apiKey: string,
-  gatewayApiUrlOverride?: string
-): Promise<SendIdentityEncryptedResponse>
-```
-
-**Wallet client signature:**
-
-```ts
-client.sendIdentityEncrypted(params: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse>
-```
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `identityOwner` | `Address` | The identity owner's address (must match the wallet signer) |
-| `identityData` | `string` | The encrypted identity data blob (opaque string) |
-| `identityDomain` | `IdentityDomainName \| string` | Domain name (e.g., `"kyc"`). Hashed to bytes32 via keccak256 |
-| `identityRegistryAddress` | `Address` | IdentityRegistry contract address for the EIP-712 domain |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
-
-### `identityDomainHash`
-
-Compute the bytes32 identity domain hash from a human-readable domain name. Matches the Rust convention: `keccak256(toBytes(domainName))`.
-
-**Signature:**
-
-```ts
-identityDomainHash(domainName: string): Hex
-```
-
-**Example:**
-
-```ts
-import { identityDomainHash } from '@magicnewton/newton-protocol-sdk';
-
-const kycDomain = identityDomainHash('kyc');
-// Returns keccak256 of "kyc" as 0x-prefixed bytes32
-```
 
 ---
 
@@ -1853,29 +1741,6 @@ const kycDomain = identityDomainHash('kyc');
   ```
 </Expandable>
 
-### Identity Types
-
-<Expandable title="SendIdentityEncryptedParams">
-  ```ts
-  interface SendIdentityEncryptedParams {
-    identityOwner: Address;
-    identityData: string;
-    identityDomain: IdentityDomainName | string;
-    identityRegistryAddress: Address;
-  }
-
-  type IdentityDomainName = 'kyc';
-  ```
-</Expandable>
-
-<Expandable title="SendIdentityEncryptedResponse">
-  ```ts
-  interface SendIdentityEncryptedResponse {
-    inclusion_tx: string;
-  }
-  ```
-</Expandable>
-
 ---
 
 ## Error Handling
@@ -1922,10 +1787,6 @@ class MagicRPCError extends Error {
     IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
     FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
     FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
-    MissingChain = 'MISSING_CHAIN',
-    MissingAccount = 'MISSING_ACCOUNT',
-    InvalidAddress = 'INVALID_ADDRESS',
-    IdentityOwnerMismatch = 'IDENTITY_OWNER_MISMATCH',
   }
   ```
 </Expandable>
