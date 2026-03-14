@@ -1,3 +1,19 @@
+# v0.6.0 (Sat Mar 14 2026)
+
+#### 🚀 Enhancement
+
+- feat: add identity module with sendIdentityEncrypted and identityDomainHash ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- docs: sync sdk-reference with source, fix error codes, update IDE config ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.5.4 (Fri Mar 13 2026)
 
 #### 🐛 Bug Fix
