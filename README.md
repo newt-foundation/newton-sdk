@@ -109,6 +109,15 @@ The SDK includes a privacy module for client-side HPKE encryption used in privac
 
 See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.
 
+## Identity Module
+
+The SDK includes an identity module for submitting EIP-712 signed identity data to the on-chain IdentityRegistry. Key exports:
+
+- `sendIdentityEncrypted` -- sign and submit encrypted identity data to the gateway
+- `identityDomainHash` -- compute the bytes32 domain identifier from a name (e.g., `identityDomainHash("kyc")`)
+
+The module uses viem's `signTypedData` with domain `{name: "IdentityRegistry", version: "1"}` and a single EIP-712 struct `EncryptedIdentityData { string data }` that works across all identity domains.
+
 ## Testing
 
 The project uses Vitest for unit testing:
