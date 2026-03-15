@@ -25,9 +25,9 @@ package example
 import future.keywords.if
 
 authorized if {
-    newton.identity.check_approved()
-    newton.identity.age_gte(18)
-    newton.identity.address_in_countries(["US","CA","DE"])
+    newton.identity.kyc.check_approved()
+    newton.identity.kyc.age_gte(18)
+    newton.identity.kyc.address_in_countries(["US","CA","DE"])
 }
 ```
 

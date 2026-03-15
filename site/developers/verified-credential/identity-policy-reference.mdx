@@ -3,11 +3,17 @@ title: "Identity Policy Reference"
 description: "Newton identity Rego built-in functions for writing policies that check user identity data."
 ---
 
-Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements—like age, country, and document status—directly in your Rego policies.
+Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements — like age, country, and document status — directly in your Rego policies.
 
-## IdentityData Fields
+Identity built-ins are domain-namespaced under `newton.identity.<domain>.*`. The KYC domain is the first implemented domain. A generic `newton.identity.get(field_name)` accessor works across any domain for ad-hoc field access.
 
-The following fields are available from the identity data passed into the policy engine:
+<Info>
+  For the full Rego syntax reference including all Newton extensions, see the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide#newton-identity-extensions).
+</Info>
+
+## KYC Data Fields
+
+The following fields are available from the KYC identity data passed into the policy engine:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -20,29 +26,29 @@ The following fields are available from the identity data passed into the policy
 | `issue_date` | `string` | The issuance date of the identity document |
 | `issuing_authority` | `string` | The country or state that issued the document |
 
-## Built-in Functions
+## KYC Built-in Functions
 
 | Function | Description |
 |----------|-------------|
-| [`newton.identity.check_approved`](#newtonidentitycheck_approved) | Check that the identity data has been approved |
-| [`newton.identity.address_in_countries`](#newtonidentityaddress_in_countries) | Check that the document country is in an allowed list |
-| [`newton.identity.address_in_subdivision`](#newtonidentityaddress_in_subdivision) | Check that the document address is in an allowed list of subdivisions |
-| [`newton.identity.address_not_in_subdivision`](#newtonidentityaddress_not_in_subdivision) | Check that the document address is not in an excluded list of subdivisions |
-| [`newton.identity.age_gte`](#newtonidentityage_gte) | Check that the user is at least a minimum age |
-| [`newton.identity.not_expired`](#newtonidentitynot_expired) | Check that the identity document has not expired |
-| [`newton.identity.valid_for`](#newtonidentityvalid_for) | Check that the document remains valid for a minimum number of days |
-| [`newton.identity.issued_since`](#newtonidentityissued_since) | Check that the document was issued at least a minimum number of days ago |
+| [`newton.identity.kyc.check_approved`](#newtonidentitykyccheck_approved) | Check that the identity data has been approved |
+| [`newton.identity.kyc.address_in_countries`](#newtonidentitykycaddress_in_countries) | Check that the document country is in an allowed list |
+| [`newton.identity.kyc.address_in_subdivision`](#newtonidentitykycaddress_in_subdivision) | Check that the document address is in an allowed list of subdivisions |
+| [`newton.identity.kyc.address_not_in_subdivision`](#newtonidentitykycaddress_not_in_subdivision) | Check that the document address is not in an excluded list of subdivisions |
+| [`newton.identity.kyc.age_gte`](#newtonidentitykycage_gte) | Check that the user is at least a minimum age |
+| [`newton.identity.kyc.not_expired`](#newtonidentitykycnot_expired) | Check that the identity document has not expired |
+| [`newton.identity.kyc.valid_for`](#newtonidentitykycvalid_for) | Check that the document remains valid for a minimum number of days |
+| [`newton.identity.kyc.issued_since`](#newtonidentitykycissued_since) | Check that the document was issued at least a minimum number of days ago |
 
 ---
 
-### `newton.identity.check_approved`
+### `newton.identity.kyc.check_approved`
 
 Requires `identity_data.status` to equal `"approved"`.
 
 **Signature:**
 
 ```rego
-result := newton.identity.check_approved()
+result := newton.identity.kyc.check_approved()
 ```
 
 **Returns:**
@@ -60,20 +66,20 @@ import future.keywords.if
 
 # Verify the identity data is approved
 authorized if {
-    newton.identity.check_approved()
+    newton.identity.kyc.check_approved()
 }
 ```
 
 ---
 
-### `newton.identity.address_in_countries`
+### `newton.identity.kyc.address_in_countries`
 
 Requires `identity_data.address_country_code` to be found within the provided list of country codes.
 
 **Signature:**
 
 ```rego
-result := newton.identity.address_in_countries(country_code_array)
+result := newton.identity.kyc.address_in_countries(country_code_array)
 ```
 
 **Arguments:**
@@ -97,20 +103,20 @@ import future.keywords.if
 
 # Verify the identity data matches address requirements
 authorized if {
-    newton.identity.address_in_countries(["US","DE","CA"])
+    newton.identity.kyc.address_in_countries(["US","DE","CA"])
 }
 ```
 
 ---
 
-### `newton.identity.address_in_subdivision`
+### `newton.identity.kyc.address_in_subdivision`
 
 Requires the ISO subdivision location code (combining `address_country_code` and `address_subdivision`) to be found within the provided list.
 
 **Signature:**
 
 ```rego
-result := newton.identity.address_in_subdivision(iso_code_array)
+result := newton.identity.kyc.address_in_subdivision(iso_code_array)
 ```
 
 **Arguments:**
@@ -134,20 +140,20 @@ import future.keywords.if
 
 # Verify the identity data matches address requirements
 authorized if {
-    newton.identity.address_in_subdivision(["US-CA","US-OR","US-WA"])
+    newton.identity.kyc.address_in_subdivision(["US-CA","US-OR","US-WA"])
 }
 ```
 
 ---
 
-### `newton.identity.address_not_in_subdivision`
+### `newton.identity.kyc.address_not_in_subdivision`
 
 Requires the ISO subdivision location code to **not** be found within the provided list. Useful for excluding specific subdivisions while allowing all others in a country (avoids submitting a long allowlist).
 
 **Signature:**
 
 ```rego
-result := newton.identity.address_not_in_subdivision(iso_code_array)
+result := newton.identity.kyc.address_not_in_subdivision(iso_code_array)
 ```
 
 **Arguments:**
@@ -171,28 +177,28 @@ import future.keywords.if
 
 # Allow all US users except specific states
 authorized if {
-    newton.identity.address_in_countries(["US"])
-    newton.identity.address_not_in_subdivision(["US-NY","US-NC","US-HI"])
+    newton.identity.kyc.address_in_countries(["US"])
+    newton.identity.kyc.address_not_in_subdivision(["US-NY","US-NC","US-HI"])
 }
 ```
 
 ---
 
-### `newton.identity.age_gte`
+### `newton.identity.kyc.age_gte`
 
 Requires `identity_data.birthdate` to be at least the required number of years ago, relative to `reference_date`.
 
 **Signature:**
 
 ```rego
-result := newton.identity.age_gte(min_age)
+result := newton.identity.kyc.age_gte(min_age)
 ```
 
 **Arguments:**
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `min_age` | `number` | Minimum age in years |
+| `min_age` | `number` | Minimum age in years (must be positive) |
 
 **Returns:**
 
@@ -209,20 +215,20 @@ import future.keywords.if
 
 # Verify the user meets age requirements
 authorized if {
-    newton.identity.age_gte(21)
+    newton.identity.kyc.age_gte(21)
 }
 ```
 
 ---
 
-### `newton.identity.not_expired`
+### `newton.identity.kyc.not_expired`
 
 Requires `identity_data.expiration_date` to be after the current date (`reference_date`).
 
 **Signature:**
 
 ```rego
-result := newton.identity.not_expired()
+result := newton.identity.kyc.not_expired()
 ```
 
 **Returns:**
@@ -240,27 +246,27 @@ import future.keywords.if
 
 # Verify the identity document isn't expired
 authorized if {
-    newton.identity.not_expired()
+    newton.identity.kyc.not_expired()
 }
 ```
 
 ---
 
-### `newton.identity.valid_for`
+### `newton.identity.kyc.valid_for`
 
 Requires `identity_data.expiration_date` to be at least the required number of days in the future, relative to `reference_date`.
 
 **Signature:**
 
 ```rego
-result := newton.identity.valid_for(min_days)
+result := newton.identity.kyc.valid_for(min_days)
 ```
 
 **Arguments:**
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `min_days` | `number` | Minimum number of days the document must still be valid |
+| `min_days` | `number` | Minimum number of days the document must still be valid (must be positive) |
 
 **Returns:**
 
@@ -277,27 +283,27 @@ import future.keywords.if
 
 # Verify the document is valid for at least one more year
 authorized if {
-    newton.identity.valid_for(365)
+    newton.identity.kyc.valid_for(365)
 }
 ```
 
 ---
 
-### `newton.identity.issued_since`
+### `newton.identity.kyc.issued_since`
 
 Requires `identity_data.issue_date` to be at least the required number of days in the past, relative to `reference_date`.
 
 **Signature:**
 
 ```rego
-result := newton.identity.issued_since(min_days)
+result := newton.identity.kyc.issued_since(min_days)
 ```
 
 **Arguments:**
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `min_days` | `number` | Minimum number of days since the document was issued |
+| `min_days` | `number` | Minimum number of days since the document was issued (must be positive) |
 
 **Returns:**
 
@@ -314,7 +320,47 @@ import future.keywords.if
 
 # Verify the document was issued at least 90 days ago
 authorized if {
-    newton.identity.issued_since(90)
+    newton.identity.kyc.issued_since(90)
+}
+```
+
+---
+
+## Generic Field Accessor
+
+### `newton.identity.get`
+
+Works across any identity domain. Returns the raw field value by name. Returns `undefined` if the field does not exist.
+
+**Signature:**
+
+```rego
+result := newton.identity.get(field_name)
+```
+
+**Arguments:**
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `field_name` | `string` | The field name to look up |
+
+**Returns:**
+
+| Type | Description |
+|------|-------------|
+| any / undefined | The field value, or `undefined` if the field does not exist |
+
+**Example:**
+
+```rego
+package example
+
+import future.keywords.if
+
+# Use generic accessor for ad-hoc field checks
+authorized if {
+    newton.identity.get("status") == "approved"
+    newton.identity.get("address_country_code") == "US"
 }
 ```
 
@@ -325,7 +371,8 @@ authorized if {
 - **Address functions** (`address_in_countries`, `address_in_subdivision`, `address_not_in_subdivision`) return an error (and the rule evaluates to `undefined`) when:
   - Provided an empty array
   - Provided full country/state names instead of ISO codes
-- **Date functions** (`age_gte`, `valid_for`, `issued_since`) return an error if given negative numbers.
+  - The stored country code or subdivision is empty
+- **Date functions** (`age_gte`, `valid_for`, `issued_since`) return an error if given negative numbers or if dates cannot be parsed.
 
 When a built-in function errors, the policy rule containing it evaluates to `undefined`, which Newton treats as a denial.
 
