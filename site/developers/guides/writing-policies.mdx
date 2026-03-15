@@ -196,6 +196,26 @@ The `--entrypoint` value must match your Rego package name + rule name. For `pac
 
 For a full reference on supported Rego syntax, see the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide).
 
+## Using Identity Data in Policies
+
+Newton provides built-in functions for checking user identity data (KYC status, age, location) within your policies. Identity data is injected by operators from the on-chain IdentityRegistry — you only see boolean check results, never raw personal data.
+
+```rego
+package kyc_gated_transfer
+
+default allow = false
+
+allow if {
+    newton.identity.kyc.check_approved()
+    newton.identity.kyc.age_gte(18)
+    newton.identity.kyc.address_in_countries(["US", "CA"])
+    newton.identity.kyc.not_expired()
+    input.value <= data.params.max_value
+}
+```
+
+Identity built-ins are domain-namespaced (e.g., `newton.identity.kyc.*`). A generic `newton.identity.get("field_name")` accessor is also available for ad-hoc field access across any domain. See the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide#newton-identity-extensions) for the full reference.
+
 ## Next Steps
 
 <Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
