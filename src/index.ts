@@ -13,7 +13,16 @@ import {
   submitIntentAndSubscribe,
   waitForTaskResponded,
 } from './modules/avs'
-import { identityDomainHash, sendIdentityEncrypted } from './modules/identity'
+import {
+  identityDomainHash,
+  linkIdentity,
+  linkIdentityAsSigner,
+  linkIdentityAsSignerAndUser,
+  linkIdentityAsUser,
+  sendIdentityEncrypted,
+  unlinkIdentityAsSigner,
+  unlinkIdentityAsUser,
+} from './modules/identity'
 import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
 import {
   createSecureEnvelope,
@@ -24,7 +33,16 @@ import {
   uploadEncryptedData,
   uploadSecureEnvelope,
 } from './modules/privacy'
-import type { SendIdentityEncryptedParams, SendIdentityEncryptedResponse } from './types/identity'
+import type {
+  LinkIdentityAsSignerAndUserParams,
+  LinkIdentityAsSignerParams,
+  LinkIdentityAsUserParams,
+  LinkIdentityParams,
+  SendIdentityEncryptedParams,
+  SendIdentityEncryptedResponse,
+  UnlinkIdentityAsSignerParams,
+  UnlinkIdentityAsUserParams,
+} from './types/identity'
 import type { PolicyParamsJson } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
@@ -278,6 +296,24 @@ const newtonWalletClientActions =
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
 
+      // Identity link/unlink (on-chain contract calls)
+      linkIdentity: (args: LinkIdentityParams): Promise<Hex> => linkIdentity(walletClient, args),
+
+      linkIdentityAsSigner: (args: LinkIdentityAsSignerParams): Promise<Hex> =>
+        linkIdentityAsSigner(walletClient, args),
+
+      linkIdentityAsSignerAndUser: (args: LinkIdentityAsSignerAndUserParams): Promise<Hex> =>
+        linkIdentityAsSignerAndUser(walletClient, args),
+
+      linkIdentityAsUser: (args: LinkIdentityAsUserParams): Promise<Hex> => linkIdentityAsUser(walletClient, args),
+
+      unlinkIdentityAsSigner: (args: UnlinkIdentityAsSignerParams): Promise<Hex> =>
+        unlinkIdentityAsSigner(walletClient, args),
+
+      unlinkIdentityAsUser: (args: UnlinkIdentityAsUserParams): Promise<Hex> =>
+        unlinkIdentityAsUser(walletClient, args),
+
+      // Identity data submission (gateway RPC)
       sendIdentityEncrypted: (args: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse> =>
         sendIdentityEncrypted(walletClient, args, apiKey, gatewayApiUrlOverride),
     }
@@ -495,7 +531,16 @@ const newtonPublicClientActions =
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
-export { identityDomainHash, sendIdentityEncrypted }
+export {
+  identityDomainHash,
+  linkIdentity,
+  linkIdentityAsSigner,
+  linkIdentityAsSignerAndUser,
+  linkIdentityAsUser,
+  sendIdentityEncrypted,
+  unlinkIdentityAsSigner,
+  unlinkIdentityAsUser,
+}
 export {
   createSecureEnvelope,
   generateSigningKeyPair,

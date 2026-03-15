@@ -24,8 +24,6 @@ export interface SendIdentityEncryptedParams {
   identityData: string
   /** Identity domain name (e.g., "kyc"). Hashed to bytes32 via keccak256. */
   identityDomain: IdentityDomainName | string
-  /** IdentityRegistry contract address for the EIP-712 domain */
-  identityRegistryAddress: Address
 }
 
 /** Response from newt_sendIdentityEncrypted. */
@@ -40,4 +38,57 @@ export interface SendIdentityEncryptedRpcRequest {
   identity_owner_sig: Hex
   identity_data: { data: string }
   identity_domain: Hex
+}
+
+/** Parameters for linkIdentityAsSignerAndUser — caller is both identity owner and client user. */
+export interface LinkIdentityAsSignerAndUserParams {
+  policyClient: Address
+  identityDomains: Hex[]
+}
+
+/** Parameters for linkIdentityAsSigner — caller is the identity owner, counterparty signature from client user. */
+export interface LinkIdentityAsSignerParams {
+  policyClient: Address
+  identityDomains: Hex[]
+  clientUser: Address
+  clientUserSignature: Hex
+  clientUserNonce: bigint
+  clientUserDeadline: bigint
+}
+
+/** Parameters for linkIdentityAsUser — caller is the client user, counterparty signature from identity owner. */
+export interface LinkIdentityAsUserParams {
+  identityOwner: Address
+  policyClient: Address
+  identityDomains: Hex[]
+  identityOwnerSignature: Hex
+  identityOwnerNonce: bigint
+  identityOwnerDeadline: bigint
+}
+
+/** Parameters for linkIdentity — 3rd party submits with signatures from both identity owner and client user. */
+export interface LinkIdentityParams {
+  identityOwner: Address
+  clientUser: Address
+  policyClient: Address
+  identityDomains: Hex[]
+  identityOwnerSignature: Hex
+  identityOwnerNonce: bigint
+  identityOwnerDeadline: bigint
+  clientUserSignature: Hex
+  clientUserNonce: bigint
+  clientUserDeadline: bigint
+}
+
+/** Parameters for unlinkIdentityAsSigner — caller is the identity owner. */
+export interface UnlinkIdentityAsSignerParams {
+  clientUser: Address
+  policyClient: Address
+  identityDomains: Hex[]
+}
+
+/** Parameters for unlinkIdentityAsUser — caller is the client user. */
+export interface UnlinkIdentityAsUserParams {
+  policyClient: Address
+  identityDomains: Hex[]
 }

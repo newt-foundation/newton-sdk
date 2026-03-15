@@ -1,22 +1,28 @@
 /**
- * Newton Identity Module — EIP-712 signed identity data submission to the on-chain IdentityRegistry.
+ * Newton Identity Module
  *
- * The gateway's `newt_sendIdentityEncrypted` RPC method accepts an EIP-712 signature over
- * `EncryptedIdentityData { string data }` with domain `{name: "IdentityRegistry", version: "1"}`.
- * The `identity_domain` field (bytes32 = keccak256 of the domain name) tells the gateway
- * how to interpret the blob after decryption.
+ * Two categories of operations:
+ * 1. Gateway RPC: `sendIdentityEncrypted` — EIP-712 signed identity data submission via gateway
+ * 2. On-chain: `linkIdentity*` / `unlinkIdentity*` — direct contract calls to IdentityRegistry
  */
 
-import { GATEWAY_METHODS } from '@core/const'
+import { IdentityRegistryAbi } from '@core/abis/newtonIdentityRegistryAbi'
+import { GATEWAY_METHODS, IDENTITY_REGISTRY } from '@core/const'
 import { SDKError } from '@core/sdk-exceptions'
 import { SDKErrorCode } from '@core/types/core/exception-types'
 import type {
+  LinkIdentityAsSignerAndUserParams,
+  LinkIdentityAsSignerParams,
+  LinkIdentityAsUserParams,
+  LinkIdentityParams,
   SendIdentityEncryptedParams,
   SendIdentityEncryptedResponse,
   SendIdentityEncryptedRpcRequest,
+  UnlinkIdentityAsSignerParams,
+  UnlinkIdentityAsUserParams,
 } from '@core/types/identity'
 import { AvsHttpService } from '@core/utils/https'
-import { type Hex, type WalletClient, getAddress, isAddress, keccak256, toBytes } from 'viem'
+import { type Account, type Chain, type Hex, type WalletClient, getAddress, isAddress, keccak256, toBytes } from 'viem'
 
 /**
  * Compute the bytes32 identity domain hash from a human-readable domain name.
@@ -55,11 +61,9 @@ export async function sendIdentityEncrypted(
   if (!isAddress(params.identityOwner)) {
     throw new SDKError(SDKErrorCode.InvalidAddress, `invalid identityOwner address: ${params.identityOwner}`)
   }
-  if (!isAddress(params.identityRegistryAddress)) {
-    throw new SDKError(
-      SDKErrorCode.InvalidAddress,
-      `invalid identityRegistryAddress: ${params.identityRegistryAddress}`,
-    )
+  const identityRegistryAddress = IDENTITY_REGISTRY[chainId]
+  if (!identityRegistryAddress) {
+    throw new SDKError(SDKErrorCode.InvalidAddress, `no IdentityRegistry address for chain ${chainId}`)
   }
 
   // The signer must match the declared identity owner
@@ -77,7 +81,7 @@ export async function sendIdentityEncrypted(
       name: 'IdentityRegistry',
       version: '1',
       chainId: BigInt(chainId),
-      verifyingContract: params.identityRegistryAddress,
+      verifyingContract: identityRegistryAddress,
     },
     types: {
       EncryptedIdentityData: [{ name: 'data', type: 'string' }],
@@ -101,4 +105,164 @@ export async function sendIdentityEncrypted(
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendIdentityEncrypted, rpcRequest, apiKey)
   if (res.error) throw res.error
   return res.result as SendIdentityEncryptedResponse
+}
+
+// ---------------------------------------------------------------------------
+// On-chain link/unlink operations (direct contract calls)
+// ---------------------------------------------------------------------------
+
+function resolveIdentityRegistry(walletClient: WalletClient): {
+  registryAddress: Hex
+  account: Account
+  chain: Chain
+} {
+  const chain = walletClient.chain
+  if (!chain) throw new SDKError(SDKErrorCode.MissingChain, 'walletClient must have a chain configured')
+
+  const account = walletClient.account
+  if (!account) throw new SDKError(SDKErrorCode.MissingAccount, 'walletClient must have an account configured')
+
+  const registryAddress = IDENTITY_REGISTRY[chain.id]
+  if (!registryAddress)
+    throw new SDKError(SDKErrorCode.InvalidAddress, `no IdentityRegistry address for chain ${chain.id}`)
+
+  return { registryAddress, account, chain }
+}
+
+/**
+ * Link identity data when the caller is both identity owner and client user.
+ * msg.sender must have submitted identity data for the given domains.
+ */
+export async function linkIdentityAsSignerAndUser(
+  walletClient: WalletClient,
+  params: LinkIdentityAsSignerAndUserParams,
+): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'linkIdentityAsSignerAndUser',
+    args: [params.policyClient, params.identityDomains],
+    account,
+    chain,
+  })
+}
+
+/**
+ * Link identity data as the identity owner (signer).
+ * Requires a counterparty signature from the client user.
+ */
+export async function linkIdentityAsSigner(
+  walletClient: WalletClient,
+  params: LinkIdentityAsSignerParams,
+): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'linkIdentityAsSigner',
+    args: [
+      params.policyClient,
+      params.identityDomains,
+      params.clientUser,
+      params.clientUserSignature,
+      params.clientUserNonce,
+      params.clientUserDeadline,
+    ],
+    account,
+    chain,
+  })
+}
+
+/**
+ * Link identity data as the client user.
+ * Requires a counterparty signature from the identity owner.
+ */
+export async function linkIdentityAsUser(walletClient: WalletClient, params: LinkIdentityAsUserParams): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'linkIdentityAsUser',
+    args: [
+      params.identityOwner,
+      params.policyClient,
+      params.identityDomains,
+      params.identityOwnerSignature,
+      params.identityOwnerNonce,
+      params.identityOwnerDeadline,
+    ],
+    account,
+    chain,
+  })
+}
+
+/**
+ * Link identity data as a 3rd party with signatures from both identity owner and client user.
+ */
+export async function linkIdentity(walletClient: WalletClient, params: LinkIdentityParams): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'linkIdentity',
+    args: [
+      params.identityOwner,
+      params.clientUser,
+      params.policyClient,
+      params.identityDomains,
+      params.identityOwnerSignature,
+      params.identityOwnerNonce,
+      params.identityOwnerDeadline,
+      params.clientUserSignature,
+      params.clientUserNonce,
+      params.clientUserDeadline,
+    ],
+    account,
+    chain,
+  })
+}
+
+/**
+ * Unlink identity data as the identity owner (signer).
+ * Only the identity owner who created the link can call this.
+ */
+export async function unlinkIdentityAsSigner(
+  walletClient: WalletClient,
+  params: UnlinkIdentityAsSignerParams,
+): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'unlinkIdentityAsSigner',
+    args: [params.clientUser, params.policyClient, params.identityDomains],
+    account,
+    chain,
+  })
+}
+
+/**
+ * Unlink identity data as the client user.
+ * Allows users to revoke links to their own account.
+ */
+export async function unlinkIdentityAsUser(
+  walletClient: WalletClient,
+  params: UnlinkIdentityAsUserParams,
+): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'unlinkIdentityAsUser',
+    args: [params.policyClient, params.identityDomains],
+    account,
+    chain,
+  })
 }
