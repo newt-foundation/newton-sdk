@@ -106,6 +106,11 @@ Type: linkIdentitySigner {
 
 The nonce is fetched from `IdentityRegistry.nonces(owner)` on-chain. The deadline is set to `block.timestamp + 300` (5 minutes).
 
+<!-- TODO (HPKE migration): The EncryptedIdentityData EIP-712 type will be removed or replaced
+     post-migration. Identity data signing will use Ed25519 envelope signatures instead of
+     EIP-712, since HPKE envelopes are uploaded off-chain (not submitted via gateway RPC).
+     The link authorization EIP-712 signatures are unaffected. -->
+
 ### Encrypted Identity Data
 
 ```
@@ -144,6 +149,16 @@ country  := newton.identity.kyc.get("country")
 # Cross-domain utility
 field    := newton.identity.get("field_name")
 ```
+
+<!-- TODO (HPKE migration): Update this flow when newton-prover-avs adds registerIdentityDataRef.
+     Phase 2 replaces steps 5-10 with:
+     5. Popup derives Ed25519 key from Turnkey wallet (personal_sign + keccak256)
+     6. Popup encrypts with HPKE via SDK createSecureEnvelope()
+     7. Popup uploads envelope via SDK uploadEncryptedData() → returns data_ref_id
+     8. Popup stores ref on-chain: registerIdentityDataRef(owner, domain, dataRefId)
+     9. Gateway watches IdentityDataRefRegistered event → confirms storage
+     The EIP-712 EncryptedIdentityData signing step is replaced by Ed25519 envelope signing.
+     See docs/identity/hpke-migration.md for details. -->
 
 ## Data Flow: Register KYC Data
 

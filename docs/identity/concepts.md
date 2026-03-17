@@ -62,6 +62,10 @@ All identity operations use EIP-712 typed data signatures for:
 2. **Domain separation** — signatures are bound to a specific IdentityRegistry contract and chain
 3. **Replay protection** — nonces and deadlines prevent signature reuse
 
+<!-- TODO (HPKE migration): The EncryptedIdentityData EIP-712 struct is Phase 1 only.
+     Post-migration, identity data is HPKE-encrypted and Ed25519-signed (no EIP-712 for data).
+     This section should be updated to describe the envelope signing model instead. -->
+
 ### Why a Single Struct for All Domains?
 
 The `EncryptedIdentityData { string data }` struct is intentionally minimal. Since the `data` field contains encrypted ciphertext, displaying per-field types in the wallet signing prompt would show meaningless hex — no benefit to the user.
@@ -108,6 +112,12 @@ EIP-712 link signatures include:
 A used nonce cannot be reused. An expired deadline cannot be submitted. Together, they prevent signature replay and time-delayed attacks.
 
 ## Encryption Pipeline
+
+<!-- TODO (HPKE migration): Replace the "Current" section with the HPKE flow once migrated.
+     The "Future" section becomes the current state. Remove the stop-gap framing.
+     Update step 4 in the Current section: EIP-712 signing is replaced by Ed25519.
+     Update step 5: newt_sendIdentityEncrypted replaced by uploadEncryptedData + registerIdentityDataRef.
+     See docs/identity/hpke-migration.md for the full migration plan. -->
 
 ### Current: AWS KMS RSA-OAEP
 

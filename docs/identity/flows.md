@@ -76,6 +76,11 @@ Parent App                    Identity Popup                 Turnkey          Id
 
 ---
 
+<!-- TODO (HPKE migration): Replace this flow diagram when migration completes.
+     Phase 2 changes: RSA-OAEP → HPKE encryption, EIP-712 → Ed25519 signing,
+     single newt_sendIdentityEncrypted call → uploadEncryptedData + registerIdentityDataRef.
+     See docs/identity/hpke-migration.md for the Phase 2 flow diagram. -->
+
 ## Flow 3: Register User Data (KYC Submission)
 
 **Purpose:** Encrypt and submit identity data to the Newton gateway for on-chain inclusion.

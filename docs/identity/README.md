@@ -11,6 +11,7 @@ The Newton identity layer enables users to link verified identity data (KYC, acc
 | [Architecture](architecture.md) | Popup trust model, key isolation, cross-origin security |
 | [Concepts](concepts.md) | Identity domains, EIP-712 signing, link/unlink mechanics, encryption |
 | [Flows](flows.md) | End-to-end sequences for connect, link, unlink, and register |
+| [HPKE Migration](hpke-migration.md) | Long-term cross-repo architecture: AWS KMS → Newton Privacy Layer |
 
 ## Architecture Overview
 
@@ -54,20 +55,19 @@ The identity system operates across two layers:
 
 | Layer | What | Who Calls It |
 |-------|------|-------------|
-| **Gateway RPC** | `newt_sendIdentityEncrypted` — submit encrypted identity data with EIP-712 signature | Newton Identity popup (today), SDK consumers (future) |
+| **Gateway RPC** | `newt_sendIdentityEncrypted` — submit encrypted identity data with EIP-712 signature | Newton Identity popup only (not wrapped by SDK) |
 | **On-chain** | `linkIdentity*` / `unlinkIdentity*` — associate/revoke identity-to-PolicyClient links on IdentityRegistry | Parent app via SDK, or popup directly |
 
 The gateway layer handles encrypted data submission. The on-chain layer manages the public identity link graph that Rego policies query at evaluation time.
 
 ## Relationship to Newton SDK
 
-The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers for both layers:
+The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers for the on-chain layer:
 
-- `sendIdentityEncrypted()` — EIP-712 sign + gateway RPC submission (takes pre-encrypted data)
 - `identityDomainHash()` — compute keccak256 domain identifier
 - `linkIdentity*()` / `unlinkIdentity*()` — on-chain writeContract calls
 
-Today, the Newton Identity popup calls the gateway directly without the SDK. Future integration may adopt the SDK's `sendIdentityEncrypted` to deduplicate EIP-712 domain/type definitions.
+The gateway RPC layer (`newt_sendIdentityEncrypted`) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will use the SDK's privacy module (`createSecureEnvelope`, `uploadEncryptedData`) for encryption and a new `registerIdentityDataRef` wrapper for on-chain ref storage. See [HPKE Migration](hpke-migration.md) for the full roadmap.
 
 ## Encryption: Current vs Future
 
