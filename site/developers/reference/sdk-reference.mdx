@@ -855,47 +855,6 @@ signPrivacyAuthorization(
 
 These methods handle identity data submission (via gateway RPC) and identity-to-PolicyClient linking (via direct contract calls). They are also exported as standalone functions from the package.
 
-#### sendIdentityEncrypted
-
-Sign encrypted identity data with EIP-712 and submit to the gateway via `newt_sendIdentityEncrypted`. The wallet client signs `EncryptedIdentityData { string data }` using EIP-712 domain `{name: "IdentityRegistry", version: "1", chainId, verifyingContract}`.
-
-```ts
-const result = await walletClient.sendIdentityEncrypted({
-  identityOwner: '0xYourAddress',
-  identityData: 'encrypted-blob',
-  identityDomain: 'kyc',
-});
-```
-
-**Signature:**
-
-```ts
-sendIdentityEncrypted(args: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse>
-```
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `identityOwner` | `Address` | The identity owner's address (must match the wallet signer) |
-| `identityData` | `string` | The encrypted identity data blob |
-| `identityDomain` | `IdentityDomainName \| string` | Domain name (e.g., `"kyc"`). Hashed to bytes32 via keccak256 |
-
-The IdentityRegistry contract address is resolved automatically from the chain ID.
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
-
-**Errors:**
-
-- `MISSING_CHAIN` -- wallet client has no chain configured
-- `MISSING_ACCOUNT` -- wallet client has no account configured
-- `INVALID_ADDRESS` -- no IdentityRegistry address for the chain, or invalid `identityOwner`
-- `IDENTITY_OWNER_MISMATCH` -- wallet signer does not match `identityOwner`
-
 #### linkIdentityAsSignerAndUser
 
 Link identity data when the caller is both the identity owner and the client user. The simplest linking flow — no counterparty signatures needed.
@@ -1508,43 +1467,6 @@ EIP-712 signed identity data submission to the on-chain IdentityRegistry. These 
 <Info>
   The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
 </Info>
-
-### `sendIdentityEncrypted`
-
-Sign encrypted identity data with EIP-712 and submit to the gateway. The gateway validates the signature and submits the data to the on-chain IdentityRegistry.
-
-**Standalone signature:**
-
-```ts
-sendIdentityEncrypted(
-  walletClient: WalletClient,
-  params: SendIdentityEncryptedParams,
-  apiKey: string,
-  gatewayApiUrlOverride?: string
-): Promise<SendIdentityEncryptedResponse>
-```
-
-**Wallet client signature:**
-
-```ts
-client.sendIdentityEncrypted(params: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse>
-```
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `identityOwner` | `Address` | The identity owner's address (must match the wallet signer) |
-| `identityData` | `string` | The encrypted identity data blob (opaque string) |
-| `identityDomain` | `IdentityDomainName \| string` | Domain name (e.g., `"kyc"`). Hashed to bytes32 via keccak256 |
-
-The IdentityRegistry contract address is resolved automatically from the chain ID.
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
 
 ### `identityDomainHash`
 
@@ -2179,26 +2101,6 @@ unlinkIdentityAsUser(
 </Expandable>
 
 ### Identity Types
-
-<Expandable title="SendIdentityEncryptedParams">
-  ```ts
-  interface SendIdentityEncryptedParams {
-    identityOwner: Address;
-    identityData: string;
-    identityDomain: IdentityDomainName | string;
-  }
-
-  type IdentityDomainName = 'kyc';
-  ```
-</Expandable>
-
-<Expandable title="SendIdentityEncryptedResponse">
-  ```ts
-  interface SendIdentityEncryptedResponse {
-    inclusion_tx: string;
-  }
-  ```
-</Expandable>
 
 <Expandable title="LinkIdentityAsSignerAndUserParams">
   ```ts

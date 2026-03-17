@@ -19,7 +19,6 @@ import {
   linkIdentityAsSigner,
   linkIdentityAsSignerAndUser,
   linkIdentityAsUser,
-  sendIdentityEncrypted,
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 } from './modules/identity'
@@ -38,8 +37,6 @@ import type {
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
   LinkIdentityParams,
-  SendIdentityEncryptedParams,
-  SendIdentityEncryptedResponse,
   UnlinkIdentityAsSignerParams,
   UnlinkIdentityAsUserParams,
 } from './types/identity'
@@ -312,10 +309,6 @@ const newtonWalletClientActions =
 
       unlinkIdentityAsUser: (args: UnlinkIdentityAsUserParams): Promise<Hex> =>
         unlinkIdentityAsUser(walletClient, args),
-
-      // Identity data submission (gateway RPC)
-      sendIdentityEncrypted: (args: SendIdentityEncryptedParams): Promise<SendIdentityEncryptedResponse> =>
-        sendIdentityEncrypted(walletClient, args, apiKey, gatewayApiUrlOverride),
     }
   }
 
@@ -537,7 +530,6 @@ export {
   linkIdentityAsSigner,
   linkIdentityAsSignerAndUser,
   linkIdentityAsUser,
-  sendIdentityEncrypted,
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 }
