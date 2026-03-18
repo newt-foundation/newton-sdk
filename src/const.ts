@@ -31,3 +31,8 @@ export const ATTESTATION_VALIDATOR: Record<number, Hex> = {
   [mainnet.id]: '0x263c275c15867a4611a44c600e77144a23012a06',
   [baseSepolia.id]: '0x4e21b596944ebe8bd3773dd70c6f134bd2840a73',
 }
+
+export const IDENTITY_REGISTRY: Record<number, Hex> = {
+  [sepolia.id]: '0xbb688f4ad1bd896197db9a20e04abe8c6344625a',
+  [baseSepolia.id]: '0x1b6ad56a68544e3f5d4afa29aa2aee8e62a70130',
+}

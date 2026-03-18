@@ -109,6 +109,18 @@ The SDK includes a privacy module for client-side HPKE encryption used in privac
 
 See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.
 
+## Identity Module
+
+The SDK includes an identity module for submitting EIP-712 signed identity data and managing identity-to-PolicyClient links on the IdentityRegistry. Key exports:
+
+- `identityDomainHash` -- compute the bytes32 domain identifier from a name (e.g., `identityDomainHash("kyc")`)
+- `linkIdentityAsSignerAndUser` -- link identity when caller is both owner and user
+- `linkIdentityAsSigner` -- link identity as owner with counterparty signature
+- `linkIdentityAsUser` -- link identity as user with counterparty signature
+- `linkIdentity` -- link identity as 3rd party with dual signatures
+- `unlinkIdentityAsSigner` -- unlink identity as owner
+- `unlinkIdentityAsUser` -- unlink identity as user
+
 ## Testing
 
 The project uses Vitest for unit testing:

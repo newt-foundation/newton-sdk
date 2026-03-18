@@ -851,6 +851,187 @@ signPrivacyAuthorization(
 
 ---
 
+### Identity Methods
+
+These methods handle identity data submission (via gateway RPC) and identity-to-PolicyClient linking (via direct contract calls). They are also exported as standalone functions from the package.
+
+#### linkIdentityAsSignerAndUser
+
+Link identity data when the caller is both the identity owner and the client user. The simplest linking flow — no counterparty signatures needed.
+
+```ts
+await walletClient.linkIdentityAsSignerAndUser({
+  policyClient: '0xPolicyClientAddress',
+  identityDomains: [identityDomainHash('kyc')],
+});
+```
+
+**Signature:**
+
+```ts
+linkIdentityAsSignerAndUser(args: LinkIdentityAsSignerAndUserParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes (use `identityDomainHash()`) |
+
+**Returns:** Transaction hash (`Hex`).
+
+#### linkIdentityAsSigner
+
+Link identity data as the identity owner (signer). Requires a counterparty EIP-712 signature from the client user.
+
+```ts
+await walletClient.linkIdentityAsSigner({
+  policyClient: '0xPolicyClientAddress',
+  identityDomains: [identityDomainHash('kyc')],
+  clientUser: '0xClientUserAddress',
+  clientUserSignature: '0x...',
+  clientUserNonce: 0n,
+  clientUserDeadline: BigInt(Math.floor(Date.now() / 1000) + 3600),
+});
+```
+
+**Signature:**
+
+```ts
+linkIdentityAsSigner(args: LinkIdentityAsSignerParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `clientUser` | `Address` | The client user's address |
+| `clientUserSignature` | `Hex` | EIP-712 signature from the client user |
+| `clientUserNonce` | `bigint` | Nonce for the client user's signature |
+| `clientUserDeadline` | `bigint` | Deadline timestamp for the signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+#### linkIdentityAsUser
+
+Link identity data as the client user. Requires a counterparty EIP-712 signature from the identity owner.
+
+```ts
+await walletClient.linkIdentityAsUser({
+  identityOwner: '0xIdentityOwnerAddress',
+  policyClient: '0xPolicyClientAddress',
+  identityDomains: [identityDomainHash('kyc')],
+  identityOwnerSignature: '0x...',
+  identityOwnerNonce: 0n,
+  identityOwnerDeadline: BigInt(Math.floor(Date.now() / 1000) + 3600),
+});
+```
+
+**Signature:**
+
+```ts
+linkIdentityAsUser(args: LinkIdentityAsUserParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `identityOwner` | `Address` | The identity owner's address |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `identityOwnerSignature` | `Hex` | EIP-712 signature from the identity owner |
+| `identityOwnerNonce` | `bigint` | Nonce for the identity owner's signature |
+| `identityOwnerDeadline` | `bigint` | Deadline timestamp for the signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+#### linkIdentity
+
+Link identity data as a 3rd party with EIP-712 signatures from both the identity owner and the client user.
+
+**Signature:**
+
+```ts
+linkIdentity(args: LinkIdentityParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `identityOwner` | `Address` | The identity owner's address |
+| `clientUser` | `Address` | The client user's address |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `identityOwnerSignature` | `Hex` | EIP-712 signature from the identity owner |
+| `identityOwnerNonce` | `bigint` | Nonce for the identity owner's signature |
+| `identityOwnerDeadline` | `bigint` | Deadline timestamp for the owner signature |
+| `clientUserSignature` | `Hex` | EIP-712 signature from the client user |
+| `clientUserNonce` | `bigint` | Nonce for the client user's signature |
+| `clientUserDeadline` | `bigint` | Deadline timestamp for the user signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+#### unlinkIdentityAsSigner
+
+Unlink identity data as the identity owner (signer). Only the identity owner who created the link can call this.
+
+```ts
+await walletClient.unlinkIdentityAsSigner({
+  clientUser: '0xClientUserAddress',
+  policyClient: '0xPolicyClientAddress',
+  identityDomains: [identityDomainHash('kyc')],
+});
+```
+
+**Signature:**
+
+```ts
+unlinkIdentityAsSigner(args: UnlinkIdentityAsSignerParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientUser` | `Address` | The client user whose link to remove |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes to unlink |
+
+**Returns:** Transaction hash (`Hex`).
+
+#### unlinkIdentityAsUser
+
+Unlink identity data as the client user. Allows users to revoke links to their own account.
+
+```ts
+await walletClient.unlinkIdentityAsUser({
+  policyClient: '0xPolicyClientAddress',
+  identityDomains: [identityDomainHash('kyc')],
+});
+```
+
+**Signature:**
+
+```ts
+unlinkIdentityAsUser(args: UnlinkIdentityAsUserParams): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes to unlink |
+
+**Returns:** Transaction hash (`Hex`).
+
+---
+
 ## Public Client Methods (Read)
 
 These methods are available after extending a `PublicClient` with `newtonPublicClientActions`.
@@ -1276,6 +1457,184 @@ client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadE
 | `success` | `boolean` | Whether the upload succeeded |
 | `data_ref_id` | `string \| null` | UUID of the stored data reference |
 | `error` | `string \| null` | Error message if upload failed |
+
+---
+
+## Identity Methods
+
+EIP-712 signed identity data submission to the on-chain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
+
+<Info>
+  The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
+</Info>
+
+### `identityDomainHash`
+
+Compute the bytes32 identity domain hash from a human-readable domain name. Matches the Rust convention: `keccak256(toBytes(domainName))`.
+
+**Signature:**
+
+```ts
+identityDomainHash(domainName: string): Hex
+```
+
+**Example:**
+
+```ts
+import { identityDomainHash } from '@magicnewton/newton-protocol-sdk';
+
+const kycDomain = identityDomainHash('kyc');
+// Returns keccak256 of "kyc" as 0x-prefixed bytes32
+```
+
+### `linkIdentityAsSignerAndUser`
+
+Link identity data when the caller is both the identity owner and the client user. Calls the IdentityRegistry contract directly via `writeContract`.
+
+**Standalone signature:**
+
+```ts
+linkIdentityAsSignerAndUser(
+  walletClient: WalletClient,
+  params: LinkIdentityAsSignerAndUserParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes (use `identityDomainHash()`) |
+
+**Returns:** Transaction hash (`Hex`).
+
+### `linkIdentityAsSigner`
+
+Link identity data as the identity owner (signer). Requires a counterparty EIP-712 signature from the client user.
+
+**Standalone signature:**
+
+```ts
+linkIdentityAsSigner(
+  walletClient: WalletClient,
+  params: LinkIdentityAsSignerParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `clientUser` | `Address` | The client user's address |
+| `clientUserSignature` | `Hex` | EIP-712 signature from the client user |
+| `clientUserNonce` | `bigint` | Nonce for the client user's signature |
+| `clientUserDeadline` | `bigint` | Deadline timestamp for the signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+### `linkIdentityAsUser`
+
+Link identity data as the client user. Requires a counterparty EIP-712 signature from the identity owner.
+
+**Standalone signature:**
+
+```ts
+linkIdentityAsUser(
+  walletClient: WalletClient,
+  params: LinkIdentityAsUserParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `identityOwner` | `Address` | The identity owner's address |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `identityOwnerSignature` | `Hex` | EIP-712 signature from the identity owner |
+| `identityOwnerNonce` | `bigint` | Nonce for the identity owner's signature |
+| `identityOwnerDeadline` | `bigint` | Deadline timestamp for the signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+### `linkIdentity`
+
+Link identity data as a 3rd party with EIP-712 signatures from both the identity owner and the client user.
+
+**Standalone signature:**
+
+```ts
+linkIdentity(
+  walletClient: WalletClient,
+  params: LinkIdentityParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `identityOwner` | `Address` | The identity owner's address |
+| `clientUser` | `Address` | The client user's address |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes |
+| `identityOwnerSignature` | `Hex` | EIP-712 signature from the identity owner |
+| `identityOwnerNonce` | `bigint` | Nonce for the identity owner's signature |
+| `identityOwnerDeadline` | `bigint` | Deadline timestamp for the owner signature |
+| `clientUserSignature` | `Hex` | EIP-712 signature from the client user |
+| `clientUserNonce` | `bigint` | Nonce for the client user's signature |
+| `clientUserDeadline` | `bigint` | Deadline timestamp for the user signature |
+
+**Returns:** Transaction hash (`Hex`).
+
+### `unlinkIdentityAsSigner`
+
+Unlink identity data as the identity owner (signer). Only the identity owner who created the link can call this.
+
+**Standalone signature:**
+
+```ts
+unlinkIdentityAsSigner(
+  walletClient: WalletClient,
+  params: UnlinkIdentityAsSignerParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientUser` | `Address` | The client user whose link to remove |
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes to unlink |
+
+**Returns:** Transaction hash (`Hex`).
+
+### `unlinkIdentityAsUser`
+
+Unlink identity data as the client user. Allows users to revoke links to their own account.
+
+**Standalone signature:**
+
+```ts
+unlinkIdentityAsUser(
+  walletClient: WalletClient,
+  params: UnlinkIdentityAsUserParams
+): Promise<Hex>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyClient` | `Address` | PolicyClient contract address |
+| `identityDomains` | `Hex[]` | Array of domain hashes to unlink |
+
+**Returns:** Transaction hash (`Hex`).
 
 ---
 
@@ -1741,6 +2100,79 @@ client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadE
   ```
 </Expandable>
 
+### Identity Types
+
+<Expandable title="LinkIdentityAsSignerAndUserParams">
+  ```ts
+  interface LinkIdentityAsSignerAndUserParams {
+    policyClient: Address;
+    identityDomains: Hex[];
+  }
+  ```
+</Expandable>
+
+<Expandable title="LinkIdentityAsSignerParams">
+  ```ts
+  interface LinkIdentityAsSignerParams {
+    policyClient: Address;
+    identityDomains: Hex[];
+    clientUser: Address;
+    clientUserSignature: Hex;
+    clientUserNonce: bigint;
+    clientUserDeadline: bigint;
+  }
+  ```
+</Expandable>
+
+<Expandable title="LinkIdentityAsUserParams">
+  ```ts
+  interface LinkIdentityAsUserParams {
+    identityOwner: Address;
+    policyClient: Address;
+    identityDomains: Hex[];
+    identityOwnerSignature: Hex;
+    identityOwnerNonce: bigint;
+    identityOwnerDeadline: bigint;
+  }
+  ```
+</Expandable>
+
+<Expandable title="LinkIdentityParams">
+  ```ts
+  interface LinkIdentityParams {
+    identityOwner: Address;
+    clientUser: Address;
+    policyClient: Address;
+    identityDomains: Hex[];
+    identityOwnerSignature: Hex;
+    identityOwnerNonce: bigint;
+    identityOwnerDeadline: bigint;
+    clientUserSignature: Hex;
+    clientUserNonce: bigint;
+    clientUserDeadline: bigint;
+  }
+  ```
+</Expandable>
+
+<Expandable title="UnlinkIdentityAsSignerParams">
+  ```ts
+  interface UnlinkIdentityAsSignerParams {
+    clientUser: Address;
+    policyClient: Address;
+    identityDomains: Hex[];
+  }
+  ```
+</Expandable>
+
+<Expandable title="UnlinkIdentityAsUserParams">
+  ```ts
+  interface UnlinkIdentityAsUserParams {
+    policyClient: Address;
+    identityDomains: Hex[];
+  }
+  ```
+</Expandable>
+
 ---
 
 ## Error Handling
@@ -1787,6 +2219,9 @@ class MagicRPCError extends Error {
     IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
     FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
     FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
+    MissingChain = 'MISSING_CHAIN',
+    MissingAccount = 'MISSING_ACCOUNT',
+    InvalidAddress = 'INVALID_ADDRESS',
   }
   ```
 </Expandable>

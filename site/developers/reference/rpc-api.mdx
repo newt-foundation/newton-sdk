@@ -1450,6 +1450,90 @@ See [Privacy Layer](/developers/concepts/privacy-layer) for the full encryption 
 
 ---
 
+### newt_sendIdentityEncrypted
+
+{/* TODO (HPKE migration): This RPC method will be deprecated when identity data moves to
+    off-chain HPKE storage. Post-migration, identity data is encrypted with HPKE and uploaded
+    via newt_uploadEncryptedData, with only a 32-byte data_ref_id stored on-chain via
+    registerIdentityDataRef. The Newton SDK does not wrap this RPC method — it is called
+    directly by the newton-identity popup. */}
+
+Submit EIP-712 signed encrypted identity data to the on-chain IdentityRegistry. The gateway validates the signature, then submits the data to the contract.
+
+**Permission level:** `RpcWrite`
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `identity_owner` | `Address` | Yes | The identity owner's address (must match the EIP-712 signer) |
+| `identity_owner_sig` | `Hex` | Yes | EIP-712 signature over `EncryptedIdentityData { string data }` |
+| `identity_data` | `object` | Yes | Object with a single `data` field containing the encrypted identity blob |
+| `identity_data.data` | `string` | Yes | The encrypted identity data string |
+| `identity_domain` | `Hex (bytes32)` | Yes | Identity domain hash — `keccak256` of the domain name (e.g., `keccak256("kyc")`) |
+
+The EIP-712 domain used for signing:
+
+```json
+{
+  "name": "IdentityRegistry",
+  "version": "1",
+  "chainId": "<chain_id>",
+  "verifyingContract": "<IdentityRegistry_address>"
+}
+```
+
+The EIP-712 struct type:
+
+```
+EncryptedIdentityData(string data)
+```
+
+<CodeGroup>
+
+```json Request
+{
+  "jsonrpc": "2.0",
+  "method": "newt_sendIdentityEncrypted",
+  "params": {
+    "identity_owner": "0x1234567890abcdef1234567890abcdef12345678",
+    "identity_owner_sig": "0x...",
+    "identity_data": {
+      "data": "encrypted-blob-string"
+    },
+    "identity_domain": "0x..."
+  },
+  "id": 1
+}
+```
+
+```json Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "inclusion_tx": "0xabc123..."
+  },
+  "id": 1
+}
+```
+
+</CodeGroup>
+
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
+
+**Errors:**
+
+- Authentication failure if the recovered signer does not match `identity_owner`
+- Authorization failure if the API key lacks `RpcWrite` permission
+
+See [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for writing policies that check identity data.
+
+---
+
 ## Related Resources
 
 - [SDK Reference](/developers/reference/sdk-reference) -- TypeScript SDK for interacting with Newton Protocol
