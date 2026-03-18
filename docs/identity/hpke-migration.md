@@ -33,9 +33,9 @@ newton-identity popup
   → Derive Ed25519 key from Turnkey wallet (per identity domain)
   → HPKE encrypt (X25519 + HKDF-SHA256 + ChaCha20-Poly1305)
   → Ed25519 sign the envelope
-  → Gateway RPC: newt_uploadEncryptedData (off-chain storage)
-  → Returns data_ref_id = keccak256(envelope)
-  → On-chain: registerIdentityDataRef(owner, domain, dataRefId) — 32 bytes
+  → Gateway RPC: newt_uploadIdentityEncrypted (off-chain storage)
+  → Returns { data_ref_id, gateway_signature, deadline }
+  → On-chain: registerIdentityData(domain, dataRefId, gatewaySig, deadline) — msg.sender is owner
   → At evaluation: Operators fetch envelope by ref → HPKE decrypt
 ```
 
@@ -45,24 +45,25 @@ newton-identity popup
 
 | Component | Phase 1 (Current) | Phase 2 (HPKE) |
 |-----------|-------------------|----------------|
-| **Gateway RPC** | `newt_sendIdentityEncrypted` — accepts EIP-712 signed RSA blob | `newt_uploadEncryptedData` — accepts HPKE envelope (off-chain) |
-| **On-chain storage** | `submitIdentity(owner, domain, encryptedBlob)` — full blob | `registerIdentityDataRef(owner, domain, dataRefId)` — 32-byte hash |
-| **Event** | (none specific) | `IdentityDataRefRegistered(owner, domain, dataRefId)` |
+| **Gateway RPC** | `newt_sendIdentityEncrypted` — accepts EIP-712 signed RSA blob | `newt_uploadIdentityEncrypted` — accepts HPKE envelope (off-chain) |
+| **On-chain storage** | `submitIdentity(owner, domain, encryptedBlob)` — full blob | `registerIdentityData(domain, dataRefId, gatewaySig, deadline)` — msg.sender is owner |
+| **Event** | (none specific) | `IdentityBound(address indexed identityOwner, bytes32 identityDomain, string identityData)` |
 | **Decryption** | AWS KMS decrypt at evaluation time | HPKE decrypt from off-chain data store |
 | **Cleanup** | N/A | Gateway GCs unconfirmed refs after 24h |
 
 **Phase 2 gateway changes:**
-1. Extend `newt_uploadEncryptedData` to accept optional `identity_domain` parameter
+1. Dedicated `newt_uploadIdentityEncrypted` endpoint (returns `{ data_ref_id, gateway_signature, deadline }`)
 2. Store HPKE envelope off-chain, keyed by `data_ref_id = keccak256(envelope)`
-3. Watch for `IdentityDataRefRegistered` events to confirm storage
+3. Watch for `IdentityBound` events to confirm storage
 4. Resolve `data_ref_id` → fetch envelope → HPKE decrypt at evaluation time
 5. Phase out AWS KMS decrypt calls for identity data
 
 **Phase 2 contract changes:**
-1. New function: `registerIdentityDataRef(address owner, bytes32 domain, bytes32 dataRefId)`
-2. New event: `IdentityDataRefRegistered(address indexed owner, bytes32 domain, bytes32 dataRefId)`
-3. Fresh deploy (no production users yet — no backward compatibility needed)
-4. Deprecate `submitIdentity` from new deployment
+1. New function: `registerIdentityData(bytes32 _identityDomain, string _dataRefId, bytes _gatewaySignature, uint256 _deadline)` — `msg.sender` is the identity owner
+2. Gateway signs `REGISTER_IDENTITY_TYPEHASH = registerIdentityData(address identityOwner, bytes32 identityDomain, string dataRefId, uint256 deadline)`; contract verifies via `isTaskGenerator(recoveredSigner)`
+3. New event: `IdentityBound(address indexed identityOwner, bytes32 identityDomain, string identityData)`
+4. Fresh deploy (no production users yet — no backward compatibility needed)
+5. Deprecate `submitIdentity` from new deployment
 
 ### newton-identity (Popup Wallet)
 
@@ -70,7 +71,7 @@ newton-identity popup
 |-----------|-------------------|----------------|
 | **Encryption** | RSA-OAEP via AWS KMS public key (`kms.ts`) | HPKE via SDK privacy module (`createSecureEnvelope`) |
 | **Signing** | EIP-712 `EncryptedIdentityData { string data }` | Ed25519 envelope signature (derived from Turnkey wallet) |
-| **Upload** | `newt_sendIdentityEncrypted` (blob goes on-chain) | `newt_uploadEncryptedData` (off-chain) + `registerIdentityDataRef` (on-chain hash) |
+| **Upload** | `newt_sendIdentityEncrypted` (blob goes on-chain) | `newt_uploadIdentityEncrypted` (off-chain) + `registerIdentityData` (on-chain hash) |
 | **Key source** | `NEXT_PUBLIC_KMS_PUBLIC_KEY` env var | Gateway X25519 key via `newt_getPrivacyPublicKey` RPC (no env var) |
 
 **Phase 2 file changes:**
@@ -102,16 +103,15 @@ Properties:
 
 | Component | Phase 1 (Current) | Phase 2 (HPKE) |
 |-----------|-------------------|----------------|
-| **Identity data submission** | None (popup calls gateway directly) | `uploadEncryptedData()` wraps HPKE upload; `registerIdentityDataRef()` wraps on-chain hash storage |
+| **Identity data submission** | None (popup calls gateway directly) | `newt_uploadIdentityEncrypted` called by popup directly; `registerIdentityData()` wraps on-chain hash storage |
 | **Link/unlink** | `linkIdentity*()` / `unlinkIdentity*()` | Unchanged |
 | **Domain hash** | `identityDomainHash()` | Unchanged |
 | **Privacy module** | Used for general privacy data | Also used for identity data encryption |
 
 **Phase 2 SDK changes:**
 1. Ensure privacy module exports are public (`createSecureEnvelope`, `getPrivacyPublicKey`, `generateSigningKeyPair`)
-2. Verify `uploadEncryptedData` can accept identity-specific parameters
-3. Add `registerIdentityDataRef` writeContract wrapper (when contract lands)
-4. Update `docs/privacy/` to cover identity data use case
+2. Add `registerIdentityData` writeContract wrapper (when contract lands)
+3. Update `docs/privacy/` to cover identity data use case
 
 ## End-to-End Flows
 
@@ -134,15 +134,17 @@ Parent App                    Identity Popup              SDK Privacy    Gateway
     |                              |   (HPKE encrypt + Ed25519 sign)      |               |
     |                              |<-- envelope + signature              |               |
     |                              |                         |             |               |
-    |                              |-- 5. uploadEncryptedData() --------> |               |
-    |                              |<-- data_ref_id (keccak256(envelope)) |               |
+    |                              |-- 5. newt_uploadIdentityEncrypted --> |               |
+    |                              |<-- { data_ref_id, gateway_sig,       |               |
+    |                              |      deadline }                       |               |
     |                              |                         |             |               |
-    |                              |-- 6. registerIdentityDataRef() ----------------------------> |
-    |                              |   (owner, domain, dataRefId)                                 |
-    |                              |<-- tx receipt ------------------------------------------------|
+    |                              |-- 6. registerIdentityData() ----------------------------> |
+    |                              |   (domain, dataRefId, gatewaySig, deadline)               |
+    |                              |   msg.sender = identityOwner                               |
+    |                              |<-- tx receipt --------------------------------------------|
     |                              |                         |             |               |
     |                              |                         |      7. watch event ------> |
-    |                              |                         |      IdentityDataRefRegistered
+    |                              |                         |      IdentityBound          |
     |                              |                         |      → confirm storage      |
     |                              |                         |             |               |
     |<-- { data_ref_id, tx } ----  |                         |             |               |
@@ -219,7 +221,7 @@ Deriving Ed25519 keys from the Turnkey secp256k1 wallet via `personal_sign`:
 
 The two-step pattern (off-chain upload, then on-chain ref registration):
 - Popup handles the on-chain tx — avoids gateway gas costs and nonce contention at scale
-- Event-based confirmation — gateway watches `IdentityDataRefRegistered`, no extra RPC needed
+- Event-based confirmation — gateway watches `IdentityBound`, no extra RPC needed
 - Atomicity gap handled naturally — gateway GCs unconfirmed refs after 24h
 - Same pattern as existing chain watcher infrastructure for identity link/unlink events
 
@@ -253,7 +255,7 @@ Matches:
 
 ## Open Questions
 
-1. Should `registerIdentityDataRef` require an EIP-712 signature, or is `msg.sender == owner` sufficient?
+1. **Resolved**: Gateway signs `REGISTER_IDENTITY_TYPEHASH` = `registerIdentityData(address identityOwner, bytes32 identityDomain, string dataRefId, uint256 deadline)`. The contract verifies via `isTaskGenerator(recoveredSigner)`, confirming the data ref was uploaded to the gateway before on-chain registration.
 2. Gateway X25519 public key caching strategy for newton-identity (recommendation: 1-hour TTL)
 3. Phase 3 threshold DKG — will identity data decryption be distributed to operators or remain gateway-only?
 

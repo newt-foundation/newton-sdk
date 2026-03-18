@@ -1454,9 +1454,9 @@ See [Privacy Layer](/developers/concepts/privacy-layer) for the full encryption 
 
 {/* TODO (HPKE migration): This RPC method will be deprecated when identity data moves to
     off-chain HPKE storage. Post-migration, identity data is encrypted with HPKE and uploaded
-    via newt_uploadEncryptedData, with only a 32-byte data_ref_id stored on-chain via
-    registerIdentityDataRef. The Newton SDK does not wrap this RPC method — it is called
-    directly by the newton-identity popup. */}
+    via newt_uploadIdentityEncrypted (returns { data_ref_id, gateway_signature, deadline }),
+    with only a string data_ref_id stored on-chain via registerIdentityData.
+    The Newton SDK does not wrap this RPC method — it is called directly by the newton-identity popup. */}
 
 Submit EIP-712 signed encrypted identity data to the on-chain IdentityRegistry. The gateway validates the signature, then submits the data to the contract.
 

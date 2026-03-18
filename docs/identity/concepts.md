@@ -116,7 +116,7 @@ A used nonce cannot be reused. An expired deadline cannot be submitted. Together
 <!-- TODO (HPKE migration): Replace the "Current" section with the HPKE flow once migrated.
      The "Future" section becomes the current state. Remove the stop-gap framing.
      Update step 4 in the Current section: EIP-712 signing is replaced by Ed25519.
-     Update step 5: newt_sendIdentityEncrypted replaced by uploadEncryptedData + registerIdentityDataRef.
+     Update step 5: newt_sendIdentityEncrypted replaced by newt_uploadIdentityEncrypted + registerIdentityData.
      See docs/identity/hpke-migration.md for the full migration plan. -->
 
 ### Current: AWS KMS RSA-OAEP
@@ -139,10 +139,11 @@ The encryption will migrate to the Newton Privacy Layer (HPKE, RFC 9180):
 1. Fetch the gateway's X25519 public key via `newt_getPrivacyPublicKey`
 2. Encrypt with HPKE (X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305)
 3. AAD binding to `keccak256(policyClient, chainId)` prevents cross-context replay
-4. Same EIP-712 signing step
-5. Same gateway RPC submission
+4. Ed25519 envelope signing (replaces EIP-712 for identity data)
+5. Call `newt_uploadIdentityEncrypted` → returns `{ data_ref_id, gateway_signature, deadline }`
+6. Store ref on-chain via `registerIdentityData(domain, dataRefId, gatewaySig, deadline)`
 
-This aligns identity encryption with the SDK's existing privacy module, enabling code reuse (`createSecureEnvelope`, `uploadEncryptedData`).
+This aligns identity encryption with the SDK's existing privacy module, enabling code reuse (`createSecureEnvelope`, `generateSigningKeyPair`).
 
 ## Rego Policy Integration
 

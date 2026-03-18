@@ -150,13 +150,14 @@ country  := newton.identity.kyc.get("country")
 field    := newton.identity.get("field_name")
 ```
 
-<!-- TODO (HPKE migration): Update this flow when newton-prover-avs adds registerIdentityDataRef.
+<!-- TODO (HPKE migration): Update this flow when newton-prover-avs adds registerIdentityData.
      Phase 2 replaces steps 5-10 with:
      5. Popup derives Ed25519 key from Turnkey wallet (personal_sign + keccak256)
      6. Popup encrypts with HPKE via SDK createSecureEnvelope()
-     7. Popup uploads envelope via SDK uploadEncryptedData() → returns data_ref_id
-     8. Popup stores ref on-chain: registerIdentityDataRef(owner, domain, dataRefId)
-     9. Gateway watches IdentityDataRefRegistered event → confirms storage
+     7. Popup calls newt_uploadIdentityEncrypted → returns { data_ref_id, gateway_signature, deadline }
+     8. Popup stores ref on-chain: registerIdentityData(domain, dataRefId, gatewaySig, deadline)
+        (msg.sender is the identity owner)
+     9. Gateway watches IdentityBound event → confirms storage
      The EIP-712 EncryptedIdentityData signing step is replaced by Ed25519 envelope signing.
      See docs/identity/hpke-migration.md for details. -->
 

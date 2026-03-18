@@ -67,7 +67,7 @@ The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers
 - `identityDomainHash()` — compute keccak256 domain identifier
 - `linkIdentity*()` / `unlinkIdentity*()` — on-chain writeContract calls
 
-The gateway RPC layer (`newt_sendIdentityEncrypted`) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will use the SDK's privacy module (`createSecureEnvelope`, `uploadEncryptedData`) for encryption and a new `registerIdentityDataRef` wrapper for on-chain ref storage. See [HPKE Migration](hpke-migration.md) for the full roadmap.
+The gateway RPC layer (`newt_sendIdentityEncrypted`) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will call `newt_uploadIdentityEncrypted` directly and use a new `registerIdentityData` SDK wrapper for on-chain ref storage. See [HPKE Migration](hpke-migration.md) for the full roadmap.
 
 ## Encryption: Current vs Future
 
