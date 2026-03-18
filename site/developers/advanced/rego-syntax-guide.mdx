@@ -1,6 +1,6 @@
 ---
 title: "Rego Syntax Guide"
-description: "Supported Rego syntax, builtins, and Newton crypto extensions for policy development"
+description: "Supported Rego syntax, builtins, and Newton extensions (crypto, identity) for policy development"
 ---
 
 ## Modules & Files
@@ -297,6 +297,199 @@ allow if {
     signer == input.from
 }
 ```
+
+---
+
+## Newton Identity Extensions
+
+Newton extends the Rego runtime with identity verification built-ins for checking user identity data within policies. Identity data is domain-namespaced — the `identity_domain` (bytes32) stored on-chain determines which schema and built-ins apply. Domain is always required.
+
+Two APIs are available:
+
+- **Domain-namespaced built-ins** (primary): `newton.identity.kyc.age_gte(21)`. Type-safe with input validation and specific error messages.
+- **Generic field accessor** (escape hatch): `newton.identity.get("field_name")`. Returns the raw field value from the current domain's data. Useful for rapid prototyping with new domains before dedicated built-ins exist.
+
+<Info>
+  Identity data is injected by Newton operators at evaluation time from the on-chain IdentityRegistry. Policy authors do not have direct access to personally identifying information — only the built-in check results (booleans) are exposed to the policy.
+</Info>
+
+### KYC Domain (`newton.identity.kyc.*`)
+
+The KYC domain provides 8 built-ins for verifying Know Your Customer identity data.
+
+#### KYC Data Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reference_date` | `YYYY-MM-DD` | Timestamp of "now" for time-based checks |
+| `status` | `string` | KYC status: `approved`, `pending`, `completed`, `failed`, `expired`, `declined` |
+| `selected_country_code` | ISO 3166-1 alpha-2 | Country selected during KYC process |
+| `address_country_code` | ISO 3166-1 alpha-2 | Country from document address |
+| `address_subdivision` | `string` | State/province from document address |
+| `birthdate` | `YYYY-MM-DD` | Date of birth |
+| `expiration_date` | `YYYY-MM-DD` | Document expiration date |
+| `issue_date` | `YYYY-MM-DD` | Document issuance date |
+| `issuing_authority` | `string` | Issuing country or state |
+
+#### `newton.identity.kyc.check_approved`
+
+Returns `true` if the identity status is `"approved"`.
+
+```rego
+result := newton.identity.kyc.check_approved()
+```
+
+No parameters. Returns `bool`.
+
+#### `newton.identity.kyc.address_in_countries`
+
+Checks if the document's address country code is in the provided list.
+
+```rego
+result := newton.identity.kyc.address_in_countries(["US", "CA", "DE"])
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `countries` | `string[]` | Array of ISO 3166-1 alpha-2 country codes |
+
+Returns `bool`. Errors if the array is empty or the stored country code is empty.
+
+#### `newton.identity.kyc.address_in_subdivision`
+
+Checks if the document's address subdivision is in the provided list.
+
+```rego
+result := newton.identity.kyc.address_in_subdivision(["US-CA", "US-OR", "US-WA"])
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `subdivisions` | `string[]` | Array of ISO subdivision codes (`CC-SS` format, e.g., `US-CA`) |
+
+Returns `bool`. The check concatenates `address_country_code` + `-` + `address_subdivision` and matches against the list. Errors if the array is empty or country/subdivision fields are empty.
+
+#### `newton.identity.kyc.address_not_in_subdivision`
+
+Inverse of `address_in_subdivision`. Returns `true` if the address is NOT in the list.
+
+```rego
+result := newton.identity.kyc.address_not_in_subdivision(["US-NY", "US-NC"])
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `subdivisions` | `string[]` | Array of ISO subdivision codes to exclude |
+
+Returns `bool`. Useful when combined with `address_in_countries` to include a country but exclude specific states.
+
+#### `newton.identity.kyc.age_gte`
+
+Checks if the person's age (calculated from `birthdate` to `reference_date`) is at least the specified years.
+
+```rego
+result := newton.identity.kyc.age_gte(21)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `min_age` | `number` | Minimum age in years (must be positive) |
+
+Returns `bool`. Errors if `min_age` is not positive or dates cannot be parsed.
+
+#### `newton.identity.kyc.not_expired`
+
+Returns `true` if the document expiration date has not passed relative to `reference_date`.
+
+```rego
+result := newton.identity.kyc.not_expired()
+```
+
+No parameters. Returns `bool`.
+
+#### `newton.identity.kyc.valid_for`
+
+Checks if the document will remain valid for at least the specified number of days.
+
+```rego
+result := newton.identity.kyc.valid_for(365)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `min_days` | `number` | Minimum days of remaining validity (must be positive) |
+
+Returns `bool`. Compares `(expiration_date - reference_date)` against the provided day count.
+
+#### `newton.identity.kyc.issued_since`
+
+Checks if the document was issued at least the specified number of days ago.
+
+```rego
+result := newton.identity.kyc.issued_since(90)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `min_days` | `number` | Minimum days since issuance (must be positive) |
+
+Returns `bool`. Compares `(reference_date - issue_date)` against the provided day count.
+
+### Generic Field Accessor (`newton.identity.get`)
+
+Works across any identity domain. Returns the raw field value by name from the current domain's data. Returns `undefined` if the field does not exist, allowing Rego `default` patterns.
+
+```rego
+result := newton.identity.get("field_name")
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `field_name` | `string` | Field name to look up |
+
+Returns the field value (any type), or `undefined` if not found.
+
+When multiple identity domains are registered, all domains' fields are accessible through this single accessor.
+
+### KYC Policy Example
+
+```rego
+package kyc_compliance
+
+default allow = false
+
+# Allow transactions from approved US/CA users over 21 with valid documents
+allow if {
+    newton.identity.kyc.check_approved()
+    newton.identity.kyc.age_gte(21)
+    newton.identity.kyc.address_in_countries(["US", "CA"])
+    newton.identity.kyc.address_not_in_subdivision(["US-NY", "US-NC"])
+    newton.identity.kyc.not_expired()
+    newton.identity.kyc.valid_for(90)
+    newton.identity.kyc.issued_since(30)
+}
+```
+
+### Mixed Domain and Generic Accessor Example
+
+```rego
+package mixed_check
+
+default allow = false
+
+# Combine domain-specific built-ins with generic field access
+allow if {
+    newton.identity.kyc.check_approved()
+    newton.identity.kyc.age_gte(18)
+    newton.identity.get("address_country_code") == "US"
+}
+```
+
+### Adding New Identity Domains
+
+The identity extension system is designed for new domains beyond KYC. Each domain (social, credit, professional, etc.) defines its own data struct, Rego built-ins, and field accessors. New domains register under `newton.identity.<domain>.*` and merge their fields into the shared `newton.identity.get` accessor.
+
+Until domain-specific built-ins are available for a new domain, policy authors can use `newton.identity.get("field_name")` to access any field from the domain's data.
 
 ---
 

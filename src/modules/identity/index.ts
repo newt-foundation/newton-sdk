@@ -1,13 +1,25 @@
 /**
  * Newton Identity Module
  *
- * Two categories of operations:
- * 1. Gateway RPC: `sendIdentityEncrypted` — EIP-712 signed identity data submission via gateway
- * 2. On-chain: `linkIdentity*` / `unlinkIdentity*` — direct contract calls to IdentityRegistry
+ * On-chain: `linkIdentity*` / `unlinkIdentity*` — direct contract calls to IdentityRegistry
+ *
+ * TODO: Add `registerIdentityDataRef` writeContract wrapper when the IdentityRegistry contract
+ * adds `registerIdentityDataRef(address owner, bytes32 domain, bytes32 dataRefId)` in
+ * newton-prover-avs. This is part of the HPKE migration (AWS KMS → Newton Privacy Layer):
+ *
+ * Post-migration flow:
+ *   1. newton-identity popup encrypts identity data with HPKE (via SDK privacy module)
+ *   2. Popup uploads envelope: SDK `uploadEncryptedData()` → returns `data_ref_id`
+ *   3. Popup stores ref on-chain: SDK `registerIdentityDataRef(owner, domain, dataRefId)`
+ *   4. Gateway watches `IdentityDataRefRegistered` event → confirms off-chain storage
+ *   5. At evaluation: operators fetch envelope by ref → HPKE decrypt
+ *
+ * This replaces the current `newt_sendIdentityEncrypted` RPC flow where full encrypted
+ * blobs are stored on-chain. See `newton-identity/docs/HPKE_MIGRATION.md` for details.
  */
 
 import { IdentityRegistryAbi } from '@core/abis/newtonIdentityRegistryAbi'
-import { GATEWAY_METHODS, IDENTITY_REGISTRY } from '@core/const'
+import { IDENTITY_REGISTRY } from '@core/const'
 import { SDKError } from '@core/sdk-exceptions'
 import { SDKErrorCode } from '@core/types/core/exception-types'
 import type {
@@ -15,14 +27,10 @@ import type {
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
   LinkIdentityParams,
-  SendIdentityEncryptedParams,
-  SendIdentityEncryptedResponse,
-  SendIdentityEncryptedRpcRequest,
   UnlinkIdentityAsSignerParams,
   UnlinkIdentityAsUserParams,
 } from '@core/types/identity'
-import { AvsHttpService } from '@core/utils/https'
-import { type Account, type Chain, type Hex, type WalletClient, getAddress, isAddress, keccak256, toBytes } from 'viem'
+import { type Account, type Chain, type Hex, type WalletClient, keccak256, toBytes } from 'viem'
 
 /**
  * Compute the bytes32 identity domain hash from a human-readable domain name.
@@ -31,80 +39,6 @@ import { type Account, type Chain, type Hex, type WalletClient, getAddress, isAd
  */
 export function identityDomainHash(domainName: string): Hex {
   return keccak256(toBytes(domainName))
-}
-
-/**
- * Sign encrypted identity data with EIP-712 and submit to the gateway.
- *
- * The wallet client signs `EncryptedIdentityData { string data }` using the
- * EIP-712 domain `{name: "IdentityRegistry", version: "1", chainId, verifyingContract}`.
- * The gateway validates the signature, then submits the data to the on-chain IdentityRegistry.
- *
- * @param walletClient - viem WalletClient with a connected account
- * @param params - Identity data and domain parameters
- * @param apiKey - Newton API key for gateway authentication
- * @param gatewayApiUrlOverride - Optional gateway URL override
- * @returns Transaction hash of the on-chain inclusion
- */
-export async function sendIdentityEncrypted(
-  walletClient: WalletClient,
-  params: SendIdentityEncryptedParams,
-  apiKey: string,
-  gatewayApiUrlOverride?: string,
-): Promise<SendIdentityEncryptedResponse> {
-  const chainId = walletClient.chain?.id
-  if (!chainId) throw new SDKError(SDKErrorCode.MissingChain, 'walletClient must have a chain configured')
-
-  const account = walletClient.account
-  if (!account) throw new SDKError(SDKErrorCode.MissingAccount, 'walletClient must have an account configured')
-
-  if (!isAddress(params.identityOwner)) {
-    throw new SDKError(SDKErrorCode.InvalidAddress, `invalid identityOwner address: ${params.identityOwner}`)
-  }
-  const identityRegistryAddress = IDENTITY_REGISTRY[chainId]
-  if (!identityRegistryAddress) {
-    throw new SDKError(SDKErrorCode.InvalidAddress, `no IdentityRegistry address for chain ${chainId}`)
-  }
-
-  // The signer must match the declared identity owner
-  if (getAddress(account.address) !== getAddress(params.identityOwner)) {
-    throw new SDKError(
-      SDKErrorCode.IdentityOwnerMismatch,
-      `wallet account ${account.address} does not match identityOwner ${params.identityOwner}`,
-    )
-  }
-
-  // EIP-712 signature over EncryptedIdentityData { string data }
-  const signature = await walletClient.signTypedData({
-    account,
-    domain: {
-      name: 'IdentityRegistry',
-      version: '1',
-      chainId: BigInt(chainId),
-      verifyingContract: identityRegistryAddress,
-    },
-    types: {
-      EncryptedIdentityData: [{ name: 'data', type: 'string' }],
-    },
-    primaryType: 'EncryptedIdentityData',
-    message: {
-      data: params.identityData,
-    },
-  })
-
-  const domainHash = identityDomainHash(params.identityDomain)
-
-  const rpcRequest: SendIdentityEncryptedRpcRequest = {
-    identity_owner: params.identityOwner,
-    identity_owner_sig: signature,
-    identity_data: { data: params.identityData },
-    identity_domain: domainHash,
-  }
-
-  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.sendIdentityEncrypted, rpcRequest, apiKey)
-  if (res.error) throw res.error
-  return res.result as SendIdentityEncryptedResponse
 }
 
 // ---------------------------------------------------------------------------

@@ -10,7 +10,6 @@ export enum SDKErrorCode {
   MissingChain = 'MISSING_CHAIN',
   MissingAccount = 'MISSING_ACCOUNT',
   InvalidAddress = 'INVALID_ADDRESS',
-  IdentityOwnerMismatch = 'IDENTITY_OWNER_MISMATCH',
 }
 
 export enum SDKWarningCode {
