@@ -64,10 +64,11 @@ The gateway layer handles encrypted data submission. The on-chain layer manages 
 
 The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers for the on-chain layer:
 
+- `registerIdentityData()` — store identity data reference on-chain with gateway co-signature
 - `identityDomainHash()` — compute keccak256 domain identifier
 - `linkIdentity*()` / `unlinkIdentity*()` — on-chain writeContract calls
 
-The gateway RPC layer (`newt_sendIdentityEncrypted`) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will call `newt_uploadIdentityEncrypted` directly and use a new `registerIdentityData` SDK wrapper for on-chain ref storage. See [HPKE Migration](hpke-migration.md) for the full roadmap.
+The gateway RPC layer (`newt_sendIdentityEncrypted` in Phase 1, `newt_uploadIdentityEncrypted` in Phase 2) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will use the SDK's privacy module (`createSecureEnvelope`, `uploadEncryptedData`) for encryption. See [HPKE Migration](hpke-migration.md) for the full roadmap.
 
 ## Encryption: Current vs Future
 

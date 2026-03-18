@@ -110,7 +110,7 @@ Properties:
 
 **Phase 2 SDK changes:**
 1. Ensure privacy module exports are public (`createSecureEnvelope`, `getPrivacyPublicKey`, `generateSigningKeyPair`)
-2. Add `registerIdentityData` writeContract wrapper (when contract lands)
+2. ~~Add `registerIdentityData` writeContract wrapper~~ — Done (shipped in Phase 2c)
 3. Update `docs/privacy/` to cover identity data use case
 
 ## End-to-End Flows
