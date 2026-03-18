@@ -1,3 +1,25 @@
+# v0.7.0 (Wed Mar 18 2026)
+
+#### 🚀 Enhancement
+
+- feat: add registerIdentityData writeContract wrapper for identity data registration ([@denniswon](https://github.com/denniswon))
+
+#### 🐛 Bug Fix
+
+- Merge pull request #140 from newt-foundation/feature/sdk-identity-module-v2 [#140](https://github.com/newt-foundation/newton-sdk/pull/140) ([@denniswon](https://github.com/denniswon))
+- Merge pull request #141 from newt-foundation/docs/rego-identity-extensions [#141](https://github.com/newt-foundation/newton-sdk/pull/141) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- chore: sync IdentityRegistry ABI with deployed contract (PR #450) ([@denniswon](https://github.com/denniswon))
+- docs: update identity docs to match deployed IdentityRegistry contract ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.6.1 (Sat Mar 14 2026)
 
 #### ⚠️ Pushed to `main`
