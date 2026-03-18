@@ -19,6 +19,7 @@ import {
   linkIdentityAsSigner,
   linkIdentityAsSignerAndUser,
   linkIdentityAsUser,
+  registerIdentityData,
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 } from './modules/identity'
@@ -37,6 +38,7 @@ import type {
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
   LinkIdentityParams,
+  RegisterIdentityDataParams,
   UnlinkIdentityAsSignerParams,
   UnlinkIdentityAsUserParams,
 } from './types/identity'
@@ -293,6 +295,10 @@ const newtonWalletClientActions =
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
 
+      // Identity data registration (on-chain with gateway co-signature)
+      registerIdentityData: (args: RegisterIdentityDataParams): Promise<Hex> =>
+        registerIdentityData(walletClient, args),
+
       // Identity link/unlink (on-chain contract calls)
       linkIdentity: (args: LinkIdentityParams): Promise<Hex> => linkIdentity(walletClient, args),
 
@@ -530,6 +536,7 @@ export {
   linkIdentityAsSigner,
   linkIdentityAsSignerAndUser,
   linkIdentityAsUser,
+  registerIdentityData,
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 }

@@ -68,3 +68,11 @@ export interface UnlinkIdentityAsUserParams {
   policyClient: Address
   identityDomains: Hex[]
 }
+
+/** Parameters for registerIdentityData — store identity data reference on-chain with gateway co-signature. */
+export interface RegisterIdentityDataParams {
+  identityDomain: Hex
+  dataRefId: string
+  gatewaySignature: Hex
+  deadline: bigint
+}

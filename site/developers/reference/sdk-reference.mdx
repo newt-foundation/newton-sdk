@@ -853,7 +853,30 @@ signPrivacyAuthorization(
 
 ### Identity Methods
 
-These methods handle identity data submission (via gateway RPC) and identity-to-PolicyClient linking (via direct contract calls). They are also exported as standalone functions from the package.
+These methods handle identity data registration and identity-to-PolicyClient linking via direct contract calls to the IdentityRegistry. They are also exported as standalone functions from the package.
+
+#### registerIdentityData
+
+Register an identity data reference on-chain. The identity owner (caller) submits a `data_ref_id` obtained from the gateway's `newt_uploadIdentityEncrypted` RPC, along with the gateway's co-signature and deadline.
+
+```ts
+await walletClient.registerIdentityData({
+  identityDomain: identityDomainHash('kyc'),
+  dataRefId: 'QmEncryptedDataRef...',
+  gatewaySignature: '0x...', // from newt_uploadIdentityEncrypted response
+  deadline: 1700000000n,      // from newt_uploadIdentityEncrypted response
+})
+```
+
+**Signature:**
+
+```ts
+registerIdentityData(args: RegisterIdentityDataParams): Promise<Hex>
+```
+
+The contract verifies the gateway signature against `REGISTER_IDENTITY_TYPEHASH` and checks that the signer is a registered task generator via `isTaskGenerator()`. Overwrites are allowed — users can update their identity data reference by calling this again.
+
+---
 
 #### linkIdentityAsSignerAndUser
 
@@ -2169,6 +2192,17 @@ unlinkIdentityAsUser(
   interface UnlinkIdentityAsUserParams {
     policyClient: Address;
     identityDomains: Hex[];
+  }
+  ```
+</Expandable>
+
+<Expandable title="RegisterIdentityDataParams">
+  ```ts
+  interface RegisterIdentityDataParams {
+    identityDomain: Hex;
+    dataRefId: string;
+    gatewaySignature: Hex;
+    deadline: bigint;
   }
   ```
 </Expandable>

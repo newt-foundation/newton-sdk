@@ -1,29 +1,9 @@
 /**
  * Newton Identity Module
  *
- * On-chain: `linkIdentity*` / `unlinkIdentity*` — direct contract calls to IdentityRegistry
- *
- * TODO: Add `registerIdentityData` writeContract wrapper when the IdentityRegistry contract
- * lands in newton-prover-avs. This is part of the HPKE migration (AWS KMS → Newton Privacy Layer).
- *
- * Actual deployed signature:
- *   `registerIdentityData(bytes32 _identityDomain, string _dataRefId, bytes _gatewaySignature, uint256 _deadline)`
- *   where `msg.sender` is the identity owner (no separate `owner` param).
- *
- * The gateway signs `REGISTER_IDENTITY_TYPEHASH`:
- *   `registerIdentityData(address identityOwner, bytes32 identityDomain, string dataRefId, uint256 deadline)`
- * The contract verifies the signature via `isTaskGenerator(recoveredSigner)`.
- *
- * Post-migration flow:
- *   1. newton-identity popup encrypts identity data with HPKE (via SDK privacy module)
- *   2. Popup calls `newt_uploadIdentityEncrypted` → returns `{ data_ref_id, gateway_signature, deadline }`
- *   3. Popup stores ref on-chain: SDK `registerIdentityData(domain, dataRefId, gatewaySig, deadline)`
- *      (msg.sender is the identity owner)
- *   4. Gateway watches `IdentityBound` event → confirms off-chain storage
- *   5. At evaluation: operators fetch envelope by ref → HPKE decrypt
- *
- * This replaces the current `newt_sendIdentityEncrypted` RPC flow where full encrypted
- * blobs are stored on-chain. See `docs/identity/hpke-migration.md` for details.
+ * - `registerIdentityData` — store identity data reference on-chain with gateway co-signature
+ * - `identityDomainHash` — compute keccak256 domain identifier
+ * - `linkIdentity*` / `unlinkIdentity*` — direct contract calls to IdentityRegistry
  */
 
 import { IdentityRegistryAbi } from '@core/abis/newtonIdentityRegistryAbi'
@@ -35,6 +15,7 @@ import type {
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
   LinkIdentityParams,
+  RegisterIdentityDataParams,
   UnlinkIdentityAsSignerParams,
   UnlinkIdentityAsUserParams,
 } from '@core/types/identity'
@@ -47,6 +28,36 @@ import { type Account, type Chain, type Hex, type WalletClient, keccak256, toByt
  */
 export function identityDomainHash(domainName: string): Hex {
   return keccak256(toBytes(domainName))
+}
+
+// ---------------------------------------------------------------------------
+// Identity data registration (on-chain with gateway co-signature)
+// ---------------------------------------------------------------------------
+
+/**
+ * Register an identity data reference on-chain.
+ *
+ * The identity owner (msg.sender) calls this after uploading encrypted data
+ * to the gateway via `newt_uploadIdentityEncrypted`. The gateway returns a
+ * `data_ref_id`, `gateway_signature`, and `deadline` which are passed here.
+ *
+ * The contract verifies the gateway signature against `REGISTER_IDENTITY_TYPEHASH`
+ * and checks that the signer is a registered task generator.
+ */
+export async function registerIdentityData(
+  walletClient: WalletClient,
+  params: RegisterIdentityDataParams,
+): Promise<Hex> {
+  const { registryAddress, account, chain } = resolveIdentityRegistry(walletClient)
+
+  return walletClient.writeContract({
+    address: registryAddress,
+    abi: IdentityRegistryAbi,
+    functionName: 'registerIdentityData',
+    args: [params.identityDomain, params.dataRefId, params.gatewaySignature, params.deadline],
+    account,
+    chain,
+  })
 }
 
 // ---------------------------------------------------------------------------

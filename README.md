@@ -111,8 +111,9 @@ See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-referen
 
 ## Identity Module
 
-The SDK includes an identity module for submitting EIP-712 signed identity data and managing identity-to-PolicyClient links on the IdentityRegistry. Key exports:
+The SDK includes an identity module for registering identity data and managing identity-to-PolicyClient links on the IdentityRegistry. Key exports:
 
+- `registerIdentityData` -- store identity data reference on-chain with gateway co-signature
 - `identityDomainHash` -- compute the bytes32 domain identifier from a name (e.g., `identityDomainHash("kyc")`)
 - `linkIdentityAsSignerAndUser` -- link identity when caller is both owner and user
 - `linkIdentityAsSigner` -- link identity as owner with counterparty signature
