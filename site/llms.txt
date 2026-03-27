@@ -1,0 +1,91 @@
+# Newton Protocol Documentation
+
+> Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.
+
+Docs: https://docs.newton.xyz
+
+## Getting Started
+
+- [What is Newton?](https://docs.newton.xyz/developers/overview/about): Overview of Newton Protocol -- a policy engine for encoding, verifying, and enforcing rules in smart contracts.
+- [Core Concepts](https://docs.newton.xyz/developers/overview/core-concepts): Policies, Intents, Tasks, Attestations, and the evaluation lifecycle.
+- [Quickstart](https://docs.newton.xyz/developers/overview/quickstart): Get up and running with Newton in minutes.
+- [Dashboard & API Keys](https://docs.newton.xyz/developers/overview/dashboard-api-keys): Create an account and obtain API keys.
+
+## Verifiable Credential
+
+- [Overview](https://docs.newton.xyz/developers/verified-credential/overview): Identity verification for onchain policy evaluation.
+- [Integration Guide](https://docs.newton.xyz/developers/verified-credential/integration-guide): How to integrate Verifiable Credentials with your PolicyClient.
+- [Reference](https://docs.newton.xyz/developers/verified-credential/reference): SDK and contract reference for identity functions.
+- [Identity Policy Reference](https://docs.newton.xyz/developers/verified-credential/identity-policy-reference): Rego built-ins for identity-based policies.
+
+## Guides
+
+- [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide): End-to-end walkthrough of integrating Newton into your project.
+- [Writing Data Oracles](https://docs.newton.xyz/developers/guides/writing-data-oracles): Build WASM PolicyData oracles in JavaScript, Python, or Rust.
+- [Writing Policies](https://docs.newton.xyz/developers/guides/writing-policies): Write Rego policies for transaction authorization.
+- [Deploying with CLI](https://docs.newton.xyz/developers/guides/deploying-with-cli): Deploy policies, schemas, and WASM oracles using newton-cli.
+- [Smart Contract Integration](https://docs.newton.xyz/developers/guides/smart-contract-integration): Inherit NewtonPolicyClient in your Solidity contracts.
+- [Frontend SDK Integration](https://docs.newton.xyz/developers/guides/frontend-sdk-integration): Use the TypeScript SDK with viem to submit and track tasks.
+
+## Use Cases
+
+- [Stablecoins & Payments](https://docs.newton.xyz/developers/use-cases/stablecoins-and-payments): Enforce spend limits and compliance on payment flows.
+- [Agent Security](https://docs.newton.xyz/developers/use-cases/agent-security): Policy guardrails for autonomous AI agents.
+- [Institutional DeFi](https://docs.newton.xyz/developers/use-cases/institutional-defi): Compliance and risk controls for institutional DeFi participation.
+
+## Deep Dives
+
+- [Architecture](https://docs.newton.xyz/developers/concepts/architecture): Three-layer architecture -- Policy, Compute & Consensus, Verification & Execution.
+- [Privacy Layer](https://docs.newton.xyz/developers/concepts/privacy-layer): HPKE encryption for privacy-preserving policy evaluation.
+- [Consensus & Security](https://docs.newton.xyz/developers/concepts/consensus-security): BLS attestations, operator quorum, and slashing.
+- [Multichain](https://docs.newton.xyz/developers/concepts/multichain): Cross-chain support and chain-agnostic design.
+
+## Reference
+
+- [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference): Full API reference for @magicnewton/newton-protocol-sdk.
+- [RPC API](https://docs.newton.xyz/developers/reference/rpc-api): Newton Gateway JSON-RPC 2.0 methods.
+- [CLI Reference](https://docs.newton.xyz/developers/reference/command-line-tool): newton-cli commands and flags.
+- [Contract Addresses](https://docs.newton.xyz/developers/reference/contract-addresses): Deployed contract addresses per chain.
+- [Error Reference](https://docs.newton.xyz/developers/reference/error-reference): SDK and Gateway error codes.
+- [Glossary](https://docs.newton.xyz/developers/reference/glossary): Definitions of Newton Protocol terms.
+
+## Advanced
+
+- [Rego Syntax Guide](https://docs.newton.xyz/developers/advanced/rego-syntax-guide): Rego language reference for Newton policies.
+- [KMS Encryption](https://docs.newton.xyz/developers/advanced/kms-encryption): Encrypt secrets for PolicyData oracles.
+- [Policy Data Oracles](https://docs.newton.xyz/developers/advanced/policy-data-oracles): Advanced WASM oracle patterns.
+- [Python WASM Guide](https://docs.newton.xyz/developers/advanced/python-wasm-guide): Build PolicyData oracles in Python.
+- [JavaScript WASM Guide](https://docs.newton.xyz/developers/advanced/javascript-wasm-guide): Build PolicyData oracles in JavaScript.
+- [Rust WASM Guide](https://docs.newton.xyz/developers/advanced/rust-wasm-guide): Build PolicyData oracles in Rust.
+
+## Resources
+
+- [FAQ](https://docs.newton.xyz/developers/resources/faq): Frequently asked questions.
+- [Testing & Debugging](https://docs.newton.xyz/developers/resources/testing-debugging): Test policies and debug evaluations.
+- [Deployment Checklist](https://docs.newton.xyz/developers/resources/deployment-checklist): Pre-launch verification steps.
+- [Newton Explorer](https://docs.newton.xyz/developers/resources/newton-explorer): Browse tasks, policies, and attestations.
+- [Context File](https://docs.newton.xyz/developers/reference/context-file): LLM context file for Newton Protocol.
+
+## Whitepaper
+
+- [Introduction](https://docs.newton.xyz/whitepaper/introduction)
+- [Privacy Architecture](https://docs.newton.xyz/whitepaper/privacy-architecture)
+- [BLS Attestation](https://docs.newton.xyz/whitepaper/bls-attestation)
+- [Streaming Consensus](https://docs.newton.xyz/whitepaper/streaming-consensus)
+- [Cross-Chain](https://docs.newton.xyz/whitepaper/cross-chain)
+- [Slashing & Challenge](https://docs.newton.xyz/whitepaper/slashing-challenge)
+- [Policy Engine](https://docs.newton.xyz/whitepaper/policy-engine)
+- [Decentralization](https://docs.newton.xyz/whitepaper/decentralization)
+- [Security Properties](https://docs.newton.xyz/whitepaper/security-properties)
+- [References](https://docs.newton.xyz/whitepaper/references)
+
+## Protocol
+
+- [Project & Protocol](https://docs.newton.xyz/protocol/overview/project-and-protocol)
+- [Bug Bounty](https://docs.newton.xyz/protocol/overview/bug-bounty)
+- [Foundation Structure](https://docs.newton.xyz/protocol/foundation/structure-and-key-contributors)
+- [Code of Conduct](https://docs.newton.xyz/protocol/foundation/conflict-of-interest-and-code-of-conduct)
+- [Token Utility](https://docs.newton.xyz/protocol/token/characteristics-and-utility)
+- [Token Distribution](https://docs.newton.xyz/protocol/token/distribution-and-vesting)
+- [Transparency Reports](https://docs.newton.xyz/protocol/transparency-reports/reports)
+- [Governance](https://docs.newton.xyz/protocol/governance/governance-model)
