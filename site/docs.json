@@ -19,6 +19,8 @@
         "groups": [
           {
             "group": "Getting Started",
+            "icon": "rocket",
+            "iconType": "duotone",
             "pages": [
               "developers/overview/about",
               "developers/overview/core-concepts",
