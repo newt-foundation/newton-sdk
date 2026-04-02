@@ -6,23 +6,35 @@ keywords: ["newton protocol", "onchain policy engine", "programmable policy engi
 
 Newton Protocol is a [policy engine](/developers/overview/core-concepts) that lets you encode, verify, and enforce rules — spend limits, sanctions screening, fraud prevention — directly within your smart contracts.
 
-## The problem
+### The problem
 
 <Frame>
-  ![B1](/images/B1.png)
+  <img
+    src="/images/about-problem.png"
+    alt="about-problem"
+    title="About Problem"
+    lightAlt="B1"
+    darkAlt="B1"
+  />
 </Frame>
 
 Smart contracts are **blind to offchain context**: whether a user is sanctioned, whether an AI agent is hallucinating, or whether a transaction violates a corporate spend policy. Traditional security relies on frontend filters or centralized API checks, leaving protocols vulnerable to unauthorized actions from third-party aggregators, autonomous agents, or direct contract calls.
 
-## The solution
+### The solution
 
 <Frame>
-  ![B2](/images/B2.png)
+  <img
+    src="/images/about-solution.png"
+    alt="about-solution"
+    title="About Solution"
+    lightAlt="B2"
+    darkAlt="B2"
+  />
 </Frame>
 
 Newton bridges this gap with real-time offchain data — KYC status, market feeds, proof of reserves — evaluated by a [decentralized operator network](/developers/concepts/consensus-security) and enforced at the smart contract level. Your protocol stays protected regardless of where the transaction originates.
 
-## Modular and chain-agnostic
+### Modular and chain-agnostic
 
 Newton integrates with [most EVM-compatible networks](/developers/concepts/multichain) including Ethereum, Base, and Arbitrum. Non-EVM support is on the roadmap.
 
