@@ -1,0 +1,184 @@
+/*
+ * Newton Docs — Animated Sidebar Icons
+ * Option A: Mintlify Custom CSS
+ *
+ * HOW TO USE
+ * ----------
+ * 1. Place this file at: /custom.css in your Mintlify repo root
+ * 2. Add to mint.json:
+ *      "css": "/custom.css"
+ * 3. Place each icon SVG pair in /public/icons/:
+ *      /public/icons/Blog-default.svg
+ *      /public/icons/Blog-hover.svg
+ *      /public/icons/GettingStarted-default.svg
+ *      /public/icons/GettingStarted-hover.svg
+ *      ... (repeat for all 9 sections)
+ * 4. In mint.json navigation groups, set "icon" to the section name, e.g.:
+ *      { "group": "Getting Started", "icon": "GettingStarted", "pages": [...] }
+ *
+ * HOW IT WORKS
+ * ------------
+ * Each nav group label gets a ::before (default) and ::after (hover) pseudo-element.
+ * Both are loaded via CSS background-image using the SVG files.
+ * On hover, the default fades+scales out and the hover fades+scales in.
+ * All timing values are controlled via CSS custom properties at :root so
+ * they can be overridden from a settings UI or per-theme.
+ */
+
+/* ── Animation timing tokens ── */
+:root {
+  --icon-dur:       200ms;
+  --icon-ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  --icon-scale-out: 0.70;   /* default icon shrinks to this on exit  */
+  --icon-scale-in:  1.20;   /* hover icon starts at this, lands at 1 */
+  --icon-size:      14px;
+}
+
+/* ────────────────────────────────────────────────
+   ICON STACK PATTERN
+   Mintlify nav group headers use: [data-group] or
+   .navigation-group-title / .group-label depending
+   on Mintlify version. We target both for safety.
+   ──────────────────────────────────────────────── */
+
+/* Wrapper: make the icon position area relative */
+.navigation-group > .group-title,
+.navigation-group > [data-title],
+[data-navigation-group] > .group-label {
+  position: relative;
+  padding-left: 22px; /* room for the icon */
+}
+
+/* Both layers: position, size, transition */
+.navigation-group > .group-title::before,
+.navigation-group > .group-title::after,
+.navigation-group > [data-title]::before,
+.navigation-group > [data-title]::after,
+[data-navigation-group] > .group-label::before,
+[data-navigation-group] > .group-label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width:  var(--icon-size);
+  height: var(--icon-size);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform-origin: center center;
+  translate: 0 -50%;
+  transition:
+    opacity  var(--icon-dur) var(--icon-ease),
+    scale    var(--icon-dur) var(--icon-ease);
+}
+
+/* Default layer (::before): visible at rest */
+.navigation-group > .group-title::before,
+.navigation-group > [data-title]::before,
+[data-navigation-group] > .group-label::before {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Hover layer (::after): hidden at rest, starts large */
+.navigation-group > .group-title::after,
+.navigation-group > [data-title]::after,
+[data-navigation-group] > .group-label::after {
+  opacity: 0;
+  scale: var(--icon-scale-in);
+}
+
+/* On parent hover: swap layers */
+.navigation-group:hover > .group-title::before,
+.navigation-group:hover > [data-title]::before,
+[data-navigation-group]:hover > .group-label::before {
+  opacity: 0;
+  scale: var(--icon-scale-out);
+}
+
+.navigation-group:hover > .group-title::after,
+.navigation-group:hover > [data-title]::after,
+[data-navigation-group]:hover > .group-label::after {
+  opacity: 1;
+  scale: 1;
+}
+
+/* ────────────────────────────────────────────────
+   PER-SECTION ICON ASSIGNMENT
+   Set background-image for each section's
+   ::before (default) and ::after (hover).
+   The [data-group] attribute matches the "group"
+   value from mint.json navigation config.
+   ──────────────────────────────────────────────── */
+
+/* Blog */
+[data-group="Blog"] .group-title::before,
+[data-group="Blog"] [data-title]::before    { background-image: url('/icons/Blog-default.svg'); }
+[data-group="Blog"] .group-title::after,
+[data-group="Blog"] [data-title]::after     { background-image: url('/icons/Blog-hover.svg'); }
+
+/* Getting Started */
+[data-group="Getting Started"] .group-title::before,
+[data-group="Getting Started"] [data-title]::before    { background-image: url('/icons/GettingStarted-default.svg'); }
+[data-group="Getting Started"] .group-title::after,
+[data-group="Getting Started"] [data-title]::after     { background-image: url('/icons/GettingStarted-hover.svg'); }
+
+/* Verifiable Credential */
+[data-group="Verifiable Credential"] .group-title::before,
+[data-group="Verifiable Credential"] [data-title]::before    { background-image: url('/icons/VerifiableCredential-default.svg'); }
+[data-group="Verifiable Credential"] .group-title::after,
+[data-group="Verifiable Credential"] [data-title]::after     { background-image: url('/icons/VerifiableCredential-hover.svg'); }
+
+/* Guides */
+[data-group="Guides"] .group-title::before,
+[data-group="Guides"] [data-title]::before    { background-image: url('/icons/Guides-default.svg'); }
+[data-group="Guides"] .group-title::after,
+[data-group="Guides"] [data-title]::after     { background-image: url('/icons/Guides-hover.svg'); }
+
+/* Use Cases */
+[data-group="Use Cases"] .group-title::before,
+[data-group="Use Cases"] [data-title]::before    { background-image: url('/icons/UseCases-default.svg'); }
+[data-group="Use Cases"] .group-title::after,
+[data-group="Use Cases"] [data-title]::after     { background-image: url('/icons/UseCases-hover.svg'); }
+
+/* Deep Dives */
+[data-group="Deep Dives"] .group-title::before,
+[data-group="Deep Dives"] [data-title]::before    { background-image: url('/icons/DeepDives-default.svg'); }
+[data-group="Deep Dives"] .group-title::after,
+[data-group="Deep Dives"] [data-title]::after     { background-image: url('/icons/DeepDives-hover.svg'); }
+
+/* Reference */
+[data-group="Reference"] .group-title::before,
+[data-group="Reference"] [data-title]::before    { background-image: url('/icons/Reference-default.svg'); }
+[data-group="Reference"] .group-title::after,
+[data-group="Reference"] [data-title]::after     { background-image: url('/icons/Reference-hover.svg'); }
+
+/* Advanced */
+[data-group="Advanced"] .group-title::before,
+[data-group="Advanced"] [data-title]::before    { background-image: url('/icons/Advanced-default.svg'); }
+[data-group="Advanced"] .group-title::after,
+[data-group="Advanced"] [data-title]::after     { background-image: url('/icons/Advanced-hover.svg'); }
+
+/* Resources */
+[data-group="Resources"] .group-title::before,
+[data-group="Resources"] [data-title]::before    { background-image: url('/icons/Resources-default.svg'); }
+[data-group="Resources"] .group-title::after,
+[data-group="Resources"] [data-title]::after     { background-image: url('/icons/Resources-hover.svg'); }
+
+
+/* ────────────────────────────────────────────────
+   DARK MODE
+   Mintlify uses .dark class on <html>.
+   SVGs use currentColor paths — invert them.
+   If your SVGs have hard-coded fill colors,
+   use a CSS filter instead:
+     filter: invert(1) hue-rotate(180deg);
+   ──────────────────────────────────────────────── */
+.dark .navigation-group > .group-title::before,
+.dark .navigation-group > .group-title::after,
+.dark .navigation-group > [data-title]::before,
+.dark .navigation-group > [data-title]::after,
+.dark [data-navigation-group] > .group-label::before,
+.dark [data-navigation-group] > .group-label::after {
+  filter: invert(1);
+}
