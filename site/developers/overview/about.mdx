@@ -6,23 +6,43 @@ keywords: ["newton protocol", "onchain policy engine", "programmable policy engi
 
 Newton Protocol is a [policy engine](/developers/overview/core-concepts) that lets you encode, verify, and enforce rules — spend limits, sanctions screening, fraud prevention — directly within your smart contracts.
 
-#### The problem
+### The problem
+
+<Frame>
+  <img
+    src="/images/about-problem.png"
+    alt="about-problem"
+    title="About Problem"
+    lightAlt="B1"
+    darkAlt="B1"
+  />
+</Frame>
 
 Smart contracts are **blind to offchain context**: whether a user is sanctioned, whether an AI agent is hallucinating, or whether a transaction violates a corporate spend policy. Traditional security relies on frontend filters or centralized API checks, leaving protocols vulnerable to unauthorized actions from third-party aggregators, autonomous agents, or direct contract calls.
 
-#### The solution
+### The solution
+
+<Frame>
+  <img
+    src="/images/about-solution.png"
+    alt="about-solution"
+    title="About Solution"
+    lightAlt="B2"
+    darkAlt="B2"
+  />
+</Frame>
 
 Newton bridges this gap with real-time offchain data — KYC status, market feeds, proof of reserves — evaluated by a [decentralized operator network](/developers/concepts/consensus-security) and enforced at the smart contract level. Your protocol stays protected regardless of where the transaction originates.
 
-#### Modular and chain-agnostic
+### Modular and chain-agnostic
 
 Newton integrates with [most EVM-compatible networks](/developers/concepts/multichain) including Ethereum, Base, and Arbitrum. Non-EVM support is on the roadmap.
 
-<Card icon="play" href="https://demo.newton.xyz/" title="Try the demo">
+<Card title="Try the demo" icon="play" href="https://demo.newton.xyz/">
   See a live example of a Newton-powered sanctions-checked transfer app
 </Card>
 
-<Card icon="headphones" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Talk to an expert">
+<Card title="Talk to an expert" icon="headphones" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team">
   Get in touch to discuss your integration or partnership opportunity
 </Card>
 
@@ -47,7 +67,7 @@ const result = await client.simulateTask({
 console.log(result.result?.allow) // true or false
 ```
 
-<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+<Card title="Quickstart" icon="rocket" href="/developers/overview/quickstart">
   Run this example end-to-end in 5 minutes
 </Card>
 
@@ -65,10 +85,10 @@ console.log(result.result?.allow) // true or false
 
 ## Next Steps
 
-<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+<Card title="Quickstart" icon="rocket" href="/developers/overview/quickstart">
   Simulate your first policy evaluation in 5 minutes
 </Card>
 
-<Card icon="lightbulb" href="/developers/overview/core-concepts" title="Core Concepts">
+<Card title="Core Concepts" icon="lightbulb" href="/developers/overview/core-concepts">
   Understand policies, intents, tasks, and attestations
 </Card>
