@@ -1,3 +1,22 @@
+# v0.7.1 (Thu Apr 02 2026)
+
+#### 🐛 Bug Fix
+
+- Enhance About page with problem/solution images [#145](https://github.com/newt-foundation/newton-sdk/pull/145) ([@mintlify[bot]](https://github.com/mintlify[bot]))
+
+#### ⚠️ Pushed to `main`
+
+- chore: gitignore plans/ and superpowers/ dirs (managed by .claude sync) ([@denniswon](https://github.com/denniswon))
+- docs: add Mintlify AI Assistant instructions and llms.txt ([@denniswon](https://github.com/denniswon))
+- docs: fix stale references found in full-repo docs-sync audit ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 2
+
+- [@mintlify[bot]](https://github.com/mintlify[bot])
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.7.0 (Wed Mar 18 2026)
 
 #### 🚀 Enhancement
