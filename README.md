@@ -107,7 +107,7 @@ The SDK includes a privacy module for client-side HPKE encryption used in privac
 - `uploadEncryptedData` — encrypt and upload data to the gateway in one call
 - `uploadSecureEnvelope` — upload a pre-built SecureEnvelope to the gateway
 - `generateSigningKeyPair` — generate Ed25519 key pair for privacy signatures
-- `storeEncryptedSecrets` — upload KMS-encrypted secrets for PolicyData
+- `storeEncryptedSecrets` — HPKE-encrypt plaintext secrets and upload them for PolicyData
 - `signPrivacyAuthorization` — compute dual Ed25519 signatures for privacy-enabled tasks
 
 See the [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) for full API documentation.

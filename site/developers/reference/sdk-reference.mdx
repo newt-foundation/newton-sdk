@@ -801,13 +801,13 @@ generateSigningKeyPair(): Ed25519KeyPair
 
 #### storeEncryptedSecrets
 
-Uploads KMS-encrypted secrets for a PolicyClient's PolicyData oracle.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway's X25519 public key is fetched automatically if not provided.
 
 ```ts
 const { success } = await walletClient.storeEncryptedSecrets({
   policyClient: '0x...',
   policyDataAddress: '0x...',
-  secrets: '{"API_KEY": "sk-..."}',
+  plaintext: { API_KEY: 'sk-...', ENDPOINT: 'https://api.example.com' },
   chainId: 11155111,
 });
 ```
@@ -2082,8 +2082,11 @@ unlinkIdentityAsUser(
   interface StoreEncryptedSecretsParams {
     policyClient: Address;
     policyDataAddress: Address;
-    secrets: string;
+    /** Plaintext secrets as a JSON object (e.g., { "API_KEY": "...", "ENDPOINT": "..." }) */
+    plaintext: Record<string, unknown>;
     chainId: number;
+    /** Gateway's X25519 public key (hex, no 0x prefix). Fetched automatically if omitted. */
+    recipientPublicKey?: string;
   }
 
   interface StoreEncryptedSecretsResponse {

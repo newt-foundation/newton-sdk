@@ -554,7 +554,7 @@ Uploads encrypted secrets for a PolicyData contract. Secrets are validated again
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
 | `policy_data_address` | `Address` | Yes | PolicyData contract address |
-| `secrets` | `String` | Yes | Base64-encoded encrypted ciphertext |
+| `envelope` | `String` | Yes | JSON-serialized HPKE SecureEnvelope (produced by `storeEncryptedSecrets` in the SDK) |
 
 #### Returns
 
@@ -564,9 +564,9 @@ Uploads encrypted secrets for a PolicyData contract. Secrets are validated again
 | `schema` | `Object` | JSON schema used for validation (on success) |
 | `error` | `String` | Error message (on failure) |
 
-#### Encryption Requirements
+#### Encryption
 
-Secrets must be encrypted before upload. See [Encrypting Secrets](/developers/advanced/kms-encryption) for the full workflow.
+Secrets are encrypted client-side using HPKE before upload. Use `storeEncryptedSecrets` from the SDK, which handles encryption automatically. See [Encrypting Secrets](/developers/advanced/kms-encryption) for the full workflow.
 
 **Plaintext format (before encryption):**
 
@@ -593,7 +593,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
   "params": {
     "policy_client": "0x1234567890123456789012345678901234567890",
     "policy_data_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-    "secrets": "<base64-encoded-encrypted-secrets>"
+    "envelope": "<json-serialized-hpke-secure-envelope>"
   },
   "id": 1
 }
