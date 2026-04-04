@@ -288,10 +288,11 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
 }
 
 /**
- * Upload KMS-encrypted secrets for a policy client's PolicyData.
+ * Upload HPKE-encrypted secrets for a policy client's PolicyData.
  *
- * The gateway decrypts via AWS KMS, validates against the PolicyData schema,
- * and stores the secrets for use during policy evaluation.
+ * The gateway decrypts the HPKE envelope, validates the plaintext against
+ * the PolicyData schema, and stores the envelope for operator-side decryption
+ * during policy evaluation.
  */
 export async function storeEncryptedSecrets(
   chainId: number,
@@ -299,10 +300,36 @@ export async function storeEncryptedSecrets(
   params: StoreEncryptedSecretsParams,
   gatewayApiUrlOverride?: string,
 ): Promise<StoreEncryptedSecretsResponse> {
+  // Resolve the gateway's HPKE public key if not provided
+  let recipientPublicKey = params.recipientPublicKey
+  if (!recipientPublicKey) {
+    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    recipientPublicKey = keyResponse.public_key
+  }
+
+  // Generate an ephemeral Ed25519 key for envelope signing.
+  // The gateway does not verify this signature for secrets — it validates
+  // ownership via on-chain getOwner() + API key instead.
+  const ephemeralKey = new Uint8Array(32)
+  crypto.getRandomValues(ephemeralKey)
+
+  const { envelope } = await createSecureEnvelope(
+    {
+      plaintext: params.plaintext,
+      policyClient: params.policyClient,
+      chainId: params.chainId,
+      recipientPublicKey,
+    },
+    ephemeralKey,
+  )
+
+  // Zeroize the ephemeral signing key
+  ephemeralKey.fill(0)
+
   const rpcRequest: StoreEncryptedSecretsRpcRequest = {
     policy_client: params.policyClient,
     policy_data_address: params.policyDataAddress,
-    secrets: params.secrets,
+    envelope: JSON.stringify(envelope),
     chain_id: params.chainId,
   }
 

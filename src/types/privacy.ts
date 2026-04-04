@@ -101,16 +101,18 @@ export interface Ed25519KeyPair {
   publicKey: string
 }
 
-/** Parameters for uploading KMS-encrypted secrets for a policy client. */
+/** Parameters for uploading HPKE-encrypted secrets for a policy client. */
 export interface StoreEncryptedSecretsParams {
   /** Policy client address secrets are scoped to */
   policyClient: Address
   /** PolicyData address secrets are scoped to */
   policyDataAddress: Address
-  /** Base64-encoded KMS ciphertext of a JSON object containing plaintext secrets */
-  secrets: string
+  /** Plaintext secrets as a JSON object (e.g., { "API_KEY_1": "...", "API_KEY_2": "..." }) */
+  plaintext: Record<string, unknown>
   /** Chain ID the policy client lives on */
   chainId: number
+  /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
+  recipientPublicKey?: string
 }
 
 /** Response from newt_storeEncryptedSecrets. */
@@ -126,7 +128,7 @@ export interface StoreEncryptedSecretsResponse {
 export interface StoreEncryptedSecretsRpcRequest {
   policy_client: Address
   policy_data_address: Address
-  secrets: string
+  envelope: string
   chain_id: number
 }
 
