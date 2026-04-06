@@ -18,6 +18,8 @@ export const GATEWAY_METHODS = {
   getPrivacyPublicKey: 'newt_getPrivacyPublicKey',
   uploadEncryptedData: 'newt_uploadEncryptedData',
   storeEncryptedSecrets: 'newt_storeEncryptedSecrets',
+  uploadConfidentialData: 'newt_uploadConfidentialData',
+  getConfidentialData: 'newt_getConfidentialData',
 }
 
 export const NEWTON_PROVER_TASK_MANAGER: Record<number, Hex> = {

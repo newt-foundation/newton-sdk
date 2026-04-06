@@ -146,6 +146,44 @@ export interface SignPrivacyAuthorizationParams {
   appSigningKey: string
 }
 
+/** Parameters for uploading HPKE-encrypted confidential data (blacklists, allowlists, etc.) to the gateway. */
+export interface UploadConfidentialDataParams {
+  /** Provider address (must be registered on-chain with ConfidentialDataRegistry) */
+  provider: string
+  /** Confidential domain as 0x-prefixed bytes32 hex (e.g., keccak256("newton.privacy.blacklist")) */
+  domain: string
+  /** Data to encrypt (will be JSON.stringify'd if not a string or Uint8Array) */
+  plaintext: Uint8Array | string | Record<string, unknown>
+  /** Chain ID for AAD context binding */
+  chainId: number
+  /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
+  recipientPublicKey?: string
+}
+
+/** Response from newt_uploadConfidentialData. */
+export interface UploadConfidentialDataResult {
+  /** Content-hash data reference ID */
+  data_ref_id: string
+}
+
+/** RPC request body for newt_uploadConfidentialData. */
+export interface UploadConfidentialDataRpcRequest {
+  provider: string
+  domain: string
+  envelope: string
+  chain_id: number
+}
+
+/** Response from newt_getConfidentialData. */
+export interface GetConfidentialDataResult {
+  /** JSON-serialized SecureEnvelope */
+  envelope: string
+  /** Confidential domain as 0x-prefixed bytes32 hex */
+  domain: string
+  /** Provider address */
+  provider: string
+}
+
 /** Result of dual-signature privacy authorization computation. */
 export interface PrivacyAuthorizationResult {
   /** User Ed25519 signature (hex-encoded, no 0x prefix) */
