@@ -1,3 +1,19 @@
+# v0.8.0 (Tue Apr 07 2026)
+
+#### 🚀 Enhancement
+
+- feat: migrate storeEncryptedSecrets from KMS to HPKE [#146](https://github.com/newt-foundation/newton-sdk/pull/146) ([@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- docs: fix about page image alt text, remove duplicate files, restore trailing newline ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.7.1 (Thu Apr 02 2026)
 
 #### 🐛 Bug Fix
