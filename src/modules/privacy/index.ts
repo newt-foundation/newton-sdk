@@ -14,6 +14,7 @@ import { GATEWAY_METHODS } from '@core/const'
 import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
+  GetConfidentialDataResult,
   PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
   SecureEnvelope,
@@ -22,6 +23,9 @@ import type {
   StoreEncryptedSecretsParams,
   StoreEncryptedSecretsResponse,
   StoreEncryptedSecretsRpcRequest,
+  UploadConfidentialDataParams,
+  UploadConfidentialDataResult,
+  UploadConfidentialDataRpcRequest,
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
   UploadEncryptedDataRpcRequest,
@@ -288,10 +292,11 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
 }
 
 /**
- * Upload KMS-encrypted secrets for a policy client's PolicyData.
+ * Upload HPKE-encrypted secrets for a policy client's PolicyData.
  *
- * The gateway decrypts via AWS KMS, validates against the PolicyData schema,
- * and stores the secrets for use during policy evaluation.
+ * The gateway decrypts the HPKE envelope, validates the plaintext against
+ * the PolicyData schema, and stores the envelope for operator-side decryption
+ * during policy evaluation.
  */
 export async function storeEncryptedSecrets(
   chainId: number,
@@ -299,10 +304,36 @@ export async function storeEncryptedSecrets(
   params: StoreEncryptedSecretsParams,
   gatewayApiUrlOverride?: string,
 ): Promise<StoreEncryptedSecretsResponse> {
+  // Resolve the gateway's HPKE public key if not provided
+  let recipientPublicKey = params.recipientPublicKey
+  if (!recipientPublicKey) {
+    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    recipientPublicKey = keyResponse.public_key
+  }
+
+  // Generate an ephemeral Ed25519 key for envelope signing.
+  // The gateway does not verify this signature for secrets — it validates
+  // ownership via on-chain getOwner() + API key instead.
+  const ephemeralKey = new Uint8Array(32)
+  crypto.getRandomValues(ephemeralKey)
+
+  const { envelope } = await createSecureEnvelope(
+    {
+      plaintext: params.plaintext,
+      policyClient: params.policyClient,
+      chainId: params.chainId,
+      recipientPublicKey,
+    },
+    ephemeralKey,
+  )
+
+  // Zeroize the ephemeral signing key
+  ephemeralKey.fill(0)
+
   const rpcRequest: StoreEncryptedSecretsRpcRequest = {
     policy_client: params.policyClient,
     policy_data_address: params.policyDataAddress,
-    secrets: params.secrets,
+    envelope: JSON.stringify(envelope),
     chain_id: params.chainId,
   }
 
@@ -361,6 +392,80 @@ export function signPrivacyAuthorization(params: SignPrivacyAuthorizationParams)
     userPublicKey: bytesToUnprefixedHex(userPublicKey),
     appPublicKey: bytesToUnprefixedHex(appPublicKey),
   }
+}
+
+/**
+ * Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists, etc.)
+ * to the gateway.
+ *
+ * The provider encrypts data client-side using HPKE and uploads the envelope.
+ * The gateway stores it and returns a content-hash data_ref_id. The provider
+ * then calls ConfidentialDataRegistry.publishData(domain, dataRefId) on-chain.
+ *
+ * If recipientPublicKey is not provided, it is fetched from the gateway first
+ * via newt_getPrivacyPublicKey.
+ */
+export async function uploadConfidentialData(
+  chainId: number,
+  apiKey: string,
+  params: UploadConfidentialDataParams,
+  gatewayApiUrlOverride?: string,
+): Promise<UploadConfidentialDataResult> {
+  // Resolve the gateway's HPKE public key if not provided
+  let recipientPublicKey = params.recipientPublicKey
+  if (!recipientPublicKey) {
+    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    recipientPublicKey = keyResponse.public_key
+  }
+
+  // Generate an ephemeral Ed25519 key for envelope signing.
+  // The gateway validates ownership via on-chain provider registration, not this signature.
+  const ephemeralKey = new Uint8Array(32)
+  crypto.getRandomValues(ephemeralKey)
+
+  // Use provider address as policyClient for AAD binding
+  const { envelope } = await createSecureEnvelope(
+    {
+      plaintext: params.plaintext,
+      policyClient: params.provider as `0x${string}`,
+      chainId: params.chainId,
+      recipientPublicKey,
+    },
+    ephemeralKey,
+  )
+
+  // Zeroize the ephemeral signing key
+  ephemeralKey.fill(0)
+
+  const rpcRequest: UploadConfidentialDataRpcRequest = {
+    provider: params.provider,
+    domain: params.domain,
+    envelope: JSON.stringify(envelope),
+    chain_id: params.chainId,
+  }
+
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadConfidentialData, rpcRequest, apiKey)
+  if (res.error) throw res.error
+  return res.result as UploadConfidentialDataResult
+}
+
+/**
+ * Retrieve encrypted confidential data by its data reference ID.
+ *
+ * Returns the HPKE-encrypted envelope along with the domain and provider address.
+ * The caller is responsible for decryption using their HPKE private key.
+ */
+export async function getConfidentialData(
+  chainId: number,
+  apiKey: string,
+  dataRefId: string,
+  gatewayApiUrlOverride?: string,
+): Promise<GetConfidentialDataResult> {
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getConfidentialData, { data_ref_id: dataRefId }, apiKey)
+  if (res.error) throw res.error
+  return res.result as GetConfidentialDataResult
 }
 
 /**

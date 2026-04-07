@@ -493,6 +493,162 @@ Until domain-specific built-ins are available for a new domain, policy authors c
 
 ---
 
+## Privacy Extensions (`newton.privacy.*`)
+
+Provider-managed confidential data (blacklists, allowlists, sanctions lists) uploaded via the `ConfidentialDataRegistry`. Operators fetch and decrypt this data at task time based on the `confidential_domain` in `policyParams`.
+
+Two access patterns:
+- **Domain-namespaced builtins** (primary): `newton.privacy.blacklist.contains(addr)`. Type-safe with address normalization.
+- **Generic field accessor** (escape hatch): `newton.privacy.get("field_name")`. Returns raw field values across all registered privacy domains.
+
+### Blacklist Domain (`newton.privacy.blacklist.*`)
+
+#### `newton.privacy.blacklist.contains`
+
+```rego
+result := newton.privacy.blacklist.contains(address)
+```
+
+Returns `true` if `address` is in the provider's blacklist. Addresses are normalized to lowercase hex before comparison.
+
+#### `newton.privacy.blacklist.count`
+
+```rego
+result := newton.privacy.blacklist.count()
+```
+
+Returns the number of addresses in the blacklist.
+
+### Allowlist Domain (`newton.privacy.allowlist.*`)
+
+#### `newton.privacy.allowlist.contains`
+
+```rego
+result := newton.privacy.allowlist.contains(address)
+```
+
+Returns `true` if `address` is in the provider's allowlist.
+
+#### `newton.privacy.allowlist.count`
+
+```rego
+result := newton.privacy.allowlist.count()
+```
+
+Returns the number of addresses in the allowlist.
+
+### Generic Field Accessor (`newton.privacy.get`)
+
+```rego
+value := newton.privacy.get("field_name")
+```
+
+Returns `undefined` if the field does not exist, which allows `default` rules to apply.
+
+### Privacy Policy Examples
+
+#### Blacklist check (deny blacklisted senders)
+
+```rego
+package sanctions_check
+
+default allow := false
+
+allow if {
+    not newton.privacy.blacklist.contains(input.from)
+}
+```
+
+#### Allowlist check (only allow approved addresses)
+
+```rego
+package allowlist_only
+
+default allow := false
+
+allow if {
+    newton.privacy.allowlist.contains(input.from)
+}
+```
+
+#### Combined identity + privacy check
+
+```rego
+package compliant_transfer
+
+default allow := false
+
+allow if {
+    # User must pass KYC
+    newton.identity.kyc.check_approved()
+    newton.identity.kyc.age_gte(18)
+    # Sender must not be blacklisted
+    not newton.privacy.blacklist.contains(input.from)
+    # Recipient must be on allowlist
+    newton.privacy.allowlist.contains(input.to)
+}
+```
+
+---
+
+## Time Extensions (`newton.time.*`)
+
+Date arithmetic builtins for time-based policy checks. All dates use `YYYY-MM-DD` format strings.
+
+### `newton.time.days_between`
+
+```rego
+result := newton.time.days_between(date_a, date_b)
+```
+
+Returns the absolute number of days between two dates.
+
+### `newton.time.days_since`
+
+```rego
+result := newton.time.days_since(past_date, reference_date)
+```
+
+Returns positive days if `past_date` is before `reference_date`.
+
+### `newton.time.is_within_days`
+
+```rego
+result := newton.time.is_within_days(date, reference_date, max_days)
+```
+
+Returns `true` if the absolute difference between `date` and `reference_date` is at most `max_days`.
+
+### `newton.time.is_before` / `newton.time.is_after`
+
+```rego
+result := newton.time.is_before(date_a, date_b)
+result := newton.time.is_after(date_a, date_b)
+```
+
+### `newton.time.age_years`
+
+```rego
+result := newton.time.age_years(birthdate, reference_date)
+```
+
+Returns the number of complete years between `birthdate` and `reference_date`. Useful for age verification without the KYC identity domain.
+
+### Time Policy Example
+
+```rego
+package time_check
+
+default allow := false
+
+# Allow if document was issued within the last 90 days
+allow if {
+    newton.time.is_within_days(data.issued_date, data.reference_date, 90)
+}
+```
+
+---
+
 ## Not Yet Supported
 
 - **Standard Crypto / Tokens / JWT**: `crypto.*`, `jwtverify*`, `jwtencode*` — use Newton crypto extensions instead

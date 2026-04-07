@@ -227,7 +227,7 @@ const keyPair = generateSigningKeyPair()
 
 ## storeEncryptedSecrets
 
-Uploads KMS-encrypted secrets for a policy client's PolicyData. The gateway decrypts via AWS KMS, validates against the PolicyData schema, and stores for use during policy evaluation.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway validates the decrypted JSON against the PolicyData schema and stores the envelope for operator-side decryption during task evaluation.
 
 ```typescript
 async function storeEncryptedSecrets(
@@ -246,8 +246,9 @@ async function storeEncryptedSecrets(
 |-------|------|-------------|
 | `policyClient` | `Address` | Policy client address |
 | `policyDataAddress` | `Address` | PolicyData contract address |
-| `secrets` | `string` | Base64-encoded KMS ciphertext of a JSON object |
+| `plaintext` | `Record<string, unknown>` | Plaintext secrets as a JSON object (e.g., `{ "API_KEY": "sk-..." }`) |
 | `chainId` | `number` | Chain ID the policy client lives on |
+| `recipientPublicKey` | `string?` | Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. |
 
 ### Returns
 
@@ -261,8 +262,9 @@ async function storeEncryptedSecrets(
 
 ### Notes
 
-- The `secrets` field must be encrypted with the gateway's AWS KMS RSA key
-- The gateway validates the decrypted JSON against the PolicyData's secrets schema
+- Secrets are HPKE-encrypted client-side before upload — the plaintext never leaves your application
+- The gateway decrypts the envelope in memory to validate against the schema, then stores the envelope (not the plaintext)
+- Operators decrypt the stored envelope locally during task evaluation — plaintext is never persisted by operators
 - Only the policy client owner (determined by `INewtonPolicyClient.getOwner()`) is authorized
 
 ---

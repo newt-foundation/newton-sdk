@@ -801,13 +801,13 @@ generateSigningKeyPair(): Ed25519KeyPair
 
 #### storeEncryptedSecrets
 
-Uploads KMS-encrypted secrets for a PolicyClient's PolicyData oracle.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway's X25519 public key is fetched automatically if not provided.
 
 ```ts
 const { success } = await walletClient.storeEncryptedSecrets({
   policyClient: '0x...',
   policyDataAddress: '0x...',
-  secrets: '{"API_KEY": "sk-..."}',
+  plaintext: { API_KEY: 'sk-...', ENDPOINT: 'https://api.example.com' },
   chainId: 11155111,
 });
 ```
@@ -1483,6 +1483,84 @@ client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadE
 
 ---
 
+### `uploadConfidentialData`
+
+Encrypt confidential data (blacklists, allowlists, sanctions lists, etc.) client-side with HPKE and upload the envelope to the gateway. The gateway stores it and returns a content-hash `data_ref_id`. The provider then calls `ConfidentialDataRegistry.publishData(domain, dataRefId)` on-chain.
+
+The gateway validates provider registration via on-chain lookup — no Ed25519 signing key required.
+
+**Standalone signature:**
+
+```ts
+uploadConfidentialData(
+  chainId: number,
+  apiKey: string,
+  params: UploadConfidentialDataParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadConfidentialDataResult>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadConfidentialData(params: UploadConfidentialDataParams): Promise<UploadConfidentialDataResult>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.provider` | `string` | Provider address (must be registered on-chain with ConfidentialDataRegistry) |
+| `params.domain` | `string` | Confidential domain as 0x-prefixed bytes32 hex (e.g., `keccak256("newton.privacy.blacklist")`) |
+| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
+| `params.chainId` | `number` | Chain ID for AAD context binding |
+| `params.recipientPublicKey` | `string?` | Gateway's X25519 key (hex, no 0x prefix). If omitted, fetched via RPC. |
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data_ref_id` | `string` | Content-hash data reference ID |
+
+---
+
+### `getConfidentialData`
+
+Retrieve an HPKE-encrypted confidential data envelope by its data reference ID. The caller is responsible for decryption using their HPKE private key.
+
+**Standalone signature:**
+
+```ts
+getConfidentialData(
+  chainId: number,
+  apiKey: string,
+  dataRefId: string,
+  gatewayApiUrlOverride?: string
+): Promise<GetConfidentialDataResult>
+```
+
+**Wallet client signature:**
+
+```ts
+client.getConfidentialData(args: { dataRefId: string }): Promise<GetConfidentialDataResult>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dataRefId` | `string` | Content-hash data reference ID returned from `uploadConfidentialData` |
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `envelope` | `string` | JSON-serialized HPKE SecureEnvelope |
+| `domain` | `string` | Confidential domain as 0x-prefixed bytes32 hex |
+| `provider` | `string` | Provider address |
+
+---
+
 ## Identity Methods
 
 EIP-712 signed identity data submission to the on-chain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
@@ -2082,8 +2160,11 @@ unlinkIdentityAsUser(
   interface StoreEncryptedSecretsParams {
     policyClient: Address;
     policyDataAddress: Address;
-    secrets: string;
+    /** Plaintext secrets as a JSON object (e.g., { "API_KEY": "...", "ENDPOINT": "..." }) */
+    plaintext: Record<string, unknown>;
     chainId: number;
+    /** Gateway's X25519 public key (hex, no 0x prefix). Fetched automatically if omitted. */
+    recipientPublicKey?: string;
   }
 
   interface StoreEncryptedSecretsResponse {

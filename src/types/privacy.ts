@@ -101,16 +101,18 @@ export interface Ed25519KeyPair {
   publicKey: string
 }
 
-/** Parameters for uploading KMS-encrypted secrets for a policy client. */
+/** Parameters for uploading HPKE-encrypted secrets for a policy client. */
 export interface StoreEncryptedSecretsParams {
   /** Policy client address secrets are scoped to */
   policyClient: Address
   /** PolicyData address secrets are scoped to */
   policyDataAddress: Address
-  /** Base64-encoded KMS ciphertext of a JSON object containing plaintext secrets */
-  secrets: string
+  /** Plaintext secrets as a JSON object (e.g., { "API_KEY_1": "...", "API_KEY_2": "..." }) */
+  plaintext: Record<string, unknown>
   /** Chain ID the policy client lives on */
   chainId: number
+  /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
+  recipientPublicKey?: string
 }
 
 /** Response from newt_storeEncryptedSecrets. */
@@ -126,7 +128,7 @@ export interface StoreEncryptedSecretsResponse {
 export interface StoreEncryptedSecretsRpcRequest {
   policy_client: Address
   policy_data_address: Address
-  secrets: string
+  envelope: string
   chain_id: number
 }
 
@@ -142,6 +144,44 @@ export interface SignPrivacyAuthorizationParams {
   userSigningKey: string
   /** Application's Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
   appSigningKey: string
+}
+
+/** Parameters for uploading HPKE-encrypted confidential data (blacklists, allowlists, etc.) to the gateway. */
+export interface UploadConfidentialDataParams {
+  /** Provider address (must be registered on-chain with ConfidentialDataRegistry) */
+  provider: string
+  /** Confidential domain as 0x-prefixed bytes32 hex (e.g., keccak256("newton.privacy.blacklist")) */
+  domain: string
+  /** Data to encrypt (will be JSON.stringify'd if not a string or Uint8Array) */
+  plaintext: Uint8Array | string | Record<string, unknown>
+  /** Chain ID for AAD context binding */
+  chainId: number
+  /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
+  recipientPublicKey?: string
+}
+
+/** Response from newt_uploadConfidentialData. */
+export interface UploadConfidentialDataResult {
+  /** Content-hash data reference ID */
+  data_ref_id: string
+}
+
+/** RPC request body for newt_uploadConfidentialData. */
+export interface UploadConfidentialDataRpcRequest {
+  provider: string
+  domain: string
+  envelope: string
+  chain_id: number
+}
+
+/** Response from newt_getConfidentialData. */
+export interface GetConfidentialDataResult {
+  /** JSON-serialized SecureEnvelope */
+  envelope: string
+  /** Confidential domain as 0x-prefixed bytes32 hex */
+  domain: string
+  /** Provider address */
+  provider: string
 }
 
 /** Result of dual-signature privacy authorization computation. */

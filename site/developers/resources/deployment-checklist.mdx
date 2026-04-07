@@ -95,7 +95,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     Verify your key has `rpc_read` for task submission and simulation, `rpc_write` if you need to manage secrets. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
   </Step>
   <Step title="Encrypted secrets stored (if applicable)">
-    If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/kms-encryption).
+    If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/encrypting-secrets).
   </Step>
   <Step title="Secrets match schema">
     Confirm your uploaded secrets match the `secretsSchemaCid` defined on your PolicyData contract. Schema mismatches produce validation errors.

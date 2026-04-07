@@ -27,9 +27,11 @@ import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
 import {
   createSecureEnvelope,
   generateSigningKeyPair,
+  getConfidentialData,
   getPrivacyPublicKey,
   signPrivacyAuthorization,
   storeEncryptedSecrets,
+  uploadConfidentialData,
   uploadEncryptedData,
   uploadSecureEnvelope,
 } from './modules/privacy'
@@ -46,12 +48,15 @@ import type { PolicyParamsJson } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
+  GetConfidentialDataResult,
   PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
   SecureEnvelopeResult,
   SignPrivacyAuthorizationParams,
   StoreEncryptedSecretsParams,
   StoreEncryptedSecretsResponse,
+  UploadConfidentialDataParams,
+  UploadConfidentialDataResult,
   UploadEncryptedDataParams,
   UploadEncryptedDataResponse,
   UploadSecureEnvelopeParams,
@@ -291,6 +296,12 @@ const newtonWalletClientActions =
 
       storeEncryptedSecrets: (args: StoreEncryptedSecretsParams): Promise<StoreEncryptedSecretsResponse> =>
         storeEncryptedSecrets(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      uploadConfidentialData: (args: UploadConfidentialDataParams): Promise<UploadConfidentialDataResult> =>
+        uploadConfidentialData(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      getConfidentialData: (args: { dataRefId: string }): Promise<GetConfidentialDataResult> =>
+        getConfidentialData(walletClient?.chain?.id ?? sepolia.id, apiKey, args.dataRefId, gatewayApiUrlOverride),
 
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
@@ -543,9 +554,11 @@ export {
 export {
   createSecureEnvelope,
   generateSigningKeyPair,
+  getConfidentialData,
   getPrivacyPublicKey,
   signPrivacyAuthorization,
   storeEncryptedSecrets,
+  uploadConfidentialData,
   uploadEncryptedData,
   uploadSecureEnvelope,
 }
