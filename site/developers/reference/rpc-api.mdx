@@ -1534,6 +1534,95 @@ See [Identity Policy Reference](/developers/verified-credential/identity-policy-
 
 ---
 
+### newt_uploadConfidentialData
+
+Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists) for a registered provider. The gateway stores the encrypted envelope and returns a content-hash `data_ref_id`. The provider then publishes the `data_ref_id` on-chain via `ConfidentialDataRegistry.publishData()` and grants access to specific policy clients.
+
+**Permission level:** `RpcWrite`
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `provider` | `Address` | Yes | Provider address (must be registered on ConfidentialDataRegistry) |
+| `domain` | `Hex (bytes32)` | Yes | Domain identifier (e.g., `keccak256("newton.privacy.blacklist")`) |
+| `envelope` | `string` | Yes | Serialized HPKE `SecureEnvelope` JSON |
+| `chain_id` | `number` | Yes | Chain ID the data is scoped to |
+
+<CodeGroup>
+
+```json Request
+{
+  "jsonrpc": "2.0",
+  "method": "newt_uploadConfidentialData",
+  "params": {
+    "provider": "0x1234567890abcdef1234567890abcdef12345678",
+    "domain": "0x6f389bcc4114a6f517365d26d1327865d8634fb1e896e1323e904058afbea0e0",
+    "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
+    "chain_id": 11155111
+  },
+  "id": 1
+}
+```
+
+```json Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "success": true,
+    "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "error": null
+  },
+  "id": 1
+}
+```
+
+</CodeGroup>
+
+The SDK's `uploadConfidentialData` function handles HPKE encryption and envelope construction automatically.
+
+---
+
+### newt_getConfidentialData
+
+Retrieve encrypted confidential data by its content-hash reference ID. Returns the stored HPKE envelope for operator-side decryption.
+
+**Permission level:** `RpcRead`
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `data_ref_id` | `string` | Yes | Content-hash data reference ID from `uploadConfidentialData` |
+
+<CodeGroup>
+
+```json Request
+{
+  "jsonrpc": "2.0",
+  "method": "newt_getConfidentialData",
+  "params": {
+    "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+  },
+  "id": 1
+}
+```
+
+```json Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
+    "data_type": "confidential"
+  },
+  "id": 1
+}
+```
+
+</CodeGroup>
+
+---
+
 ## Related Resources
 
 - [SDK Reference](/developers/reference/sdk-reference) -- TypeScript SDK for interacting with Newton Protocol
