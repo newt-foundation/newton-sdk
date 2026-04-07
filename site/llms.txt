@@ -26,6 +26,7 @@ Docs: https://docs.newton.xyz
 - [Deploying with CLI](https://docs.newton.xyz/developers/guides/deploying-with-cli): Deploy policies, schemas, and WASM oracles using newton-cli.
 - [Smart Contract Integration](https://docs.newton.xyz/developers/guides/smart-contract-integration): Inherit NewtonPolicyClient in your Solidity contracts.
 - [Frontend SDK Integration](https://docs.newton.xyz/developers/guides/frontend-sdk-integration): Use the TypeScript SDK with viem to submit and track tasks.
+- [Privacy Flows](https://docs.newton.xyz/developers/guides/privacy-flows): Three privacy data modes — identity (user), confidential (provider), and ephemeral (per-task inline).
 
 ## Use Cases
 

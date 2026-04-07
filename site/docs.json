@@ -43,7 +43,8 @@
               "developers/guides/writing-policies",
               "developers/guides/deploying-with-cli",
               "developers/guides/smart-contract-integration",
-              "developers/guides/frontend-sdk-integration"
+              "developers/guides/frontend-sdk-integration",
+              "developers/guides/privacy-flows"
             ]
           },
           {
