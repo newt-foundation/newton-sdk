@@ -78,7 +78,7 @@
             "group": "Advanced",
             "pages": [
               "developers/advanced/rego-syntax-guide",
-              "developers/advanced/kms-encryption",
+              "developers/advanced/encrypting-secrets",
               "developers/advanced/policy-data-oracles",
               "developers/advanced/python-wasm-guide",
               "developers/advanced/javascript-wasm-guide",
@@ -218,6 +218,10 @@
     {
       "source": "/developers/overview/newton-explorer",
       "destination": "/developers/resources/newton-explorer"
+    },
+    {
+      "source": "/developers/advanced/kms-encryption",
+      "destination": "/developers/advanced/encrypting-secrets"
     }
   ],
   "logo": {

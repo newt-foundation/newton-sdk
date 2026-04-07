@@ -52,7 +52,7 @@ Docs: https://docs.newton.xyz
 ## Advanced
 
 - [Rego Syntax Guide](https://docs.newton.xyz/developers/advanced/rego-syntax-guide): Rego language reference for Newton policies.
-- [Encrypting Secrets](https://docs.newton.xyz/developers/advanced/kms-encryption): Encrypt secrets for PolicyData oracles using HPKE.
+- [Encrypting Secrets](https://docs.newton.xyz/developers/advanced/encrypting-secrets): Encrypt secrets for PolicyData oracles using HPKE.
 - [Policy Data Oracles](https://docs.newton.xyz/developers/advanced/policy-data-oracles): Advanced WASM oracle patterns.
 - [Python WASM Guide](https://docs.newton.xyz/developers/advanced/python-wasm-guide): Build PolicyData oracles in Python.
 - [JavaScript WASM Guide](https://docs.newton.xyz/developers/advanced/javascript-wasm-guide): Build PolicyData oracles in JavaScript.
