@@ -19,6 +19,7 @@
         "groups": [
           {
             "group": "Getting Started",
+            "icon": "/snippets/GettingStartedIcon",
             "pages": [
               "developers/overview/about",
               "developers/overview/core-concepts",
