@@ -623,6 +623,7 @@ await walletClient.registerUserData({
     issuing_authority: 'US_DL',
   },
   appIdentityDomain: '0x...',
+  policyClient: '0xYourPolicyClientAddress',
 });
 ```
 
@@ -632,6 +633,7 @@ await walletClient.registerUserData({
 registerUserData(args: {
   userData: KycUserData;
   appIdentityDomain: Hex;
+  policyClient: Address;
 }): Promise<unknown>
 ```
 

@@ -113,37 +113,18 @@ A used nonce cannot be reused. An expired deadline cannot be submitted. Together
 
 ## Encryption Pipeline
 
-<!-- TODO (HPKE migration): Replace the "Current" section with the HPKE flow once migrated.
-     The "Future" section becomes the current state. Remove the stop-gap framing.
-     Update step 4 in the Current section: EIP-712 signing is replaced by Ed25519.
-     Update step 5: newt_sendIdentityEncrypted replaced by newt_uploadIdentityEncrypted + registerIdentityData.
-     See docs/identity/hpke-migration.md for the full migration plan. -->
+### Encryption: Newton Privacy Layer (HPKE)
 
-### Current: AWS KMS RSA-OAEP
-
-The newton-identity popup encrypts identity data using AWS KMS:
-
-1. Fetch the KMS public key (RSA-OAEP)
-2. JSON-serialize the identity data (e.g., KYC fields)
-3. Encrypt with `crypto.subtle.encrypt('RSA-OAEP', kmsPublicKey, plaintext)`
-4. Convert ciphertext to hex string
-5. Sign hex string with EIP-712 (`EncryptedIdentityData { string data }`)
-6. Submit signature + encrypted data to gateway via `newt_sendIdentityEncrypted`
-
-This is a **stop-gap** — it relies on a centralized AWS KMS key for encryption, which is a single point of trust.
-
-### Future: Newton Privacy Layer
-
-The encryption will migrate to the Newton Privacy Layer (HPKE, RFC 9180):
+The newton-identity popup encrypts identity data using HPKE (RFC 9180):
 
 1. Fetch the gateway's X25519 public key via `newt_getPrivacyPublicKey`
-2. Encrypt with HPKE (X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305)
+2. Encrypt with HPKE (X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305) via `createSecureEnvelope`
 3. AAD binding to `keccak256(policyClient, chainId)` prevents cross-context replay
-4. Ed25519 envelope signing (replaces EIP-712 for identity data)
+4. EIP-712 signature over the envelope JSON (`EncryptedIdentityData { string data }`)
 5. Call `newt_uploadIdentityEncrypted` → returns `{ data_ref_id, gateway_signature, deadline }`
 6. Store ref on-chain via `registerIdentityData(domain, dataRefId, gatewaySig, deadline)`
 
-This aligns identity encryption with the SDK's existing privacy module, enabling code reuse (`createSecureEnvelope`, `generateSigningKeyPair`).
+This uses the SDK's privacy module (`createSecureEnvelope`, `generateSigningKeyPair`) for encryption.
 
 ## Rego Policy Integration
 
