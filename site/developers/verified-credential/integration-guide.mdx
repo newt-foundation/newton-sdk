@@ -5,17 +5,28 @@ description: "Step-by-step guide for integrating Newton Verifiable Credentials i
 
 This guide walks through the end-to-end integration of Newton Verifiable Credentials into your app. Before starting, read the [overview](/developers/verified-credential/overview) to understand how Newton VC works.
 
+<CardGroup cols={2}>
+  <Card icon="github" href="https://github.com/newt-foundation/verifiable-credential-example" title="Example Repo">
+    Clone the repo and follow the README to run the full VC flow locally
+  </Card>
+  <Card icon="browser" href="https://verifiable-credential-example.vercel.app/" title="Live Demo">
+    Try the live demo
+  </Card>
+</CardGroup>
+
 ## Prerequisites
 
 | Requirement | Details |
 |-------------|---------|
-| **Newton SDK** | `@magicnewton/newton-protocol-sdk` installed and configured |
+| **Newton SDK** | `@magicnewton/newton-protocol-sdk` installed in your JavaScript/TypeScript app |
 | **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
 | **Policy client contract** | Must inherit `NewtonPolicyClient` + `EIP712` and be registered with `PolicyClientRegistry` |
-| **Identity domain** | A `bytes32` string (keccak256 of your domain, e.g. `keccak256(bytes("my.dev.domain.co"))`) |
-| **KYC vendor** | A third-party vendor to collect user identity data |
+| **Identity domain** | A fixed `bytes32` hex value for your application — the output of `keccak256("kyc")` |
+| **KYC vendor** | A third-party vendor to collect user identity data. The vendor's output must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields). |
 
 ## Step 1: Write and Deploy a Policy
+
+### 1a. Write your Rego policy
 
 Write a Rego policy that uses Newton identity built-in functions. For example, to enforce that a user is approved and at least 18 years old:
 
@@ -31,19 +42,64 @@ authorized if {
 }
 ```
 
-Set the policy params to include your identity domain, in addition to another other params that you may need:
+See the [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for all available built-in functions.
+
+### 1b. Write your `params_schema.json`
+
+Define the schema for your policy params, including the `identity_domain`:
 
 ```json
 {
-  "identity_domain": "0x<keccak256 of your domain string>"
+  "type": "object",
+  "description": "params including domain",
+  "required": [],
+  "properties": {
+    "identity_domain": {
+      "type": "string",
+      "description": "the identity domain, must be hex"
+    }
+  }
+}
+```
+
+### 1c. Write your `policy_metadata.json`
+
+```json
+{
+  "name": "Newton Verifiable Credential Policy",
+  "version": "1.0.0",
+  "author": "Newton",
+  "link": "https://newton.xyz",
+  "description": "This policy enforces KYC compliance"
 }
 ```
 
 <Note>
-The `identity_domain` value is the `keccak256` hash of your domain string encoded as a `bytes32` hex value. For example: `keccak256(bytes("my.dev.domain.co"))`. This scopes the identity data to your application. An example value of this is 0x70013f8147873660b512807fffa46355f43463c571a0b05eea4ede282dfcf523
+Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
 </Note>
 
-See the [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for all available built-in functions.
+### 1d. Deploy your policy using newton-cli
+
+Your policy directory should look like this before deploying:
+
+```
+policy_files/
+├── params_schema.json
+├── policy.rego
+└── policy_metadata.json
+```
+
+Generate your `policy_cids.json` file with the Newton CLI command documented [here](/developers/guides/deploying-with-cli#step-1-generate-cids-and-upload-to-ipfs).
+
+**Deploy the policy contract**
+
+Once you have `policy_cids.json`, run:
+
+```bash
+newton-cli policy deploy --cids policy_cids.json
+```
+
+After deploying, note your policy contract address — you'll need it in Step 2.
 
 ## Step 2: Deploy a Policy Client Contract
 
@@ -54,13 +110,26 @@ Key requirements:
 - Call `_initNewtonPolicyClient(policyTaskManager, owner)` in the constructor
 - Register the contract with the `PolicyClientRegistry` — see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration)
 
+**After registering**, call the following on your deployed policy client contract:
+
+1. `setPolicyAddress(policyContractAddress)` — point it to the policy deployed in Step 1
+2. `setPolicy(params)` — set the policy params, including your identity domain:
+
+```json
+{
+  "identity_domain": "0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4"
+}
+```
+
 ## Step 3: Collect KYC Data
 
-Collect identity data from your users using a third-party KYC vendor. The structure of this data maps to the fields Newton's identity policy engine reads (see [IdentityData fields](/developers/verified-credential/identity-policy-reference#identitydata-fields)).
+Collect identity data from your users using a third-party KYC vendor. The data you receive from the vendor must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields) — fields like `status`, `birthdate`, `address_country_code`, etc.
 
-## Step 4: Register KYC Data
+## Step 4: Register and Confirm KYC Data
 
-Once you have the KYC data, call `registerUserData` to register it with Newton, scoped to your identity domain:
+### 4a. Register KYC Data
+
+Once you have the KYC data from your vendor, call `registerUserData` to register it with Newton, scoped to your identity domain:
 
 ```typescript
 const walletClient = createWalletClient({ ... }).extend(
@@ -69,17 +138,21 @@ const walletClient = createWalletClient({ ... }).extend(
 
 await walletClient.registerUserData({
   userData: kycDataFromVendor,
-  appIdentityDomain: '0x<keccak256 of your domain string>',
+  appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
 })
 ```
 
-This opens the Newton identity popup, where Newton securely stores the KYC data associated with the user.
+<Note>
+When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
+</Note>
 
-## Step 5: User Confirms KYC Data
+### 4b. User Confirms KYC Data
 
-The user sees a confirmation prompt in the Newton identity flow to verify the KYC data being registered. This is handled by the popup opened in Step 4.
+The user sees a confirmation prompt in the Newton identity popup to verify the KYC data being registered. This is handled automatically by the popup opened in step 4a — no additional SDK calls are required.
 
-## Step 6: Link User Identity to Your App
+## Step 5: Link Identity to Your App
+
+### 5a. Initiate Identity Link
 
 Call `linkApp` to link the user's registered identity to your policy client contract:
 
@@ -87,32 +160,127 @@ Call `linkApp` to link the user's registered identity to your policy client cont
 await walletClient.linkApp({
   appWalletAddress: userWalletAddress,
   appClientAddress: yourPolicyClientAddress,
-  appIdentityDomain: '0x<keccak256 of your domain string>',
+  appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
 })
 ```
 
-This triggers a prompt for the user to sign and confirm the link.
+This creates an association between the user's Newton identity wallet and your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.
 
-## Step 7: User Confirms the Link
+You can find the `IdentityRegistry` contract address in [Contract Addresses](/developers/reference/contract-addresses).
 
-The user completes the link confirmation in the Newton identity popup. Under the hood, this calls `linkIdentityAsUser` on the `IdentityRegistry` contract — a transaction signed by the user's wallet.
+### 5b. User Confirms the Link
 
-See [SDK & Contract Reference](/developers/verified-credential/reference#linkidentityasuser) for the full contract function signature.
-
-## Step 8: Submit a Task
-
-Submit a task with a signed intent from the user's dapp wallet (the same wallet that confirmed the link in Step 7). The intent must be signed using the EIP712 domain of your policy client:
+The user completes the link confirmation in the Newton identity popup. Under the hood, this calls `linkIdentityAsUser` on the `IdentityRegistry` contract — a transaction signed by the user's Newton identity wallet.
 
 ```typescript
-await walletClient.submitEvaluationRequest({
-  intent: signedIntent,
-  policyId: yourPolicyId,
-  intentSignature: intentSignature,
-  // ...other task params
+// This is called internally by the SDK when the user confirms — shown here for reference
+function linkIdentityAsUser(
+    address _identityOwner,      // user's Newton identity wallet
+    address _policyClient,       // your policy client contract
+    bytes32[] _identityDomains,  // [your identity domain]
+    bytes _signature,            // user's authorization signature
+    uint256 _nonce,
+    uint256 _deadline
+)
+```
+
+See [SDK & Contract Reference](/developers/verified-credential/reference#linkidentityasuser) for the full function signature and return value.
+
+## Step 6: Submit a Task
+
+Submit a task with a signed intent from the user's dapp wallet. The intent must be constructed and signed using the EIP712 domain of your policy client.
+
+**1. Construct the intent**
+
+```typescript
+const intent = {
+  from: userAddress,
+  to: yourPolicyClientAddress,   // the contract that will execute the tx
+  value: '0x0' as Hex,           // ETH value as hex string
+  data: '0x...' as Hex,          // encoded calldata for the target call
+  chainId: 11155111,             // your chain ID
+  functionSignature: '0x' as Hex,
+}
+```
+
+**2. Sign the intent using your policy client's EIP712 domain**
+
+```typescript
+// The EIP712 domain name and version must match your policy client's constructor args
+const intentSignature = await walletClient.signTypedData({
+  account: userAddress,
+  domain: {
+    name: 'NewtonPolicyWallet',  // must match EIP712("NewtonPolicyWallet", "1")
+    version: '1',
+    chainId: 11155111,
+    verifyingContract: yourPolicyClientAddress,
+  },
+  types: {
+    Intent: [
+      { name: 'from', type: 'address' },
+      { name: 'to', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'chainId', type: 'uint256' },
+      { name: 'functionSignature', type: 'bytes' },
+    ],
+  },
+  primaryType: 'Intent',
+  message: {
+    ...intent,
+    value: BigInt(intent.value),
+    chainId: BigInt(intent.chainId),
+  },
 })
 ```
 
-Newton evaluates the Rego policy, checks identity data, and returns an attestation if the policy passes.
+**3. Submit for evaluation**
+
+```typescript
+const result = await newtonWalletClient.evaluateIntentDirect({
+  policyClient: yourPolicyClientAddress,
+  intent,
+  intentSignature,
+  timeout: 60,
+  identityDomain: IDENTITY_DOMAIN,
+})
+// result.evaluationResult — true if the policy passed
+// result.task, result.taskResponse, result.blsSignature — needed for Step 7
+```
+
+## Step 7: Execute On-Chain Transaction with Attestation
+
+Use the attestation returned in Step 6 to execute the transaction on-chain through your policy client.
+
+```typescript
+const { task, taskResponse, blsSignature } = result
+
+await walletClient.writeContract({
+  address: yourPolicyClientAddress,
+  abi: policyClientAbi,
+  functionName: 'validateAndExecuteDirect',
+  args: [
+    intent.to,
+    BigInt(intent.value),
+    intent.data,
+    {
+      ...task,
+      intent: { ...task.intent, value: BigInt(task.intent.value), chainId: BigInt(task.intent.chainId) },
+      initializationTimestamp: BigInt(task.initializationTimestamp),
+    },
+    {
+      ...taskResponse,
+      intent: { ...taskResponse.intent, value: BigInt(taskResponse.intent.value), chainId: BigInt(taskResponse.intent.chainId) },
+      initializationTimestamp: BigInt(taskResponse.initializationTimestamp),
+    },
+    blsSignature,
+  ],
+  account: userAddress,
+  chain: sepolia,
+})
+```
+
+`validateAndExecuteDirect` verifies the attestation on-chain and executes the call — only if the policy passed.
 
 ## Unlinking
 
@@ -122,7 +290,7 @@ To remove a user's identity link from your app, call `unlinkApp`:
 await walletClient.unlinkApp({
   appWalletAddress: userWalletAddress,
   appClientAddress: yourPolicyClientAddress,
-  appIdentityDomain: '0x<keccak256 of your domain string>',
+  appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
 })
 ```
 
