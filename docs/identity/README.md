@@ -26,12 +26,13 @@ Parent App (dApp)                 Newton Identity Popup              Turnkey Enc
       |                                    |-- 3. WebAuthn prompt ------> |
       |                                    |<-- auth session ------------ |
       |                                    |                              |
-      |                                    |-- 4. encrypt (KMS/Privacy) --|
+      |                                    |-- 4. HPKE encrypt (createSecureEnvelope) --|
       |                                    |-- 5. EIP-712 sign ---------> |
       |                                    |<-- signature --------------- |
       |                                    |                              |
-      |                                    |-- 6. newt_sendIdentityEncrypted --> Gateway
-      |                                    |<-- inclusion_tx ------------------- Gateway
+      |                                    |-- 6. newt_uploadIdentityEncrypted --> Gateway
+      |                                    |<-- data_ref_id + gatewaySig --------- Gateway
+      |                                    |-- 7. registerIdentityData on-chain -->|
       |                                    |                              |
       |<-- 7. postMessage(result) ------  |                              |
       |                                    |-- auto-close                 |
@@ -55,7 +56,7 @@ The identity system operates across two layers:
 
 | Layer | What | Who Calls It |
 |-------|------|-------------|
-| **Gateway RPC** | `newt_sendIdentityEncrypted` — submit encrypted identity data with EIP-712 signature | Newton Identity popup only (not wrapped by SDK) |
+| **Gateway RPC** | `newt_uploadIdentityEncrypted` — submit HPKE-encrypted identity data with EIP-712 signature | Newton Identity popup only (not wrapped by SDK) |
 | **On-chain** | `linkIdentity*` / `unlinkIdentity*` — associate/revoke identity-to-PolicyClient links on IdentityRegistry | Parent app via SDK, or popup directly |
 
 The gateway layer handles encrypted data submission. The on-chain layer manages the public identity link graph that Rego policies query at evaluation time.
@@ -68,14 +69,12 @@ The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers
 - `identityDomainHash()` — compute keccak256 domain identifier
 - `linkIdentity*()` / `unlinkIdentity*()` — on-chain writeContract calls
 
-The gateway RPC layer (`newt_sendIdentityEncrypted` in Phase 1, `newt_uploadIdentityEncrypted` in Phase 2) is called directly by the newton-identity popup, not wrapped by the SDK. Post-HPKE migration, the popup will use the SDK's privacy module (`createSecureEnvelope`, `uploadEncryptedData`) for encryption. See [HPKE Migration](hpke-migration.md) for the full roadmap.
+The gateway RPC layer (`newt_uploadIdentityEncrypted`) is called directly by the newton-identity popup, not wrapped by the SDK. The popup uses the SDK's privacy module (`createSecureEnvelope`, `getPrivacyPublicKey`, `generateSigningKeyPair`) for HPKE encryption.
 
-## Encryption: Current vs Future
+## Encryption
 
-| | Current (Phase 1) | Future |
-|---|---|---|
-| **Encryption** | AWS KMS RSA-OAEP (client-side, in popup) | Newton Privacy Layer HPKE (RFC 9180) |
-| **Key management** | KMS public key fetched from AWS | Gateway X25519 public key via `newt_getPrivacyPublicKey` |
-| **Where it happens** | Inside newton-identity popup | Inside newton-identity popup (migrated) |
-
-The encryption mechanism is a stop-gap. The migration to Newton Privacy Layer will unify identity encryption with the SDK's existing privacy module (`createSecureEnvelope`, `uploadEncryptedData`).
+| | Details |
+|---|---|
+| **Encryption** | HPKE (X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305, RFC 9180) |
+| **Key management** | Gateway X25519 public key via `newt_getPrivacyPublicKey` |
+| **Where it happens** | Inside newton-identity popup, using SDK's `createSecureEnvelope` |

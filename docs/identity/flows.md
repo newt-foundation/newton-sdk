@@ -76,16 +76,11 @@ Parent App                    Identity Popup                 Turnkey          Id
 
 ---
 
-<!-- TODO (HPKE migration): Replace this flow diagram when migration completes.
-     Phase 2 changes: RSA-OAEP → HPKE encryption, EIP-712 → Ed25519 signing,
-     single newt_sendIdentityEncrypted call → newt_uploadIdentityEncrypted + registerIdentityData.
-     See docs/identity/hpke-migration.md for the Phase 2 flow diagram. -->
-
 ## Flow 3: Register User Data (KYC Submission)
 
-**Purpose:** Encrypt and submit identity data to the Newton gateway for on-chain inclusion.
+**Purpose:** Encrypt and submit identity data to the Newton gateway, then register the data reference on-chain.
 
-**Trigger:** Parent app calls `popupRequest({ method: 'newton_vc_user_register_user_data', params: { userData, appIdentityDomain, apiKey, chainId } })`
+**Trigger:** Parent app calls `popupRequest({ method: 'newton_vc_user_register_user_data', params: { userData, appIdentityDomain, policyClient, apiKey, chainId } })`
 
 ```
 Parent App                    Identity Popup                 Turnkey          Gateway
@@ -100,31 +95,35 @@ Parent App                    Identity Popup                 Turnkey          Ga
     |                              |                           |                |
     |                              |   User clicks "Submit"    |                |
     |                              |                           |                |
-    |                              |-- 1. JSON.stringify(kycData)               |
-    |                              |-- 2. encrypt(RSA-OAEP, kmsKey, plaintext)  |
-    |                              |-- 3. hex-encode ciphertext                 |
+    |                              |-- 1. getPrivacyPublicKey ----------------> |
+    |                              |<-- X25519 public key --------------------- |
+    |                              |-- 2. createSecureEnvelope (HPKE encrypt)   |
     |                              |                           |                |
-    |                              |-- 4. EIP-712 sign ------> |                |
+    |                              |-- 3. EIP-712 sign ------> |                |
     |                              |   EncryptedIdentityData   |                |
-    |                              |   { data: hexCiphertext } |                |
+    |                              |   { data: envelopeJson }  |                |
     |                              |<-- signature ------------ |                |
     |                              |                           |                |
-    |                              |-- 5. newt_sendIdentityEncrypted ---------> |
-    |                              |   { data, identity_domain,                 |
-    |                              |     signature, identity_owner }            |
-    |                              |<-- { inclusion_tx } ---------------------- |
+    |                              |-- 4. newt_uploadIdentityEncrypted -------> |
+    |                              |   { identity_owner, identity_owner_sig,    |
+    |                              |     envelope, identity_domain, chain_id }  |
+    |                              |<-- { data_ref_id, gateway_signature } ---- |
     |                              |                           |                |
-    |<-- { inclusion_tx } --------  |                           |                |
+    |                              |-- 5. registerIdentityData on-chain         |
+    |                              |   (domain, data_ref_id, gatewaySig)        |
+    |                              |                           |                |
+    |<-- { data_ref_id, tx_hash }  |                           |                |
     |                              |-- auto-close              |                |
 ```
 
 **Steps inside the popup:**
 1. Serialize KYC data to JSON
-2. Encrypt with RSA-OAEP using AWS KMS public key (future: HPKE via Privacy Layer)
-3. Hex-encode the ciphertext
-4. Sign the hex string with EIP-712 (`EncryptedIdentityData { string data }`) via Turnkey
-5. Submit encrypted data + signature to gateway via `newt_sendIdentityEncrypted` RPC
-6. Return `inclusion_tx` hash to parent
+2. Encrypt with HPKE via `createSecureEnvelope` (gateway X25519 key fetched via `newt_getPrivacyPublicKey`)
+3. Sign envelope JSON with EIP-712 (`EncryptedIdentityData { string data }`) via Turnkey
+4. Submit envelope + signature to gateway via `newt_uploadIdentityEncrypted` RPC
+5. Gateway returns `data_ref_id` + `gateway_signature` + `deadline`
+6. Register on-chain via `registerIdentityData(domain, dataRefId, gatewaySig, deadline)`
+7. Return `tx_hash` to parent
 
 **The parent app never sees the plaintext KYC data.** The popup receives it, displays it for user confirmation, encrypts it, and submits it — all within the isolated popup context.
 
