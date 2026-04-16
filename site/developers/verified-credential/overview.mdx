@@ -37,9 +37,9 @@ flowchart LR
 Your policy client contract must:
 - Inherit from both `NewtonPolicyClient` and `EIP712`
 - Be registered with the `PolicyClientRegistry`
-- Set policy params with your identity domain: `{"identity_domain": "<keccak256 of your domain string>"}`
+- Have `setPolicy()` called with params that include your identity domain: `{"identity_domain": "0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4"}`
 
-The `identity_domain` value is the `keccak256` hash of your domain string (e.g., `keccak256(bytes("my.dev.domain.co"))`), encoded as a `bytes32` hex string.
+The `identity_domain` is the output of `keccak256("kyc")`.
 
 ## Next Steps
 

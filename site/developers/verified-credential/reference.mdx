@@ -28,7 +28,7 @@ registerUserData(args: {
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `userData` | `KycUserData` | KYC data object from your identity vendor |
-| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string (keccak256 of your domain string) |
+| `appIdentityDomain` | `Hex` | Output of `keccak256("kyc")` |
 | `policyClient` | `Address` | Policy client contract address (used for HPKE encryption AAD binding) |
 
 **Example:**
@@ -36,7 +36,7 @@ registerUserData(args: {
 ```typescript
 await walletClient.registerUserData({
   userData: kycDataFromVendor,
-  appIdentityDomain: '0xabc123...', // keccak256(bytes("my.dev.domain.co"))
+  appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
   policyClient: '0xYourPolicyClientAddress',
 })
 ```
@@ -63,7 +63,7 @@ linkApp(args: {
 |-----------|------|-------------|
 | `appWalletAddress` | `Address` | The user's dapp wallet address |
 | `appClientAddress` | `Address` | Your deployed policy client contract address |
-| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string |
+| `appIdentityDomain` | `Hex` | Output of `keccak256("kyc")` |
 
 **Example:**
 
@@ -97,7 +97,7 @@ unlinkApp(args: {
 |-----------|------|-------------|
 | `appWalletAddress` | `Address` | The user's dapp wallet address |
 | `appClientAddress` | `Address` | Your deployed policy client contract address |
-| `appIdentityDomain` | `Hex` | Your identity domain as a `bytes32` hex string |
+| `appIdentityDomain` | `Hex` | Output of `keccak256("kyc")` |
 
 **Example:**
 
@@ -165,7 +165,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
     constructor(
         address policyTaskManager,
         address owner
-    ) EIP712("NewtonPolicyWallet", "1") {
+    ) payable EIP712("NewtonPolicyWallet", "1") {
         _initNewtonPolicyClient(policyTaskManager, owner);
     }
 
@@ -180,7 +180,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
         INewtonProverTaskManager.Task calldata task,
         INewtonProverTaskManager.TaskResponse calldata taskResponse,
         bytes calldata signatureData
-    ) external returns (bytes memory) {
+    ) external payable returns (bytes memory) {
         require(
             _validateAttestationDirect(task, taskResponse, signatureData),
             InvalidAttestation()
