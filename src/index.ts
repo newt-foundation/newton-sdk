@@ -215,6 +215,7 @@ const newtonWalletClientActions =
       registerUserData: (args: {
         userData: KycUserData
         appIdentityDomain: Hex
+        policyClient: Address
       }): Promise<unknown> => {
         return popupRequest(
           {
@@ -227,6 +228,7 @@ const newtonWalletClientActions =
               gatewayApiUrlOverride,
               chainId: walletClient.chain?.id,
               appIdentityDomain: args.appIdentityDomain,
+              policyClient: args.policyClient,
               identityRegistryOverride,
             },
           },

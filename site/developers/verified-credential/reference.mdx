@@ -19,6 +19,7 @@ Registers KYC data for a user, scoped to your application's identity domain. Ope
 registerUserData(args: {
   userData: KycUserData
   appIdentityDomain: Hex
+  policyClient: Address
 }): Promise<unknown>
 ```
 
@@ -28,6 +29,7 @@ registerUserData(args: {
 |-----------|------|-------------|
 | `userData` | `KycUserData` | KYC data object from your identity vendor |
 | `appIdentityDomain` | `Hex` | Output of `keccak256("kyc")` |
+| `policyClient` | `Address` | Policy client contract address (used for HPKE encryption AAD binding) |
 
 **Example:**
 
@@ -35,6 +37,7 @@ registerUserData(args: {
 await walletClient.registerUserData({
   userData: kycDataFromVendor,
   appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
+  policyClient: '0xYourPolicyClientAddress',
 })
 ```
 

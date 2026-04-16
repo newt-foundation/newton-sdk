@@ -79,8 +79,7 @@ await client.registerIdentityData({
 // Step 3: Link to policy client
 await client.linkIdentityAsSignerAndUser({
   policyClient: '0xYourPolicyClient',
-  clientUser: '0xEndUserAddress',
-  identityDomain: identityDomainHash('kyc'),
+  identityDomains: [identityDomainHash('kyc')],
 })
 ```
 

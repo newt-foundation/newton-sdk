@@ -168,15 +168,14 @@ field    := newton.identity.get("field_name")
 2. Popup opens → user authenticates with Turnkey (WebAuthn)
 3. Popup displays KYC fields for user review (country, birthdate, document dates)
 4. User clicks "Submit"
-5. Popup encrypts JSON-serialized KYC data:
-   - Current: RSA-OAEP with AWS KMS public key
-   - Future: HPKE with Newton Privacy Layer
-6. Popup converts ciphertext to hex string
-7. Popup signs hex string with EIP-712 (EncryptedIdentityData type)
+5. Popup encrypts JSON-serialized KYC data with HPKE via createSecureEnvelope
+   - Fetches gateway X25519 public key via newt_getPrivacyPublicKey
+   - AAD binding: keccak256(policyClient, chainId)
+6. Popup signs envelope JSON with EIP-712 (EncryptedIdentityData type)
    - Turnkey signs the EIP-712 digest via signRawPayload()
-8. Popup calls newt_sendIdentityEncrypted RPC to Newton Gateway
-   - Params: { data, identity_domain, signature, identity_owner }
-9. Gateway validates EIP-712 signature against identity_owner
+7. Popup calls newt_uploadIdentityEncrypted RPC to Newton Gateway
+   - Params: { identity_owner, identity_owner_sig, envelope, identity_domain, chain_id }
+8. Gateway validates EIP-712 signature against identity_owner
 10. Gateway submits encrypted data to on-chain IdentityRegistry
 11. Popup returns { inclusion_tx } to parent via postMessage
 12. Popup auto-closes

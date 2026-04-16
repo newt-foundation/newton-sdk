@@ -139,6 +139,7 @@ const walletClient = createWalletClient({ ... }).extend(
 await walletClient.registerUserData({
   userData: kycDataFromVendor,
   appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
+  policyClient: '0xYourPolicyClientAddress',
 })
 ```
 

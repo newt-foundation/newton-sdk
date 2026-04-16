@@ -1,3 +1,15 @@
+# v0.8.1 (Wed Apr 08 2026)
+
+#### 🐛 Bug Fix
+
+- fix: add policyClient to registerUserData and update HPKE docs [#148](https://github.com/newt-foundation/newton-sdk/pull/148) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.8.0 (Tue Apr 07 2026)
 
 #### 🚀 Enhancement
