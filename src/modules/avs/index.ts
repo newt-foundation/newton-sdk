@@ -480,6 +480,7 @@ async function simulatePolicyData(
     policy_data_address: args.policyDataAddress,
     secrets: args.secrets,
     wasm_args: args.wasmArgs,
+    chain_id: args.chainId,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey)
   if (res.error) throw res.error
