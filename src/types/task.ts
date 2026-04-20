@@ -201,6 +201,7 @@ export interface SimulatePolicyResult {
 
 export interface SimulatePolicyDataParams {
   policyDataAddress: Address
+  chainId: number
   secrets?: string
   wasmArgs?: Hex
 }
