@@ -34,13 +34,11 @@ import {
 } from './utils';
 
 export interface GatewayClientOptions {
-  /** Gateway HTTP base URL, e.g. https://gateway.newton.xyz */
   baseUrl: string;
-  /** Bearer token for Gateway RPC calls. */
   token?: string;
-  /** POST path for JSON-RPC calls. Defaults to /rpc. */
+  /** Defaults to /rpc. */
   rpcPath?: string;
-  /** Optional WebSocket URL for async task subscriptions. Defaults to baseUrl mapped to /ws. */
+  /** Defaults to baseUrl with /ws path and ws(s) scheme. */
   websocketUrl?: string;
   headers?: Record<string, string>;
   timeoutMs?: number;

@@ -20,13 +20,9 @@ export interface NewtonClientOptions {
 }
 
 export interface TaskLifecycleOptions<TSync extends boolean = boolean> {
-  /** Base64 BCS-serialized TLSNotary Presentation. */
   proof: string;
-  /** Task request. proof_cid is filled from the stored proof unless already provided. */
   task: TSync extends true ? CreateTaskRequest : SendTaskRequest;
-  /** Use newt_sendTask when true; otherwise use newt_createTask. */
   async?: TSync;
-  /** Optional MPC-TLS session registration before storing proof/submitting task. */
   session?: RegisterRequest;
   sessionOptions?: CreateSessionOptions;
 }

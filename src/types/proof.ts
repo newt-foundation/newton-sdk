@@ -1,5 +1,4 @@
 export interface StoreProofRequest {
-  /** Base64 BCS-serialized TLSNotary Presentation. */
   proof: string;
 }
 

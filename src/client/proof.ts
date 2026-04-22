@@ -10,7 +10,6 @@ import {
 } from './utils';
 
 export interface ProofClientOptions {
-  /** Attester REST base URL, e.g. https://attester.newton.xyz */
   baseUrl: string;
   token?: string;
   headers?: Record<string, string>;

@@ -48,11 +48,8 @@ export type NewtonRpcMethod =
   | 'newt_unregisterWebhook';
 
 export interface RpcRequestOptions {
-  /** Additional headers for this request. Authorization is managed by the client token option. */
   headers?: Record<string, string>;
-  /** Abort signal for caller-controlled cancellation. */
   signal?: AbortSignal;
-  /** Per-request timeout in milliseconds. Overrides the client default. */
   timeoutMs?: number;
 }
 

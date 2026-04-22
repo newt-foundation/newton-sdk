@@ -1,11 +1,11 @@
 # @newton-protocol/sdk
 
-TypeScript SDK for Newton Protocol zkTLS flows. It provides small, explicit clients for:
+TypeScript SDK for Newton Protocol zkTLS.
 
-- Gateway JSON-RPC task submission (`GatewayClient`)
-- TLSNotary sidecar/attester WebSocket sessions (`AttesterClient`)
-- TLSNotary proof storage and retrieval (`ProofClient`)
-- A convenience wrapper for proof → task flows (`NewtonClient`)
+- `GatewayClient` — JSON-RPC task submission
+- `AttesterClient` — TLSNotary attester WebSocket sessions
+- `ProofClient` — proof storage / retrieval
+- `NewtonClient` — proof → task lifecycle wrapper
 
 ## Install
 
@@ -57,8 +57,6 @@ console.log(result.status, result.task_id);
 ```
 
 ## Full flow: proof → store → task
-
-Use this when your browser extension or TLSNotary client returns a base64 BCS-serialized presentation proof.
 
 ```ts
 import { NewtonClient } from '@newton-protocol/sdk';
@@ -146,8 +144,6 @@ Methods:
 
 ### `NewtonClient`
 
-Convenience wrapper around Gateway/Proof/Attester clients.
-
 Methods:
 
 - `createSession(request, options?)`
@@ -177,13 +173,6 @@ try {
   }
 }
 ```
-
-## Security notes
-
-- Do not log cookies, bearer tokens, CSRF tokens, or raw authorization headers.
-- Browser proof generation should happen in the TLSNotary extension sandbox.
-- Reveal only fields required by the policy, such as `data.public_metrics.followers_count`.
-- Treat gateway and sidecar tokens as secrets.
 
 ## Local verification
 

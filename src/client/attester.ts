@@ -11,15 +11,12 @@ import type {
 import { appendQuery, normalizeWsUrl, parseSocketMessage, requireWebSocket } from './utils';
 
 export interface AttesterClientOptions {
-  /** Attester service base URL, e.g. https://attester.newton.xyz */
   baseUrl: string;
-  /** Optional bearer token sent as a query token for WebSocket endpoints that require it. */
   token?: string;
   WebSocket?: typeof WebSocket;
 }
 
 export interface CreateSessionOptions extends WebSocketConnectionOptions<unknown> {
-  /** Customize the initial Register message for deployments using a different serde shape. */
   registerMessage?: (request: RegisterRequest) => unknown;
 }
 
