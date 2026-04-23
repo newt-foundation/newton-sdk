@@ -36,40 +36,28 @@ export interface SecureEnvelopeResult {
   senderPublicKey: string
 }
 
-/** Parameters for uploading encrypted data to the gateway. */
-export interface UploadEncryptedDataParams {
-  /** EVM address of the end user (intent sender) */
-  senderAddress: Address
-  /** Policy client address this data is scoped to */
-  policyClient: Address
-  /** Chain ID the policy client lives on */
+/** Parameters for uploading encrypted identity data to the gateway. */
+export interface UploadIdentityEncryptedParams {
+  /** EVM address of the identity owner */
+  identityOwner: Address
+  /** EIP-712 signature of the SecureEnvelope JSON by the identity owner (hex-encoded) */
+  identityOwnerSig: string
+  /** JSON-serialized SecureEnvelope (from createSecureEnvelope) */
+  envelope: string
+  /** Identity domain as 0x-prefixed bytes32 hex (e.g., keccak256("kyc")) */
+  identityDomain: `0x${string}`
+  /** Chain ID the identity registry lives on */
   chainId: number
-  /** Plaintext data to encrypt and upload */
-  plaintext: Uint8Array | string | Record<string, unknown>
-  /** Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. */
-  recipientPublicKey?: string
-  /** Ed25519 private key seed (32 bytes as Uint8Array). Caller owns the buffer lifecycle. */
-  signingKey: Uint8Array
-  /** Optional TTL in seconds (data expires after this duration) */
-  ttl?: number
 }
 
-/** Parameters for uploading a pre-built SecureEnvelope to the gateway. */
-export interface UploadSecureEnvelopeParams {
-  /** EVM address of the end user (intent sender) */
-  senderAddress: Address
-  /** Pre-built envelope result from createSecureEnvelope */
-  envelopeResult: SecureEnvelopeResult
-  /** Optional TTL in seconds (data expires after this duration) */
-  ttl?: number
-}
-
-/** Response from the gateway after uploading encrypted data. */
-export interface UploadEncryptedDataResponse {
-  success: boolean
-  /** UUID of the stored data reference (if successful) */
-  data_ref_id: string | null
-  error: string | null
+/** Response from the gateway after uploading encrypted identity data. */
+export interface UploadIdentityEncryptedResponse {
+  /** Content-hash data reference ID: keccak256(envelope_json_bytes) */
+  data_ref_id: string
+  /** Gateway EIP-712 signature for registerIdentityData on-chain call */
+  gateway_signature: string
+  /** Signature expiration (unix timestamp) for registerIdentityData */
+  deadline: number
 }
 
 /** Response from newt_getPrivacyPublicKey. */
@@ -82,14 +70,12 @@ export interface PrivacyPublicKeyResponse {
   encryption_suite: string
 }
 
-/** RPC request body for newt_uploadEncryptedData. */
-export interface UploadEncryptedDataRpcRequest {
-  sender_address: Address
-  policy_client: Address
+/** RPC request body for newt_uploadIdentityEncrypted. */
+export interface UploadIdentityEncryptedRpcRequest {
+  identity_owner: Address
+  identity_owner_sig: string
   envelope: string
-  signature: string
-  sender_pubkey: string
-  ttl: number | null
+  identity_domain: `0x${string}`
   chain_id: number
 }
 
@@ -138,7 +124,7 @@ export interface SignPrivacyAuthorizationParams {
   policyClient: Address
   /** Keccak256 hash of the intent (hex-encoded, 32 bytes) */
   intentHash: string
-  /** Encrypted data reference UUIDs returned from uploadEncryptedData */
+  /** Encrypted data reference UUIDs returned from uploadIdentityEncrypted */
   encryptedDataRefs: string[]
   /** User's Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
   userSigningKey: string
@@ -194,4 +180,30 @@ export interface PrivacyAuthorizationResult {
   userPublicKey: string
   /** Application's Ed25519 public key (hex-encoded, no 0x prefix) */
   appPublicKey: string
+}
+
+/** Response from newt_getSecretsPublicKey (may differ from privacy key in threshold DKG mode). */
+export interface SecretsPublicKeyResponse {
+  /** X25519 public key (hex-encoded, no 0x prefix) */
+  public_key: string
+  /** Key type (always "x25519") */
+  key_type: string
+  /** Encryption suite identifier */
+  encryption_suite: string
+}
+
+/** Parameters for fetching encrypted identity data by reference ID. */
+export interface GetIdentityEncryptedParams {
+  /** Content-hash data reference ID (keccak256 of the encrypted data) */
+  dataRefId: string
+}
+
+/** Response from newt_getIdentityEncrypted. */
+export interface GetIdentityEncryptedResult {
+  /** The HPKE-encrypted identity data as a SecureEnvelope JSON string */
+  envelope: string
+  /** The identity domain this data was registered under */
+  identity_domain: string
+  /** The identity owner address */
+  identity_owner: string
 }

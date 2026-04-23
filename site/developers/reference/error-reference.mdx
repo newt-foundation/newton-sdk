@@ -63,6 +63,26 @@ This page documents all error codes and messages you may encounter when interact
 | `Attestation already spent` | TaskManager | Attestation has already been used | Each attestation is single-use; request a new one |
 | `InterfaceNotSupported` | PolicyClient | Contract does not implement `IERC165` correctly | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
 
+### On-Chain Error Selectors
+
+When `_validateAttestationDirect()` reverts, the error originates from Newton's TaskManager or AttestationValidator contracts, not your PolicyClient. Standard ABI decoders (including viem) may show "Unable to decode signature" because these selectors are not in your contract's ABI.
+
+| Selector | Error | Meaning |
+|----------|-------|---------|
+| `0xec9758ff` | `InsufficientQuorumStake()` | Operators lack registered on-chain stake |
+| `0x716dcc39` | `AttestationExpired()` | Attestation expired before tx was mined |
+| `0x297fb567` | `AttestationHashMismatch()` | Task/response hash does not match attestation |
+| `0x2a5d4fed` | `AttestationAlreadySpent()` | This attestation was already used |
+| `0xac0b52a7` | `PolicyIdMismatch()` | Vault policyId does not match attestation |
+| `0x32d53d69` | `PolicyNotSet()` | Policy not registered on vault |
+| `0x3e8e0ab1` | `PolicyNotVerified()` | Policy verification failed |
+| `0xaf30fbb1` | `PolicyDataNotVerified()` | Policy data attestation invalid |
+| `0xf984c150` | `CertificateMessageHashMismatch()` | BLS certificate hash mismatch |
+| `0x729d0f6b` | `SignatureVerificationFailed()` | BLS signature invalid |
+| `0x90fe746d` | `ClientNotRegistered(address)` | Vault not in PolicyClientRegistry |
+
+Use `cast sig "ErrorName()"` to compute selectors for new errors.
+
 ## SDK Error Codes
 
 | Code | Description |

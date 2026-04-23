@@ -70,7 +70,7 @@ For a step-by-step walkthrough of integrating these into your application, see t
 ## Setup & Initialization
 
 <Info>
-  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), and **Ethereum Mainnet** (chain ID `1`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
 </Info>
 
 ### newtonPublicClientActions
@@ -79,11 +79,11 @@ Extends a viem `PublicClient` with Newton Protocol read methods.
 
 ```ts
 import { createPublicClient, http } from 'viem';
-import { sepolia, baseSepolia } from 'viem/chains';
+import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
 
 const publicClient = createPublicClient({
-  chain: sepolia,        // or baseSepolia for Base Sepolia
+  chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('<RPC_URL>'),
 }).extend(
   newtonPublicClientActions({
@@ -118,11 +118,11 @@ Extends a viem `WalletClient` with Newton Protocol write methods.
 
 ```ts
 import { createWalletClient, http } from 'viem';
-import { sepolia, baseSepolia } from 'viem/chains';
+import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
 
 const walletClient = createWalletClient({
-  chain: sepolia,        // or baseSepolia for Base Sepolia
+  chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('<RPC_URL>'),
 }).extend(
   newtonWalletClientActions({
@@ -221,17 +221,23 @@ submitEvaluationRequest(
 
 **Parameters:**
 
-| Parameter      | Type               | Required | Description                        |
-| -------------- | ------------------ | -------- | ---------------------------------- |
-| `policyClient` | `Address`          | Yes      | The policy client contract address |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate             |
-| `timeout`      | `number`           | No       | Request timeout in milliseconds    |
+| Parameter                  | Type               | Required | Description                                                                 |
+| -------------------------- | ------------------ | -------- | --------------------------------------------------------------------------- |
+| `policyClient`             | `Address`          | Yes      | The policy client contract address                                          |
+| `intent`                   | `IntentFromParams` | Yes      | The intent to evaluate                                                      |
+| `timeout`                  | `number`           | Yes      | Request timeout in seconds                                                  |
+| `proofCid`                 | `string`           | No       | IPFS CID of a TLSNotary presentation proof for zkTLS-backed evaluation      |
+| `includeValidateCalldata`  | `boolean`          | No       | Include ABI-encoded `validateAttestationDirect` calldata in the response    |
 
 **Returns:** An object containing:
 
 - `result.taskId` (`Hex`) -- The unique task identifier
 - `result.txHash` (`Hex`) -- The transaction hash
 - `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
+
+<Note>
+  The `validate_calldata` and `operator_errors` fields are available on the raw `GatewayCreateTaskResult` returned by the `newt_createTask` RPC method (see the [RPC API Reference](/developers/reference/rpc-api)). These fields are not surfaced by the SDK's `submitEvaluationRequest` or `evaluateIntentDirect` wrappers — call the gateway RPC directly when you need them.
+</Note>
 
 ---
 
@@ -452,6 +458,7 @@ const result = await walletClient.simulatePolicyData({
   policyDataAddress: '0x...',
   secrets: '<secrets-json-string>',
   wasmArgs: '0x...',
+  chainId: 11155111, // required
 });
 
 console.log(result.success);
@@ -751,32 +758,81 @@ createSecureEnvelope(
 
 ---
 
-#### uploadEncryptedData
+#### getSecretsPublicKey
 
-Encrypts data with HPKE and uploads it to the Newton Gateway in a single call.
+Fetches the Newton Gateway's X25519 HPKE public key for encrypting WASM secrets. In threshold DKG mode, this returns a different key than `getPrivacyPublicKey`.
 
 ```ts
-const { success, data_ref_id } = await walletClient.uploadEncryptedData({
-  senderAddress: '0x...',
-  policyClient: '0x...',
+const { public_key, key_type, encryption_suite } = await walletClient.getSecretsPublicKey();
+```
+
+**Signature:**
+
+```ts
+getSecretsPublicKey(): Promise<SecretsPublicKeyResponse>
+```
+
+**Returns:**
+
+- `public_key` (`string`) -- The gateway's X25519 public key (hex-encoded)
+- `key_type` (`string`) -- Key type identifier
+- `encryption_suite` (`string`) -- HPKE suite identifier
+
+---
+
+#### uploadIdentityEncrypted
+
+Uploads HPKE-encrypted identity data to the Newton Gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the on-chain `registerIdentityData` call.
+
+```ts
+const { data_ref_id, gateway_signature, deadline } = await walletClient.uploadIdentityEncrypted({
+  identityOwner: '0x...',
+  identityOwnerSig: '0x...', // EIP-712 signature of the envelope JSON
+  envelope: JSON.stringify(envelope),
+  identityDomain: identityDomainHash('kyc'),
   chainId: 11155111,
-  plaintext: { secret: 'value' },
-  signingKey: '<ed25519-private-key>',
 });
 ```
 
 **Signature:**
 
 ```ts
-uploadEncryptedData(
-  args: UploadEncryptedDataParams
-): Promise<UploadEncryptedDataResponse>
+uploadIdentityEncrypted(
+  args: UploadIdentityEncryptedParams
+): Promise<UploadIdentityEncryptedResponse>
 ```
 
 **Returns:**
 
-- `success` (`boolean`) -- Whether the upload succeeded
-- `data_ref_id` (`string`) -- Reference ID for the uploaded data (use in `encryptedDataRefs`)
+- `data_ref_id` (`string`) -- Content-hash data reference ID: `keccak256(envelope_json_bytes)`
+- `gateway_signature` (`string`) -- Gateway EIP-712 signature for `registerIdentityData` on-chain call
+- `deadline` (`number`) -- Signature expiration (unix timestamp)
+
+---
+
+#### getIdentityEncrypted
+
+Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the encrypted data blob (stored off-chain in the gateway).
+
+```ts
+const { envelope, identity_domain, identity_owner } = await walletClient.getIdentityEncrypted({
+  dataRefId: 'abc123...',
+});
+```
+
+**Signature:**
+
+```ts
+getIdentityEncrypted(
+  args: { dataRefId: string }
+): Promise<GetIdentityEncryptedResult>
+```
+
+**Returns:**
+
+- `envelope` (`string`) -- The HPKE-encrypted identity data as a SecureEnvelope JSON string
+- `identity_domain` (`string`) -- The identity domain this data was registered under
+- `identity_owner` (`string`) -- The identity owner address
 
 ---
 
@@ -850,6 +906,56 @@ signPrivacyAuthorization(
 <Note>
   This is a **synchronous** method. Signatures are computed locally.
 </Note>
+
+---
+
+### Webhook Methods
+
+#### registerWebhook
+
+Registers a webhook URL to receive task failure notifications. The gateway sends HMAC-SHA256 signed payloads to the registered URL when tasks fail.
+
+```ts
+const { success, message } = await walletClient.registerWebhook({
+  url: 'https://example.com/newton-webhook',
+  secret: 'my-hmac-secret',
+  timeoutSeconds: 10,
+  maxRetries: 3,
+  failureTypes: ['timeout', 'quorum_not_reached'],
+});
+```
+
+**Signature:**
+
+```ts
+registerWebhook(args: RegisterWebhookParams): Promise<RegisterWebhookResult>
+```
+
+**Parameters:**
+
+| Parameter       | Type                | Required | Description                                                       |
+| --------------- | ------------------- | -------- | ----------------------------------------------------------------- |
+| `url`           | `string`            | Yes      | Webhook URL (must be HTTPS, or `http://localhost` for testing)    |
+| `secret`        | `string`            | No       | HMAC secret for payload signing (recommended)                     |
+| `timeoutSeconds`| `number`            | No       | Request timeout in seconds (default: 10)                          |
+| `maxRetries`    | `number`            | No       | Maximum retry attempts (default: 3)                               |
+| `failureTypes`  | `TaskFailureType[]` | No       | Failure types to notify about (default: all)                      |
+
+---
+
+#### unregisterWebhook
+
+Removes the registered webhook for the current API key.
+
+```ts
+const { success, message } = await walletClient.unregisterWebhook();
+```
+
+**Signature:**
+
+```ts
+unregisterWebhook(): Promise<UnregisterWebhookResult>
+```
 
 ---
 
@@ -1411,77 +1517,111 @@ client.getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
 
 ---
 
-### `uploadEncryptedData`
+### `getSecretsPublicKey`
 
-Encrypt data and upload to the gateway in a single call. If `recipientPublicKey` is not provided, it is fetched from the gateway first.
+Fetch the gateway's X25519 HPKE public key for WASM secrets encryption. In threshold DKG mode, this returns a different key than `getPrivacyPublicKey`. Use this key when encrypting secrets via `storeEncryptedSecrets`.
 
 **Standalone signature:**
 
 ```ts
-uploadEncryptedData(
+getSecretsPublicKey(
   chainId: number,
   apiKey: string,
-  params: UploadEncryptedDataParams,
   gatewayApiUrlOverride?: string
-): Promise<UploadEncryptedDataResponse>
+): Promise<SecretsPublicKeyResponse>
 ```
 
 **Wallet client signature:**
 
 ```ts
-client.uploadEncryptedData(params: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse>
+client.getSecretsPublicKey(): Promise<SecretsPublicKeyResponse>
 ```
 
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `params.senderAddress` | `Address` | EVM address of the end user |
-| `params.policyClient` | `Address` | Policy client address |
-| `params.chainId` | `number` | Chain ID the policy client lives on |
-| `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
-| `params.recipientPublicKey` | `string?` | Gateway's X25519 key. If omitted, fetched via RPC. |
-| `params.signingKey` | `Uint8Array` | Ed25519 private key seed (32 bytes) |
-| `params.ttl` | `number?` | Optional TTL in seconds |
-
----
-
-### `uploadSecureEnvelope`
-
-Upload a pre-built SecureEnvelope to the gateway. Use this when you have already created an envelope via `createSecureEnvelope` and want to control the upload separately — for example, offline-first apps that encrypt now and upload later, or batching multiple envelopes.
-
-**Standalone signature:**
-
-```ts
-uploadSecureEnvelope(
-  chainId: number,
-  apiKey: string,
-  params: UploadSecureEnvelopeParams,
-  gatewayApiUrlOverride?: string
-): Promise<UploadEncryptedDataResponse>
-```
-
-**Wallet client signature:**
-
-```ts
-client.uploadSecureEnvelope(params: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse>
-```
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `params.senderAddress` | `Address` | EVM address of the end user |
-| `params.envelopeResult` | `SecureEnvelopeResult` | Pre-built envelope from `createSecureEnvelope` |
-| `params.ttl` | `number?` | Optional TTL in seconds |
-
-**Returns (both upload methods):**
+**Returns:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | `boolean` | Whether the upload succeeded |
-| `data_ref_id` | `string \| null` | UUID of the stored data reference |
-| `error` | `string \| null` | Error message if upload failed |
+| `public_key` | `string` | X25519 public key (hex, no 0x prefix) |
+| `key_type` | `string` | Always `"x25519"` |
+| `encryption_suite` | `string` | Encryption suite identifier |
+
+---
+
+### `uploadIdentityEncrypted`
+
+Upload HPKE-encrypted identity data to the gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the on-chain `registerIdentityData` call.
+
+**Standalone signature:**
+
+```ts
+uploadIdentityEncrypted(
+  chainId: number,
+  apiKey: string,
+  params: UploadIdentityEncryptedParams,
+  gatewayApiUrlOverride?: string
+): Promise<UploadIdentityEncryptedResponse>
+```
+
+**Wallet client signature:**
+
+```ts
+client.uploadIdentityEncrypted(params: UploadIdentityEncryptedParams): Promise<UploadIdentityEncryptedResponse>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.identityOwner` | `Address` | EVM address of the identity owner |
+| `params.identityOwnerSig` | `string` | EIP-712 signature of the SecureEnvelope JSON by the identity owner |
+| `params.envelope` | `string` | JSON-serialized SecureEnvelope (from `createSecureEnvelope`) |
+| `params.identityDomain` | `` `0x${string}` `` | Identity domain as 0x-prefixed bytes32 hex (e.g., `keccak256("kyc")`) |
+| `params.chainId` | `number` | Chain ID the identity registry lives on |
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data_ref_id` | `string` | Content-hash data reference ID: `keccak256(envelope_json_bytes)` |
+| `gateway_signature` | `string` | Gateway EIP-712 signature for `registerIdentityData` on-chain call |
+| `deadline` | `number` | Signature expiration (unix timestamp) |
+
+---
+
+### `getIdentityEncrypted`
+
+Fetch encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the encrypted data blob (stored off-chain in the gateway).
+
+**Standalone signature:**
+
+```ts
+getIdentityEncrypted(
+  chainId: number,
+  apiKey: string,
+  dataRefId: string,
+  gatewayApiUrlOverride?: string
+): Promise<GetIdentityEncryptedResult>
+```
+
+**Wallet client signature:**
+
+```ts
+client.getIdentityEncrypted(args: { dataRefId: string }): Promise<GetIdentityEncryptedResult>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dataRefId` | `string` | Content-hash data reference ID (keccak256 of the encrypted data) |
+
+**Returns:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `envelope` | `string` | HPKE-encrypted identity data as a SecureEnvelope JSON string |
+| `identity_domain` | `string` | Identity domain this data was registered under |
+| `identity_owner` | `string` | Identity owner address |
 
 ---
 
@@ -1860,15 +2000,29 @@ unlinkIdentityAsUser(
   interface SubmitEvaluationRequestParams {
     policyClient: Address;
     intent: IntentFromParams;
-    timeout?: number;
+    timeout: number;
+    proofCid?: string;
+    includeValidateCalldata?: boolean;
+    encryptedDataRefs?: string[];
+    userSignature?: string;
+    appSignature?: string;
+    userPublicKey?: string;
+    appPublicKey?: string;
   }
   ```
 
-  | Field          | Type               | Required | Description                        |
-  | -------------- | ------------------ | -------- | ---------------------------------- |
-  | `policyClient` | `Address`          | Yes      | The policy client contract address |
-  | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate             |
-  | `timeout`      | `number`           | No       | Request timeout in milliseconds    |
+  | Field                      | Type               | Required | Description                                                              |
+  | -------------------------- | ------------------ | -------- | ------------------------------------------------------------------------ |
+  | `policyClient`             | `Address`          | Yes      | The policy client contract address                                       |
+  | `intent`                   | `IntentFromParams` | Yes      | The intent to evaluate                                                   |
+  | `timeout`                  | `number`           | Yes      | Request timeout in seconds                                               |
+  | `proofCid`                 | `string`           | No       | IPFS CID of a TLSNotary presentation proof for zkTLS-backed evaluation   |
+  | `includeValidateCalldata`  | `boolean`          | No       | Include ABI-encoded `validateAttestationDirect` calldata in the response |
+  | `encryptedDataRefs`        | `string[]`         | No       | Encrypted data reference UUIDs for privacy-preserving evaluation         |
+  | `userSignature`            | `string`           | No       | User Ed25519 signature for privacy authorization (hex-encoded)           |
+  | `appSignature`             | `string`           | No       | Application Ed25519 signature for privacy authorization (hex-encoded)    |
+  | `userPublicKey`            | `string`           | No       | User Ed25519 public key (hex-encoded, 32 bytes)                          |
+  | `appPublicKey`             | `string`           | No       | Application Ed25519 public key (hex-encoded, 32 bytes)                   |
 </Expandable>
 
 ---
@@ -1936,17 +2090,19 @@ unlinkIdentityAsUser(
   ```ts
   interface SimulatePolicyDataParams {
     policyDataAddress: Address;
-    secrets: string;
-    wasmArgs: Hex;
+    secrets?: string;
+    wasmArgs?: Hex;
+    chainId: number; // required
   }
   
   interface SimulatePolicyDataResult {
     success: boolean;
-    policy_data?: {
+    policy_data: {
       specifier: string;
-      data: string;
-    };
-    error?: string;
+      data: unknown;
+      timestamp: number;
+    } | null;
+    error: string | null;
   }
   ```
 </Expandable>
@@ -1956,16 +2112,17 @@ unlinkIdentityAsUser(
   interface SimulatePolicyDataWithClientParams {
     policyDataAddress: Address;
     policyClient: Address;
-    wasmArgs: Hex;
+    wasmArgs?: Hex;
   }
   
   interface SimulatePolicyDataWithClientResult {
     success: boolean;
-    policy_data?: {
+    policy_data: {
       specifier: string;
-      data: string;
-    };
-    error?: string;
+      data: unknown;
+      timestamp: number;
+    } | null;
+    error: string | null;
   }
   ```
 </Expandable>
@@ -2030,15 +2187,41 @@ unlinkIdentityAsUser(
 <Expandable title="GatewayCreateTaskResult & AggregationResponse">
   ```ts
   interface GatewayCreateTaskResult {
-    taskId: Hex;
-    txHash: Hex;
+    task_id: Hex;
+    task: Task;
+    task_response: unknown;
+    aggregation_response: AggregationResponse;
+    status: 'success' | 'failed';
+    error: string | null;
+    expiration: number;
+    reference_block: number;
+    signature_data: Hex;
+    timestamp: number;
+    /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
+    validate_calldata?: string;
+    /** Per-operator error details when quorum fails */
+    operator_errors?: OperatorError[];
   }
   
   interface AggregationResponse {
-    evaluationResult: boolean;
-    task: Task;
-    taskResponse: unknown;
-    blsSignature: unknown;
+    non_signer_quorum_bitmap_indices: number[];
+    non_signer_stake_indices: number[][];
+    non_signers_pub_keys_g1: number[][];
+    quorum_apk_indices: number[];
+    quorum_apks_g1: number[][];
+    signers_agg_sig_g1: { g1_point: number[] };
+    signers_apk_g2: number[];
+    total_stake_indices: number[];
+    task_created_block: number;
+  }
+
+  interface OperatorError {
+    operator_address: Address;
+    operator_id: Hex;
+    error_code: number;
+    message: string;
+    timestamp: string;
+    retryable: boolean;
   }
   ```
 </Expandable>
@@ -2089,9 +2272,9 @@ unlinkIdentityAsUser(
 <Expandable title="PendingTaskBuilder">
   ```ts
   interface PendingTaskBuilder {
-    waitForTaskResponded(args?: {
+    readonly taskId?: TaskId;
+    waitForTaskResponded(args: {
       timeoutMs?: number;
-      abortSignal?: AbortSignal;
     }): Promise<TaskResponseResult>;
   }
   ```
@@ -2137,22 +2320,40 @@ unlinkIdentityAsUser(
   ```
 </Expandable>
 
-<Expandable title="UploadEncryptedDataParams & Response">
+<Expandable title="UploadIdentityEncryptedParams & Response">
   ```ts
-  interface UploadEncryptedDataParams {
-    senderAddress: Address;
-    policyClient: Address;
+  interface UploadIdentityEncryptedParams {
+    identityOwner: Address;
+    identityOwnerSig: string;
+    envelope: string;
+    identityDomain: `0x${string}`;
     chainId: number;
-    plaintext: Uint8Array | string | Record<string, unknown>;
-    recipientPublicKey?: string;
-    signingKey: string;
-    ttl?: number;
   }
 
-  interface UploadEncryptedDataResponse {
-    success: boolean;
+  interface UploadIdentityEncryptedResponse {
     data_ref_id: string;
-    error?: string;
+    gateway_signature: string;
+    deadline: number;
+  }
+  ```
+</Expandable>
+
+<Expandable title="GetIdentityEncryptedResult">
+  ```ts
+  interface GetIdentityEncryptedResult {
+    envelope: string;
+    identity_domain: string;
+    identity_owner: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="SecretsPublicKeyResponse">
+  ```ts
+  interface SecretsPublicKeyResponse {
+    public_key: string;
+    key_type: string;
+    encryption_suite: string;
   }
   ```
 </Expandable>
@@ -2171,8 +2372,8 @@ unlinkIdentityAsUser(
 
   interface StoreEncryptedSecretsResponse {
     success: boolean;
-    schema?: string;
-    error?: string;
+    schema: Record<string, unknown> | null;
+    error: string | null;
   }
   ```
 </Expandable>
@@ -2203,6 +2404,49 @@ unlinkIdentityAsUser(
     key_type: string;
     encryption_suite: string;
   }
+  ```
+</Expandable>
+
+---
+
+### Webhook Types
+
+<Expandable title="RegisterWebhookParams & RegisterWebhookResult">
+  ```ts
+  interface RegisterWebhookParams {
+    url: string;
+    secret?: string;
+    timeoutSeconds?: number;
+    maxRetries?: number;
+    failureTypes?: TaskFailureType[];
+  }
+
+  interface RegisterWebhookResult {
+    success: boolean;
+    message: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="UnregisterWebhookResult">
+  ```ts
+  interface UnregisterWebhookResult {
+    success: boolean;
+    message: string;
+  }
+  ```
+</Expandable>
+
+<Expandable title="TaskFailureType">
+  ```ts
+  type TaskFailureType =
+    | 'channel_error'
+    | 'timeout'
+    | 'quorum_not_reached'
+    | 'onchain_submission_failed'
+    | 'policy_evaluation_failed'
+    | 'signature_verification_failed'
+    | 'internal_error';
   ```
 </Expandable>
 

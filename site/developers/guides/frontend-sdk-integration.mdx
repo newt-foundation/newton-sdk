@@ -175,6 +175,86 @@ const txHash = await walletClient.sendTransaction({
 });
 ```
 
+## Gateway Response Handling
+
+When working with the gateway directly (outside the SDK), be aware of these serialization details.
+
+### Field Name Mapping
+
+The gateway uses different casing for `task` (camelCase) and `task_response` (snake_case):
+
+```typescript
+// task fields: taskId, policyClient, quorumThresholdPercentage
+// task_response fields: task_id, policy_client, evaluation_result
+
+// Map with fallback pattern:
+const mappedTaskResponse = {
+  taskId: toHex(tr.task_id ?? tr.taskId),
+  policyClient: tr.policy_client ?? tr.policyClient,
+  policyId: toHex(tr.policy_id ?? tr.policyId),
+  // ... etc
+};
+```
+
+### Byte Array Conversion
+
+The gateway returns all Solidity `bytes` fields as JSON number arrays (`[0,0,...,0,1]`), not hex strings. Viem expects hex strings and fails with `x.replace is not a function` if given arrays.
+
+```typescript
+function toHex(val: unknown): string {
+  if (typeof val === "string") return val.startsWith("0x") ? val : `0x${val}`;
+  if (Array.isArray(val)) {
+    return `0x${val.map((b: number) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+  if (val == null) return "0x";
+  return String(val);
+}
+```
+
+Apply `toHex()` to these fields before ABI encoding: `evaluationResult`, `intentSignature`, `wasmArgs`, `quorumNumbers`, `policy`, `policyData[].data`, `policyData[].attestation`, `policyConfig.policyParams`, `taskId`, and `policyId`.
+
+### Decoding `evaluationResult`
+
+`evaluationResult` is an ABI-encoded boolean (32 bytes). The gateway returns it as a JSON byte array:
+
+```typescript
+function decodePolicyAllowed(taskResponse: Record<string, unknown>): boolean {
+  const evalResult = taskResponse.evaluation_result ?? taskResponse.evaluationResult;
+  if (evalResult == null) return false;
+  if (typeof evalResult === "boolean") return evalResult;
+
+  // Gateway returns byte arrays: [0,0,...,0,1] for true, [0,0,...,0,0] for false
+  if (Array.isArray(evalResult)) {
+    return evalResult.some((b: number) => b !== 0);
+  }
+
+  // Hex string fallback
+  const str = String(evalResult);
+  if (!str || str === "0x") return false;
+  const hex = str.startsWith("0x") ? str.slice(2) : str;
+  return BigInt(`0x${hex || "0"}`) !== 0n;
+}
+```
+
+<Note>
+`status: "success"` in the gateway response means BLS aggregation completed, **not** that the policy approved the intent. Operators sign the evaluation result regardless of allow/deny. The actual policy decision is in `evaluationResult`.
+</Note>
+
+### Function Signature Encoding
+
+<Warning>
+The `functionSignature` field in the intent is the **hex-encoded human-readable ABI**, not the 4-byte selector. The gateway needs the full signature to decode calldata into `decoded_function_arguments` for Rego. Using the 4-byte selector (`0xa9059cbb`) instead causes decoding to fail silently.
+
+```typescript
+// Correct: hex-encode the full human-readable signature
+const functionSig = "function transfer(address,uint256)";
+const functionSigHex = `0x${Buffer.from(functionSig).toString("hex")}`;
+
+// Wrong: using the 4-byte selector
+const wrong = "0xa9059cbb";
+```
+</Warning>
+
 ## Step 7: Run the Application
 
 ```bash

@@ -15,8 +15,10 @@ import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
   GetConfidentialDataResult,
+  GetIdentityEncryptedResult,
   PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
+  SecretsPublicKeyResponse,
   SecureEnvelope,
   SecureEnvelopeResult,
   SignPrivacyAuthorizationParams,
@@ -26,10 +28,9 @@ import type {
   UploadConfidentialDataParams,
   UploadConfidentialDataResult,
   UploadConfidentialDataRpcRequest,
-  UploadEncryptedDataParams,
-  UploadEncryptedDataResponse,
-  UploadEncryptedDataRpcRequest,
-  UploadSecureEnvelopeParams,
+  UploadIdentityEncryptedParams,
+  UploadIdentityEncryptedResponse,
+  UploadIdentityEncryptedRpcRequest,
 } from '@core/types/privacy'
 import { AvsHttpService } from '@core/utils/https'
 import { Chacha20Poly1305 } from '@hpke/chacha20poly1305'
@@ -72,12 +73,13 @@ function bytesToUnprefixedHex(bytes: Uint8Array): string {
 
 /**
  * Compute AAD as keccak256(abi.encodePacked(policy_client_bytes, chain_id_be_bytes)).
+ * Binds ciphertext to a specific policy_client + chain_id, preventing cross-context replay.
  * Must match the Rust implementation in `crates/core/src/crypto/envelope.rs`.
  */
 function computeAad(policyClient: Hex, chainId: number): Uint8Array {
   if (!isAddress(policyClient)) throw new Error(`invalid policy client address: ${policyClient}`)
   const clientBytes = hexToBytes(policyClient)
-  // chain_id as big-endian u64 (8 bytes) — use BigInt for correctness parity with Rust's u64
+  // chain_id as big-endian u64 (8 bytes) — BigInt required for parity with Rust's u64 in abi.encodePacked
   const chainIdBytes = new Uint8Array(8)
   const view = new DataView(chainIdBytes.buffer)
   view.setBigUint64(0, BigInt(chainId))
@@ -107,9 +109,9 @@ function zeroize(arr: Uint8Array): void {
  * This is a pure, offline function — zero network calls.
  * The ephemeral HPKE key is generated internally and zeroed after use.
  *
- * The caller owns the signingKey buffer lifecycle. This function creates an
- * internal copy for signing and zeroes it immediately after use, but the
- * caller is responsible for zeroing the original Uint8Array when done.
+ * SECURITY: The caller owns the signingKey buffer lifecycle and must zeroize it when done.
+ * This function copies the key internally and zeroes the copy after signing, but the
+ * original Uint8Array remains in the caller's control.
  *
  * @param params - Encryption parameters
  * @param signingKey - Ed25519 private key seed (32 bytes as Uint8Array)
@@ -189,88 +191,66 @@ export async function getPrivacyPublicKey(
 }
 
 /**
- * Encrypt data and upload to the gateway in a single call.
+ * Upload encrypted identity data to the gateway.
  *
- * Combines createSecureEnvelope + RPC upload. If recipientPublicKey is not
- * provided, it is fetched from the gateway first via newt_getPrivacyPublicKey.
+ * The caller must provide a pre-built SecureEnvelope (via createSecureEnvelope)
+ * and an EIP-712 signature of the envelope JSON from the identity owner.
+ * The gateway stores the envelope and returns a data_ref_id + gateway signature
+ * for the on-chain registerIdentityData call.
  */
-export async function uploadEncryptedData(
+export async function uploadIdentityEncrypted(
   chainId: number,
   apiKey: string,
-  params: UploadEncryptedDataParams,
+  params: UploadIdentityEncryptedParams,
   gatewayApiUrlOverride?: string,
-): Promise<UploadEncryptedDataResponse> {
-  // Resolve the gateway's public key if not provided
-  let recipientPublicKey = params.recipientPublicKey
-  if (!recipientPublicKey) {
-    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
-    recipientPublicKey = keyResponse.public_key
-  }
-
-  // Create the secure envelope (offline HPKE encryption + Ed25519 signing)
-  const { envelope, signature, senderPublicKey } = await createSecureEnvelope(
-    {
-      plaintext: params.plaintext,
-      policyClient: params.policyClient,
-      chainId: params.chainId,
-      recipientPublicKey,
-    },
-    params.signingKey,
-  )
-
-  // Build the RPC request matching gateway's UploadEncryptedDataRequest
-  const rpcRequest: UploadEncryptedDataRpcRequest = {
-    sender_address: params.senderAddress,
-    policy_client: params.policyClient,
-    envelope: JSON.stringify(envelope),
-    signature,
-    sender_pubkey: senderPublicKey,
-    ttl: params.ttl ?? null,
+): Promise<UploadIdentityEncryptedResponse> {
+  const rpcRequest: UploadIdentityEncryptedRpcRequest = {
+    identity_owner: params.identityOwner,
+    identity_owner_sig: params.identityOwnerSig,
+    envelope: params.envelope,
+    identity_domain: params.identityDomain,
     chain_id: params.chainId,
   }
 
-  return sendEnvelopeToGateway(chainId, apiKey, rpcRequest, gatewayApiUrlOverride)
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadIdentityEncrypted, rpcRequest, apiKey)
+  if (res.error) throw res.error
+  return res.result as UploadIdentityEncryptedResponse
 }
 
 /**
- * Upload a pre-built SecureEnvelope to the gateway.
+ * Fetch encrypted identity data by its content-hash reference ID.
  *
- * Use this when you've already created an envelope via createSecureEnvelope
- * and want to control the upload separately — e.g., offline-first apps that
- * encrypt now and upload later, or batching multiple envelopes.
+ * Used to resolve a data_ref_id (stored on-chain in IdentityRegistry) back to
+ * the actual encrypted data blob (stored off-chain in the gateway).
  */
-export async function uploadSecureEnvelope(
+export async function getIdentityEncrypted(
   chainId: number,
   apiKey: string,
-  params: UploadSecureEnvelopeParams,
+  dataRefId: string,
   gatewayApiUrlOverride?: string,
-): Promise<UploadEncryptedDataResponse> {
-  const { envelope, signature, senderPublicKey } = params.envelopeResult
-
-  const rpcRequest: UploadEncryptedDataRpcRequest = {
-    sender_address: params.senderAddress,
-    policy_client: envelope.policy_client,
-    envelope: JSON.stringify(envelope),
-    signature,
-    sender_pubkey: senderPublicKey,
-    ttl: params.ttl ?? null,
-    chain_id: envelope.chain_id,
-  }
-
-  return sendEnvelopeToGateway(chainId, apiKey, rpcRequest, gatewayApiUrlOverride)
+): Promise<GetIdentityEncryptedResult> {
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getIdentityEncrypted, { data_ref_id: dataRefId }, apiKey)
+  if (res.error) throw res.error
+  return res.result as GetIdentityEncryptedResult
 }
 
-/** Shared upload logic for both uploadEncryptedData and uploadSecureEnvelope. */
-async function sendEnvelopeToGateway(
+/**
+ * Fetch the gateway's X25519 HPKE public key for WASM secrets encryption.
+ *
+ * In threshold DKG mode, this returns a different key than getPrivacyPublicKey.
+ * Use this key when encrypting secrets via storeEncryptedSecrets.
+ */
+export async function getSecretsPublicKey(
   chainId: number,
   apiKey: string,
-  rpcRequest: UploadEncryptedDataRpcRequest,
   gatewayApiUrlOverride?: string,
-): Promise<UploadEncryptedDataResponse> {
+): Promise<SecretsPublicKeyResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadEncryptedData, rpcRequest, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getSecretsPublicKey, {}, apiKey)
   if (res.error) throw res.error
-  return res.result as UploadEncryptedDataResponse
+  return res.result as SecretsPublicKeyResponse
 }
 
 /**
@@ -304,16 +284,13 @@ export async function storeEncryptedSecrets(
   params: StoreEncryptedSecretsParams,
   gatewayApiUrlOverride?: string,
 ): Promise<StoreEncryptedSecretsResponse> {
-  // Resolve the gateway's HPKE public key if not provided
+  // Secrets use a different HPKE key than privacy data (may differ in threshold DKG mode)
   let recipientPublicKey = params.recipientPublicKey
   if (!recipientPublicKey) {
-    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    const keyResponse = await getSecretsPublicKey(chainId, apiKey, gatewayApiUrlOverride)
     recipientPublicKey = keyResponse.public_key
   }
 
-  // Generate an ephemeral Ed25519 key for envelope signing.
-  // The gateway does not verify this signature for secrets — it validates
-  // ownership via on-chain getOwner() + API key instead.
   const ephemeralKey = new Uint8Array(32)
   crypto.getRandomValues(ephemeralKey)
 
@@ -327,8 +304,7 @@ export async function storeEncryptedSecrets(
     ephemeralKey,
   )
 
-  // Zeroize the ephemeral signing key
-  ephemeralKey.fill(0)
+  zeroize(ephemeralKey)
 
   const rpcRequest: StoreEncryptedSecretsRpcRequest = {
     policy_client: params.policyClient,
@@ -346,9 +322,9 @@ export async function storeEncryptedSecrets(
 /**
  * Compute dual Ed25519 signatures for privacy-enabled task creation.
  *
- * The gateway validates these signatures when `encrypted_data_refs` are present
- * in a `newt_createTask` request. This prevents unauthorized use of encrypted
- * data references across policy contexts.
+ * Dual signatures prevent the app from forging user authorization, and ensure
+ * the app explicitly acknowledges which encrypted data refs are being used.
+ * The gateway validates both when `encrypted_data_refs` are present in `newt_createTask`.
  *
  * Signature scheme (must match `crates/gateway/src/processor/privacy_auth.rs`):
  * - User signs: keccak256(abi.encodePacked(policy_client, intent_hash, ref_id_1, ref_id_2, ...))
@@ -418,8 +394,8 @@ export async function uploadConfidentialData(
     recipientPublicKey = keyResponse.public_key
   }
 
-  // Generate an ephemeral Ed25519 key for envelope signing.
-  // The gateway validates ownership via on-chain provider registration, not this signature.
+  // Ephemeral Ed25519 key for envelope signing (not used for auth).
+  // Auth: gateway validates provider via on-chain ConfidentialDataRegistry, not this signature.
   const ephemeralKey = new Uint8Array(32)
   crypto.getRandomValues(ephemeralKey)
 

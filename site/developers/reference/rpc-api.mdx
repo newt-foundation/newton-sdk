@@ -236,6 +236,9 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
 | `timeout` | `Number` | No | Timeout in seconds (default: 30) |
+| `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
+| `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
+
 #### Returns
 
 | Field | Type | Description |
@@ -247,6 +250,8 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 | `task_response` | `Object` | Full TaskResponse struct from aggregation (if success) |
 | `reference_block` | `Number` | Block number when response was prepared (if success) |
 | `expiration` | `Number` | Expiration block: `reference_block + policyConfig.expireAfter` |
+| `validate_calldata` | `String` | ABI-encoded calldata for `validateAttestationDirect` (present when `include_validate_calldata` was true) |
+| `operator_errors` | `Array` | Per-operator error details with `retryable` classification (present on quorum failure) |
 | `error` | `String` | Error message (if failed) |
 | `timestamp` | `Number` | Unix timestamp |
 
@@ -353,6 +358,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
+| `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 
 #### Returns
 
@@ -673,6 +679,7 @@ Simulates PolicyData WASM execution with caller-provided secrets. Use this endpo
 | `policy_data_address` | `Address` | Yes | PolicyData contract address |
 | `secrets` | `String` | No | Base64-encoded encrypted ciphertext (for testing) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM arguments |
+| `chain_id` | `Number` | Yes | Chain ID for RPC provider resolution |
 
 #### Returns
 
@@ -1328,6 +1335,19 @@ flowchart TD
 
 ---
 
+### Two HPKE Public Key Domains
+
+Newton exposes two distinct HPKE public key endpoints. Using the wrong one causes silent decryption failures in threshold mode.
+
+| Endpoint | Use For | Key Behavior |
+|----------|---------|--------------|
+| `newt_getPrivacyPublicKey` | Identity data, confidential data, ephemeral data | Threshold master public key (MPK) when DKG is active; otherwise individual operator key |
+| `newt_getSecretsPublicKey` | WASM secrets (API keys, config for data providers) | Always the individual operator's key |
+
+**Why two keys?** WASM secrets are decrypted during the Prepare phase when operators fetch policy data independently. In threshold mode, the threshold MPK cannot be decrypted until the Commit phase (after partial DH outputs are collected). Secrets encrypted to the threshold MPK would be undecryptable during Prepare, deadlocking the protocol. `newt_getSecretsPublicKey` always returns the individual operator's key to avoid this.
+
+In single-node deployments, both keys may be identical. In production threshold DKG deployments, they differ.
+
 ### newt_getPrivacyPublicKey
 
 <Note>This method is under active development and not yet available in production. The API surface may change.</Note>
@@ -1377,42 +1397,23 @@ See [Privacy Layer](/developers/concepts/privacy-layer) for details on HPKE encr
 
 ---
 
-### newt_uploadEncryptedData
+### newt_getSecretsPublicKey
 
-<Note>This method is under active development and not yet available in production. The API surface may change.</Note>
+Retrieves the HPKE public key used for encrypting WASM secrets. In threshold DKG mode, this may differ from the privacy public key returned by `newt_getPrivacyPublicKey`.
 
-Uploads HPKE-encrypted data for use during privacy-enabled task evaluation. Data is wrapped in a `SecureEnvelope` that operators threshold-decrypt during evaluation.
-
-**Permission:** `RpcWrite`
+**Permission:** `RpcRead`
 
 #### Parameters
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `sender_address` | `Address` | Yes | End user's EVM address (intent sender) |
-| `policy_client` | `Address` | Yes | PolicyClient contract address this data is scoped to |
-| `envelope` | `String` | Yes | Serialized `SecureEnvelope` JSON string |
-| `signature` | `String` | Yes | Ed25519 signature over the envelope bytes (hex, 0x-prefixed) |
-| `recipient_pubkey` | `String` | Yes | System's Ed25519 public key (hex, 0x-prefixed) |
-| `ttl` | `Number` | No | Time-to-live in seconds (data expires after this duration) |
-
-**SecureEnvelope Structure** (serialized as JSON string in `envelope`):
-
-| Field | Type | Description |
-|---|---|---|
-| `enc` | `String` | Hex-encoded HPKE encapsulated key (32-byte X25519 ephemeral public key) |
-| `ciphertext` | `String` | Hex-encoded HPKE ciphertext including ChaCha20-Poly1305 tag |
-| `policy_client` | `String` | 0x-prefixed EVM address of the target PolicyClient |
-| `chain_id` | `Number` | Chain ID for context binding |
-| `recipient_pubkey` | `String` | Hex-encoded recipient Ed25519 public key |
+None.
 
 #### Returns
 
 | Field | Type | Description |
 |---|---|---|
-| `success` | `Boolean` | Whether upload succeeded |
-| `data_ref_id` | `String` | UUID reference for use in `newt_createTask` |
-| `error` | `String` | Error message (on failure, otherwise `null`) |
+| `public_key` | `String` | Hex-encoded X25519 public key (32 bytes) |
+| `key_type` | `String` | Key type identifier (`"x25519"`) |
+| `encryption_suite` | `String` | Full cipher suite identifier |
 
 #### Example
 
@@ -1420,88 +1421,68 @@ Uploads HPKE-encrypted data for use during privacy-enabled task evaluation. Data
 ```json Request
 {
   "jsonrpc": "2.0",
-  "method": "newt_uploadEncryptedData",
-  "params": {
-    "sender_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "policy_client": "0x1234567890123456789012345678901234567890",
-    "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
-    "signature": "0x<64-byte Ed25519 signature hex>",
-    "recipient_pubkey": "0x<32-byte Ed25519 public key hex>",
-    "ttl": 3600
-  },
+  "method": "newt_getSecretsPublicKey",
+  "params": {},
   "id": 1
 }
 ```
 
-```json Response (Success)
+```json Response
 {
   "jsonrpc": "2.0",
   "result": {
-    "success": true,
-    "data_ref_id": "550e8400-e29b-41d4-a716-446655440000",
-    "error": null
+    "public_key": "<hex-encoded X25519 public key>",
+    "key_type": "x25519",
+    "encryption_suite": "HPKE-Base-X25519-HKDF-SHA256-ChaCha20Poly1305"
   },
   "id": 1
 }
 ```
 </CodeGroup>
 
-See [Privacy Layer](/developers/concepts/privacy-layer) for the full encryption flow.
+<Note>
+Use `newt_getSecretsPublicKey` when encrypting WASM secrets via `storeEncryptedSecrets`. Use `newt_getPrivacyPublicKey` for identity and confidential data encryption.
+</Note>
 
 ---
 
-### newt_sendIdentityEncrypted
+### newt_uploadIdentityEncrypted
 
-{/* TODO (HPKE migration): This RPC method will be deprecated when identity data moves to
-    off-chain HPKE storage. Post-migration, identity data is encrypted with HPKE and uploaded
-    via newt_uploadIdentityEncrypted (returns { data_ref_id, gateway_signature, deadline }),
-    with only a string data_ref_id stored on-chain via registerIdentityData.
-    The Newton SDK does not wrap this RPC method — it is called directly by the newton-identity popup. */}
+Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encrypted envelope and returns a `data_ref_id`, gateway EIP-712 signature, and deadline for the on-chain `registerIdentityData` call.
 
-Submit EIP-712 signed encrypted identity data to the on-chain IdentityRegistry. The gateway validates the signature, then submits the data to the contract.
+**Permission:** `RpcWrite`
 
-**Permission level:** `RpcWrite`
-
-**Parameters:**
+#### Parameters
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `identity_owner` | `Address` | Yes | The identity owner's address (must match the EIP-712 signer) |
-| `identity_owner_sig` | `Hex` | Yes | EIP-712 signature over `EncryptedIdentityData { string data }` |
-| `identity_data` | `object` | Yes | Object with a single `data` field containing the encrypted identity blob |
-| `identity_data.data` | `string` | Yes | The encrypted identity data string |
-| `identity_domain` | `Hex (bytes32)` | Yes | Identity domain hash — `keccak256` of the domain name (e.g., `keccak256("kyc")`) |
+|---|---|---|---|
+| `identity_owner` | `Address` | Yes | The identity owner's address |
+| `identity_owner_sig` | `String` | Yes | EIP-712 signature of the SecureEnvelope JSON by the identity owner |
+| `envelope` | `String` | Yes | JSON-serialized HPKE SecureEnvelope |
+| `identity_domain` | `Hex (bytes32)` | Yes | Identity domain hash (e.g., `keccak256("kyc")`) |
+| `chain_id` | `Number` | Yes | Chain ID the identity registry lives on |
 
-The EIP-712 domain used for signing:
+#### Returns
 
-```json
-{
-  "name": "IdentityRegistry",
-  "version": "1",
-  "chainId": "<chain_id>",
-  "verifyingContract": "<IdentityRegistry_address>"
-}
-```
+| Field | Type | Description |
+|---|---|---|
+| `data_ref_id` | `String` | Content-hash data reference ID: `keccak256(envelope_json_bytes)` |
+| `gateway_signature` | `String` | Gateway EIP-712 signature for `registerIdentityData` on-chain call |
+| `deadline` | `Number` | Signature expiration (unix timestamp) for `registerIdentityData` |
 
-The EIP-712 struct type:
-
-```
-EncryptedIdentityData(string data)
-```
+#### Example
 
 <CodeGroup>
-
 ```json Request
 {
   "jsonrpc": "2.0",
-  "method": "newt_sendIdentityEncrypted",
+  "method": "newt_uploadIdentityEncrypted",
   "params": {
     "identity_owner": "0x1234567890abcdef1234567890abcdef12345678",
     "identity_owner_sig": "0x...",
-    "identity_data": {
-      "data": "encrypted-blob-string"
-    },
-    "identity_domain": "0x..."
+    "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
+    "identity_domain": "0x...",
+    "chain_id": 11155111
   },
   "id": 1
 }
@@ -1511,26 +1492,65 @@ EncryptedIdentityData(string data)
 {
   "jsonrpc": "2.0",
   "result": {
-    "inclusion_tx": "0xabc123..."
+    "data_ref_id": "0xabcdef1234567890...",
+    "gateway_signature": "0x...",
+    "deadline": 1705127056
+  },
+  "id": 1
+}
+```
+</CodeGroup>
+
+After receiving the response, call `registerIdentityData` on the IdentityRegistry contract with the `data_ref_id`, `gateway_signature`, and `deadline`.
+
+---
+
+### newt_getIdentityEncrypted
+
+Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the actual encrypted data blob (stored off-chain in the gateway).
+
+**Permission:** `RpcRead`
+
+#### Parameters
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `data_ref_id` | `String` | Yes | Content-hash data reference ID |
+
+#### Returns
+
+| Field | Type | Description |
+|---|---|---|
+| `envelope` | `String` | The HPKE-encrypted identity data as a SecureEnvelope JSON string |
+| `identity_domain` | `String` | The identity domain this data was registered under |
+| `identity_owner` | `String` | The identity owner address |
+
+#### Example
+
+<CodeGroup>
+```json Request
+{
+  "jsonrpc": "2.0",
+  "method": "newt_getIdentityEncrypted",
+  "params": {
+    "data_ref_id": "0xabcdef1234567890..."
   },
   "id": 1
 }
 ```
 
+```json Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\"}",
+    "identity_domain": "0x...",
+    "identity_owner": "0x1234567890abcdef1234567890abcdef12345678"
+  },
+  "id": 1
+}
+```
 </CodeGroup>
-
-**Response fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `inclusion_tx` | `string` | Transaction hash of the on-chain inclusion |
-
-**Errors:**
-
-- Authentication failure if the recovered signer does not match `identity_owner`
-- Authorization failure if the API key lacks `RpcWrite` permission
-
-See [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for writing policies that check identity data.
 
 ---
 

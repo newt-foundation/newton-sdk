@@ -2,6 +2,8 @@ import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, type TaskResponded
 import { GATEWAY_METHODS } from '@core/const'
 import {
   type GatewayCreateTaskResult,
+  type RegisterWebhookParams,
+  type RegisterWebhookResult,
   type SimulatePolicyDataParams,
   type SimulatePolicyDataResult,
   type SimulatePolicyDataWithClientParams,
@@ -16,6 +18,7 @@ import {
   type TaskId,
   type TaskResponseResult,
   TaskStatus,
+  type UnregisterWebhookResult,
 } from '@core/types/task'
 import { AvsHttpService } from '@core/utils/https'
 import { removeHexPrefix, sanitizeIntentForRequest } from '@core/utils/intent'
@@ -252,6 +255,8 @@ async function submitEvaluationRequest(
     app_signature: args.appSignature ?? null,
     user_pubkey: args.userPublicKey ?? null,
     app_pubkey: args.appPublicKey ?? null,
+    proof_cid: args.proofCid ?? null,
+    include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -326,6 +331,8 @@ async function evaluateIntentDirect(
     app_signature: args.appSignature ?? null,
     user_pubkey: args.userPublicKey ?? null,
     app_pubkey: args.appPublicKey ?? null,
+    proof_cid: args.proofCid ?? null,
+    include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
@@ -391,6 +398,7 @@ async function submitIntentAndSubscribe(
     app_signature: args.appSignature ?? null,
     user_pubkey: args.userPublicKey ?? null,
     app_pubkey: args.appPublicKey ?? null,
+    proof_cid: args.proofCid ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)
@@ -480,6 +488,7 @@ async function simulatePolicyData(
     policy_data_address: args.policyDataAddress,
     secrets: args.secrets,
     wasm_args: args.wasmArgs,
+    chain_id: args.chainId,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey)
   if (res.error) throw res.error
@@ -507,6 +516,42 @@ async function simulatePolicyDataWithClient(
   return res.result as SimulatePolicyDataWithClientResult
 }
 
+/**
+ * Register a webhook for task failure notifications (newt_registerWebhook).
+ */
+async function registerWebhook(
+  chainId: number,
+  apiKey: string,
+  params: RegisterWebhookParams,
+  gatewayApiUrlOverride?: string,
+): Promise<RegisterWebhookResult> {
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const requestBody = {
+    url: params.url,
+    secret: params.secret ?? undefined,
+    timeout_seconds: params.timeoutSeconds ?? 10,
+    max_retries: params.maxRetries ?? 3,
+    failure_types: params.failureTypes ?? undefined,
+  }
+  const res = await avsHttpService.Post(GATEWAY_METHODS.registerWebhook, requestBody, apiKey)
+  if (res.error) throw res.error
+  return res.result as RegisterWebhookResult
+}
+
+/**
+ * Unregister the webhook for the API key (newt_unregisterWebhook).
+ */
+async function unregisterWebhook(
+  chainId: number,
+  apiKey: string,
+  gatewayApiUrlOverride?: string,
+): Promise<UnregisterWebhookResult> {
+  const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.unregisterWebhook, {}, apiKey)
+  if (res.error) throw res.error
+  return res.result as UnregisterWebhookResult
+}
+
 export {
   submitEvaluationRequest,
   waitForTaskResponded,
@@ -518,4 +563,6 @@ export {
   simulatePolicy,
   simulatePolicyData,
   simulatePolicyDataWithClient,
+  registerWebhook,
+  unregisterWebhook,
 }

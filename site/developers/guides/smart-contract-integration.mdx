@@ -362,6 +362,12 @@ contract DeployScript is Script {
 The Task Manager address **must** be `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address — using any other causes `InvalidAttestation`.
 </Warning>
 
+### Initialization Gotchas
+
+**`_setPolicyAddress()` vs `setPolicy()`**: `_setPolicyAddress()` stores the policy address but does NOT register with the Policy contract and does NOT return a `policyId`. You must call `setPolicy()` (or `_setPolicy()`) in a separate transaction after deployment to get a `policyId`. If you forget this step, `policyId == 0` and all attestation validations silently fail with no helpful error message.
+
+**`expireAfter` must be non-zero**: `NewtonPolicyData.initialize()` reverts with `InvalidExpireAfter()` if `expireAfter == 0`. A zero value creates attestations where `expiration == reference_block`, making on-chain execution impossible — every call reverts with `AttestationExpired` because `block.number >= expiration` is always true by the time the tx mines. Use at least 150 blocks (~5 minutes on Base) for testnets.
+
 Deploy:
 
 ```bash

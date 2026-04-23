@@ -42,7 +42,8 @@ foundryup
 ### Install `newton-cli`
 
 ```bash
-cargo install newton-cli@0.1.35
+curl -L cli.newton.xyz | sh
+newtup
 newton-cli --help
 ```
 

@@ -45,7 +45,7 @@ Install only what you need for the steps you plan to follow:
 | **Newton API key**                     | 4–5   | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
 | **Rust + Cargo**                       | 1–3   | Building and running `newton-cli`                                                      |
-| **newton-cli 0.1.35**                  | 3     | Uploading policy files, generating CIDs, deploying policies                            |
+| **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 | **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
 <Accordion title="Install all tooling (Steps 1–5)">
@@ -60,8 +60,9 @@ Install only what you need for the steps you plan to follow:
   curl -L https://foundry.paradigm.xyz | bash
   foundryup
 
-  # newton-cli
-  cargo install newton-cli@0.1.35
+  # newton-cli (via newtup version manager)
+  curl -L cli.newton.xyz | sh
+  newtup
 
   # jco (WASM componentization)
   npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js

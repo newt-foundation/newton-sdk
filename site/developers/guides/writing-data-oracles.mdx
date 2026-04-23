@@ -87,6 +87,10 @@ export function run(wasm_args) {
 The `httpFetch` function is provided by the Newton WASM runtime — you do not need to import it. It maps to the `http.fetch` function defined in the WIT interface.
 </Note>
 
+<Warning>
+**WASM sandbox network restrictions**: Newton operators execute WASM in sandboxed Wasmtime. Private IPs (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`), and link-local (`169.254.0.0/16`) are blocked. Any HTTP endpoint your WASM calls must be on a public URL.
+</Warning>
+
 ## Build WASM
 
 Compile the JavaScript into a WASM component using `jco`:

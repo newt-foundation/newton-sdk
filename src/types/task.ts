@@ -30,6 +30,10 @@ export interface SubmitEvaluationRequestParams {
   userPublicKey?: string
   /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
   appPublicKey?: string
+  /** IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation */
+  proofCid?: string
+  /** Include ABI-encoded validateAttestationDirect calldata in the response */
+  includeValidateCalldata?: boolean
 }
 
 export interface SubmitIntentResult {
@@ -199,10 +203,43 @@ export interface SimulatePolicyResult {
   } | null
 }
 
+export type TaskFailureType =
+  | 'channel_error'
+  | 'timeout'
+  | 'quorum_not_reached'
+  | 'onchain_submission_failed'
+  | 'policy_evaluation_failed'
+  | 'signature_verification_failed'
+  | 'internal_error'
+
+export interface RegisterWebhookParams {
+  /** Webhook URL to receive notifications (must be HTTPS, or http://localhost for testing) */
+  url: string
+  /** Optional HMAC secret for payload signing (recommended) */
+  secret?: string
+  /** Request timeout in seconds (default: 10) */
+  timeoutSeconds?: number
+  /** Maximum retry attempts (default: 3) */
+  maxRetries?: number
+  /** Failure types to notify about (default: all) */
+  failureTypes?: TaskFailureType[]
+}
+
+export interface RegisterWebhookResult {
+  success: boolean
+  message: string
+}
+
+export interface UnregisterWebhookResult {
+  success: boolean
+  message: string
+}
+
 export interface SimulatePolicyDataParams {
   policyDataAddress: Address
   secrets?: string
   wasmArgs?: Hex
+  chainId: number
 }
 
 export interface SimulatePolicyDataResult {
@@ -231,9 +268,18 @@ export interface SimulatePolicyDataWithClientResult {
   error: string | null
 }
 
+export interface OperatorError {
+  operator_address: Address
+  operator_id: Hex
+  error_code: number
+  message: string
+  timestamp: string
+  retryable: boolean
+}
+
 export interface GatewayCreateTaskResult {
   aggregation_response: AggregationResponse
-  error: null
+  error: string | null
   expiration: number
   reference_block: number
   status: 'success' | 'failed'
@@ -270,5 +316,9 @@ export interface GatewayCreateTaskResult {
     task_id: Hex
   }
   signature_data: Hex
+  /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
+  validate_calldata?: string
+  /** Per-operator error details when quorum fails */
+  operator_errors?: OperatorError[]
   timestamp: number
 }

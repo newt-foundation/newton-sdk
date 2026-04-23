@@ -7,7 +7,7 @@ This guide walks through deploying your policy files to IPFS and registering the
 
 ## Prerequisites
 
-- **newton-cli** installed: `cargo install newton-cli@0.1.35`
+- **newton-cli** installed: `curl -L cli.newton.xyz | sh && newtup` (see [CLI Reference](/developers/reference/command-line-tool#installation))
 - **Pinata account** for IPFS pinning ([pinata.cloud](https://pinata.cloud))
 - **Sepolia ETH** in your deployer wallet
 - Completed [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies)
@@ -103,6 +103,22 @@ newton-cli policy-client set-policy-params \
   --policy-params policy_params.json \
   --expire-after 1000
 ```
+
+<Warning>
+**`set-policy-params` changes the `policyId`.** Every call internally calls `setPolicy(PolicyConfig)` which re-registers with the Policy contract and returns a new `policyId`. Any previously recorded `policyId` becomes stale. Always verify the new `policyId` on-chain after updating params.
+</Warning>
+
+### Policy Params Format
+
+On-chain policy params must be **flat JSON** matching your `params_schema.json`. The gateway reads these bytes directly and passes them to Rego as `data.params`. Do not use the nested CLI format.
+
+| File | Purpose | Use With |
+|------|---------|----------|
+| `policy_params.json` | Template with `VAULT_ADDRESS_PLACEHOLDER` | Never use directly |
+| `policy_params_live.json` | Nested CLI format with real vault address | Reference only |
+| `policy_params_onchain.json` | Flat JSON matching the params schema | `set-policy-params` |
+
+If on-chain params are in the nested CLI format instead of flat JSON, policy evaluation fails with `Missing required property` during schema validation.
 
 ## Step 7: Verify
 

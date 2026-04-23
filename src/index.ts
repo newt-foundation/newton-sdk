@@ -1,16 +1,18 @@
 import type { Address, Hex, PublicClient, WalletClient } from 'viem'
-import { baseSepolia, mainnet, sepolia } from 'viem/chains'
+import { base, baseSepolia, mainnet, sepolia } from 'viem/chains'
 import {
   type PendingTaskBuilder,
   evaluateIntentDirect,
   getTaskResponseHash,
   getTaskStatus,
+  registerWebhook,
   simulatePolicy,
   simulatePolicyData,
   simulatePolicyDataWithClient,
   simulateTask,
   submitEvaluationRequest,
   submitIntentAndSubscribe,
+  unregisterWebhook,
   waitForTaskResponded,
 } from './modules/avs'
 import {
@@ -28,12 +30,13 @@ import {
   createSecureEnvelope,
   generateSigningKeyPair,
   getConfidentialData,
+  getIdentityEncrypted,
   getPrivacyPublicKey,
+  getSecretsPublicKey,
   signPrivacyAuthorization,
   storeEncryptedSecrets,
   uploadConfidentialData,
-  uploadEncryptedData,
-  uploadSecureEnvelope,
+  uploadIdentityEncrypted,
 } from './modules/privacy'
 import type {
   LinkIdentityAsSignerAndUserParams,
@@ -49,19 +52,22 @@ import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
   GetConfidentialDataResult,
+  GetIdentityEncryptedResult,
   PrivacyAuthorizationResult,
   PrivacyPublicKeyResponse,
+  SecretsPublicKeyResponse,
   SecureEnvelopeResult,
   SignPrivacyAuthorizationParams,
   StoreEncryptedSecretsParams,
   StoreEncryptedSecretsResponse,
   UploadConfidentialDataParams,
   UploadConfidentialDataResult,
-  UploadEncryptedDataParams,
-  UploadEncryptedDataResponse,
-  UploadSecureEnvelopeParams,
+  UploadIdentityEncryptedParams,
+  UploadIdentityEncryptedResponse,
 } from './types/privacy'
 import type {
+  RegisterWebhookParams,
+  RegisterWebhookResult,
   SimulatePolicyDataParams,
   SimulatePolicyDataResult,
   SimulatePolicyDataWithClientParams,
@@ -76,6 +82,7 @@ import type {
   TaskId,
   TaskResponseResult,
   TaskStatus,
+  UnregisterWebhookResult,
 } from './types/task'
 
 import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
@@ -92,7 +99,7 @@ interface SdkOverrides {
   identityRegistry?: Address
 }
 
-const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id]
+const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id]
 
 const newtonWalletClientActions =
   (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
@@ -285,14 +292,17 @@ const newtonWalletClientActions =
       getPrivacyPublicKey: (): Promise<PrivacyPublicKeyResponse> =>
         getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
 
+      getSecretsPublicKey: (): Promise<SecretsPublicKeyResponse> =>
+        getSecretsPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
+
       createSecureEnvelope: (args: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult> =>
         createSecureEnvelope(args, signingKey),
 
-      uploadEncryptedData: (args: UploadEncryptedDataParams): Promise<UploadEncryptedDataResponse> =>
-        uploadEncryptedData(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+      uploadIdentityEncrypted: (args: UploadIdentityEncryptedParams): Promise<UploadIdentityEncryptedResponse> =>
+        uploadIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
 
-      uploadSecureEnvelope: (args: UploadSecureEnvelopeParams): Promise<UploadEncryptedDataResponse> =>
-        uploadSecureEnvelope(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+      getIdentityEncrypted: (args: { dataRefId: string }): Promise<GetIdentityEncryptedResult> =>
+        getIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, apiKey, args.dataRefId, gatewayApiUrlOverride),
 
       generateSigningKeyPair: (): Ed25519KeyPair => generateSigningKeyPair(),
 
@@ -307,6 +317,13 @@ const newtonWalletClientActions =
 
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
+
+      // Webhook functions
+      registerWebhook: (args: RegisterWebhookParams): Promise<RegisterWebhookResult> =>
+        registerWebhook(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+
+      unregisterWebhook: (): Promise<UnregisterWebhookResult> =>
+        unregisterWebhook(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
 
       // Identity data registration (on-chain with gateway co-signature)
       registerIdentityData: (args: RegisterIdentityDataParams): Promise<Hex> =>
@@ -557,10 +574,12 @@ export {
   createSecureEnvelope,
   generateSigningKeyPair,
   getConfidentialData,
+  getIdentityEncrypted,
   getPrivacyPublicKey,
+  getSecretsPublicKey,
   signPrivacyAuthorization,
   storeEncryptedSecrets,
   uploadConfidentialData,
-  uploadEncryptedData,
-  uploadSecureEnvelope,
+  uploadIdentityEncrypted,
 }
+export { registerWebhook, unregisterWebhook }

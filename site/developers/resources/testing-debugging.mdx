@@ -121,6 +121,30 @@ Test a WASM oracle execution via the Gateway:
   </Tab>
 </Tabs>
 
+## Simulation Endpoints Comparison
+
+Newton provides four distinct simulation endpoints for different phases of policy development:
+
+| Endpoint | Purpose | Data Source | Operators | Use Case |
+|----------|---------|-------------|-----------|----------|
+| `newt_simulatePolicyData` | Test WASM plugin execution | Caller provides secrets directly | Yes (delegation) | Iterate WASM before uploading secrets |
+| `newt_simulatePolicyDataWithClient` | Verify stored secrets work | Reads secrets from gateway DB | Yes (delegation) | Verify uploaded secrets |
+| `newt_simulatePolicy` | Full Rego + WASM evaluation | Delegates to operators for full pipeline | Yes (full pipeline) | Final testing before deployment |
+| `newt_simulateTask` | Replay with pre-assembled data | Uses provided PolicyTaskData directly | No (local only) | Replay historical tasks, debugging |
+
+`simulatePolicy` delegates to an operator via `broadcast_first_success` — it runs the full data pipeline (fetches WASM from IPFS, decrypts stored secrets, executes each PolicyData plugin, merges outputs, evaluates Rego). `simulateTask` takes pre-assembled `PolicyTaskData` and evaluates Rego against it locally — the data pipeline is skipped because data is already assembled.
+
+**Recommended development workflow:**
+
+1. Deploy PolicyData contracts
+2. Test WASM locally with `newt_simulatePolicyData`
+3. Upload secrets via `newt_storeEncryptedSecrets`
+4. Verify stored secrets with `newt_simulatePolicyDataWithClient`
+5. Test full policy end-to-end with `newt_simulatePolicy`
+6. Deploy Policy on-chain
+7. Submit production tasks with `newt_createTask` / `newt_sendTask`
+8. Debug/replay tasks with `newt_simulateTask`
+
 ## Newton Explorer
 
 The [Newton Explorer](/developers/resources/newton-explorer) provides a visual interface for inspecting tasks, attestations, and policy evaluations on-chain. Use it to:
