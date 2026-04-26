@@ -3,8 +3,6 @@
 Target: `https://x.com/realsigridjin`
 Mode: safe public/no-auth validation. No cookies, bearer tokens, or user credentials were supplied or logged.
 
-한국어 요약: 공개 페이지에 대해 안전한 범위에서 실제 접근과 MPC-TLS 시도를 수행했습니다. 로그인 우회나 비밀 값 사용은 하지 않았습니다.
-
 ## Exact steps executed
 
 ### 1. Tutorial fixture validation

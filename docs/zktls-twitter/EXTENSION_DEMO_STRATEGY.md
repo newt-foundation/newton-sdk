@@ -2,8 +2,6 @@
 
 Reference reviewed: `newt-foundation/newton-tlsn-extension-demo`.
 
-한국어 요약: 현재 문서/스크립트는 “proof CID를 이미 가지고 있다”는 가정의 SDK/Gateway 데모입니다. extension demo는 사용자가 브라우저에서 x.com에 로그인한 상태로 실제 증명을 만드는 UX를 담당합니다. 외부 사용자 튜토리얼은 두 흐름을 연결해야 합니다.
-
 ## What the extension demo adds
 
 The extension demo provides the missing first-user UX layer:

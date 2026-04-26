@@ -2,8 +2,6 @@
 
 Goal: generate and inspect a valid Newton `newt_createTask` payload that carries a TLSNotary proof CID for a Twitter/X follower policy.
 
-한국어 요약: 10분 안에 “실제 제출 전 요청 JSON이 어떻게 생겼는지” 확인하는 경로입니다. 로컬 게이트웨이나 Docker는 필요 없습니다.
-
 ## Prerequisites
 
 - Git checkout of this repository
@@ -44,8 +42,6 @@ What to look for:
 - `params[0].use_two_phase` is `true`
 - `params[0].wasm_args` is a hex-encoded JSON object with `min_followers` and `twitter_username`
 
-한국어 체크포인트: `proof_cid`가 IPFS CID이고, `wasm_args`는 정책 파라미터를 hex로 인코딩한 값입니다.
-
 ## 3. Compare SDK-style and raw JSON-RPC examples
 
 ```bash
@@ -73,8 +69,6 @@ The dry-run payload above uses a placeholder CID. For a real external-user proof
 2. Use its Newton plugin to open x.com and generate a TLSNotary proof.
 3. Store the proof through the sidecar/verifier and copy the returned CID.
 4. Re-run this quickstart with `--proof-cid <REAL_CID>` and `--twitter-username realsigridjin`.
-
-한국어: 실제 증명은 브라우저 확장 프로그램에서 만들고, 이 저장소의 스크립트는 CID를 Newton Gateway 요청에 넣는 역할입니다.
 
 ## 5. Optional: run policy-only tests
 

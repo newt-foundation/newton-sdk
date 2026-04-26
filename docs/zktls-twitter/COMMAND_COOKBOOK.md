@@ -2,8 +2,6 @@
 
 Copy-paste commands for common tutorial tasks.
 
-한국어 요약: 자주 쓰는 명령만 모았습니다. 값은 필요에 맞게 바꿔서 실행하세요.
-
 ## Validate tutorial files
 
 ```bash

@@ -2,8 +2,6 @@
 
 Goal: run the local Newton gateway/operator stack, then submit a zkTLS-shaped Twitter/X task payload to the local gateway.
 
-한국어 요약: Docker Compose로 로컬 게이트웨이/오퍼레이터 스택을 띄우고, quickstart에서 만든 zkTLS 요청을 로컬 게이트웨이에 보내는 절차입니다.
-
 > First build can take a long time. Budget 20-45 minutes on a fresh machine.
 
 ## Prerequisites
