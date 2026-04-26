@@ -2,7 +2,7 @@
 
 Goal: make Newton zkTLS understandable to a first-time external user in under five minutes.
 
-한국어 요약: 데모 UX는 “증명 생성 → CID → Newton 제출 → 검증 결과” 네 단계를 화면에 분명히 보여주면 됩니다.
+Summary: the demo UX should make four steps clear on screen: proof generation, CID handoff, Newton submission, and verification result.
 
 ## Recommended demo screen flow
 
@@ -37,11 +37,11 @@ Use plain language:
 - “zkTLS” → “cryptographic proof of a real HTTPS response”
 - “Operator verification” → “Newton operators independently check the proof”
 
-Korean-friendly wording:
+Plain-language wording:
 
-- zkTLS: “HTTPS 응답에 대한 암호학적 증명”
-- proof CID: “IPFS에 저장된 증명 파일 주소”
-- operator: “검증 노드 / 오퍼레이터”
+- zkTLS: “cryptographic proof of a real HTTPS response”
+- proof CID: “IPFS address for the stored proof file”
+- operator: “verification node that checks the proof”
 
 ## Error UX checklist
 

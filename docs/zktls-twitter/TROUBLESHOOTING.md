@@ -1,6 +1,6 @@
 # zkTLS Twitter/X Troubleshooting Guide
 
-한국어 요약: 가장 자주 막히는 지점과 바로 확인할 명령을 정리했습니다.
+Summary: this guide lists the most common failure points and the quickest commands to inspect them.
 
 ## 1. `proof_cid` is missing from task payload
 

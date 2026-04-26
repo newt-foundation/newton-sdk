@@ -2,7 +2,7 @@
 
 This pack is for first-time external builders who want to understand and demo Newton's zkTLS flow for a Twitter/X follower-count policy.
 
-한국어 안내: 각 문서는 영어를 기본으로 쓰되, 핵심 문장에는 짧은 한국어 설명을 함께 둡니다. 그대로 복사해서 실행할 수 있는 명령은 `COMMAND_COOKBOOK.md`에 모았습니다.
+All tutorial documents are English-only. Copy-pasteable commands are collected in `COMMAND_COOKBOOK.md`.
 
 ## Start here
 
@@ -30,7 +30,7 @@ This pack is for first-time external builders who want to understand and demo Ne
 - It does not replace the TLSNotary browser/client prover UX.
 - It does not bypass gateway, operator, IPFS, or trusted notary key requirements for a live submission.
 
-한국어 요약: 이 튜토리얼은 “처음 보는 개발자”가 Newton zkTLS 요청 모양과 로컬 실행 경로를 빠르게 이해하도록 돕습니다. 실제 제출에는 실행 중인 게이트웨이, API 키, IPFS CID, 신뢰할 수 있는 TLSNotary 키 설정이 필요합니다.
+Summary: this tutorial helps a first-time developer quickly understand the Newton zkTLS request shape and local execution path. A real submission still requires a running gateway, API key, IPFS CID, and trusted TLSNotary key configuration.
 
 ## Repository map
 
