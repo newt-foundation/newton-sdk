@@ -155,18 +155,27 @@ new ProofClient({
 new AttesterClient({
   baseUrl: 'http://localhost:7047',
   token?: 'sidecar-token',
-  headers?: { 'x-trace-id': 'trace-123' },
   WebSocket?: CustomWebSocket,
 })
 ```
 
 ### `NewtonClient`
 
+Accepts either options objects or pre-constructed client instances. The `proof` and `attester` fields are optional; methods that require them (`storeProof`, `createSession`, `submitTaskWithProof`) will throw `NewtonSdkError` if the corresponding client is not configured.
+
 ```ts
+// With options objects (clients are constructed internally)
 new NewtonClient({
   gateway: { baseUrl: 'http://localhost:8080' },
-  proof: { baseUrl: 'http://localhost:7047' },
-  attester: { baseUrl: 'http://localhost:7047' }, // optional
+  proof: { baseUrl: 'http://localhost:7047' },       // optional
+  attester: { baseUrl: 'http://localhost:7047' },     // optional
+})
+
+// With pre-constructed client instances
+new NewtonClient({
+  gateway: new GatewayClient({ baseUrl: 'http://localhost:8080' }),
+  proof: new ProofClient({ baseUrl: 'http://localhost:7047' }),
+  attester: new AttesterClient({ baseUrl: 'http://localhost:7047' }),
 })
 ```
 

@@ -31,4 +31,18 @@ describe('ProofClient', () => {
     expect(url).toBe('https://attester.example/v1/proof/bafy%2Fproof');
     expect(init?.method).toBe('GET');
   });
+
+  it('retrieves proof bytes and returns base64 encoding', async () => {
+    const bytes = new Uint8Array([72, 101, 108, 108, 111]);
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit): Promise<Response> =>
+      new Response(bytes)
+    );
+    const client = new ProofClient({ baseUrl: 'https://attester.example', fetch: fetchMock });
+
+    const result = await client.getProofBase64('bafybase64');
+    expect(result).toBe(Buffer.from(bytes).toString('base64'));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url] = fetchMock.mock.calls[0] as [string | URL | Request, RequestInit];
+    expect(url).toBe('https://attester.example/v1/proof/bafybase64');
+  });
 });
