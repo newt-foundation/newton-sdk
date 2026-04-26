@@ -50,7 +50,7 @@ export function ProofPanel({
             onChange={(event) => onMinFollowersChange(Number(event.target.value))}
           />
         </label>
-        <button type="submit" disabled={running || !twitterUsername}>
+        <button type="submit" disabled={running || !twitterUsername.trim()}>
           {running ? "Generating proof..." : "Generate proof + CID"}
         </button>
       </form>

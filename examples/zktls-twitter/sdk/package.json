@@ -1,5 +1,5 @@
 {
-  "name": "@newton-protocol/sdk",
+  "name": "@newton-protocol/zktls-sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for Newton Protocol — zkTLS proof generation, task submission, and policy evaluation",
   "type": "module",
@@ -38,7 +38,7 @@
     "zkproof",
     "web3"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=18"
   },

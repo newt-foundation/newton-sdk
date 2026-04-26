@@ -1,5 +1,5 @@
 /**
- * E2E-style integration tests for @newton-protocol/sdk.
+ * E2E-style integration tests for @newton-protocol/zktls-sdk.
  *
  * These tests verify the full SDK flow end-to-end using mocked HTTP,
  * ensuring the request/response shapes match what the Newton gateway expects.

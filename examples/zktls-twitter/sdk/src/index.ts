@@ -1,5 +1,5 @@
 /**
- * @newton-protocol/sdk
+ * @newton-protocol/zktls-sdk
  *
  * TypeScript SDK for Newton Protocol — zkTLS proof generation,
  * task submission, and policy evaluation.
@@ -94,7 +94,7 @@ export interface NewtonSDK {
  *
  * @example
  * ```ts
- * import { createNewtonSDK } from "@newton-protocol/sdk";
+ * import { createNewtonSDK } from "@newton-protocol/zktls-sdk";
  *
  * const sdk = createNewtonSDK({
  *   gatewayUrl: "http://localhost:8080",

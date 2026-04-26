@@ -1,17 +1,19 @@
-# @newton-protocol/sdk
+# @newton-protocol/zktls-sdk
+
+> **Note:** This is the zkTLS-specific SDK for Newton Protocol examples. For the main SDK, see [@magicnewton/newton-protocol-sdk](https://www.npmjs.com/package/@magicnewton/newton-protocol-sdk).
 
 TypeScript SDK for Newton Protocol — zkTLS proof generation, task submission, and policy evaluation.
 
 ## Installation
 
 ```bash
-npm install @newton-protocol/sdk
+npm install @newton-protocol/zktls-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { createNewtonSDK } from "@newton-protocol/sdk";
+import { createNewtonSDK } from "@newton-protocol/zktls-sdk";
 
 const sdk = createNewtonSDK({
   gatewayUrl: "http://localhost:8080",
@@ -198,7 +200,7 @@ const event = await sdk.task.submitAndWait(options, onUpdate, timeoutMs);
 ## Utilities
 
 ```typescript
-import { encodeWasmArgs, decodeWasmArgs } from "@newton-protocol/sdk";
+import { encodeWasmArgs, decodeWasmArgs } from "@newton-protocol/zktls-sdk";
 
 // Encode JS object → 0x-prefixed hex JSON
 const hex = encodeWasmArgs({ min_followers: 1000 });
@@ -214,7 +216,7 @@ const obj = decodeWasmArgs(hex);
 ## Error Handling
 
 ```typescript
-import { JsonRpcError_, TimeoutError, SessionError } from "@newton-protocol/sdk";
+import { JsonRpcError_, TimeoutError, SessionError } from "@newton-protocol/zktls-sdk";
 
 try {
   await sdk.task.createTask({ ... });
@@ -237,7 +239,7 @@ try {
 Complete flow using the `tlsn_twitter_followers.rego` policy:
 
 ```typescript
-import { createNewtonSDK, encodeWasmArgs } from "@newton-protocol/sdk";
+import { createNewtonSDK, encodeWasmArgs } from "@newton-protocol/zktls-sdk";
 
 const sdk = createNewtonSDK({
   gatewayUrl: "http://localhost:8080",
@@ -303,4 +305,4 @@ The policy evaluates:
 
 ## License
 
-MIT
+Apache-2.0

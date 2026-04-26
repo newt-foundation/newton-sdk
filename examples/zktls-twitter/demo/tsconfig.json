@@ -27,7 +27,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@newton-protocol/sdk": [
+      "@newton-protocol/zktls-sdk": [
         "../sdk/src/index.ts"
       ]
     }
