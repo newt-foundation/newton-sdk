@@ -78,7 +78,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.17.4",
     "@auto-it/conventional-commits": "^11.3.0",
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.4.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@size-limit/file": "^11.2.0",
     "@types/rimraf": "^4.0.5",
