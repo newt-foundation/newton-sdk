@@ -3,7 +3,7 @@ title: "Characteristics & Utility"
 description: "NEWT token characteristics, utility, and role in the Newton Protocol ecosystem"
 ---
 
-### Token Summary
+## **Token Summary**
 
 - Token Name / Ticker: NEWT
 - Contract Address: 0xd0ec028a3d21533fdd200838f39c85b03679285d
@@ -11,34 +11,34 @@ description: "NEWT token characteristics, utility, and role in the Newton Protoc
 - Token Standard: ERC-20
 - Total Supply: 1,000,000,000 NEWT
 
-### Supply and Economic Model
+## **Supply and Economic Model**
 
-NEWT has a fixed total supply of 1,000,000,000 tokens.  No inflationary minting or deflationary mechanics are intended post-launch.
+NEWT has a fixed total supply of 1,000,000,000 tokens. No inflationary minting or deflationary mechanics are intended post-launch.
 
-### Token Type and Technology
+## **Token Type and Technology**
 
-NEWT is the native network token of Newton Protocol and is currently deployed as an ERC-20 token on Ethereum. Newton Protocol will utilize a delegated proof-of-stake (dPoS) consensus mechanism, where validators are responsible for securing the network and verifying key protocol operations. The token is expected to migrate to the Protocol’s own Keystore rollup architecture once the Protocol is sufficiently developed. Although the token contract may be upgraded in the future to support rollup-native functionality, such changes would be subject to governance processes overseen by the Newton Protocol community.  In no way will NEWT tokens be marketed as an investment or income-producing asset, either in the United States or elsewhere.
+NEWT is the native coordination token of Newton Protocol, deployed as an ERC-20 token on Ethereum. Newton Protocol is designed to operate as an Actively Validated Service (AVS) built on EigenLayer. Operators stake collateral through EigenLayer's AVS framework and register BLS keys through EigenLayer's registry contracts, with eligible collateral types determined by the Foundation and eventually protocol governance.  NEWT serves as the economic coordination and governance asset within this operator network. In no way are NEWT tokens an investment or income-producing asset, either in the United States or elsewhere, and they are not marketed as such.
 
-### Core Functions
+## **Core Functions**
 
-NEWT is a multifunctional utility token used throughout Newton Protocol for the following purposes:
+NEWT is a multifunctional utility token used throughout Newton Protocol for the following purposes.
 
-#### **1. Staking for Protocol Security**
+**1. Operator Staking and Network Security**
 
-NEWT staking enables participants to help secure the Newton Keystore rollup via delegated proof-of-stake (dPoS). Token holders can delegate their NEWT to validators and earn staking rewards in return. 
+Operators participating in policy evaluation stake NEWT to register and maintain active status within the Newton Protocol AVS. Staking aligns economic incentives: operators are eligible to receive fees for accurate and timely policy evaluations and are subject to slashing penalties for provable misbehavior, downtime, or submission of invalid attestations. Token holders who do not wish to operate infrastructure directly may delegate NEWT to operator nodes. Staked NEWT is subject to a 14-day unstaking (cool-down) period, during which tokens remain locked and non-transferable. Partial withdrawal of staked NEWT is not available.
 
-#### **2. Transaction Fees and Permission Management**
+**2. Policy Evaluation Fees**
 
-NEWT is the native gas token of Newton Protocol. It will be required to pay for transaction execution—including agent-triggered automation—and to issue, update, or revoke onchain permissions, such as zkPermissions and session keys.  Initially, transaction fees may be subsidized by the Foundation while validator infrastructure comes online. Over time, the Protocol intends to adopt a fee market mechanism similar to Ethereum’s EIP-1559 to support scalable, fair transaction ordering.
+Applications that submit transaction intents or policy evaluation requests to the network pay service fees for protocol usage. Fees are distributed to active operators in proportion to their contribution to the policy evaluation process, including WASM instruction execution, data provider calls, and bandwidth consumed. This fee structure is intended to incentivize continuous participation and performance among the operator set.
 
-#### **3. Agent Model Registry and Service Collateral**
+**3. Challenge and Dispute Resolution**
 
-Agent developers can register agent models via the Newton Model Registry. Agent operators must provide NEWT as collateral to offer services using these models. In return, they earn NEWT-denominated fees from users, and a portion of those fees is distributed to the agent developers. Slashing conditions apply if the agents behave incorrectly, helping enforce safety and service guarantees. The Model Registry also supports an onchain marketplace, making it easy to discover and deploy autonomous agents.  
+Challengers help maintain accountability by verifying operator responses and submitting fraud proofs during challenge windows. Challengers stake NEWT to raise a dispute and may receive rewards if a challenge is upheld, creating adversarial checks within the system.
 
-#### **4. Governance**
+**4. Governance**
 
-Once the Protocol achieves sufficient decentralization, NEWT holders who stake their tokens will be able to participate in governance. This includes voting on matters such as treasury disbursements, protocol parameter changes, and ecosystem priorities. Governance will evolve to include DAO-based decision-making, with a linear, stake-weighted voting model.
+Once the Protocol achieves sufficient decentralization, NEWT holders who stake their tokens will be able to participate in governance. This includes voting on matters such as treasury disbursements, protocol parameter changes, and ecosystem priorities. Core protocol upgrades require validator coordination and are not upgradeable via governance vote alone.
 
-### Network Fees and Validator Rewards
+## **Network Fees and Operator Rewards**
 
-NEWT is earned and distributed through Protocol-level fees. Users pay gas fees in NEWT for executing transactions and managing onchain permissions. Validators receive rewards in NEWT for securing the network and processing automation-related operations. The validator rewards are sourced from the NEWT tokens paid as gas fees for use of the Protocol and are determined programmatically at the Protocol level.  Rewards, neither in form nor in function, serve as any kind of “interest,” “dividend,” or return on any “investment.”  It is intended that the network will feature a fee market similar to Ethereum’s EIP-1559, balancing usability and scalability while helping prevent congestion.  At a Protocol level, until validator(s) are operational on the Protocol, NEWT tokens will not be required to pay for Protocol gas fees.  To increase the security of the Protocol, the Foundation may offer additional validator reward incentives in order to encourage staking.
+Operators receive fees for securing the network and processing policy evaluation operations. Fee distribution to operators is determined programmatically at the Protocol level. Rewards, neither in form nor in function, serve as any kind of "interest," "dividend," or return on any "investment."
