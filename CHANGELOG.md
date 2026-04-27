@@ -1,3 +1,22 @@
+# v0.8.2 (Mon Apr 27 2026)
+
+#### 🐛 Bug Fix
+
+- Newton Protocol key contributor and token characteristic updates [#153](https://github.com/newt-foundation/newton-sdk/pull/153) ([@mintlify[bot]](https://github.com/mintlify[bot]))
+- docs: vc docs updates [#147](https://github.com/newt-foundation/newton-sdk/pull/147) ([@hcote](https://github.com/hcote))
+
+#### ⚠️ Pushed to `main`
+
+- docs: sync SDK, CLI, and site docs against protocol source ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 3
+
+- [@mintlify[bot]](https://github.com/mintlify[bot])
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- Hunter Cote ([@hcote](https://github.com/hcote))
+
+---
+
 # v0.8.1 (Wed Apr 08 2026)
 
 #### 🐛 Bug Fix
