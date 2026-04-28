@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@newton-protocol/sdk':
+      '@newton-protocol/zktls-twitter-example':
         specifier: file:../sdk
         version: file:../sdk
       react:
@@ -221,7 +221,7 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@newton-protocol/sdk@file:../sdk':
+  '@newton-protocol/zktls-twitter-example@file:../sdk':
     resolution: {directory: ../sdk, type: directory}
     engines: {node: '>=18'}
 
@@ -1417,7 +1417,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@newton-protocol/sdk@file:../sdk':
+  '@newton-protocol/zktls-twitter-example@file:../sdk':
     dependencies:
       ws: 8.20.0
     transitivePeerDependencies:

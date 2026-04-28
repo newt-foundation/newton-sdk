@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@newton-protocol/sdk": fileURLToPath(new URL("../sdk/src/index.ts", import.meta.url)),
+      "@newton-protocol/zktls-twitter-example": fileURLToPath(new URL("../sdk/src/index.ts", import.meta.url)),
     },
   },
   server: {

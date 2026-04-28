@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { NewtonSDK } from "@newton-protocol/sdk";
+import type { NewtonSDK } from "@newton-protocol/zktls-twitter-example";
 import { checkSystem, generateTwitterFollowerProof, submitTwitterFollowersTask } from "./newtonFlow";
 
 function makeSdk(overrides: Partial<NewtonSDK> = {}): NewtonSDK {

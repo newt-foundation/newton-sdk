@@ -95,6 +95,7 @@ export class AttesterClient {
         try {
           const data = JSON.parse(String(ev.data)) as SessionServerMessage;
           if (data.type === "sessionRegistered") {
+            ws.close();
             resolve({
               sessionId: data.sessionId,
               verifierUrl: `${this.wsBaseUrl}/verifier?sessionId=${data.sessionId}`,

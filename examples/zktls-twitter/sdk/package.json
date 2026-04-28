@@ -1,5 +1,5 @@
 {
-  "name": "@newton-protocol/sdk",
+  "name": "@newton-protocol/zktls-twitter-example",
   "version": "0.1.0",
   "description": "TypeScript SDK for Newton Protocol — zkTLS proof generation, task submission, and policy evaluation",
   "type": "module",

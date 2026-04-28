@@ -1,8 +1,12 @@
 /**
- * @newton-protocol/sdk
+ * @newton-protocol/zktls-twitter-example
  *
- * TypeScript SDK for Newton Protocol — zkTLS proof generation,
- * task submission, and policy evaluation.
+ * Example-scoped TypeScript helpers for the Newton Protocol Twitter/X zkTLS
+ * flow. Production integrations should use the main
+ * `@magicnewton/newton-protocol-sdk` package for gateway RPC, task submission,
+ * identity, privacy, and secrets flows; this package keeps the tutorial
+ * self-contained until the zkTLS-specific pieces are promoted into a thin
+ * extension on top of the main SDK.
  */
 
 export { GatewayClient } from "./gateway.js";
@@ -90,11 +94,17 @@ export interface NewtonSDK {
 }
 
 /**
- * Create a fully-configured Newton SDK instance.
+ * Create a fully-configured Twitter/X zkTLS example SDK instance.
+ *
+ * This factory intentionally keeps the example runnable without additional
+ * setup. It should not be treated as a production replacement for
+ * `@magicnewton/newton-protocol-sdk`; production apps should compose the main
+ * SDK with the zkTLS-only pieces exported here (`AttesterClient`,
+ * `ProofClient`, and wasm-argument helpers).
  *
  * @example
  * ```ts
- * import { createNewtonSDK } from "@newton-protocol/sdk";
+ * import { createNewtonSDK } from "@newton-protocol/zktls-twitter-example";
  *
  * const sdk = createNewtonSDK({
  *   gatewayUrl: "http://localhost:8080",

@@ -1,4 +1,4 @@
-import { encodeWasmArgs, type CreateTaskResponse, type TaskIntent } from "@newton-protocol/sdk";
+import { encodeWasmArgs, type CreateTaskResponse, type TaskIntent } from "@newton-protocol/zktls-twitter-example";
 import type { PolicyDecision, ProofArtifact, TaskFormState, TaskPreview, TaskSubmission } from "./types";
 
 const CID_RE = /\b(?:bafy[a-z2-7]{20,}|Qm[1-9A-HJ-NP-Za-km-z]{44})\b/;

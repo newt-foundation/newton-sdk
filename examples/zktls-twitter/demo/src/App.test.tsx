@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { NewtonSDK } from "@newton-protocol/sdk";
+import type { NewtonSDK } from "@newton-protocol/zktls-twitter-example";
 import { App } from "./App";
 import type { DemoServices } from "./types";
 

@@ -32,6 +32,40 @@ All tutorial documents are English-only. Copy-pasteable commands are collected i
 
 Summary: this tutorial helps a first-time developer quickly understand the Newton zkTLS request shape and local execution path. A real submission still requires a running gateway, API key, IPFS CID, and trusted TLSNotary key configuration.
 
+## Identity integration roadmap
+
+The current demo proves Twitter/X follower data, stores the proof on IPFS, and
+passes the resulting CID as `proofCid`/`proof_cid` in the task request. The next
+protocol milestone is to make TLS proofs optionally travel with encrypted
+identity uploads so the gateway can verify the proof before persisting identity
+data, removing the required IPFS hop for identity-backed zkTLS flows.
+
+Follow-up work to track in Linear:
+
+1. **Protocol follow-up** — extend `newt_uploadIdentityEncrypted` to accept an
+   optional `tls_proof` field. The gateway should verify the proof signature,
+   freshness, and server identity before storing the encrypted identity payload
+   in Postgres.
+2. **SDK follow-up** — update the main `@magicnewton/newton-protocol-sdk`
+   `uploadIdentityEncrypted` wrapper to accept the optional proof, then add a
+   convenience method that chains proof generation → identity upload → task
+   submission.
+3. **UX follow-up** — update the demo to show both paths: the standalone zkTLS
+   proof-CID task flow documented here and the identity-integrated zkTLS flow
+   once protocol support lands.
+
+Until those tickets are linked, treat this section as the source checklist for
+the protocol, SDK, and UX tracking items.
+
+## Mintlify docs-site follow-up
+
+This tutorial pack currently lives in `docs/zktls-twitter/`, while the public
+Newton docs site is generated from `site/` via Mintlify. As a non-blocking docs
+publishing follow-up, add a `site/developers/guides/zktls-twitter.mdx` page that
+links to or inlines this tutorial, wire it into `site/docs.json` under
+Developers → Guides, and keep this markdown pack as the source of truth if that
+is the preferred docs workflow.
+
 ## Repository map
 
 ```text

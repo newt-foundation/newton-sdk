@@ -1,5 +1,5 @@
-import { createNewtonSDK } from "@newton-protocol/sdk";
-import type { CreateTaskResponse, NewtonSDK } from "@newton-protocol/sdk";
+import { createNewtonSDK } from "@newton-protocol/zktls-twitter-example";
+import type { CreateTaskResponse, NewtonSDK } from "@newton-protocol/zktls-twitter-example";
 import type {
   DemoConfig,
   DemoServices,

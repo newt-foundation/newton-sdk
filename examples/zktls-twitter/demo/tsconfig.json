@@ -27,7 +27,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@newton-protocol/sdk": [
+      "@newton-protocol/zktls-twitter-example": [
         "../sdk/src/index.ts"
       ]
     }

@@ -105,7 +105,7 @@ describe("GatewayClient", () => {
     expect(params.wasm_args).toBe("0x7b7d");
   });
 
-  it("includes x-newton-secret header when apiKey is provided", async () => {
+  it("includes Authorization bearer header when apiKey is provided", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ jsonrpc: "2.0", id: 1, result: {} }),
@@ -114,7 +114,7 @@ describe("GatewayClient", () => {
     await client.getPrivacyPublicKey();
 
     const [, fetchInit] = mockFetch.mock.calls[0];
-    expect(fetchInit.headers["x-newton-secret"]).toBe("test-key");
+    expect(fetchInit.headers["Authorization"]).toBe("Bearer test-key");
   });
 
   it("throws JsonRpcError on RPC error response", async () => {

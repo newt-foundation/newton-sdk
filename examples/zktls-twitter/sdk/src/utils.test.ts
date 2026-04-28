@@ -35,6 +35,11 @@ describe("decodeWasmArgs", () => {
     const result = decodeWasmArgs(hex);
     expect(result).toEqual({ key: "value" });
   });
+
+  it("throws a clear error for empty input", () => {
+    expect(() => decodeWasmArgs("0x")).toThrow("Invalid hex string: empty input");
+    expect(() => decodeWasmArgs("")).toThrow("Invalid hex string: empty input");
+  });
 });
 
 describe("camelToSnake", () => {

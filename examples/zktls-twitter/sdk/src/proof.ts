@@ -4,6 +4,12 @@
  * Handles IPFS proof storage and retrieval via the attester's REST endpoints:
  *   POST /v1/proof/store
  *   GET  /v1/proof/:cid
+ *
+ * This IPFS archival path is for the standalone demo flow. The planned
+ * identity-integrated flow will let `newt_uploadIdentityEncrypted` accept an
+ * optional TLS proof so the gateway can verify and persist proof-backed
+ * identity data directly; when that lands, ProofClient should become optional
+ * standalone archival tooling rather than a required task-submission step.
  */
 
 import type { NewtonSDKConfig, StoreProofRequest, StoreProofResponse } from "./types.js";

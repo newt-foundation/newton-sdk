@@ -1,17 +1,24 @@
-# @newton-protocol/sdk
+# @newton-protocol/zktls-twitter-example
 
-TypeScript SDK for Newton Protocol — zkTLS proof generation, task submission, and policy evaluation.
+Example-scoped TypeScript helpers for the Newton Protocol Twitter/X zkTLS tutorial.
+
+> **Production SDK boundary:** this package lives under `examples/` and is a
+> reference implementation for the Twitter/X zkTLS flow. Production integrations
+> should use `@magicnewton/newton-protocol-sdk` for gateway RPC, task submission,
+> identity, privacy, and secrets APIs, then compose only the zkTLS-specific pieces
+> from this example (`AttesterClient`, `ProofClient`, and wasm-argument helpers)
+> while the thin-extension path is developed.
 
 ## Installation
 
 ```bash
-npm install @newton-protocol/sdk
+npm install @newton-protocol/zktls-twitter-example
 ```
 
 ## Quick Start
 
 ```typescript
-import { createNewtonSDK } from "@newton-protocol/sdk";
+import { createNewtonSDK } from "@newton-protocol/zktls-twitter-example";
 
 const sdk = createNewtonSDK({
   gatewayUrl: "http://localhost:8080",
@@ -153,6 +160,13 @@ const results = await sdk.attester.reveal(sessionWsUrl, {
 
 IPFS proof storage and retrieval via the attester REST API.
 
+Today the demo stores the TLS proof on IPFS, passes the CID in `proofCid`, and
+lets the task flow resolve that CID during evaluation. The planned
+identity-integrated flow will allow `newt_uploadIdentityEncrypted` to accept an
+optional TLS proof so the gateway can verify authenticity before persisting
+identity data. Once that lands, `ProofClient` should be optional standalone proof
+archival tooling rather than a required task-submission step.
+
 ```typescript
 // Store a proof (base64-encoded BCS bytes)
 const { cid, url } = await sdk.proof.store("base64EncodedProofData==");
@@ -198,7 +212,7 @@ const event = await sdk.task.submitAndWait(options, onUpdate, timeoutMs);
 ## Utilities
 
 ```typescript
-import { encodeWasmArgs, decodeWasmArgs } from "@newton-protocol/sdk";
+import { encodeWasmArgs, decodeWasmArgs } from "@newton-protocol/zktls-twitter-example";
 
 // Encode JS object → 0x-prefixed hex JSON
 const hex = encodeWasmArgs({ min_followers: 1000 });
@@ -214,7 +228,7 @@ const obj = decodeWasmArgs(hex);
 ## Error Handling
 
 ```typescript
-import { JsonRpcError_, TimeoutError, SessionError } from "@newton-protocol/sdk";
+import { JsonRpcError_, TimeoutError, SessionError } from "@newton-protocol/zktls-twitter-example";
 
 try {
   await sdk.task.createTask({ ... });
@@ -237,7 +251,7 @@ try {
 Complete flow using the `tlsn_twitter_followers.rego` policy:
 
 ```typescript
-import { createNewtonSDK, encodeWasmArgs } from "@newton-protocol/sdk";
+import { createNewtonSDK, encodeWasmArgs } from "@newton-protocol/zktls-twitter-example";
 
 const sdk = createNewtonSDK({
   gatewayUrl: "http://localhost:8080",
@@ -297,7 +311,7 @@ The policy evaluates:
 |--------|---------|-------------|
 | `gatewayUrl` | (required) | Gateway JSON-RPC endpoint |
 | `attesterUrl` | derived from gatewayUrl | Attester/Sidecar endpoint |
-| `apiKey` | — | API key (`x-newton-secret` header for gateway, `Bearer` for attester) |
+| `apiKey` | — | API key (`Authorization: Bearer` header for gateway and attester calls) |
 | `timeout` | 30000 | Default request timeout in milliseconds |
 | `chainId` | — | Default chain ID |
 

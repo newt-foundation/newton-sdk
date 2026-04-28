@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
-    "@newton-protocol/sdk": "file:../sdk",
+    "@newton-protocol/zktls-twitter-example": "file:../sdk",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

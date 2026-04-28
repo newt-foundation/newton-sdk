@@ -8,7 +8,13 @@
 // Primitives
 // ---------------------------------------------------------------------------
 
-/** Ethereum address (0x-prefixed hex string) */
+/**
+ * Ethereum address (0x-prefixed hex string).
+ *
+ * TODO: If this example package graduates beyond tutorial/demo scope, re-export
+ * viem's branded `Address` type from the main SDK (or narrow to
+ * `0x${string}`) so invalid addresses fail at compile time.
+ */
 export type Address = string;
 
 /** Hex-encoded bytes (0x-prefixed) */

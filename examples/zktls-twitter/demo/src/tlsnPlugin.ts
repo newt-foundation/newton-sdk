@@ -1,4 +1,4 @@
-import type { AttesterSession, NewtonSDK } from "@newton-protocol/sdk";
+import type { AttesterSession, NewtonSDK } from "@newton-protocol/zktls-twitter-example";
 import {
   extractCid,
   extractConnectionTime,

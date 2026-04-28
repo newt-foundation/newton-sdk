@@ -1,7 +1,7 @@
 /**
- * E2E-style integration tests for @newton-protocol/sdk.
+ * Integration tests for @newton-protocol/zktls-twitter-example.
  *
- * These tests verify the full SDK flow end-to-end using mocked HTTP,
+ * These tests verify the full SDK request/response flow using mocked HTTP,
  * ensuring the request/response shapes match what the Newton gateway expects.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -11,7 +11,7 @@ import type { JsonRpcResponse, CreateTaskResponse, SendTaskResponse } from "./ty
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
-describe("E2E: zkTLS Twitter follower verification flow", () => {
+describe("Integration: zkTLS Twitter follower verification flow", () => {
   const sdk = createNewtonSDK({
     gatewayUrl: "http://localhost:8080",
     attesterUrl: "http://localhost:7047",
@@ -104,6 +104,7 @@ describe("E2E: zkTLS Twitter follower verification flow", () => {
     // Verify the JSON-RPC payload sent to gateway
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe("http://localhost:8080/rpc");
+    expect(init.headers["Authorization"]).toBe("Bearer test-api-key");
 
     const body = JSON.parse(init.body);
     expect(body.jsonrpc).toBe("2.0");

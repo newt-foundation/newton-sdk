@@ -1,4 +1,4 @@
-import type { AttesterSession, CreateTaskResponse, NewtonSDK, TaskIntent } from "@newton-protocol/sdk";
+import type { AttesterSession, CreateTaskResponse, NewtonSDK, TaskIntent } from "@newton-protocol/zktls-twitter-example";
 
 export type CheckStatus = "checking" | "success" | "error" | "idle";
 export type ConsoleEntryType = "info" | "success" | "error" | "warning";

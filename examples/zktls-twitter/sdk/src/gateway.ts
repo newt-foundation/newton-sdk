@@ -53,7 +53,7 @@ export class GatewayClient {
 
     this.headers = { "Content-Type": "application/json" };
     if (config.apiKey) {
-      this.headers["x-newton-secret"] = config.apiKey;
+      this.headers["Authorization"] = `Bearer ${config.apiKey}`;
     }
     this.timeout = config.timeout ?? 30_000;
   }
@@ -162,9 +162,13 @@ export class GatewayClient {
   // -------------------------------------------------------------------------
 
   /**
-   * Send a JSON-RPC call to the gateway. The request params object is converted
-   * from camelCase to snake_case to match the gateway's Rust serde conventions.
-   * The intent field stays in camelCase as the gateway accepts it.
+   * Send a JSON-RPC call to the gateway. Only the top-level request params are
+   * converted from camelCase to snake_case to match the gateway's Rust serde
+   * conventions. Nested objects intentionally pass through unchanged: `intent`
+   * is the known exception because the gateway accepts its camelCase fields
+   * (`chainId`, `functionSignature`). If a future nested object needs snake_case
+   * fields, add an explicit converter for that shape instead of relying on this
+   * shallow helper.
    */
   private async call<TReq, TRes>(
     method: string,

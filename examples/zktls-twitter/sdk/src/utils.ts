@@ -2,6 +2,8 @@
  * Shared utility helpers for the Newton SDK.
  */
 
+import { NewtonSDKError } from "./errors.js";
+
 /**
  * Convert a JS object to a 0x-prefixed hex-encoded UTF-8 JSON string,
  * matching the Rust gateway's `wasm_args` format.
@@ -20,9 +22,11 @@ export function encodeWasmArgs(args: Record<string, unknown>): string {
  */
 export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
   const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(
-    stripped.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-  );
+  const matches = stripped.match(/.{1,2}/g);
+  if (!matches) {
+    throw new NewtonSDKError("Invalid hex string: empty input");
+  }
+  const bytes = new Uint8Array(matches.map((b) => parseInt(b, 16)));
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
@@ -40,6 +44,11 @@ export function snakeToCamel(obj: Record<string, unknown>): Record<string, unkno
 
 /**
  * Convert camelCase keys to snake_case (single-level for JSON-RPC request params).
+ *
+ * This is intentionally shallow: top-level RPC params use Rust-style snake_case,
+ * while nested gateway-accepted objects such as `intent` keep their camelCase
+ * fields (`chainId`, `functionSignature`). Add a shape-specific converter before
+ * sending any future nested object that requires snake_case.
  */
 export function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
