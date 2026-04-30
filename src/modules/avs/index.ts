@@ -434,7 +434,6 @@ async function simulateTask(
       policyData: args.policyTaskData.policyData.map(pd => ({
         wasmArgs: pd.wasmArgs,
         data: pd.data,
-        attestation: pd.attestation,
         policyDataAddress: pd.policyDataAddress,
         expireBlock: pd.expireBlock,
       })),

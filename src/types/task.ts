@@ -140,7 +140,6 @@ export interface Task {
 export interface SimulateTaskPolicyData {
   wasmArgs: Hex
   data: Hex
-  attestation: Hex
   policyDataAddress: Address
   expireBlock: number
 }
@@ -305,7 +304,6 @@ export interface GatewayCreateTaskResult {
       policy: Hex
       policyAddress: Address
       policyData: Array<{
-        attestation: Hex
         data: Hex
         expireBlock: number
         policyDataAddress: Address

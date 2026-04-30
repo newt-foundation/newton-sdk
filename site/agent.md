@@ -1011,7 +1011,6 @@ export const newtonPolicyWalletAbi = [
                 components: [
                   { name: "wasmArgs", type: "bytes", internalType: "bytes" },
                   { name: "data", type: "bytes", internalType: "bytes" },
-                  { name: "attestation", type: "bytes", internalType: "bytes" },
                   { name: "policyDataAddress", type: "address", internalType: "address" },
                   { name: "expireBlock", type: "uint32", internalType: "uint32" },
                 ],

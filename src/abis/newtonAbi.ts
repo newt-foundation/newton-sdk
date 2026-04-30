@@ -83,7 +83,6 @@ export const AttestationValidatorAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -387,7 +386,6 @@ export const AttestationValidatorAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -601,7 +599,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -763,7 +760,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -923,7 +919,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -1016,7 +1011,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -1422,7 +1416,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -1552,7 +1545,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
@@ -1815,7 +1807,6 @@ export const NewtonProverTaskManagerAbi = [
                 components: [
                   { internalType: 'bytes', name: 'wasmArgs', type: 'bytes' },
                   { internalType: 'bytes', name: 'data', type: 'bytes' },
-                  { internalType: 'bytes', name: 'attestation', type: 'bytes' },
                   { internalType: 'address', name: 'policyDataAddress', type: 'address' },
                   { internalType: 'uint32', name: 'expireBlock', type: 'uint32' },
                 ],
