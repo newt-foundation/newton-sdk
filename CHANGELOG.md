@@ -1,3 +1,15 @@
+# v0.8.3 (Thu Apr 30 2026)
+
+#### 🐛 Bug Fix
+
+- fix: remove stale PolicyData.attestation field from ABI, types, and site docs ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v0.8.2 (Mon Apr 27 2026)
 
 #### 🐛 Bug Fix
