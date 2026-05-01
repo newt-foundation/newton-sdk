@@ -97,12 +97,18 @@ Use `cast sig "ErrorName()"` to compute selectors for new errors.
 | `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE` | Could not read native token balance from the chain |
 
 ```typescript
-import { SDKError, SDKErrorCode } from '@magicnewton/newton-protocol-sdk';
+import { NewtonTaskError, SDKError, SDKErrorCode } from '@magicnewton/newton-protocol-sdk';
 
 try {
   await walletClient.evaluateIntentDirect(request);
 } catch (error) {
-  if (error instanceof SDKError) {
+  if (error instanceof NewtonTaskError) {
+    // Task-level failure (e.g., quorum not reached)
+    console.error('Task failed:', error.message);
+    for (const opErr of error.operatorErrors) {
+      console.error(`  Operator ${opErr.operator_address}: ${opErr.message} (retryable: ${opErr.retryable})`);
+    }
+  } else if (error instanceof SDKError) {
     switch (error.code) {
       case SDKErrorCode.MissingApiKey:
         // Provide an API key when initializing newtonWalletClientActions

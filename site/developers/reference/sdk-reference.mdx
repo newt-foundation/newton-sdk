@@ -236,7 +236,7 @@ submitEvaluationRequest(
 - `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
 
 <Note>
-  The `validate_calldata` and `operator_errors` fields are available on the raw `GatewayCreateTaskResult` returned by the `newt_createTask` RPC method (see the [RPC API Reference](/developers/reference/rpc-api)). These fields are not surfaced by the SDK's `submitEvaluationRequest` or `evaluateIntentDirect` wrappers — call the gateway RPC directly when you need them.
+  When a task fails (e.g., quorum not reached), `submitEvaluationRequest`, `evaluateIntentDirect`, and `submitIntentAndSubscribe` throw a `NewtonTaskError` that includes the `taskId` and `operatorErrors` array from the gateway response. Catch it with `instanceof NewtonTaskError` to inspect per-operator failure details. The `validate_calldata` field is available on the raw `GatewayCreateTaskResult` via the [RPC API](/developers/reference/rpc-api).
 </Note>
 
 ---
@@ -2567,6 +2567,46 @@ class MagicRPCError extends Error {
 }
 ```
 
+### NewtonTaskError
+
+Thrown when a task submission fails at the application level (e.g., quorum not reached, operator evaluation failures). Carries per-operator error details from the gateway.
+
+```ts
+import { NewtonTaskError } from '@magicnewton/newton-protocol-sdk';
+
+class NewtonTaskError extends Error {
+  taskId: string | undefined;
+  operatorErrors: OperatorError[];
+
+  constructor(message: string, taskId?: string, operatorErrors?: OperatorError[]);
+}
+
+interface OperatorError {
+  operator_address: string;
+  operator_id: string;
+  error_code: number;
+  message: string;
+  timestamp: string;
+  retryable: boolean;
+}
+```
+
+Thrown by `submitEvaluationRequest`, `evaluateIntentDirect`, and `submitIntentAndSubscribe` when the gateway returns an application-level error.
+
+```ts
+try {
+  const { result } = await walletClient.evaluateIntentDirect(request);
+} catch (error) {
+  if (error instanceof NewtonTaskError) {
+    console.error('Task failed:', error.message);
+    console.error('Task ID:', error.taskId);
+    for (const opErr of error.operatorErrors) {
+      console.error(`  Operator ${opErr.operator_address}: ${opErr.message}`);
+    }
+  }
+}
+```
+
 ### SDKErrorCode
 
 <Expandable title="SDKErrorCode enum values">
@@ -2626,7 +2666,7 @@ class MagicRPCError extends Error {
 </Expandable>
 
 <Note>
-  `SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
+  `NewtonTaskError` and the `OperatorError` type are exported from the main package entrypoint. `SDKError`, `MagicRPCError`, and the error code enums are currently internal types — catch them generically using `instanceof Error`.
 </Note>
 
 ---

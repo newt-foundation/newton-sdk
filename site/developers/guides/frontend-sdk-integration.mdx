@@ -154,8 +154,23 @@ export const createEvaluationRequest = ({
 Use `evaluateIntentDirect` to get an attestation, then submit the attested transaction on-chain:
 
 ```typescript
+import { NewtonTaskError } from "@magicnewton/newton-protocol-sdk";
+
 // Evaluate intent — returns attestation data
-const evalResponse = await walletClient.evaluateIntentDirect(evalRequest);
+let evalResponse;
+try {
+  evalResponse = await walletClient.evaluateIntentDirect(evalRequest);
+} catch (error) {
+  if (error instanceof NewtonTaskError) {
+    // Inspect per-operator failures (e.g., quorum not reached)
+    console.error("Task failed:", error.message);
+    for (const opErr of error.operatorErrors) {
+      console.error(`  ${opErr.operator_address}: ${opErr.message}`);
+    }
+    throw error;
+  }
+  throw error;
+}
 const { evaluationResult, task, taskResponse, blsSignature } = evalResponse.result;
 
 if (!evaluationResult) {

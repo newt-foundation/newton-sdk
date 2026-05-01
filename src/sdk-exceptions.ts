@@ -1,5 +1,6 @@
 import { RPCErrorCode, type SDKErrorCode } from './types/core/exception-types'
 import type { JsonRpcError } from './types/core/json-rpc-types'
+import type { OperatorError } from './types/task'
 
 function isNil(value: unknown): value is null | undefined {
   return value == null // This checks for both null and undefined
@@ -46,4 +47,18 @@ export class MagicRPCError extends Error {
 
 export function createRpcError(code: RPCErrorCode, message: string, data?: unknown): MagicRPCError {
   return new MagicRPCError({ code, message, data })
+}
+
+export class NewtonTaskError extends Error {
+  __proto__ = Error
+
+  public taskId: string | undefined
+  public operatorErrors: OperatorError[]
+
+  constructor(message: string, taskId?: string, operatorErrors?: OperatorError[]) {
+    super(message)
+    this.taskId = taskId
+    this.operatorErrors = operatorErrors ?? []
+    Object.setPrototypeOf(this, NewtonTaskError.prototype)
+  }
 }

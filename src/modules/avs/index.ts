@@ -1,5 +1,6 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, type TaskRespondedLog } from '@core/abis/newtonAbi'
 import { GATEWAY_METHODS } from '@core/const'
+import { NewtonTaskError } from '@core/sdk-exceptions'
 import {
   type GatewayCreateTaskResult,
   type RegisterWebhookParams,
@@ -261,7 +262,7 @@ async function submitEvaluationRequest(
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
   if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new NewtonTaskError(res.result.error, res.result.task_id, res.result.operator_errors)
 
   const createTaskResult = res.result as CreateTaskResult
   taskIdRef.taskId = createTaskResult.task_id
@@ -337,7 +338,7 @@ async function evaluateIntentDirect(
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
   if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new NewtonTaskError(res.result.error, res.result.task_id, res.result.operator_errors)
 
   const createTaskResult = res.result as GatewayCreateTaskResult
   const taskResponse = {
@@ -403,7 +404,7 @@ async function submitIntentAndSubscribe(
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)
   if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new NewtonTaskError(res.result.error, res.result.task_id, res.result.operator_errors)
 
   const submitIntentResult = res.result as SubmitIntentResult
 

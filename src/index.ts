@@ -86,9 +86,11 @@ import type {
 } from './types/task'
 
 import { ATTESTATION_VALIDATOR, NEWTON_PROVER_TASK_MANAGER } from './const'
+import { NewtonTaskError } from './sdk-exceptions'
 import { popupRequest } from './service/popup'
 import { NewtonIdpPayloadMethod } from './types'
 import type { KycUserData } from './types/identity'
+import type { OperatorError } from './types/task'
 import { getPayloadId } from './utils/get-payload-id'
 
 interface SdkOverrides {
@@ -583,3 +585,5 @@ export {
   uploadIdentityEncrypted,
 }
 export { registerWebhook, unregisterWebhook }
+export { NewtonTaskError }
+export type { OperatorError }
