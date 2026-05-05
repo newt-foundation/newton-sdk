@@ -8,6 +8,7 @@ export function getDemoConfig(): DemoConfig {
   return {
     sidecarUrl: import.meta.env.VITE_SIDECAR_URL ?? "http://localhost:7047",
     gatewayUrl: import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:8080",
+    apiKey: import.meta.env.VITE_NEWTON_API_KEY || undefined,
     policyClient: import.meta.env.VITE_POLICY_CLIENT ?? DEFAULT_POLICY_CLIENT,
     intentFrom: import.meta.env.VITE_INTENT_FROM ?? DEFAULT_INTENT_FROM,
     intentTo: import.meta.env.VITE_INTENT_TO ?? DEFAULT_INTENT_TO,

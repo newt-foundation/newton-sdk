@@ -24,6 +24,7 @@ export interface SystemChecks {
 export interface DemoConfig {
   gatewayUrl: string;
   sidecarUrl: string;
+  apiKey?: string;
   policyClient: string;
   intentFrom: string;
   intentTo: string;

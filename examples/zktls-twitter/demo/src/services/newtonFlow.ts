@@ -228,6 +228,7 @@ export const newtonDemoServices: DemoServices = {
     return createNewtonSDK({
       gatewayUrl: config.gatewayUrl,
       attesterUrl: config.sidecarUrl,
+      apiKey: config.apiKey,
       timeout: 30_000,
     });
   },

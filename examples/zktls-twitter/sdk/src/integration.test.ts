@@ -5,11 +5,18 @@
  * ensuring the request/response shapes match what the Newton gateway expects.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { CID } from "multiformats/cid";
+import { sha256 } from "multiformats/hashes/sha2";
+
 import { createNewtonSDK, encodeWasmArgs, decodeWasmArgs } from "./index.js";
 import type { JsonRpcResponse, CreateTaskResponse, SendTaskResponse } from "./types.js";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
+
+async function cidFor(bytes: Uint8Array): Promise<string> {
+  return CID.createV1(0x55, await sha256.digest(bytes)).toString();
+}
 
 describe("Integration: zkTLS Twitter follower verification flow", () => {
   const sdk = createNewtonSDK({
@@ -167,16 +174,19 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
 
   it("Step 5: retrieve proof from IPFS by CID", async () => {
     const proofBytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+    const cid = await cidFor(proofBytes);
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: async () => proofBytes.buffer,
     });
 
-    const result = await sdk.proof.retrieve("bafybeigtest");
+    const result = await sdk.proof.retrieve(cid);
 
     expect(result).toEqual(proofBytes);
-    expect(mockFetch.mock.calls[0][0]).toBe("http://localhost:7047/v1/proof/bafybeigtest");
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      `http://localhost:7047/v1/proof/${cid}`,
+    );
   });
 
   it("handles JSON-RPC error from gateway", async () => {

@@ -63,7 +63,7 @@ Common causes:
 Symptoms:
 
 - HTTP 401 / 403 from `/rpc`
-- `x-newton-secret` missing or wrong
+- `Authorization: Bearer` missing or wrong
 
 Fix:
 
@@ -71,7 +71,7 @@ Fix:
 export NEWTON_API_KEY="replace-with-local-seeded-key"
 curl -i -X POST http://127.0.0.1:8080/rpc \
   -H 'Content-Type: application/json' \
-  -H "x-newton-secret: $NEWTON_API_KEY" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
   --data-binary @/tmp/newton-zktls-twitter-payload.json
 ```
 

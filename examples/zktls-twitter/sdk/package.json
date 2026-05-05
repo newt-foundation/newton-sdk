@@ -1,7 +1,7 @@
 {
   "name": "@newton-protocol/zktls-twitter-example",
   "version": "0.1.0",
-  "description": "TypeScript SDK for Newton Protocol — zkTLS proof generation, task submission, and policy evaluation",
+  "description": "Example SDK demonstrating zkTLS Twitter/X proof-to-task flow for Newton Protocol. For production use, install @magicnewton/newton-protocol-sdk instead.",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -43,6 +43,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "multiformats": "^9.9.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

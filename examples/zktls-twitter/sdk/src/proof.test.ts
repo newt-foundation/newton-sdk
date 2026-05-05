@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { CID } from "multiformats/cid";
+import { sha256 } from "multiformats/hashes/sha2";
+
 import { ProofClient } from "./proof.js";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
+
+async function cidFor(bytes: Uint8Array): Promise<string> {
+  return CID.createV1(0x55, await sha256.digest(bytes)).toString();
+}
 
 describe("ProofClient", () => {
   let client: ProofClient;
@@ -54,17 +61,31 @@ describe("ProofClient", () => {
   describe("retrieve", () => {
     it("fetches proof bytes by CID", async () => {
       const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const cid = await cidFor(proofBytes);
       mockFetch.mockResolvedValueOnce({
         ok: true,
         arrayBuffer: async () => proofBytes.buffer,
       });
 
-      const result = await client.retrieve("bafytest");
+      const result = await client.retrieve(cid);
 
       expect(result).toEqual(proofBytes);
 
       const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe("http://localhost:7047/v1/proof/bafytest");
+      expect(url).toBe(`http://localhost:7047/v1/proof/${cid}`);
+    });
+
+    it("throws when retrieved bytes do not match the requested CID", async () => {
+      const cid = await cidFor(new Uint8Array([1, 2, 3, 4, 5]));
+      const returnedBytes = new Uint8Array([5, 4, 3, 2, 1]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => returnedBytes.buffer,
+      });
+
+      await expect(client.retrieve(cid)).rejects.toThrow(
+        "CID integrity check failed: returned bytes do not match the requested content hash",
+      );
     });
 
     it("throws on 404", async () => {

@@ -39,6 +39,7 @@
             "group": "Guides",
             "pages": [
               "developers/guides/integration-guide",
+              "developers/guides/zktls-twitter",
               "developers/guides/writing-data-oracles",
               "developers/guides/writing-policies",
               "developers/guides/deploying-with-cli",

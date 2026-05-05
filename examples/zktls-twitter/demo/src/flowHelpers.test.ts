@@ -6,7 +6,7 @@ import {
   extractFollowerCount,
   extractProofPayload,
   toHexQuantity,
-} from "./newtonFlow";
+} from "./flowHelpers";
 import type { ProofArtifact, TaskFormState } from "./types";
 
 const form: TaskFormState = {

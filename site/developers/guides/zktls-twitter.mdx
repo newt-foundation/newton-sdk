@@ -1,0 +1,115 @@
+---
+title: "zkTLS Twitter/X Example"
+description: "Generate a TLSNotary proof for a Twitter/X follower count and submit it to Newton for policy evaluation."
+---
+
+This guide mirrors the repository tutorial pack for the zkTLS Twitter/X follower-count example. It is intended for developers who want to see how a browser-generated TLSNotary proof becomes a Newton task input.
+
+<Info>
+The package in this example is `@newton-protocol/zktls-twitter-example`. It is an example SDK/demo surface for the zkTLS Twitter flow, not the production Newton SDK package.
+</Info>
+
+## What you build
+
+The example flow:
+
+1. Opens a browser demo that talks to the TLSNotary extension.
+2. Creates an attester WebSocket session through the Newton sidecar.
+3. Generates a proof for a Twitter/X follower-count response from `api.x.com`.
+4. Stores the proof and receives a CID.
+5. Submits a Newton task with `proofCid`, `wasmArgs`, and a transaction `intent`.
+6. Evaluates whether the account meets the configured follower threshold.
+
+## Prerequisites
+
+- Node.js 20+
+- A Newton API key
+- A running Newton gateway and zkTLS attester sidecar
+- A TLSNotary-compatible browser extension bridge
+- A deployed policy client address for the Twitter/X follower policy
+
+## Run the example locally
+
+From the SDK repository:
+
+```bash
+cd examples/zktls-twitter/sdk
+npm install
+npm run build
+npm test
+
+cd ../demo
+npm install
+npm run build
+npm run dev
+```
+
+Configure the demo with environment variables:
+
+```bash
+VITE_GATEWAY_URL=http://localhost:8080
+VITE_SIDECAR_URL=http://localhost:7047
+VITE_NEWTON_API_KEY=your_newton_api_key
+VITE_POLICY_CLIENT=0xYourPolicyClient
+```
+
+SDK requests authenticate with:
+
+```http
+Authorization: Bearer your_newton_api_key
+```
+
+## Task payload shape
+
+The demo submits a task with a shallow camelCase client shape. The SDK converts top-level gateway params to snake_case while preserving the nested `intent` object in camelCase because the gateway accepts it.
+
+```typescript
+import { createNewtonSDK, encodeWasmArgs } from "@newton-protocol/zktls-twitter-example";
+
+const sdk = createNewtonSDK({
+  gatewayUrl: "http://localhost:8080",
+  attesterUrl: "http://localhost:7047",
+  apiKey: process.env.NEWTON_API_KEY,
+});
+
+const result = await sdk.task.createTask({
+  policyClient: "0x1111111111111111111111111111111111111111",
+  intent: {
+    from: "0x2222222222222222222222222222222222222222",
+    to: "0x3333333333333333333333333333333333333333",
+    value: "0x0",
+    data: "0x",
+    chainId: "0xaa36a7",
+    functionSignature: "0x",
+  },
+  proofCid: "bafy...",
+  wasmArgs: encodeWasmArgs({
+    min_followers: 1000,
+    twitter_username: "newton_protocol",
+  }),
+  timeout: 60,
+  useTwoPhase: true,
+});
+```
+
+## Proof retrieval and integrity
+
+The example proof client retrieves proof bytes by CID and verifies that the returned bytes match the CID multihash before returning them to callers. This keeps the client boundary stable while proof storage is still IPFS-backed.
+
+The planned backend migration moves proof persistence to gateway-owned Postgres. The public store/retrieve API should remain the handoff point for the demo even when the storage backend changes.
+
+## Identity integration roadmap
+
+Future iterations should bind this proof flow to Newton identity records:
+
+- Upload encrypted identity data before proof submission.
+- Include identity references alongside `proofCid` in policy-specific WASM args.
+- Validate identity domain, proof freshness, and task chain ID together in the policy.
+- Move address fields to checksum-validated branded address types when the SDK adopts them.
+
+## More resources
+
+- Repository tutorial pack: `docs/zktls-twitter/`
+- Example SDK: `examples/zktls-twitter/sdk/`
+- Browser demo: `examples/zktls-twitter/demo/`
+- Config fixtures: `examples/zktls-twitter/configs/`

@@ -6,7 +6,7 @@ import {
   extractProofPayload,
   extractTwitterUsername,
   normalizeExtensionResult,
-} from "./newtonFlow";
+} from "./flowHelpers";
 import type { ProofArtifact } from "./types";
 
 export function hasTlsnExtension(): boolean {

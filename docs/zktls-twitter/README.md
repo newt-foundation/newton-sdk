@@ -59,12 +59,10 @@ the protocol, SDK, and UX tracking items.
 
 ## Mintlify docs-site follow-up
 
-This tutorial pack currently lives in `docs/zktls-twitter/`, while the public
-Newton docs site is generated from `site/` via Mintlify. As a non-blocking docs
-publishing follow-up, add a `site/developers/guides/zktls-twitter.mdx` page that
-links to or inlines this tutorial, wire it into `site/docs.json` under
-Developers → Guides, and keep this markdown pack as the source of truth if that
-is the preferred docs workflow.
+- Keep the canonical tutorial pack in `docs/zktls-twitter/` for repo-local development and troubleshooting.
+- Mirror the external-developer happy path in the Mintlify guide at `site/developers/guides/zktls-twitter.mdx`.
+- Add the guide to the Developers → Guides navigation so reviewers can preview it from the docs sidebar.
+- After the storage backend migrates from IPFS to gateway-owned Postgres, update both the repo tutorial and Mintlify guide together so CID/proof retrieval behavior stays consistent.
 
 ## Repository map
 

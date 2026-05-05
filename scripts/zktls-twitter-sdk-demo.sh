@@ -16,7 +16,7 @@ Required options:
 
 Optional options:
   --gateway-url <url>         Gateway RPC URL (required with --submit)
-  --api-key <key>             Gateway x-newton-secret value for --submit
+  --api-key <key>             Gateway API key for Authorization: Bearer header with --submit
   --chain-id <id>             Chain ID (default: 11155111)
   --value <uint>              Intent value in wei (default: 0)
   --data <hex>                Intent calldata (default: 0x)
@@ -152,7 +152,7 @@ curl_args=(
 )
 
 if [[ -n "$API_KEY" ]]; then
-  curl_args+=( -H "x-newton-secret: $API_KEY" )
+  curl_args+=( -H "Authorization: Bearer $API_KEY" )
 fi
 
 curl "${curl_args[@]}"

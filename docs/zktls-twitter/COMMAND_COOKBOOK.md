@@ -66,7 +66,7 @@ scripts/zktls-twitter-sdk-demo.sh \
 ```bash
 curl -sS -X POST http://127.0.0.1:8080/rpc \
   -H 'Content-Type: application/json' \
-  -H "x-newton-secret: $NEWTON_API_KEY" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
   --data-binary @/tmp/newton-zktls-twitter-payload.json \
   | python3 -m json.tool
 ```

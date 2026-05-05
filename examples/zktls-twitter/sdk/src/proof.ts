@@ -1,3 +1,5 @@
+/// <reference path="./multiformats-compat.d.ts" />
+
 /**
  * Newton Protocol Proof management client.
  *
@@ -12,9 +14,21 @@
  * standalone archival tooling rather than a required task-submission step.
  */
 
-import type { NewtonSDKConfig, StoreProofRequest, StoreProofResponse } from "./types.js";
+import { CID } from "multiformats/cid";
+import { sha256 } from "multiformats/hashes/sha2";
+
+import type {
+  NewtonSDKConfig,
+  StoreProofRequest,
+  StoreProofResponse,
+} from "./types.js";
 import { NewtonSDKError, TimeoutError } from "./errors.js";
 
+/**
+ * Proof storage currently uses IPFS-backed attester endpoints. The planned
+ * migration moves proof persistence from IPFS to gateway-owned Postgres while
+ * preserving this client boundary for store/retrieve calls.
+ */
 export class ProofClient {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
@@ -93,7 +107,9 @@ export class ProofClient {
       }
 
       const buf = await response.arrayBuffer();
-      return new Uint8Array(buf);
+      const bytes = new Uint8Array(buf);
+      await verifyCidIntegrity(cid, bytes);
+      return bytes;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         throw new TimeoutError(this.timeout);
@@ -103,4 +119,26 @@ export class ProofClient {
       clearTimeout(timer);
     }
   }
+}
+
+async function verifyCidIntegrity(
+  cid: string,
+  bytes: Uint8Array,
+): Promise<void> {
+  const expected = CID.parse(cid).multihash.bytes;
+  const actual = (await sha256.digest(bytes)).bytes;
+
+  if (!bytesEqual(actual, expected)) {
+    throw new NewtonSDKError(
+      "CID integrity check failed: returned bytes do not match the requested content hash",
+    );
+  }
+}
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) {
+    return false;
+  }
+
+  return a.every((byte, index) => byte === b[index]);
 }
