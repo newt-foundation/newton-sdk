@@ -102,6 +102,7 @@ export class AttesterClient {
               proxyUrl: (host: string) =>
                 `${this.wsBaseUrl}/proxy?token=${encodeURIComponent(host)}&session=${data.sessionId}`,
             });
+            ws.close();
           } else if (data.type === "error") {
             reject(new SessionError(data.message));
             ws.close();

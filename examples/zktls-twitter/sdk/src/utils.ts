@@ -22,6 +22,9 @@ export function encodeWasmArgs(args: Record<string, unknown>): string {
  */
 export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
   const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (stripped.length === 0) {
+    throw new NewtonSDKError("Invalid hex string: empty input");
+  }
   const matches = stripped.match(/.{1,2}/g);
   if (!matches) {
     throw new NewtonSDKError("Invalid hex string: empty input");

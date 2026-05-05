@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { NewtonSDKError } from "./errors.js";
 import { encodeWasmArgs, decodeWasmArgs, camelToSnake, snakeToCamel } from "./utils.js";
 
 describe("encodeWasmArgs", () => {
