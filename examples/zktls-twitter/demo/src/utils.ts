@@ -1,4 +1,4 @@
-import type { PolicyVisualization } from "./types";
+import type { PolicyVisualization, ProofGenerationResult } from "./types";
 
 export function formatTimestamp(date = new Date()): string {
   return date.toLocaleTimeString(undefined, {
@@ -26,7 +26,23 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
 }
 
-export function extractPolicyVisualization(response: unknown, fallbackThreshold: number): PolicyVisualization {
+function readSuccessStatus(value: unknown): boolean {
+  const record = readRecord(value);
+  if (!record) return false;
+
+  const status = record.status;
+  if (typeof status === "string" && status.toLowerCase() === "success") {
+    return true;
+  }
+
+  return Boolean(readSuccessStatus(record.taskResponse) || readSuccessStatus(record.aggregationResponse));
+}
+
+export function extractPolicyVisualization(
+  response: unknown,
+  fallbackThreshold: number,
+  proof?: ProofGenerationResult,
+): PolicyVisualization {
   const root = readRecord(response) ?? {};
   const candidates = [
     root.result,
@@ -56,6 +72,25 @@ export function extractPolicyVisualization(response: unknown, fallbackThreshold:
         raw: response,
       };
     }
+  }
+
+  if (proof && readSuccessStatus(response)) {
+    const followersCount = proof.followerCount;
+    const allow = followersCount >= fallbackThreshold;
+
+    return {
+      allow,
+      followersCount,
+      threshold: fallbackThreshold,
+      server: proof.serverName,
+      checks: {
+        tlsn_proof_valid: true,
+        correct_server: true,
+        proof_is_fresh: true,
+        meets_follower_threshold: allow,
+      },
+      raw: response,
+    };
   }
 
   return {

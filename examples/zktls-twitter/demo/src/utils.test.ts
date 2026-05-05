@@ -33,4 +33,34 @@ describe("extractPolicyVisualization", () => {
       },
     });
   });
+
+  it("uses the generated proof metadata when the gateway only reports success", () => {
+    const visualization = extractPolicyVisualization(
+      { status: "success", taskId: "task-1" },
+      1000,
+      {
+        cid: "bafyproof",
+        proofBase64: "cHJvb2Y=",
+        followerCount: 5000,
+        twitterUsername: "newton_protocol",
+        sessionId: "session-1",
+        serverName: "x.com",
+        verifierUrl: "http://localhost:7047",
+        proxyUrl: "ws://localhost:7047/proxy?token=x.com",
+      },
+    );
+
+    expect(visualization).toMatchObject({
+      allow: true,
+      followersCount: 5000,
+      threshold: 1000,
+      server: "x.com",
+      checks: {
+        tlsn_proof_valid: true,
+        correct_server: true,
+        proof_is_fresh: true,
+        meets_follower_threshold: true,
+      },
+    });
+  });
 });

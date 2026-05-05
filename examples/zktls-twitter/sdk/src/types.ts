@@ -341,7 +341,7 @@ export interface SessionRegisterMessage {
 }
 
 export interface SessionRegisteredMessage {
-  type: "sessionRegistered";
+  type: "sessionRegistered" | "session_registered";
   sessionId: string;
 }
 
@@ -379,7 +379,7 @@ export interface HandlerResult {
 }
 
 export interface SessionCompletedMessage {
-  type: "sessionCompleted";
+  type: "sessionCompleted" | "session_completed";
   results: HandlerResult[];
 }
 
@@ -416,7 +416,7 @@ export interface JsonRpcRequest<T = unknown> {
   jsonrpc: "2.0";
   id: number | string;
   method: string;
-  params: T[];
+  params: T;
 }
 
 export interface JsonRpcResponse<T = unknown> {

@@ -91,7 +91,7 @@ describe("TaskManager", () => {
 
       const [, fetchInit] = mockFetch.mock.calls[0];
       const body = JSON.parse(fetchInit.body);
-      const params = body.params[0];
+      const params = body.params;
 
       // wasm_args should be hex-encoded
       expect(params.wasm_args).toMatch(/^0x[0-9a-f]+$/);
@@ -124,7 +124,7 @@ describe("TaskManager", () => {
 
       const [, fetchInit] = mockFetch.mock.calls[0];
       const body = JSON.parse(fetchInit.body);
-      expect(body.params[0].wasm_args).toBe("0xdeadbeef");
+      expect(body.params.wasm_args).toBe("0xdeadbeef");
     });
 
     it("sets default timeout to 60 seconds", async () => {
@@ -144,7 +144,7 @@ describe("TaskManager", () => {
 
       const [, fetchInit] = mockFetch.mock.calls[0];
       const body = JSON.parse(fetchInit.body);
-      expect(body.params[0].timeout).toBe(60);
+      expect(body.params.timeout).toBe(60);
     });
   });
 

@@ -11,6 +11,7 @@ import "./App.css";
 
 const idleChecks: SystemChecksState = {
   browser: { status: "idle", message: "Not checked" },
+  extension: { status: "idle", message: "Not checked" },
   gateway: { status: "idle", message: "Not checked" },
   attester: { status: "idle", message: "Not checked" },
 };
@@ -51,10 +52,11 @@ export function App({ services = newtonDemoServices }: AppProps) {
     setChecking(true);
     setChecks({
       browser: { status: "checking", message: "Checking browser APIs..." },
+      extension: { status: "checking", message: "Checking TLSNotary extension bridge..." },
       gateway: { status: "checking", message: "Checking gateway health..." },
       attester: { status: "checking", message: "Checking attester sidecar health..." },
     });
-    log("Running browser, gateway, and attester health checks...");
+    log("Running browser, extension, gateway, and attester health checks...");
     try {
       const nextChecks = await services.checkSystem(config);
       setChecks(nextChecks);
@@ -71,9 +73,14 @@ export function App({ services = newtonDemoServices }: AppProps) {
   const generateProof = useCallback(async () => {
     setGeneratingProof(true);
     setPolicyResult(undefined);
-    log(`Creating MPC-TLS session for @${twitterUsername} via api.x.com...`);
+    setProof(undefined);
+    log(`Creating MPC-TLS session for @${twitterUsername} via x.com UserByScreenName...`);
     try {
-      const generated = await services.generateProof(sdk, { twitterUsername, minFollowers });
+      const generated = await services.generateProof(sdk, {
+        twitterUsername,
+        minFollowers,
+        attesterUrl: config.sidecarUrl,
+      });
       setProof(generated);
       log(`Stored TLSNotary proof to IPFS: ${generated.cid}`, "success");
     } catch (error) {
@@ -82,7 +89,7 @@ export function App({ services = newtonDemoServices }: AppProps) {
     } finally {
       setGeneratingProof(false);
     }
-  }, [log, minFollowers, sdk, services, twitterUsername]);
+  }, [config.sidecarUrl, log, minFollowers, sdk, services, twitterUsername]);
 
   const submitTask = useCallback(async () => {
     if (!proof) return;
@@ -93,19 +100,20 @@ export function App({ services = newtonDemoServices }: AppProps) {
         policyClient: config.policyClient,
         from: config.intentFrom,
         to: config.intentTo,
+        chainId: config.chainId,
         proofCid: proof.cid,
         minFollowers,
         twitterUsername,
       });
-      setPolicyResult(extractPolicyVisualization(response, minFollowers));
-      log(`Task ${response.taskId} returned status ${response.status}`, "success");
+      setPolicyResult(extractPolicyVisualization(response, minFollowers, proof));
+      log(`Task ${response.taskId ?? "sync"} returned status ${response.status}`, "success");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log(`Task submission failed: ${message}`, "error");
     } finally {
       setSubmittingTask(false);
     }
-  }, [config.intentFrom, config.intentTo, config.policyClient, log, minFollowers, proof, sdk, services, twitterUsername]);
+  }, [config.chainId, config.intentFrom, config.intentTo, config.policyClient, log, minFollowers, proof, sdk, services, twitterUsername]);
 
   return (
     <main className="app-container">

@@ -116,9 +116,8 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
     const body = JSON.parse(init.body);
     expect(body.jsonrpc).toBe("2.0");
     expect(body.method).toBe("newt_createTask");
-    expect(body.params).toHaveLength(1);
 
-    const params = body.params[0];
+    const params = body.params;
     // Gateway expects snake_case
     expect(params.policy_client).toBe("0x1111111111111111111111111111111111111111");
     expect(params.use_two_phase).toBe(true);

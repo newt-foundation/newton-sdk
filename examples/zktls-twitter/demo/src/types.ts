@@ -17,6 +17,7 @@ export interface SystemCheckResult {
 
 export interface SystemChecks {
   browser: SystemCheckResult;
+  extension: SystemCheckResult;
   gateway: SystemCheckResult;
   attester: SystemCheckResult;
 }
@@ -28,11 +29,13 @@ export interface DemoConfig {
   policyClient: string;
   intentFrom: string;
   intentTo: string;
+  chainId: string | number;
 }
 
 export interface ProofRequest {
   twitterUsername: string;
   minFollowers: number;
+  attesterUrl: string;
 }
 
 export interface ProofGenerationResult {
@@ -42,6 +45,7 @@ export interface ProofGenerationResult {
   followerCount: number;
   twitterUsername: string;
   sessionId: string;
+  serverName?: string;
   verifierUrl: string;
   proxyUrl: string;
 }
@@ -53,6 +57,7 @@ export interface TwitterTaskSubmission {
   proofCid: string;
   minFollowers: number;
   twitterUsername: string;
+  chainId: string | number;
 }
 
 export interface TaskFormState {
@@ -75,6 +80,9 @@ export interface TaskPreview {
   wasmArgsJson: {
     min_followers: number;
     twitter_username: string;
+    base_symbol: string;
+    quote_symbol: string;
+    feed_id: string;
   };
   timeout: number;
   useTwoPhase: boolean;

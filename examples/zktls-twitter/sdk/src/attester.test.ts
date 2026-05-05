@@ -90,6 +90,20 @@ describe("AttesterClient WebSocket lifecycle", () => {
     expect(ws.close).toHaveBeenCalledTimes(1);
   });
 
+  it("createSession accepts the sidecar snake_case session_registered message", async () => {
+    const pending = client.createSession({ maxRecvData: 32, maxSentData: 16 });
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    ws.emitMessage({ type: "session_registered", sessionId: "session-1" });
+
+    await expect(pending).resolves.toMatchObject({
+      sessionId: "session-1",
+      verifierUrl: "ws://localhost:7047/verifier?sessionId=session-1",
+    });
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
   it("createSession rejects and closes on server error messages", async () => {
     const pending = client.createSession();
     const ws = MockWebSocket.latest();
@@ -119,6 +133,23 @@ describe("AttesterClient WebSocket lifecycle", () => {
     });
 
     ws.emitMessage({ type: "sessionCompleted", results });
+
+    await expect(pending).resolves.toEqual(results);
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal accepts the sidecar snake_case session_completed message", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+    const results: HandlerResult[] = [
+      { type: "RECV", part: "BODY", value: "{\"followers_count\":1000}" },
+    ];
+
+    ws.emitOpen();
+    ws.emitMessage({ type: "session_completed", results });
 
     await expect(pending).resolves.toEqual(results);
     expect(ws.close).toHaveBeenCalledTimes(1);

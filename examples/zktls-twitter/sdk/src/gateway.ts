@@ -174,16 +174,16 @@ export class GatewayClient {
     method: string,
     params: TReq,
   ): Promise<TRes> {
-    const id = ++this.requestId;
+    const id = this.nextRequestId();
 
     // Convert top-level keys to snake_case for the gateway
     const snakeParams = camelToSnake(params as unknown as Record<string, unknown>);
 
-    const body: JsonRpcRequest = {
+    const body: JsonRpcRequest<typeof snakeParams> = {
       jsonrpc: "2.0",
       id,
       method,
-      params: [snakeParams],
+      params: snakeParams,
     };
 
     const controller = new AbortController();
@@ -198,7 +198,10 @@ export class GatewayClient {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const text = typeof response.text === "function"
+          ? await response.text().catch(() => "")
+          : "";
+        throw new Error(`HTTP ${response.status}: ${response.statusText}${text ? ` ${text}` : ""}`);
       }
 
       const json = (await response.json()) as JsonRpcResponse<TRes>;
@@ -216,5 +219,15 @@ export class GatewayClient {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private nextRequestId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+
+    this.requestId += 1;
+    const suffix = this.requestId.toString(16).padStart(12, "0").slice(-12);
+    return `00000000-0000-4000-8000-${suffix}`;
   }
 }

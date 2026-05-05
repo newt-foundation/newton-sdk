@@ -142,7 +142,7 @@ export class AttesterClient {
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(String(ev.data)) as SessionServerMessage;
-          if (data.type === "sessionRegistered") {
+          if (data.type === "sessionRegistered" || data.type === "session_registered") {
             if (settled) {
               return;
             }
@@ -213,7 +213,7 @@ export class AttesterClient {
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(String(ev.data)) as SessionServerMessage;
-          if (data.type === "sessionCompleted") {
+          if (data.type === "sessionCompleted" || data.type === "session_completed") {
             if (settled) {
               return;
             }

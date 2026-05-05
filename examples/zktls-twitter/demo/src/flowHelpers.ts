@@ -27,6 +27,9 @@ export function buildWasmArgs(form: Pick<TaskFormState, "minFollowers" | "twitte
   return {
     min_followers: Number(form.minFollowers),
     twitter_username: form.twitterUsername.replace(/^@/, "").trim(),
+    base_symbol: "BTC",
+    quote_symbol: "USD",
+    feed_id: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
   };
 }
 
@@ -251,7 +254,7 @@ export function derivePolicyDecision(
   const proofAgeSecs = artifact.connectionTime ? secondsSince(artifact.connectionTime) : undefined;
   const followerCheck = artifact.followerCount === undefined ? "unknown" : artifact.followerCount >= minFollowers;
   const freshCheck = proofAgeSecs === undefined ? "unknown" : proofAgeSecs >= 0 && proofAgeSecs < 3600;
-  const serverCheck = artifact.server === "api.x.com" || artifact.server === "api.twitter.com";
+  const serverCheck = artifact.server === "api.x.com" || artifact.server === "api.twitter.com" || artifact.server === "x.com";
   const proofCheck = Boolean(artifact.cid);
 
   const allKnownAllow = proofCheck && serverCheck && freshCheck !== false && followerCheck === true;
@@ -259,7 +262,7 @@ export function derivePolicyDecision(
 
   const reasons: string[] = [];
   if (!proofCheck) reasons.push("No proof CID is available.");
-  if (!serverCheck) reasons.push("Proof server is not api.x.com or api.twitter.com.");
+  if (!serverCheck) reasons.push("Proof server is not api.x.com, api.twitter.com, or x.com.");
   if (freshCheck === false) reasons.push("Proof is older than the one-hour policy default.");
   if (followerCheck === false && artifact.followerCount !== undefined) {
     reasons.push(`Followers count ${artifact.followerCount} is below minimum ${minFollowers}.`);

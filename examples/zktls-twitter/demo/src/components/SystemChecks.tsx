@@ -26,6 +26,7 @@ export function SystemChecks({ checks, onRunChecks, checking }: SystemChecksProp
       </div>
       <div className="check-grid">
         <CheckItem label="Browser" {...checks.browser} />
+        <CheckItem label="Extension" {...checks.extension} />
         <CheckItem label="Gateway" {...checks.gateway} />
         <CheckItem label="Attester" {...checks.attester} />
       </div>

@@ -29,7 +29,7 @@ export function ProofPanel({
     <section className="content-card" aria-labelledby="proof-title">
       <h2 id="proof-title">MPC-TLS proof generation</h2>
       <p>
-        Connect to the Newton attester WebSocket, proxy the Twitter/X request to <code>api.x.com</code>,
+        Connect to the Newton attester WebSocket, proxy the Twitter/X request to <code>x.com/i/api</code>,
         generate a TLSNotary presentation, then store the proof to IPFS.
       </p>
       <form className="form-grid" onSubmit={submit}>

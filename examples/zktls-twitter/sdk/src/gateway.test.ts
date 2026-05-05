@@ -95,10 +95,10 @@ describe("GatewayClient", () => {
     const body = JSON.parse(fetchInit.body);
     expect(body.method).toBe("newt_createTask");
     expect(body.jsonrpc).toBe("2.0");
-    expect(body.params).toHaveLength(1);
+    expect(body.id).toEqual(expect.stringMatching(/^[0-9a-f-]{36}$/));
 
     // Verify snake_case conversion for gateway
-    const params = body.params[0];
+    const params = body.params;
     expect(params.policy_client).toBe("0x1111111111111111111111111111111111111111");
     expect(params.use_two_phase).toBe(true);
     expect(params.proof_cid).toBe("bafytest");

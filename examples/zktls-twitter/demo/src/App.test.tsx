@@ -11,6 +11,7 @@ function fakeServices(): DemoServices {
     createSdk: vi.fn(() => sdk),
     checkSystem: vi.fn(async () => ({
       browser: { status: "success" as const, message: "Browser OK" },
+      extension: { status: "success" as const, message: "Extension OK" },
       gateway: { status: "success" as const, message: "Gateway OK" },
       attester: { status: "success" as const, message: "Attester OK" },
     })),
@@ -53,6 +54,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /run checks/i }));
 
     expect(await screen.findByText("Browser OK")).toBeInTheDocument();
+    expect(screen.getByText("Extension OK")).toBeInTheDocument();
     expect(screen.getByText("Gateway OK")).toBeInTheDocument();
     expect(screen.getByText("Attester OK")).toBeInTheDocument();
     expect(services.checkSystem).toHaveBeenCalledTimes(1);
@@ -69,6 +71,7 @@ describe("App", () => {
     expect(services.generateProof).toHaveBeenCalledWith(expect.anything(), {
       twitterUsername: "newton_protocol",
       minFollowers: 1000,
+      attesterUrl: "http://127.0.0.1:7047",
     });
 
     await user.click(screen.getByRole("button", { name: /submit newton task/i }));
