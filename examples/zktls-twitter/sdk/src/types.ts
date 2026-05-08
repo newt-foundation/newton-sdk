@@ -416,7 +416,10 @@ export interface StoreProofResponse {
 
 export interface JsonRpcRequest<T = unknown> {
   jsonrpc: "2.0";
-  id: number | string;
+  // Outbound requests always use string ids (UUID or `req-N` fallback). The
+  // response interface keeps `number | string` because servers may echo back
+  // either form per the JSON-RPC 2.0 spec.
+  id: string;
   method: string;
   params: T;
 }

@@ -17,6 +17,10 @@ export function encodeWasmArgs(args: Record<string, unknown>): string {
   return `0x${hex}`;
 }
 
+// 50 MiB cap matches the proof-bytes size cap in `proof.ts` so the two
+// boundaries are reasoned about together.
+const MAX_WASM_ARGS_BYTES = 50 * 1024 * 1024;
+
 /**
  * Decode 0x-prefixed hex-encoded UTF-8 JSON back to an object.
  */
@@ -28,6 +32,14 @@ export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
   if (stripped.length % 2 !== 0) {
     throw new NewtonSDKError(
       `Invalid hex string: odd length (${stripped.length} chars)`,
+    );
+  }
+  // Reject pathologically large payloads before doing the O(n) hex match and
+  // O(n) byte allocation. A 50 MiB JSON arg is already three orders of
+  // magnitude beyond legitimate SDK use.
+  if (stripped.length / 2 > MAX_WASM_ARGS_BYTES) {
+    throw new NewtonSDKError(
+      `Invalid hex string: payload exceeds ${MAX_WASM_ARGS_BYTES} bytes`,
     );
   }
   if (!/^[0-9a-fA-F]+$/.test(stripped)) {
@@ -50,7 +62,13 @@ export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
 export function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = key.replace(/([A-Z])/g, (c) => `_${c.toLowerCase()}`);
+    // Two-arm pattern handles both `aB`-style transitions and runs of caps
+    // (`fooHTTPSServer` → `foo_https_server`). The naive single-arm form
+    // `/([A-Z])/g` produces leading underscores on PascalCase keys and
+    // splits acronyms letter-by-letter (`HTTP` → `_h_t_t_p`).
+    const snakeKey = key
+      .replace(/([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])/g, "$1$3_$2$4")
+      .toLowerCase();
     result[snakeKey] = value;
   }
   return result;

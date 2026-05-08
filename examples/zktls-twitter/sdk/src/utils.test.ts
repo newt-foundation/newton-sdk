@@ -71,4 +71,20 @@ describe("camelToSnake", () => {
     const result = camelToSnake({ count: 42, active: true });
     expect(result).toEqual({ count: 42, active: true });
   });
+
+  it("does not insert leading underscore for PascalCase keys", () => {
+    const result = camelToSnake({ FooBar: 1 });
+    expect(result).toEqual({ foo_bar: 1 });
+  });
+
+  it("preserves runs of consecutive caps as single segments", () => {
+    const result = camelToSnake({
+      fooHTTPServer: "yes",
+      apiURL: "https://example.com",
+    });
+    expect(result).toEqual({
+      foo_http_server: "yes",
+      api_url: "https://example.com",
+    });
+  });
 });

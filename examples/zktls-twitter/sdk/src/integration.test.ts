@@ -18,6 +18,14 @@ async function cidFor(bytes: Uint8Array): Promise<string> {
   return CID.createV1(0x55, await sha256.digest(bytes)).toString();
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 describe("Integration: zkTLS Twitter follower verification flow", () => {
   const sdk = createNewtonSDK({
     gatewayUrl: "http://localhost:8080",
@@ -45,7 +53,11 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
   });
 
   it("Step 2: store proof to IPFS via attester", async () => {
-    const proofCid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+    // Use real bytes + real CID so the client-side integrity check in
+    // ProofClient.store can verify the gateway response.
+    const proofBytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const proofBase64 = bytesToBase64(proofBytes);
+    const proofCid = await cidFor(proofBytes);
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -55,7 +67,7 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
       }),
     });
 
-    const result = await sdk.proof.store("base64EncodedProofData==");
+    const result = await sdk.proof.store(proofBase64);
 
     expect(result.cid).toBe(proofCid);
 
@@ -64,7 +76,7 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
     expect(url).toBe("http://localhost:7047/v1/proof/store");
     expect(init.method).toBe("POST");
     expect(init.headers["Authorization"]).toBe("Bearer test-api-key");
-    expect(JSON.parse(init.body).proof).toBe("base64EncodedProofData==");
+    expect(JSON.parse(init.body).proof).toBe(proofBase64);
   });
 
   it("Step 3: createTask with proofCid — full payload validation", async () => {

@@ -147,11 +147,28 @@ export class TaskManager {
       };
 
       ws.onmessage = (ev) => {
+        const raw = String(ev.data);
+        // Defensive cap matches the AttesterClient frame guard so a hostile
+        // or misconfigured upstream cannot OOM the client by streaming a
+        // single oversized JSON frame.
+        if (raw.length > 1_000_000) {
+          rejectWithCleanup(
+            new SessionError(`WebSocket frame exceeds 1 MB (${raw.length} bytes)`),
+          );
+          return;
+        }
+
         let event: TaskUpdateEvent;
         try {
-          event = JSON.parse(String(ev.data)) as TaskUpdateEvent;
-        } catch {
-          // Ignore non-JSON frames; do not settle the outer Promise.
+          event = JSON.parse(raw) as TaskUpdateEvent;
+        } catch (err) {
+          // Non-JSON frames are tolerated to allow gateway-side keepalives or
+          // future control frames without settling the outer Promise. Surface
+          // at debug so an unexpected upstream format change is not invisible
+          // to operators tailing browser DevTools.
+          if (typeof console !== "undefined" && typeof console.debug === "function") {
+            console.debug("[newton-sdk] trackTask: ignoring non-JSON frame", err);
+          }
           return;
         }
 

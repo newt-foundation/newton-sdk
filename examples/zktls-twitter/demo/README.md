@@ -30,11 +30,13 @@ VITE_INTENT_TO=0x3333333333333333333333333333333333333333
 
 ## Commands
 
+The repository uses pnpm as the package manager (see `pnpm-lock.yaml`).
+
 ```bash
-npm install
-npm run dev
-npm run test
-npm run typecheck
-npm run lint
-npm run build
+pnpm install
+pnpm dev
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
 ```

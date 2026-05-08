@@ -27,7 +27,6 @@
     "build": "npm run build:esm && npm run build:cjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/",
     "clean": "rm -rf dist"
   },
   "keywords": [

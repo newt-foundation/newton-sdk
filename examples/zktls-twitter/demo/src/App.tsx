@@ -20,6 +20,11 @@ interface AppProps {
   services?: DemoServices;
 }
 
+// Cap console-output buffer so a long-running demo session does not pin an
+// unbounded React array in memory. 100 entries comfortably covers the full
+// proof-generation + task-submission flow with margin to spare.
+const MAX_CONSOLE_ENTRIES = 100;
+
 function createConsoleEntry(message: string, type: ConsoleEntry["type"] = "info"): ConsoleEntry {
   return {
     id: `${Date.now()}-${Math.random()}`,
@@ -45,7 +50,10 @@ export function App({ services = newtonDemoServices }: AppProps) {
   const [policyResult, setPolicyResult] = useState<PolicyVisualization>();
 
   const log = useCallback((message: string, type: ConsoleEntry["type"] = "info") => {
-    setConsoleEntries((entries) => [...entries, createConsoleEntry(message, type)]);
+    setConsoleEntries((entries) => {
+      const next = [...entries, createConsoleEntry(message, type)];
+      return next.length > MAX_CONSOLE_ENTRIES ? next.slice(-MAX_CONSOLE_ENTRIES) : next;
+    });
   }, []);
 
   const runChecks = useCallback(async () => {

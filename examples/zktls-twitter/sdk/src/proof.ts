@@ -71,7 +71,13 @@ export class ProofClient {
         );
       }
 
-      return (await boundedJson(response, this.timeout)) as StoreProofResponse;
+      const result = (await boundedJson(response, this.timeout)) as StoreProofResponse;
+      // Defense in depth: re-derive the CID from the bytes we sent and confirm
+      // the gateway returned a CID for *that* content. Otherwise a malicious or
+      // misconfigured gateway could return any CID, and downstream `proofCid`
+      // submission would resolve to content the client never authored.
+      await verifyCidIntegrity(result.cid, base64ToBytes(proof));
+      return result;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         throw new TimeoutError(this.timeout);
@@ -147,6 +153,27 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   }
 
   return a.every((byte, index) => byte === b[index]);
+}
+
+/**
+ * Decode a base64 string into raw bytes. Uses `atob` (universal across modern
+ * Node ≥18 and browsers) so the verification path stays runtime-agnostic.
+ * The implementation routes through `String.fromCharCode` to preserve byte
+ * values exactly — `atob` returns a binary string where each codepoint is
+ * the literal byte value.
+ */
+function base64ToBytes(b64: string): Uint8Array {
+  if (typeof atob !== "function") {
+    throw new NewtonSDKError(
+      "Cannot verify proof CID: atob() is not available in this runtime",
+    );
+  }
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) {
+    bytes[i] = bin.charCodeAt(i);
+  }
+  return bytes;
 }
 
 /**

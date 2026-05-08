@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttesterClient } from "./attester.js";
+import { AttesterClient, formatWebSocketError } from "./attester.js";
 import type { HandlerResult } from "./types.js";
 
 class MockWebSocket {
@@ -238,5 +238,51 @@ describe("AttesterClient WebSocket lifecycle", () => {
     await expect(pending).resolves.toMatchObject({
       sessionId: "session-key",
     });
+  });
+});
+
+describe("formatWebSocketError", () => {
+  it("returns String(ev) for primitives", () => {
+    expect(formatWebSocketError(undefined)).toBe("undefined");
+    expect(formatWebSocketError(null)).toBe("null");
+    expect(formatWebSocketError("plain")).toBe("plain");
+    expect(formatWebSocketError(42)).toBe("42");
+  });
+
+  it("formats message-only events", () => {
+    expect(formatWebSocketError({ message: "boom" })).toBe("message=boom");
+  });
+
+  it("formats code-only events", () => {
+    expect(formatWebSocketError({ code: 1006 })).toBe("code=1006");
+  });
+
+  it("formats nested error.message", () => {
+    expect(
+      formatWebSocketError({ error: new Error("ECONNRESET") }),
+    ).toBe("error.message=ECONNRESET");
+  });
+
+  it("composes message, code, and nested error fields in order", () => {
+    expect(
+      formatWebSocketError({
+        message: "socket failed",
+        code: 1006,
+        error: new Error("ECONNRESET"),
+      }),
+    ).toBe(
+      "message=socket failed, code=1006, error.message=ECONNRESET",
+    );
+  });
+
+  it("falls back to String(ev) when no recognized fields are present", () => {
+    const ev = { irrelevant: true };
+    expect(formatWebSocketError(ev)).toBe(String(ev));
+  });
+
+  it("ignores nested error without a message property", () => {
+    expect(formatWebSocketError({ error: { code: "EPIPE" } })).toBe(
+      String({ error: { code: "EPIPE" } }),
+    );
   });
 });

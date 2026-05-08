@@ -11,8 +11,8 @@ export function getDemoConfig(): DemoConfig {
     gatewayUrl: import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:8080",
     apiKey: import.meta.env.VITE_NEWTON_API_KEY || undefined,
     policyClient: import.meta.env.VITE_POLICY_CLIENT ?? DEFAULT_POLICY_CLIENT,
-    intentFrom: import.meta.env.VITE_INTENT_FROM ?? import.meta.env.VITE_DEMO_FROM ?? DEFAULT_INTENT_FROM,
-    intentTo: import.meta.env.VITE_INTENT_TO ?? import.meta.env.VITE_DEMO_TO ?? DEFAULT_INTENT_TO,
+    intentFrom: import.meta.env.VITE_INTENT_FROM ?? DEFAULT_INTENT_FROM,
+    intentTo: import.meta.env.VITE_INTENT_TO ?? DEFAULT_INTENT_TO,
     chainId: import.meta.env.VITE_CHAIN_ID ?? DEFAULT_CHAIN_ID,
   };
 }

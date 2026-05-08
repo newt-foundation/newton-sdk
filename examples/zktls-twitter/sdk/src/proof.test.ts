@@ -12,6 +12,14 @@ async function cidFor(bytes: Uint8Array): Promise<string> {
   return CID.createV1(0x55, await sha256.digest(bytes)).toString();
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 describe("ProofClient", () => {
   let client: ProofClient;
 
@@ -26,17 +34,21 @@ describe("ProofClient", () => {
 
   describe("store", () => {
     it("sends proof to /v1/proof/store and returns CID", async () => {
+      const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const proofBase64 = bytesToBase64(proofBytes);
+      const cid = await cidFor(proofBytes);
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          url: "https://ipfs.example.com/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          cid,
+          url: `https://ipfs.example.com/ipfs/${cid}`,
         }),
       });
 
-      const result = await client.store("base64encodedproof==");
+      const result = await client.store(proofBase64);
 
-      expect(result.cid).toBe("bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
+      expect(result.cid).toBe(cid);
       expect(result.url).toContain("ipfs");
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -45,7 +57,22 @@ describe("ProofClient", () => {
       expect(init.headers["Authorization"]).toBe("Bearer test-key");
 
       const body = JSON.parse(init.body);
-      expect(body.proof).toBe("base64encodedproof==");
+      expect(body.proof).toBe(proofBase64);
+    });
+
+    it("throws when gateway returns a CID that does not match the stored bytes", async () => {
+      const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const proofBase64 = bytesToBase64(proofBytes);
+      const wrongCid = await cidFor(new Uint8Array([9, 9, 9]));
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ cid: wrongCid }),
+      });
+
+      await expect(client.store(proofBase64)).rejects.toThrow(
+        "CID integrity check failed",
+      );
     });
 
     it("throws on HTTP error", async () => {

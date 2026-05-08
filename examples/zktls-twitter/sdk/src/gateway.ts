@@ -198,11 +198,17 @@ export class GatewayClient {
       });
 
       if (!response.ok) {
-        let text = "";
-        if (typeof response.text === "function") {
-          text = await response.text().catch(() => "");
-        }
+        const text = await readBoundedText(response);
         throw new Error(`HTTP ${response.status}: ${response.statusText}${text ? ` ${text}` : ""}`);
+      }
+
+      // Reject responses that advertise an oversized body before parsing JSON.
+      // Production gateways send compact JSON-RPC envelopes; a multi-MiB body
+      // here is either misconfigured or hostile and should not pour into JSON.parse.
+      if (!isAdvertisedSizeAcceptable(response)) {
+        throw new Error(
+          `HTTP ${response.status}: response body exceeds ${MAX_RPC_BODY_BYTES} byte cap`,
+        );
       }
 
       const json = (await response.json()) as JsonRpcResponse<TRes>;
@@ -232,4 +238,27 @@ export class GatewayClient {
     this.requestId += 1;
     return `req-${this.requestId}`;
   }
+}
+
+// JSON-RPC envelopes are compact by design; cap defends against a hostile or
+// misconfigured upstream pushing megabytes through the error/JSON paths.
+const MAX_RPC_BODY_BYTES = 1_048_576;
+
+function isAdvertisedSizeAcceptable(response: Response): boolean {
+  const header =
+    typeof response.headers?.get === "function"
+      ? response.headers.get("content-length")
+      : null;
+  if (!header) return true;
+  const declared = Number.parseInt(header, 10);
+  return Number.isFinite(declared) && declared <= MAX_RPC_BODY_BYTES;
+}
+
+async function readBoundedText(response: Response): Promise<string> {
+  if (typeof response.text !== "function") return "";
+  if (!isAdvertisedSizeAcceptable(response)) {
+    return `<body suppressed: exceeds ${MAX_RPC_BODY_BYTES} byte cap>`;
+  }
+  const text = await response.text().catch(() => "");
+  return text.length > MAX_RPC_BODY_BYTES ? text.slice(0, MAX_RPC_BODY_BYTES) : text;
 }

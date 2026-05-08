@@ -71,7 +71,7 @@ describe("App", () => {
     expect(services.generateProof).toHaveBeenCalledWith(expect.anything(), {
       twitterUsername: "newton_protocol",
       minFollowers: 1000,
-      attesterUrl: "http://127.0.0.1:7047",
+      attesterUrl: "http://localhost:7047",
     });
 
     await user.click(screen.getByRole("button", { name: /submit newton task/i }));

@@ -11,9 +11,19 @@ Example-scoped TypeScript helpers for the Newton Protocol Twitter/X zkTLS tutori
 
 ## Installation
 
+This package is not published to npm — it is reference code that lives in this
+repository under `examples/zktls-twitter/sdk/`. To use it, clone the repo and
+build locally:
+
 ```bash
-npm install @newton-protocol/zktls-twitter-example
+git clone https://github.com/newt-foundation/newton-sdk.git
+cd newton-sdk/examples/zktls-twitter/sdk
+pnpm install
+pnpm build
 ```
+
+Then import directly from the relative path or via a workspace dependency. For
+production integrations, use `@magicnewton/newton-protocol-sdk` instead.
 
 ## Quick Start
 
@@ -228,12 +238,12 @@ const obj = decodeWasmArgs(hex);
 ## Error Handling
 
 ```typescript
-import { JsonRpcError_, TimeoutError, SessionError } from "@newton-protocol/zktls-twitter-example";
+import { RpcError, TimeoutError, SessionError } from "@newton-protocol/zktls-twitter-example";
 
 try {
   await sdk.task.createTask({ ... });
 } catch (err) {
-  if (err instanceof JsonRpcError_) {
+  if (err instanceof RpcError) {
     console.error(`RPC error ${err.code}: ${err.message}`);
     console.error("Details:", err.data);
   } else if (err instanceof TimeoutError) {
