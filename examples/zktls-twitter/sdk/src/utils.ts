@@ -22,27 +22,18 @@ export function encodeWasmArgs(args: Record<string, unknown>): string {
  */
 export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
   const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length === 0) {
-    throw new NewtonSDKError("Invalid hex string: empty input");
+  if (stripped.length === 0 || stripped.length % 2 !== 0) {
+    throw new NewtonSDKError(
+      `Invalid hex string: length must be even and non-zero, got ${stripped.length}`,
+    );
   }
-  const matches = stripped.match(/.{1,2}/g);
-  if (!matches) {
-    throw new NewtonSDKError("Invalid hex string: empty input");
+  if (!/^[0-9a-fA-F]+$/.test(stripped)) {
+    throw new NewtonSDKError("Invalid hex string: contains non-hex characters");
   }
-  const bytes = new Uint8Array(matches.map((b) => parseInt(b, 16)));
+  const bytes = new Uint8Array(
+    stripped.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
+  );
   return JSON.parse(new TextDecoder().decode(bytes));
-}
-
-/**
- * Convert snake_case keys to camelCase (single-level for JSON-RPC request params).
- */
-export function snakeToCamel(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const camelKey = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
-    result[camelKey] = value;
-  }
-  return result;
 }
 
 /**

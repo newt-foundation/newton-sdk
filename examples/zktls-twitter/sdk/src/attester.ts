@@ -28,7 +28,7 @@ export interface AttesterSession {
   proxyUrl: (host: string) => string;
 }
 
-function formatWebSocketError(ev: unknown): string {
+export function formatWebSocketError(ev: unknown): string {
   if (!ev || typeof ev !== "object") {
     return String(ev);
   }
@@ -141,7 +141,15 @@ export class AttesterClient {
 
       ws.onmessage = (ev) => {
         try {
-          const data = JSON.parse(String(ev.data)) as SessionServerMessage;
+          const raw = String(ev.data);
+          // Defensive: reject oversized frames before JSON.parse
+          if (raw.length > 1_000_000) {
+            rejectWithCleanup(
+              new SessionError(`Session message too large (${raw.length} chars)`),
+            );
+            return;
+          }
+          const data = JSON.parse(raw) as SessionServerMessage;
           if (data.type === "sessionRegistered" || data.type === "session_registered") {
             if (settled) {
               return;
@@ -163,6 +171,18 @@ export class AttesterClient {
             new SessionError(`Failed to parse session message: ${err}`),
           );
         }
+      };
+
+      ws.onclose = (ev) => {
+        rejectWithCleanup(
+          new SessionError(`WebSocket closed: ${formatWebSocketError(ev)}`),
+        );
+      };
+
+      ws.onclose = (ev) => {
+        rejectWithCleanup(
+          new SessionError(`WebSocket closed: ${formatWebSocketError(ev)}`),
+        );
       };
 
       ws.onerror = (ev) => {
@@ -212,7 +232,15 @@ export class AttesterClient {
 
       ws.onmessage = (ev) => {
         try {
-          const data = JSON.parse(String(ev.data)) as SessionServerMessage;
+          const raw = String(ev.data);
+          // Defensive: reject oversized frames before JSON.parse
+          if (raw.length > 1_000_000) {
+            rejectWithCleanup(
+              new SessionError(`Session message too large (${raw.length} chars)`),
+            );
+            return;
+          }
+          const data = JSON.parse(raw) as SessionServerMessage;
           if (data.type === "sessionCompleted" || data.type === "session_completed") {
             if (settled) {
               return;
@@ -229,6 +257,12 @@ export class AttesterClient {
             new SessionError(`Failed to parse message: ${err}`),
           );
         }
+      };
+
+      ws.onclose = (ev) => {
+        rejectWithCleanup(
+          new SessionError(`WebSocket closed: ${formatWebSocketError(ev)}`),
+        );
       };
 
       ws.onerror = (ev) => {
@@ -255,6 +289,14 @@ export class AttesterClient {
       );
     }
 
-    return new WS(url);
+    // Thread API key into the WebSocket URL as a query parameter since
+    // the WS upgrade handshake cannot carry custom HTTP headers in browsers.
+    const wsUrl = new URL(url);
+    if (this.headers["Authorization"]) {
+      const bearer = this.headers["Authorization"].replace(/^Bearer\s+/i, "");
+      wsUrl.searchParams.set("apiKey", bearer);
+    }
+
+    return new WS(wsUrl.toString());
   }
 }

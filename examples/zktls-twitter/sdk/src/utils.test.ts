@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NewtonSDKError } from "./errors.js";
-import { encodeWasmArgs, decodeWasmArgs, camelToSnake, snakeToCamel } from "./utils.js";
+import { encodeWasmArgs, decodeWasmArgs, camelToSnake } from "./utils.js";
 
 describe("encodeWasmArgs", () => {
   it("encodes a JSON object to 0x-prefixed hex", () => {
@@ -41,6 +41,11 @@ describe("decodeWasmArgs", () => {
     expect(() => decodeWasmArgs("0x")).toThrow("Invalid hex string: empty input");
     expect(() => decodeWasmArgs("")).toThrow("Invalid hex string: empty input");
   });
+
+  it("throws a clear error for odd-length hex", () => {
+    expect(() => decodeWasmArgs("0xabc")).toThrow("Invalid hex string: odd length");
+    expect(() => decodeWasmArgs("abc")).toThrow("Invalid hex string: odd length");
+  });
 });
 
 describe("camelToSnake", () => {
@@ -63,17 +68,9 @@ describe("camelToSnake", () => {
   });
 });
 
-describe("snakeToCamel", () => {
-  it("converts snake_case keys to camelCase", () => {
-    const result = snakeToCamel({
-      policy_client: "0x1234",
-      use_two_phase: true,
-      proof_cid: "bafybeig",
-    });
-    expect(result).toEqual({
-      policyClient: "0x1234",
-      useTwoPhase: true,
-      proofCid: "bafybeig",
-    });
+describe("camelToSnake", () => {
+  it("leaves non-string values unchanged", () => {
+    const result = camelToSnake({ count: 42, active: true });
+    expect(result).toEqual({ count: 42, active: true });
   });
 });

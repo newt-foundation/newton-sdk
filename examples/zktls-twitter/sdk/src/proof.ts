@@ -65,13 +65,13 @@ export class ProofClient {
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
+        const text = await boundedText(response, this.timeout);
         throw new NewtonSDKError(
           `Proof store failed: HTTP ${response.status} ${text}`,
         );
       }
 
-      return (await response.json()) as StoreProofResponse;
+      return (await boundedJson(response, this.timeout)) as StoreProofResponse;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         throw new TimeoutError(this.timeout);
@@ -93,21 +93,20 @@ export class ProofClient {
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(`${this.baseUrl}/v1/proof/${cid}`, {
+      const response = await fetch(`${this.baseUrl}/v1/proof/${encodeURIComponent(cid)}`, {
         method: "GET",
         headers: this.headers,
         signal: controller.signal,
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
+        const text = await boundedText(response, this.timeout);
         throw new NewtonSDKError(
           `Proof retrieve failed: HTTP ${response.status} ${text}`,
         );
       }
 
-      const buf = await response.arrayBuffer();
-      const bytes = new Uint8Array(buf);
+      const bytes = await boundedArrayBuffer(response, this.timeout);
       await verifyCidIntegrity(cid, bytes);
       return bytes;
     } catch (err: unknown) {
@@ -125,7 +124,14 @@ async function verifyCidIntegrity(
   cid: string,
   bytes: Uint8Array,
 ): Promise<void> {
-  const expected = CID.parse(cid).multihash.bytes;
+  const parsed = CID.parse(cid);
+  if (parsed.multihash.code !== sha256.code) {
+    throw new NewtonSDKError(
+      `CID integrity check unsupported: multihash algorithm ${parsed.multihash.code} is not sha-256`,
+    );
+  }
+
+  const expected = parsed.multihash.bytes;
   const actual = (await sha256.digest(bytes)).bytes;
 
   if (!bytesEqual(actual, expected)) {
@@ -141,4 +147,57 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   }
 
   return a.every((byte, index) => byte === b[index]);
+}
+
+/**
+ * Bounded body-read helpers: keep the AbortController alive across the
+ * response-body read so a stalled or oversized body still times out.
+ */
+
+const MAX_BODY_SIZE = 50 * 1024 * 1024; // 50 MiB
+
+async function boundedArrayBuffer(
+  response: Response,
+  timeoutMs: number,
+): Promise<Uint8Array> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new NewtonSDKError("Response body is not readable");
+    }
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > MAX_BODY_SIZE) {
+        throw new NewtonSDKError(
+          `Response body exceeds maximum allowed size (${MAX_BODY_SIZE} bytes)`,
+        );
+      }
+      chunks.push(value);
+    }
+    const buf = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buf.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return buf;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function boundedText(response: Response, timeoutMs: number): Promise<string> {
+  const bytes = await boundedArrayBuffer(response, timeoutMs);
+  return new TextDecoder().decode(bytes);
+}
+
+async function boundedJson(response: Response, timeoutMs: number): Promise<unknown> {
+  const text = await boundedText(response, timeoutMs);
+  return JSON.parse(text);
 }

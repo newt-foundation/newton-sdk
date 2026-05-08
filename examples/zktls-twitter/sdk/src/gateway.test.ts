@@ -117,7 +117,7 @@ describe("GatewayClient", () => {
     expect(fetchInit.headers["Authorization"]).toBe("Bearer test-key");
   });
 
-  it("throws JsonRpcError on RPC error response", async () => {
+  it("throws RpcError on RPC error response", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -157,5 +157,26 @@ describe("GatewayClient", () => {
       "http://localhost:8080/rpc",
       expect.anything(),
     );
+  });
+
+  it("uses sequential request IDs when crypto.randomUUID is unavailable", async () => {
+    const originalRandomUUID = crypto.randomUUID;
+    // @ts-expect-error — intentionally removing randomUUID for test
+    crypto.randomUUID = undefined;
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ jsonrpc: "2.0", id: "req-1", result: {} }),
+    });
+
+    const simpleClient = new GatewayClient({ gatewayUrl: "http://localhost:8080" });
+    await simpleClient.getPrivacyPublicKey();
+
+    const [, fetchInit] = mockFetch.mock.calls[0];
+    const body = JSON.parse(fetchInit.body);
+    expect(body.id).toBe("req-1");
+
+    // @ts-expect-error — restore
+    crypto.randomUUID = originalRandomUUID;
   });
 });

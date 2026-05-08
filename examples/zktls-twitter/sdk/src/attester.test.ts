@@ -187,4 +187,51 @@ describe("AttesterClient WebSocket lifecycle", () => {
     await assertion;
     expect(ws.close).toHaveBeenCalledTimes(1);
   });
+
+  it("createSession rejects on WebSocket close before completion", async () => {
+    const pending = client.createSession();
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    ws.emitClose({ code: 1006, reason: "abnormal closure" });
+
+    await expect(pending).rejects.toThrow("WebSocket closed:");
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal rejects on oversized WebSocket frame", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    // Simulate a frame larger than 1 MB
+    ws.emitMessage("x".repeat(1_000_001));
+
+    await expect(pending).rejects.toThrow("WebSocket frame exceeds 1 MB");
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession passes apiKey as query parameter when configured", async () => {
+    const keyClient = new AttesterClient({
+      gatewayUrl: "http://localhost:8080",
+      attesterUrl: "http://localhost:7047",
+      apiKey: "secret-key",
+      timeout: 50,
+    });
+    keyClient.setWebSocket(MockWebSocket);
+
+    const pending = keyClient.createSession();
+    const ws = MockWebSocket.latest();
+
+    expect(ws.url).toBe("ws://localhost:7047/session?apiKey=secret-key");
+    ws.emitOpen();
+    ws.emitMessage({ type: "sessionRegistered", sessionId: "session-key" });
+
+    await expect(pending).resolves.toMatchObject({
+      sessionId: "session-key",
+    });
+  });
 });

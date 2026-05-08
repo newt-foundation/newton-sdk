@@ -36,7 +36,7 @@ import type {
   UploadIdentityRequest,
   UploadIdentityResponse,
 } from "./types.js";
-import { JsonRpcError_, TimeoutError } from "./errors.js";
+import { RpcError, TimeoutError } from "./errors.js";
 import { camelToSnake } from "./utils.js";
 
 export class GatewayClient {
@@ -198,16 +198,14 @@ export class GatewayClient {
       });
 
       if (!response.ok) {
-        const text = typeof response.text === "function"
-          ? await response.text().catch(() => "")
-          : "";
+        const text = await response.text().catch(() => "");
         throw new Error(`HTTP ${response.status}: ${response.statusText}${text ? ` ${text}` : ""}`);
       }
 
       const json = (await response.json()) as JsonRpcResponse<TRes>;
 
       if (json.error) {
-        throw new JsonRpcError_(json.error);
+        throw new RpcError(json.error);
       }
 
       return json.result as TRes;
@@ -227,7 +225,6 @@ export class GatewayClient {
     }
 
     this.requestId += 1;
-    const suffix = this.requestId.toString(16).padStart(12, "0").slice(-12);
-    return `00000000-0000-4000-8000-${suffix}`;
+    return `00000000-0000-4000-8000-${this.requestId.toString(16).padStart(12, "0").slice(-12)}`;
   }
 }

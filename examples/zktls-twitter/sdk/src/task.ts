@@ -19,6 +19,7 @@ import type {
 import { GatewayClient } from "./gateway.js";
 import { SessionError, TimeoutError } from "./errors.js";
 import { encodeWasmArgs } from "./utils.js";
+import { formatWebSocketError } from "./attester.js";
 
 export interface TaskOptions {
   /** Policy client contract address */
@@ -125,28 +126,48 @@ export class TaskManager {
         reject(new TimeoutError(effectiveTimeout));
       }, effectiveTimeout);
 
+      let terminalEvent: TaskUpdateEvent | undefined;
+
       ws.onmessage = (ev) => {
         try {
           const event = JSON.parse(String(ev.data)) as TaskUpdateEvent;
           onUpdate?.(event);
 
           if (event.event === "success" || event.event === "failure") {
+            terminalEvent = event;
             clearTimeout(timer);
             ws.close();
             resolve(event);
           }
-        } catch {
-          // Ignore non-JSON frames
+        } catch (err) {
+          if (err instanceof SyntaxError) {
+            // Ignore non-JSON frames
+          } else {
+            throw err; // Re-throw non-parse errors (e.g. onUpdate callback threw)
+          }
         }
       };
 
       ws.onerror = (ev) => {
         clearTimeout(timer);
-        reject(new SessionError(`Task tracking WebSocket error: ${ev}`));
+        ws.close();
+        reject(
+          new SessionError(
+            `Task tracking WebSocket error: ${formatWebSocketError(ev)}`,
+          ),
+        );
       };
 
       ws.onclose = () => {
         clearTimeout(timer);
+        ws.close();
+        if (!terminalEvent) {
+          reject(
+            new SessionError(
+              "Task tracking WebSocket closed before receiving success/failure",
+            ),
+          );
+        }
       };
     });
   }

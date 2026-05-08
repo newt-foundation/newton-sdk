@@ -11,13 +11,13 @@ export class NewtonSDKError extends Error {
   }
 }
 
-export class JsonRpcError_ extends NewtonSDKError {
+export class RpcError extends NewtonSDKError {
   public readonly code: number;
   public readonly data?: unknown;
 
   constructor(err: JsonRpcError) {
     super(err.message);
-    this.name = "JsonRpcError";
+    this.name = "RpcError";
     this.code = err.code;
     this.data = err.data;
   }

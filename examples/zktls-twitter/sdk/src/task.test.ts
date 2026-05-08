@@ -185,6 +185,40 @@ describe("TaskManager", () => {
       expect(onUpdate).toHaveBeenNthCalledWith(2, success);
       expect(ws.close).toHaveBeenCalledTimes(1);
     });
+
+    it("rejects on WebSocket close before terminal event", async () => {
+      manager.setWebSocket(MockWebSocket);
+      const pending = manager.trackTask("task/topic", undefined, 1_000);
+      const ws = MockWebSocket.latest();
+
+      ws.emitClose({ code: 1006, reason: "abnormal closure" });
+
+      await expect(pending).rejects.toThrow("WebSocket closed:");
+      expect(ws.close).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores WebSocket error after terminal event", async () => {
+      manager.setWebSocket(MockWebSocket);
+      const pending = manager.trackTask("task/topic", undefined, 1_000);
+      const ws = MockWebSocket.latest();
+      const success: TaskUpdateEvent = {
+        event: "success",
+        taskId: 7,
+        timestamp: 124,
+        data: {
+          status: "success",
+          operatorResponses: [],
+          progress: 100,
+          result: { allow: true },
+        },
+      };
+
+      ws.emitMessage(success);
+      ws.emitError({ message: "socket failed" });
+
+      await expect(pending).resolves.toEqual(success);
+      expect(ws.close).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("submitAndWait", () => {

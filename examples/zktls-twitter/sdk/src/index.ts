@@ -16,7 +16,7 @@ export { ProofClient } from "./proof.js";
 export { TaskManager } from "./task.js";
 export type { TaskOptions } from "./task.js";
 export { encodeWasmArgs, decodeWasmArgs } from "./utils.js";
-export { NewtonSDKError, JsonRpcError_, SessionError, TimeoutError } from "./errors.js";
+export { NewtonSDKError, RpcError, SessionError, TimeoutError } from "./errors.js";
 
 // Re-export all types
 export type {

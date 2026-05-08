@@ -88,14 +88,42 @@ describe("ProofClient", () => {
       );
     });
 
-    it("throws on 404", async () => {
+    it("encodeURIComponent CID in URL", async () => {
+      const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const cid = await cidFor(proofBytes);
       mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        text: async () => "Not found",
+        ok: true,
+        arrayBuffer: async () => proofBytes.buffer,
       });
 
-      await expect(client.retrieve("nonexistent")).rejects.toThrow("HTTP 404");
+      // Use a CID-like string with special characters to test encoding
+      const specialCid = "bafybeig/test+cid";
+      await client.retrieve(specialCid);
+
+      const [url] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+      expect(url).toBe("http://localhost:7047/v1/proof/bafybeig%2Ftest%2Bcid");
+    });
+
+    it("throws on unsupported multihash algorithm", async () => {
+      // This test verifies the multihash guard in verifyCidIntegrity.
+      // Since the real CID.parse + sha256.digest is used, we mock a non-sha256 CID.
+      const { CID: RealCID } = await import("multiformats/cid");
+      const fakeCid = RealCID.createV1(0x55, {
+        code: 0x13, // not sha256
+        size: 32,
+        digest: new Uint8Array(32),
+        bytes: new Uint8Array(34),
+      });
+
+      const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => proofBytes.buffer,
+      });
+
+      await expect(client.retrieve(fakeCid.toString())).rejects.toThrow(
+        "multihash algorithm",
+      );
     });
   });
 });

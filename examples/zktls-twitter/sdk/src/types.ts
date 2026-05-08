@@ -12,10 +12,10 @@
  * Ethereum address (0x-prefixed hex string).
  *
  * TODO: If this example package graduates beyond tutorial/demo scope, re-export
- * viem's branded `Address` type from the main SDK (or narrow to
- * `0x${string}`) so invalid addresses fail at compile time.
+ * viem's branded `Address` type from the main SDK so invalid addresses fail at
+ * compile time.
  */
-export type Address = string;
+export type Address = `0x${string}`;
 
 /** Hex-encoded bytes (0x-prefixed) */
 export type HexBytes = string;
@@ -74,8 +74,10 @@ export interface OperatorError {
 export interface CreateTaskResponse {
   taskId: TaskId;
   status: TaskStatus;
+  /** TODO: Replace `unknown` with concrete BLS aggregation response shape once the gateway schema stabilizes. */
   aggregationResponse?: unknown;
   signatureData?: string;
+  /** TODO: Replace `unknown` with concrete task metadata shape once the gateway schema stabilizes. */
   task?: unknown;
   taskResponse?: unknown;
   referenceBlock?: number;
