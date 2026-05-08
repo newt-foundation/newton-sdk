@@ -1,3 +1,18 @@
+# v0.9.0 (Fri May 08 2026)
+
+#### 🚀 Enhancement
+
+- feat(zktls): add zkTLS Twitter/X SDK, demo app, and tutorial docs [#151](https://github.com/newt-foundation/newton-sdk/pull/151) (jinhypark@newt.foundation [@sigridjineth](https://github.com/sigridjineth) [@denniswon](https://github.com/denniswon) [@jinhypark](https://github.com/jinhypark))
+
+#### Authors: 4
+
+- [@jinhypark](https://github.com/jinhypark)
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- jinhypark (jinhypark@newt.foundation)
+- Sigrid Jin (ง'̀-'́)ง oO ([@sigridjineth](https://github.com/sigridjineth))
+
+---
+
 # v0.8.3 (Thu Apr 30 2026)
 
 #### 🐛 Bug Fix
