@@ -23,25 +23,31 @@ The example flow:
 ## Prerequisites
 
 - Node.js 20+
+- pnpm 9+
 - A Newton API key
 - A running Newton gateway and zkTLS attester sidecar
 - A TLSNotary-compatible browser extension bridge
 - A deployed policy client address for the Twitter/X follower policy
 
+<Info>
+This example sub-package is `"private": true` in `package.json` and is not published to npm. To use it, clone the SDK repo and build locally. Production integrations should depend on `@magicnewton/newton-protocol-sdk` instead.
+</Info>
+
 ## Run the example locally
 
-From the SDK repository:
+Clone the SDK repository and build the example workspace:
 
 ```bash
-cd examples/zktls-twitter/sdk
-npm install
-npm run build
-npm test
+git clone https://github.com/newt-foundation/newton-sdk.git
+cd newton-sdk/examples/zktls-twitter/sdk
+pnpm install
+pnpm build
+pnpm test
 
 cd ../demo
-npm install
-npm run build
-npm run dev
+pnpm install
+pnpm build
+pnpm dev
 ```
 
 Configure the demo with environment variables:
@@ -51,6 +57,8 @@ VITE_GATEWAY_URL=http://localhost:8080
 VITE_SIDECAR_URL=http://localhost:7047
 VITE_NEWTON_API_KEY=your_newton_api_key
 VITE_POLICY_CLIENT=0xYourPolicyClient
+VITE_INTENT_FROM=0xYourFromAddress
+VITE_INTENT_TO=0xYourToAddress
 ```
 
 SDK requests authenticate with:
@@ -94,9 +102,13 @@ const result = await sdk.task.createTask({
 
 ## Proof retrieval and integrity
 
-The example proof client retrieves proof bytes by CID and verifies that the returned bytes match the CID multihash before returning them to callers. This keeps the client boundary stable while proof storage is still IPFS-backed.
+The example proof client retrieves proof bytes by CID and verifies that the returned bytes match the CID multihash before returning them to callers. The same verification runs after `store()`: the SDK re-derives the CID locally from the bytes it sent and rejects any gateway response whose CID does not match. This keeps the client boundary stable while proof storage is still IPFS-backed and prevents a malicious or misconfigured gateway from routing downstream `proofCid` submissions to content the client never authored.
+
+Verification rejects unknown multihash algorithms — only sha2-256 (multicodec `0x12`) is accepted. CIDs using other hash functions throw before any byte comparison runs.
 
 The planned backend migration moves proof persistence to gateway-owned Postgres. The public store/retrieve API should remain the handoff point for the demo even when the storage backend changes.
+
+For the full set of client-side invariants (CID integrity, WebSocket lifecycle, bounded body reads, hex caps), see the [SDK Invariants](https://github.com/newt-foundation/newton-sdk/blob/main/docs/zktls-twitter/SDK_INVARIANTS.md) reference.
 
 ## Identity integration roadmap
 

@@ -174,3 +174,63 @@ done
 ```
 
 Stop the conflicting service or remap ports in Docker Compose before starting the stack.
+
+## 13. `CID integrity check failed: returned bytes do not match the requested content hash`
+
+Symptoms:
+
+- `sdk.proof.store(...)` or `sdk.proof.retrieve(cid)` throws this error
+- The HTTP request succeeded; the failure is client-side after the response
+
+Cause: the SDK re-derives the CID locally and compares it to the gateway-returned (or caller-supplied) CID. A mismatch means either:
+
+- the gateway returned a CID that does not address the bytes the client just uploaded
+- the bytes returned by IPFS retrieval do not hash to the requested CID
+
+This is intentional and protects against a misconfigured or malicious gateway substituting unrelated content.
+
+Fixes:
+
+- confirm the gateway's IPFS pinning service is healthy and not returning cached/wrong content
+- if the CID was hand-constructed, ensure it uses sha2-256 multihash (multicodec `0x12`) — the SDK rejects other algorithms with `CID integrity check unsupported: multihash algorithm <code> is not sha-256`
+- verify `multiformats` is installed at compatible major version; structural shape of `parsed.multihash.{code,bytes}` must match the SDK's `multiformats-compat.d.ts`
+
+## 14. `WebSocket frame exceeds 1 MB`
+
+Symptoms:
+
+- `sdk.attester.createSession(...)` or `sdk.attester.reveal(...)` rejects with this error before completion
+
+Cause: the attester sent a single WebSocket frame larger than the SDK's 1 MB cap. This guard prevents a malicious or misconfigured attester from exhausting client memory with arbitrarily large payloads.
+
+Fixes:
+
+- inspect the attester logs for the message it tried to send; legitimate `sessionRegistered` and `sessionCompleted` messages are well below 1 MB
+- if a real revealed-value payload exceeds 1 MB, the attester is encoding too much state into a single frame — split the reveal across multiple `revealConfig` requests or trim the response body fields the policy needs
+
+## 15. `wasmArgs` hex cap exceeded
+
+Symptoms:
+
+- `decodeWasmArgs(hex)` throws "wasmArgs hex too long" or task creation rejects oversized args
+
+Cause: encoded `wasmArgs` exceed the SDK's 50 MiB hex cap. This bound matches the operator-side proof size limit and protects against unbounded JSON serialization.
+
+Fixes:
+
+- inspect the JSON object you passed to `encodeWasmArgs(...)` — typical Twitter follower policies use ~100 bytes
+- if you are deliberately passing large data, route it through `proofCid` (IPFS) instead of inline `wasmArgs`
+
+## 16. Gateway response body exceeds 1 MiB
+
+Symptoms:
+
+- `sdk.task.createTask(...)` or any `sdk.gateway.*` call rejects with "Response body exceeds maximum allowed size"
+
+Cause: the gateway returned a JSON-RPC response larger than the SDK's 1 MiB body cap. The cap is enforced by streaming the response and aborting via `reader.cancel()` once the byte counter exceeds the limit.
+
+Fixes:
+
+- a normal JSON-RPC response is well under 1 MiB; an oversized response usually means the gateway is returning unexpected content (HTML error page from a misconfigured proxy, debug dumps, etc.)
+- check `curl -i ${GATEWAY_URL}/rpc` directly to see the raw response size and content type
+- if the gateway is behind an HTTPS terminator, confirm it is not interpolating its own error pages into successful responses

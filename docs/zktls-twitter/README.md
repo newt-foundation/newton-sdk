@@ -10,6 +10,7 @@ All tutorial documents are English-only. Copy-pasteable commands are collected i
 | --- | --- |
 | 10-minute no-infra path | [QUICKSTART_10_MIN.md](./QUICKSTART_10_MIN.md) |
 | Full local Docker Compose walkthrough | [LOCAL_DOCKER_COMPOSE.md](./LOCAL_DOCKER_COMPOSE.md) |
+| Client-side SDK invariants (CID, WS, body caps) | [SDK_INVARIANTS.md](./SDK_INVARIANTS.md) |
 | Common failures and fixes | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) |
 | Copy-paste commands | [COMMAND_COOKBOOK.md](./COMMAND_COOKBOOK.md) |
 | Minimal demo UX recommendations | [DEMO_UX_RECOMMENDATIONS.md](./DEMO_UX_RECOMMENDATIONS.md) |
@@ -67,11 +68,15 @@ the protocol, SDK, and UX tracking items.
 ## Repository map
 
 ```text
+examples/zktls-twitter/sdk/           # @newton-protocol/zktls-twitter-example — TypeScript SDK
+examples/zktls-twitter/demo/          # Vite browser demo wired to the example SDK
 examples/zktls-twitter/configs/       # sample SDK and raw JSON-RPC payloads
-scripts/zktls-twitter-sdk-demo.sh  # payload generator / optional submitter
-scripts/zktls-tutorial-doctor.sh   # tutorial environment and fixture checker
+scripts/zktls-twitter-sdk-demo.sh     # payload generator / optional submitter
+scripts/zktls-tutorial-doctor.sh      # tutorial environment and fixture checker
 bin/deploy/docker-compose.gateway-local.yml
 ```
+
+The example SDK package (`examples/zktls-twitter/sdk/`) is `"private": true` and is not published to npm. It demonstrates the proof → CID → task pipeline against a running gateway and attester sidecar. Production integrations should use `@magicnewton/newton-protocol-sdk` from the repo root.
 
 ## Validation commands used for this tutorial pack
 

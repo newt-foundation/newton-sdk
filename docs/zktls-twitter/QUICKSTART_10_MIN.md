@@ -13,6 +13,8 @@ Summary: this path lets you inspect the request JSON before a real submission in
 
 No Docker stack is required for this quickstart.
 
+For the TypeScript SDK approach (proof storage + task submission via `createNewtonSDK(...)` instead of bash + curl), see [`examples/zktls-twitter/sdk/README.md`](../../examples/zktls-twitter/sdk/README.md). Client-side invariants — CID integrity, WebSocket caps, body bounds — are documented in [SDK_INVARIANTS.md](./SDK_INVARIANTS.md).
+
 ## 1. Check tutorial fixtures
 
 ```bash
