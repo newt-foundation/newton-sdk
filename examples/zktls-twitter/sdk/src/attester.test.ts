@@ -1,0 +1,288 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AttesterClient, formatWebSocketError } from "./attester.js";
+import type { HandlerResult } from "./types.js";
+
+class MockWebSocket {
+  static instances: MockWebSocket[] = [];
+
+  readonly url: string;
+  readonly sent: string[] = [];
+  readyState = 1;
+  onopen: ((ev: unknown) => void) | null = null;
+  onmessage: ((ev: { data: unknown }) => void) | null = null;
+  onerror: ((ev: unknown) => void) | null = null;
+  onclose: ((ev: unknown) => void) | null = null;
+  close = vi.fn(() => {
+    this.readyState = 3;
+    this.onclose?.({});
+  });
+
+  constructor(url: string) {
+    this.url = url;
+    MockWebSocket.instances.push(this);
+  }
+
+  send(data: string): void {
+    this.sent.push(data);
+  }
+
+  emitOpen(): void {
+    this.onopen?.({});
+  }
+
+  emitMessage(data: unknown): void {
+    this.onmessage?.({
+      data: typeof data === "string" ? data : JSON.stringify(data),
+    });
+  }
+
+  emitError(ev: unknown): void {
+    this.onerror?.(ev);
+  }
+
+  emitClose(ev: unknown): void {
+    this.readyState = 3;
+    this.onclose?.(ev);
+  }
+
+  static latest(): MockWebSocket {
+    const ws = MockWebSocket.instances.at(-1);
+    if (!ws) {
+      throw new Error("Expected a MockWebSocket instance");
+    }
+    return ws;
+  }
+}
+
+describe("AttesterClient WebSocket lifecycle", () => {
+  let client: AttesterClient;
+
+  beforeEach(() => {
+    MockWebSocket.instances = [];
+    client = new AttesterClient({
+      gatewayUrl: "http://localhost:8080",
+      attesterUrl: "http://localhost:7047",
+      timeout: 50,
+    });
+    client.setWebSocket(MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("createSession sends registration and closes after sessionRegistered", async () => {
+    const pending = client.createSession({ maxRecvData: 32, maxSentData: 16 });
+    const ws = MockWebSocket.latest();
+
+    expect(ws.url).toBe("ws://localhost:7047/session");
+    ws.emitOpen();
+    expect(JSON.parse(ws.sent[0])).toEqual({
+      type: "register",
+      maxRecvData: 32,
+      maxSentData: 16,
+    });
+
+    ws.emitMessage({ type: "sessionRegistered", sessionId: "session-1" });
+
+    await expect(pending).resolves.toMatchObject({
+      sessionId: "session-1",
+      verifierUrl: "ws://localhost:7047/verifier?sessionId=session-1",
+    });
+    expect((await pending).proxyUrl("api.x.com")).toBe(
+      "ws://localhost:7047/proxy?token=api.x.com&session=session-1",
+    );
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession accepts the sidecar snake_case session_registered message", async () => {
+    const pending = client.createSession({ maxRecvData: 32, maxSentData: 16 });
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    ws.emitMessage({ type: "session_registered", sessionId: "session-1" });
+
+    await expect(pending).resolves.toMatchObject({
+      sessionId: "session-1",
+      verifierUrl: "ws://localhost:7047/verifier?sessionId=session-1",
+    });
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession rejects and closes on server error messages", async () => {
+    const pending = client.createSession();
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    ws.emitMessage({ type: "error", message: "registration failed" });
+
+    await expect(pending).rejects.toThrow("registration failed");
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal sends revealConfig and closes after sessionCompleted", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+    const results: HandlerResult[] = [
+      { type: "RECV", part: "BODY", value: "{\"followers_count\":1000}" },
+    ];
+
+    ws.emitOpen();
+    expect(JSON.parse(ws.sent[0])).toEqual({
+      type: "revealConfig",
+      sent: [],
+      recv: [],
+    });
+
+    ws.emitMessage({ type: "sessionCompleted", results });
+
+    await expect(pending).resolves.toEqual(results);
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal accepts the sidecar snake_case session_completed message", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+    const results: HandlerResult[] = [
+      { type: "RECV", part: "BODY", value: "{\"followers_count\":1000}" },
+    ];
+
+    ws.emitOpen();
+    ws.emitMessage({ type: "session_completed", results });
+
+    await expect(pending).resolves.toEqual(results);
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal rejects with WebSocket diagnostic details and closes", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+
+    ws.emitError({
+      message: "socket failed",
+      code: 1006,
+      error: new Error("ECONNRESET"),
+    });
+
+    await expect(pending).rejects.toThrow(
+      "WebSocket error: message=socket failed, code=1006, error.message=ECONNRESET",
+    );
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession closes and rejects on timeout", async () => {
+    vi.useFakeTimers();
+    const pending = client.createSession();
+    const assertion = expect(pending).rejects.toThrow(
+      "Request timed out after 50ms",
+    );
+    const ws = MockWebSocket.latest();
+
+    await vi.advanceTimersByTimeAsync(50);
+
+    await assertion;
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession rejects on WebSocket close before completion", async () => {
+    const pending = client.createSession();
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    ws.emitClose({ code: 1006, reason: "abnormal closure" });
+
+    await expect(pending).rejects.toThrow("WebSocket closed:");
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reveal rejects on oversized WebSocket frame", async () => {
+    const pending = client.reveal("ws://localhost:7047/session/session-1", {
+      sent: [],
+      recv: [],
+    });
+    const ws = MockWebSocket.latest();
+
+    ws.emitOpen();
+    // Simulate a frame larger than 1 MB
+    ws.emitMessage("x".repeat(1_000_001));
+
+    await expect(pending).rejects.toThrow("WebSocket frame exceeds 1 MB");
+    expect(ws.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("createSession passes apiKey as query parameter when configured", async () => {
+    const keyClient = new AttesterClient({
+      gatewayUrl: "http://localhost:8080",
+      attesterUrl: "http://localhost:7047",
+      apiKey: "secret-key",
+      timeout: 50,
+    });
+    keyClient.setWebSocket(MockWebSocket);
+
+    const pending = keyClient.createSession();
+    const ws = MockWebSocket.latest();
+
+    expect(ws.url).toBe("ws://localhost:7047/session?apiKey=secret-key");
+    ws.emitOpen();
+    ws.emitMessage({ type: "sessionRegistered", sessionId: "session-key" });
+
+    await expect(pending).resolves.toMatchObject({
+      sessionId: "session-key",
+    });
+  });
+});
+
+describe("formatWebSocketError", () => {
+  it("returns String(ev) for primitives", () => {
+    expect(formatWebSocketError(undefined)).toBe("undefined");
+    expect(formatWebSocketError(null)).toBe("null");
+    expect(formatWebSocketError("plain")).toBe("plain");
+    expect(formatWebSocketError(42)).toBe("42");
+  });
+
+  it("formats message-only events", () => {
+    expect(formatWebSocketError({ message: "boom" })).toBe("message=boom");
+  });
+
+  it("formats code-only events", () => {
+    expect(formatWebSocketError({ code: 1006 })).toBe("code=1006");
+  });
+
+  it("formats nested error.message", () => {
+    expect(
+      formatWebSocketError({ error: new Error("ECONNRESET") }),
+    ).toBe("error.message=ECONNRESET");
+  });
+
+  it("composes message, code, and nested error fields in order", () => {
+    expect(
+      formatWebSocketError({
+        message: "socket failed",
+        code: 1006,
+        error: new Error("ECONNRESET"),
+      }),
+    ).toBe(
+      "message=socket failed, code=1006, error.message=ECONNRESET",
+    );
+  });
+
+  it("falls back to String(ev) when no recognized fields are present", () => {
+    const ev = { irrelevant: true };
+    expect(formatWebSocketError(ev)).toBe(String(ev));
+  });
+
+  it("ignores nested error without a message property", () => {
+    expect(formatWebSocketError({ error: { code: "EPIPE" } })).toBe(
+      String({ error: { code: "EPIPE" } }),
+    );
+  });
+});
