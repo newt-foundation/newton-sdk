@@ -40,6 +40,11 @@ class MockWebSocket {
     this.onerror?.(ev);
   }
 
+  emitClose(ev: unknown): void {
+    this.readyState = 3;
+    this.onclose?.(ev);
+  }
+
   static latest(): MockWebSocket {
     const ws = MockWebSocket.instances.at(-1);
     if (!ws) {

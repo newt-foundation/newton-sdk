@@ -8,6 +8,7 @@
  */
 
 import type {
+  Address,
   CreateTaskRequest,
   CreateTaskResponse,
   NewtonSDKConfig,
@@ -23,7 +24,7 @@ import { formatWebSocketError } from "./attester.js";
 
 export interface TaskOptions {
   /** Policy client contract address */
-  policyClient: string;
+  policyClient: Address;
   /** Transaction intent */
   intent: TaskIntent;
   /** WASM arguments (will be hex-encoded if provided as an object) */
@@ -121,53 +122,65 @@ export class TaskManager {
       }
 
       const ws = new WS(`${this.wsBaseUrl}/ws?topic=${encodeURIComponent(topic)}`);
+      let settled = false;
       const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         ws.close();
         reject(new TimeoutError(effectiveTimeout));
       }, effectiveTimeout);
 
-      let terminalEvent: TaskUpdateEvent | undefined;
+      const rejectWithCleanup = (err: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        ws.close();
+        reject(err);
+      };
+
+      const resolveWithCleanup = (event: TaskUpdateEvent) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        ws.close();
+        resolve(event);
+      };
 
       ws.onmessage = (ev) => {
+        let event: TaskUpdateEvent;
         try {
-          const event = JSON.parse(String(ev.data)) as TaskUpdateEvent;
-          onUpdate?.(event);
+          event = JSON.parse(String(ev.data)) as TaskUpdateEvent;
+        } catch {
+          // Ignore non-JSON frames; do not settle the outer Promise.
+          return;
+        }
 
-          if (event.event === "success" || event.event === "failure") {
-            terminalEvent = event;
-            clearTimeout(timer);
-            ws.close();
-            resolve(event);
-          }
+        try {
+          onUpdate?.(event);
         } catch (err) {
-          if (err instanceof SyntaxError) {
-            // Ignore non-JSON frames
-          } else {
-            throw err; // Re-throw non-parse errors (e.g. onUpdate callback threw)
-          }
+          rejectWithCleanup(
+            err instanceof Error ? err : new SessionError(String(err)),
+          );
+          return;
+        }
+
+        if (event.event === "success" || event.event === "failure") {
+          resolveWithCleanup(event);
         }
       };
 
       ws.onerror = (ev) => {
-        clearTimeout(timer);
-        ws.close();
-        reject(
+        rejectWithCleanup(
           new SessionError(
             `Task tracking WebSocket error: ${formatWebSocketError(ev)}`,
           ),
         );
       };
 
-      ws.onclose = () => {
-        clearTimeout(timer);
-        ws.close();
-        if (!terminalEvent) {
-          reject(
-            new SessionError(
-              "Task tracking WebSocket closed before receiving success/failure",
-            ),
-          );
-        }
+      ws.onclose = (ev) => {
+        rejectWithCleanup(
+          new SessionError(`WebSocket closed: ${formatWebSocketError(ev)}`),
+        );
       };
     });
   }

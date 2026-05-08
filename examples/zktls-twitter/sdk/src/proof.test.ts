@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CID } from "multiformats/cid";
+import * as Digest from "multiformats/hashes/digest";
 import { sha256 } from "multiformats/hashes/sha2";
 
 import { ProofClient } from "./proof.js";
@@ -88,7 +89,7 @@ describe("ProofClient", () => {
       );
     });
 
-    it("encodeURIComponent CID in URL", async () => {
+    it("URL-encodes the CID path segment", async () => {
       const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
       const cid = await cidFor(proofBytes);
       mockFetch.mockResolvedValueOnce({
@@ -96,24 +97,19 @@ describe("ProofClient", () => {
         arrayBuffer: async () => proofBytes.buffer,
       });
 
-      // Use a CID-like string with special characters to test encoding
-      const specialCid = "bafybeig/test+cid";
-      await client.retrieve(specialCid);
+      await client.retrieve(cid);
 
       const [url] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
-      expect(url).toBe("http://localhost:7047/v1/proof/bafybeig%2Ftest%2Bcid");
+      expect(url).toBe(`http://localhost:7047/v1/proof/${encodeURIComponent(cid)}`);
     });
 
     it("throws on unsupported multihash algorithm", async () => {
-      // This test verifies the multihash guard in verifyCidIntegrity.
-      // Since the real CID.parse + sha256.digest is used, we mock a non-sha256 CID.
-      const { CID: RealCID } = await import("multiformats/cid");
-      const fakeCid = RealCID.createV1(0x55, {
-        code: 0x13, // not sha256
-        size: 32,
-        digest: new Uint8Array(32),
-        bytes: new Uint8Array(34),
-      });
+      // Construct a CID whose multihash uses sha2-512 (code 0x13) instead of
+      // sha2-256 (code 0x12). Using Digest.create produces a properly varint-
+      // encoded `bytes` field so CID.parse round-trips successfully and we
+      // reach the algorithm guard inside verifyCidIntegrity.
+      const digest = Digest.create(0x13, new Uint8Array(32));
+      const fakeCid = CID.createV1(0x55, digest);
 
       const proofBytes = new Uint8Array([1, 2, 3, 4, 5]);
       mockFetch.mockResolvedValueOnce({

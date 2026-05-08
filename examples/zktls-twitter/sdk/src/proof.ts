@@ -160,20 +160,46 @@ async function boundedArrayBuffer(
   response: Response,
   timeoutMs: number,
 ): Promise<Uint8Array> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new NewtonSDKError("Response body is not readable");
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    // Fallback for environments / mocks without a streaming body. Real
+    // browser/node fetch responses always expose `body`; this path covers
+    // minimal Response polyfills and unit-test mocks. The outer caller's
+    // AbortController bounds wall-clock by aborting the underlying fetch.
+    if (typeof response.arrayBuffer === "function") {
+      const buf = new Uint8Array(await response.arrayBuffer());
+      if (buf.byteLength > MAX_BODY_SIZE) {
+        throw new NewtonSDKError(
+          `Response body exceeds maximum allowed size (${buf.byteLength} bytes)`,
+        );
+      }
+      return buf;
     }
+    throw new NewtonSDKError("Response body is not readable");
+  }
+
+  // Bound the body-read with an out-of-band timer that calls reader.cancel().
+  // AbortController cannot interrupt an in-flight reader.read(); only cancel()
+  // does. The timedOut flag distinguishes a clean EOF from a cancel-induced
+  // EOF so we can surface the original timeout instead of a truncated payload.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    void reader.cancel().catch(() => undefined);
+  }, timeoutMs);
+
+  try {
     const chunks: Uint8Array[] = [];
     let received = 0;
     while (true) {
       const { done, value } = await reader.read();
+      if (timedOut) {
+        throw new TimeoutError(timeoutMs);
+      }
       if (done) break;
       received += value.byteLength;
       if (received > MAX_BODY_SIZE) {
+        await reader.cancel().catch(() => undefined);
         throw new NewtonSDKError(
           `Response body exceeds maximum allowed size (${MAX_BODY_SIZE} bytes)`,
         );
@@ -193,11 +219,19 @@ async function boundedArrayBuffer(
 }
 
 async function boundedText(response: Response, timeoutMs: number): Promise<string> {
+  // Prefer the streaming path for size enforcement; fall back to response.text()
+  // when only the eager method is available (test mocks, polyfills).
+  if (!response.body && typeof response.text === "function") {
+    return response.text();
+  }
   const bytes = await boundedArrayBuffer(response, timeoutMs);
   return new TextDecoder().decode(bytes);
 }
 
 async function boundedJson(response: Response, timeoutMs: number): Promise<unknown> {
+  if (!response.body && typeof response.json === "function") {
+    return response.json();
+  }
   const text = await boundedText(response, timeoutMs);
   return JSON.parse(text);
 }

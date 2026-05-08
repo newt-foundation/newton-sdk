@@ -22,9 +22,12 @@ export function encodeWasmArgs(args: Record<string, unknown>): string {
  */
 export function decodeWasmArgs<T = Record<string, unknown>>(hex: string): T {
   const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length === 0 || stripped.length % 2 !== 0) {
+  if (stripped.length === 0) {
+    throw new NewtonSDKError("Invalid hex string: empty input");
+  }
+  if (stripped.length % 2 !== 0) {
     throw new NewtonSDKError(
-      `Invalid hex string: length must be even and non-zero, got ${stripped.length}`,
+      `Invalid hex string: odd length (${stripped.length} chars)`,
     );
   }
   if (!/^[0-9a-fA-F]+$/.test(stripped)) {

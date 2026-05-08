@@ -34,6 +34,14 @@ class MockWebSocket {
     });
   }
 
+  emitError(ev: unknown): void {
+    this.onerror?.(ev);
+  }
+
+  emitClose(ev: unknown): void {
+    this.onclose?.(ev);
+  }
+
   static latest(): MockWebSocket {
     const ws = MockWebSocket.instances.at(-1);
     if (!ws) {

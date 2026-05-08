@@ -198,7 +198,10 @@ export class GatewayClient {
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
+        let text = "";
+        if (typeof response.text === "function") {
+          text = await response.text().catch(() => "");
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}${text ? ` ${text}` : ""}`);
       }
 
@@ -224,7 +227,9 @@ export class GatewayClient {
       return crypto.randomUUID();
     }
 
+    // Fallback for environments without crypto.randomUUID (older Node, sandbox).
+    // JSON-RPC permits any string id, so a stable monotonic prefix is sufficient.
     this.requestId += 1;
-    return `00000000-0000-4000-8000-${this.requestId.toString(16).padStart(12, "0").slice(-12)}`;
+    return `req-${this.requestId}`;
   }
 }

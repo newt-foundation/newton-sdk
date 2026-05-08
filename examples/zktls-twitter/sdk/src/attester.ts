@@ -145,7 +145,7 @@ export class AttesterClient {
           // Defensive: reject oversized frames before JSON.parse
           if (raw.length > 1_000_000) {
             rejectWithCleanup(
-              new SessionError(`Session message too large (${raw.length} chars)`),
+              new SessionError(`WebSocket frame exceeds 1 MB (${raw.length} bytes)`),
             );
             return;
           }
@@ -171,12 +171,6 @@ export class AttesterClient {
             new SessionError(`Failed to parse session message: ${err}`),
           );
         }
-      };
-
-      ws.onclose = (ev) => {
-        rejectWithCleanup(
-          new SessionError(`WebSocket closed: ${formatWebSocketError(ev)}`),
-        );
       };
 
       ws.onclose = (ev) => {
@@ -236,7 +230,7 @@ export class AttesterClient {
           // Defensive: reject oversized frames before JSON.parse
           if (raw.length > 1_000_000) {
             rejectWithCleanup(
-              new SessionError(`Session message too large (${raw.length} chars)`),
+              new SessionError(`WebSocket frame exceeds 1 MB (${raw.length} bytes)`),
             );
             return;
           }
@@ -289,8 +283,12 @@ export class AttesterClient {
       );
     }
 
-    // Thread API key into the WebSocket URL as a query parameter since
-    // the WS upgrade handshake cannot carry custom HTTP headers in browsers.
+    // Thread API key into the WebSocket URL as a query parameter — browsers
+    // cannot send custom headers on the WS upgrade handshake. Tradeoff: the
+    // bearer leaks into server access logs and browser history, and may leak
+    // into Referer if reused on HTTP requests. Deploy over WSS only, scrub
+    // `apiKey=` from access logs, and prefer Sec-WebSocket-Protocol on the
+    // server side when header rewriting is feasible.
     const wsUrl = new URL(url);
     if (this.headers["Authorization"]) {
       const bearer = this.headers["Authorization"].replace(/^Bearer\s+/i, "");

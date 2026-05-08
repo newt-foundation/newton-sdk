@@ -66,9 +66,7 @@ describe("camelToSnake", () => {
     const result = camelToSnake({ already_snake: "yes" });
     expect(result).toEqual({ already_snake: "yes" });
   });
-});
 
-describe("camelToSnake", () => {
   it("leaves non-string values unchanged", () => {
     const result = camelToSnake({ count: 42, active: true });
     expect(result).toEqual({ count: 42, active: true });
