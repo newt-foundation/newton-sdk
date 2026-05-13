@@ -36,6 +36,14 @@
             ]
           },
           {
+            "group": "Smart Account",
+            "pages": [
+              "developers/smart-account/overview",
+              "developers/smart-account/integration-guide",
+              "developers/smart-account/reference"
+            ]
+          },
+          {
             "group": "Guides",
             "pages": [
               "developers/guides/integration-guide",

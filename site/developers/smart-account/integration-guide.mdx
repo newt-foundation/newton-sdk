@@ -1,0 +1,182 @@
+---
+title: "Integration Guide"
+description: "Build a working Newton Smart Account integration from scratch — install the SDK, create an account, send a chain-abstracted transfer under policy."
+---
+
+This guide walks through installing the SDK, configuring credentials, creating an account, and sending a policy-gated transfer that settles on a different chain than where funds are held. Read the [overview](/developers/smart-account/overview) first for context.
+
+## Prerequisites
+
+| Requirement | Details |
+|-------------|---------|
+| **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
+| **Policy client contract address** | A deployed contract that inherits `NewtonPolicyClient` and is registered with `PolicyClientRegistry`. See the [Verifiable Credential reference](/developers/verified-credential/reference#sample-policy-client) for a sample policy client and [Smart Contract Integration](/developers/guides/smart-contract-integration) for registration. |
+| **Owner signer** | A `viem` `Account` your app controls. In dev you can use `privateKeyToAccount`. In production back it with Turnkey, a server-side KMS, or similar. |
+| **Node 20+** | The SDK targets modern Node and modern browsers. |
+
+## Step 1: Install
+
+```bash
+npm install @newton-xyz/warp viem
+```
+
+## Step 2: Configure Environment
+
+The SDK needs three values: your API key, your policy client address, and the Warp orchestrator URL. The testnet orchestrator is hosted at:
+
+```
+https://warp.api.stagef.newt.foundation/intents
+```
+
+If you don't pass `warpUrl`, the SDK defaults to `http://127.0.0.1:8090/intents` — that only works if you're running the Warp service locally.
+
+```bash
+# .env
+NEWTON_API_KEY=gw_...
+POLICY_CLIENT=0x...                       # your deployed policy client
+WARP_URL=https://warp.api.stagef.newt.foundation/intents
+```
+
+<Warning>
+The SDK runs in the browser in the demo for simplicity, but in production you should keep the API key and owner signer on a backend. Treat the owner signer as a hot signer that's bounded by your Newton policy — never expose it client-side with real funds.
+</Warning>
+
+## Step 3: Initialize the SDK
+
+```typescript
+import { NewtonAccountSDK } from "@newton-xyz/warp";
+
+const sdk = new NewtonAccountSDK({
+  apiKey: process.env.NEWTON_API_KEY!,
+  policyClient: process.env.POLICY_CLIENT as `0x${string}`,
+  warpUrl: process.env.WARP_URL,
+  isTestnet: true,
+});
+```
+
+The `policyClient` you pass here is the contract that will gate every transfer the account makes. The account becomes meaningless without it — there's no "ungated" mode.
+
+## Step 4: Create an Account
+
+`createAccount` takes an `owner` — a `viem` `Account` — and returns a `NewtonAccountInstance`:
+
+```typescript
+import { privateKeyToAccount } from "viem/accounts";
+
+const owner = privateKeyToAccount(process.env.OWNER_PRIVATE_KEY as `0x${string}`);
+
+const account = await sdk.createAccount({ owner });
+console.log("Smart account address:", account.address);
+```
+
+The account is an ERC-7579 smart account. If it hasn't been deployed yet, it will be deployed lazily when the first transaction lands on a given chain — you don't need to fund or deploy it ahead of time.
+
+<Note>
+Fund the smart account by sending USDC/USDT/ETH to `account.address` on any supported chain. You don't need to pre-fund the destination chain — Warp will route liquidity from wherever the balance lives.
+</Note>
+
+## Step 5: Send a Transfer
+
+`account.transfer` is the one-call path. It builds the intent, asks the orchestrator to route liquidity, submits to Newton for policy evaluation, and dispatches on the destination chain.
+
+```typescript
+import { parseUnits } from "viem";
+
+const result = await account.transfer({
+  to: "0xdc35091f632DB9610205DF3db0FF1169C5052b6a",
+  amount: parseUnits("5", 6),   // 5 USDC (6 decimals)
+  token: "USDC",
+  chain: 11155111,              // settle on Sepolia
+});
+```
+
+A few things to notice:
+
+- **`amount` is a `bigint`** in the token's smallest unit. Use `parseUnits` with the right decimals (USDC/USDT = 6, ETH = 18).
+- **`chain` is the *destination* chain** where the recipient gets paid. Where the source liquidity comes from is decided by the orchestrator based on the account's balances.
+- **`token` is the destination token.** The account can hold any combination of the supported tokens — Warp routes across them as needed.
+
+## Step 6: Wait for Execution
+
+`transfer()` returns once the intent has been routed and submitted, but before the destination transaction is mined. To wait for the on-chain receipt:
+
+```typescript
+const execution = await account.waitForExecution(result);
+console.log("Executed:", execution);
+```
+
+This is the moment the user actually has the funds.
+
+## Advanced: Prepare / Sign / Submit Separately
+
+For flows where you want to inspect or persist the intent between steps (e.g. a backend prepares, a separate signer signs), use the three-step API:
+
+```typescript
+// 1. Prepare — builds the intent and routes liquidity, no signature yet
+const prepared = await account.prepareTransfer({
+  to,
+  amount,
+  token: "USDC",
+  chain: 11155111,
+});
+
+// 2. Sign — produces the signed intent op + signed transaction
+const signed = await account.signTransfer(prepared);
+
+// 3. Submit — sends to Newton for policy evaluation and execution
+const result = await account.submitTransfer({
+  signedIntentOp: signed.signedIntentOp,
+  signedDigest: signed.messageHashes[0],
+  verifyingClient: process.env.POLICY_CLIENT as `0x${string}`,
+});
+
+const execution = await account.waitForExecution(
+  result as Parameters<typeof account.waitForExecution>[0],
+);
+```
+
+`account.transfer()` is exactly this three-step flow stitched together — reach for the split form only when you need it.
+
+## What Policies Look Like
+
+Every transfer is evaluated against the Rego policy attached to your policy client. A minimal example that pairs the Smart Account with [Newton VC](/developers/verified-credential/overview) to require KYC on the sender:
+
+```rego
+package payouts
+
+import future.keywords.if
+
+authorized if {
+    newton.identity.check_approved()
+    newton.identity.age_gte(18)
+    newton.identity.address_in_countries(["US", "CA", "DE"])
+}
+```
+
+See [Writing Policies](/developers/guides/writing-policies) and the [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for the full surface.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| `createAccount` hangs | `warpUrl` points at a Warp service that isn't running. Double-check the URL — the default is localhost. |
+| `transfer` fails with policy error | The policy returned `authorized = false`. Check inputs against the Rego policy attached to your `policyClient`. |
+| `transfer` fails with insufficient liquidity | The smart account doesn't hold enough of the source token(s) on any chain. Top up `account.address`. |
+| Wrong amount sent | `amount` is in the token's smallest unit. `parseUnits("5", 6)` for 5 USDC, not `5n`. |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card icon="code" href="/developers/smart-account/reference" title="SDK Reference">
+    Full API surface for `NewtonAccountSDK` and `NewtonAccountInstance`
+  </Card>
+  <Card icon="brackets-curly" href="/developers/guides/writing-policies" title="Writing Policies">
+    Author the Rego policy that gates account spending
+  </Card>
+  <Card icon="shield-check" href="/developers/verified-credential/overview" title="Verifiable Credentials">
+    Add KYC-aware checks to your policy
+  </Card>
+  <Card icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
+    Get in touch with the Newton team
+  </Card>
+</CardGroup>

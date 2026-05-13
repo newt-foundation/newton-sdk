@@ -1,0 +1,253 @@
+---
+title: "SDK Reference"
+description: "Full API for `@newton-xyz/warp` — NewtonAccountSDK, NewtonAccountInstance, and exported helpers."
+---
+
+The Newton Smart Account SDK ships as `@newton-xyz/warp`. It exports a top-level SDK class for configuring credentials and a per-account instance returned by `createAccount`.
+
+## Package
+
+```bash
+npm install @newton-xyz/warp viem
+```
+
+```typescript
+import {
+  NewtonAccountSDK,
+  testnetChains,
+  mainnetChains,
+} from "@newton-xyz/warp";
+
+import type {
+  NewtonAccountSDKOptions,
+  NewtonAccountCreateOptions,
+  NewtonAccountInstance,
+  NewtonPreparedTransfer,
+  NewtonSignedTransfer,
+} from "@newton-xyz/warp/types";
+```
+
+---
+
+## `NewtonAccountSDK`
+
+The top-level entrypoint. One instance per app — it holds your API key, your policy client address, and the orchestrator URLs the account instances will use.
+
+### Constructor
+
+```typescript
+new NewtonAccountSDK(options: NewtonAccountSDKOptions)
+```
+
+**`NewtonAccountSDKOptions`:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiKey` | `string` | yes | Your Newton API key. [Create one in the dashboard](/developers/overview/dashboard-api-keys). |
+| `policyClient` | `Address` | yes | The deployed policy client contract that gates every transfer this SDK instance produces. |
+| `isTestnet` | `boolean` | no | When `true`, the SDK targets the testnet chain set. Defaults to `false`. |
+| `warpUrl` | `string` | no | Override the Warp orchestrator URL. Defaults to `http://127.0.0.1:8090/intents`. For hosted testnet: `https://warp.api.stagef.newt.foundation/intents`. |
+| `gatewayUrl` | `string` | no | Override the Newton gateway RPC URL. Defaults to the public testnet/mainnet endpoint. |
+| `rpcOverrides` | `{ [chainId: number]: string }` | no | Per-chain RPC URL overrides — useful for local Anvil forks in tests. |
+| `orchestratorUrl` | `string` | no | Override the Rhinestone orchestrator URL (passed to `RhinestoneSDK({ endpointUrl })`). |
+
+### `createAccount`
+
+Builds a `NewtonAccountInstance` bound to a specific owner signer.
+
+```typescript
+createAccount(options: NewtonAccountCreateOptions): Promise<NewtonAccountInstance>
+```
+
+**`NewtonAccountCreateOptions`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `owner` | `Account` (viem) | The signer that authorizes intents on the account's behalf. Use `privateKeyToAccount` for dev, a Turnkey/KMS-backed account for production. |
+
+**Example:**
+
+```typescript
+import { NewtonAccountSDK } from "@newton-xyz/warp";
+import { privateKeyToAccount } from "viem/accounts";
+
+const sdk = new NewtonAccountSDK({
+  apiKey: process.env.NEWTON_API_KEY!,
+  policyClient: "0x...",
+  isTestnet: true,
+  warpUrl: "https://warp.api.stagef.newt.foundation/intents",
+});
+
+const owner = privateKeyToAccount(process.env.OWNER_PRIVATE_KEY as `0x${string}`);
+const account = await sdk.createAccount({ owner });
+```
+
+---
+
+## `NewtonAccountInstance`
+
+Returned by `sdk.createAccount`. Represents a single ERC-7579 smart account bound to a specific owner and policy client.
+
+```typescript
+type NewtonAccountInstance = {
+  address: Hex | string;
+  transfer: (request: NewtonTransferRequest) => Promise<unknown>;
+  waitForExecution: (result: TransactionResult) => Promise<unknown>;
+  prepareTransfer: (request: NewtonTransferRequest) => Promise<NewtonPreparedTransfer>;
+  signTransfer: (prepared: NewtonPreparedTransfer) => Promise<NewtonSignedTransfer>;
+  submitTransfer: (signed: SubmitIntentRequest) => Promise<unknown>;
+};
+```
+
+### `address`
+
+The smart account address. Stable across chains — fund this address with USDC, USDT, or ETH on any supported chain to give the account a spendable balance.
+
+---
+
+### `transfer`
+
+One-call path: build, route, sign, submit. Returns once the intent has been submitted, before on-chain settlement. Pair with `waitForExecution` to await mining.
+
+```typescript
+transfer(request: NewtonTransferRequest): Promise<TransactionResult>
+```
+
+**`NewtonTransferRequest`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `to` | `Hex` | Recipient address (`0x` + 40 hex). |
+| `amount` | `bigint` | Amount in the token's smallest unit. Use `parseUnits(value, decimals)` from `viem`. |
+| `token` | `"USDC" \| "USDT" \| "ETH"` | Destination token. |
+| `chain` | `number` | Destination chain ID (e.g. `11155111` for Sepolia, `84532` for Base Sepolia). |
+
+**Example:**
+
+```typescript
+import { parseUnits } from "viem";
+
+const result = await account.transfer({
+  to: "0xdc35091f632DB9610205DF3db0FF1169C5052b6a",
+  amount: parseUnits("5", 6),
+  token: "USDC",
+  chain: 11155111,
+});
+
+await account.waitForExecution(result);
+```
+
+---
+
+### `waitForExecution`
+
+Awaits the destination-chain receipt for an intent submitted by `transfer` or `submitTransfer`.
+
+```typescript
+waitForExecution(result: TransactionResult): Promise<unknown>
+```
+
+---
+
+### `prepareTransfer`
+
+Builds the intent and routes liquidity without signing. Use this when you want to inspect, persist, or split the build/sign/submit steps across processes.
+
+```typescript
+prepareTransfer(request: NewtonTransferRequest): Promise<NewtonPreparedTransfer>
+```
+
+`NewtonPreparedTransfer` is an alias for Rhinestone's `PreparedTransactionData`.
+
+---
+
+### `signTransfer`
+
+Signs a prepared transfer using the account's owner signer.
+
+```typescript
+signTransfer(prepared: NewtonPreparedTransfer): Promise<NewtonSignedTransfer>
+```
+
+**`NewtonSignedTransfer`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `signedIntentOp` | `SignedIntentOp` | The signed intent op (Rhinestone). |
+| `signedTransaction` | `SignedTransactionData` | The signed transaction payload. |
+| `authorizations` | `SignedAuthorizationList?` | EIP-7702 authorizations, when applicable. |
+| `messageHashes` | `Hex[]` | Message hashes signed for the intent — pass index `0` as `signedDigest` to `submitTransfer`. |
+
+---
+
+### `submitTransfer`
+
+Submits a signed intent for Newton policy evaluation and execution.
+
+```typescript
+submitTransfer(signed: SubmitIntentRequest): Promise<TransactionResult>
+```
+
+**`SubmitIntentRequest`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `signedIntentOp` | `SignedIntentOp` | From `signTransfer`. |
+| `signedDigest` | `Hex` | The signed digest — typically `signed.messageHashes[0]`. |
+| `verifyingClient` | `Address` | Your policy client address (same as `policyClient` on the SDK). |
+
+---
+
+## Exported Chains
+
+The SDK exports `viem`-compatible chain definitions:
+
+```typescript
+import { testnetChains, mainnetChains } from "@newton-xyz/warp";
+```
+
+| Export | Chains |
+|--------|--------|
+| `testnetChains` | Sepolia (`11155111`), Base Sepolia (`84532`) |
+| `mainnetChains` | Ethereum (`1`), Base (`8453`), and additional supported mainnets |
+
+Use the chain `id` field as the `chain` parameter in `transfer`.
+
+## Supported Tokens
+
+| Token | Decimals | Notes |
+|-------|----------|-------|
+| `USDC` | `6` | Stablecoin |
+| `USDT` | `6` | Stablecoin |
+| `ETH` | `18` | Native asset on each chain |
+
+Pass amounts as `bigint` using `parseUnits` with the right decimals.
+
+## Errors
+
+The SDK surfaces errors from three layers:
+
+| Layer | When it fires | What it looks like |
+|-------|---------------|--------------------|
+| **Validation** | Invalid `to`, `amount`, `chain`, or `token` at call time | Standard `Error` with a descriptive message |
+| **Routing** | Warp orchestrator can't route liquidity (insufficient balance, no route) | `Error` from the orchestrator, surfaced through the SDK |
+| **Policy** | Newton policy returned `authorized = false`, or attestation failed | `Error` describing the policy decision |
+
+See [Error Reference](/developers/reference/error-reference) for cross-SDK error codes.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card icon="list-check" href="/developers/smart-account/integration-guide" title="Integration Guide">
+    Walkthrough of the full flow with examples
+  </Card>
+  <Card icon="brackets-curly" href="/developers/guides/writing-policies" title="Writing Policies">
+    Author the Rego policy that gates account spending
+  </Card>
+  <Card icon="map" href="/developers/reference/contract-addresses" title="Contract Addresses">
+    PolicyClientRegistry and other deployed contracts
+  </Card>
+  <Card icon="shield-check" href="/developers/verified-credential/overview" title="Verifiable Credentials">
+    Pair Smart Accounts with KYC-aware policies
+  </Card>
+</CardGroup>
