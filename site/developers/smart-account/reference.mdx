@@ -5,6 +5,10 @@ description: "Full API for `@newton-xyz/warp` — NewtonAccountSDK, NewtonAccoun
 
 The Newton Smart Account SDK ships as `@newton-xyz/warp`. It exports a top-level SDK class for configuring credentials and a per-account instance returned by `createAccount`.
 
+<Note>
+This reference reflects `@newton-xyz/warp` version `0.2.1-alpha-2083766.0`. The package is pre-release — APIs may change between alpha versions.
+</Note>
+
 ## Package
 
 ```bash
@@ -22,10 +26,19 @@ import type {
   NewtonAccountSDKOptions,
   NewtonAccountCreateOptions,
   NewtonAccountInstance,
+  NewtonTransferRequest,
+  NewtonExecutionRequest,
   NewtonPreparedTransfer,
   NewtonSignedTransfer,
+  IntentCreationResult,
+  IntentStatus,
+  IntentClaimStatus,
+  CallInput,
+  TokenRequest,
 } from "@newton-xyz/warp/types";
 ```
+
+Runtime values (`NewtonAccountSDK`, chain lists) come from `@newton-xyz/warp`. Type-only imports come from the `@newton-xyz/warp/types` subpath.
 
 ---
 
@@ -91,13 +104,16 @@ Returned by `sdk.createAccount`. Represents a single ERC-7579 smart account boun
 ```typescript
 type NewtonAccountInstance = {
   address: Hex | string;
-  transfer: (request: NewtonTransferRequest) => Promise<unknown>;
-  waitForExecution: (result: TransactionResult) => Promise<unknown>;
+  transfer: (request: NewtonTransferRequest) => Promise<IntentCreationResult>;
+  execute: (request: NewtonExecutionRequest) => Promise<IntentCreationResult>;
+  getStatus: (intentOperationId: string) => Promise<IntentStatus>;
   prepareTransfer: (request: NewtonTransferRequest) => Promise<NewtonPreparedTransfer>;
   signTransfer: (prepared: NewtonPreparedTransfer) => Promise<NewtonSignedTransfer>;
-  submitTransfer: (signed: SubmitIntentRequest) => Promise<unknown>;
+  submitTransfer: (signed: SubmitIntentRequest) => Promise<IntentCreationResult>;
 };
 ```
+
+The intent-producing methods — `transfer`, `execute`, `submitTransfer` — all resolve to an `IntentCreationResult`. They return as soon as the intent is submitted, **not** when it settles on-chain. Use `getStatus` to track the intent to a terminal state.
 
 ### `address`
 
@@ -107,17 +123,17 @@ The smart account address. Stable across chains — fund this address with USDC,
 
 ### `transfer`
 
-One-call path: build, route, sign, submit. Returns once the intent has been submitted, before on-chain settlement. Pair with `waitForExecution` to await mining.
+Builds a token-transfer intent, routes liquidity, submits it for Newton policy evaluation, and returns the intent's ID.
 
 ```typescript
-transfer(request: NewtonTransferRequest): Promise<TransactionResult>
+transfer(request: NewtonTransferRequest): Promise<IntentCreationResult>
 ```
 
 **`NewtonTransferRequest`:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `to` | `Hex` | Recipient address (`0x` + 40 hex). |
+| `to` | `Address` | Recipient address (`0x` + 40 hex). |
 | `amount` | `bigint` | Amount in the token's smallest unit. Use `parseUnits(value, decimals)` from `viem`. |
 | `token` | `"USDC" \| "USDT" \| "ETH"` | Destination token. |
 | `chain` | `number` | Destination chain ID (e.g. `11155111` for Sepolia, `84532` for Base Sepolia). |
@@ -127,24 +143,146 @@ transfer(request: NewtonTransferRequest): Promise<TransactionResult>
 ```typescript
 import { parseUnits } from "viem";
 
-const result = await account.transfer({
+const { intentOperationId } = await account.transfer({
   to: "0xdc35091f632DB9610205DF3db0FF1169C5052b6a",
   amount: parseUnits("5", 6),
   token: "USDC",
   chain: 11155111,
 });
-
-await account.waitForExecution(result);
 ```
 
 ---
 
-### `waitForExecution`
+### `execute`
 
-Awaits the destination-chain receipt for an intent submitted by `transfer` or `submitTransfer`.
+Builds an intent for **arbitrary contract calls** — not just token transfers. Use this to interact with any contract on a destination chain (swaps, deposits, mints, approvals) while Warp bridges the tokens those calls need.
 
 ```typescript
-waitForExecution(result: TransactionResult): Promise<unknown>
+execute(request: NewtonExecutionRequest): Promise<IntentCreationResult>
+```
+
+**`NewtonExecutionRequest`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chain` | `number` | Destination chain ID where the calls execute. |
+| `calls` | `CallInput[]` | The contract calls to run on the destination chain, in order. |
+| `tokenRequests` | `TokenRequest[]` | The tokens that must be available on the destination chain for the calls to succeed. Warp routes/bridges these from the account's balances on other chains. |
+
+**`CallInput`** (the common `CalldataInput` form):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `to` | `Address \| TokenSymbol` | Target contract address (or a token symbol like `"USDC"`). |
+| `data` | `Hex` | Optional. Encoded calldata. Omit for a plain value transfer. |
+| `value` | `bigint` | Optional. Native value to send with the call. |
+
+**`TokenRequest`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | `Address \| TokenSymbol` | The token to make available on the destination chain — a contract address or a symbol like `"USDC"`. |
+| `amount` | `bigint` | Optional. Amount needed, in the token's smallest unit. |
+
+**Example** — supply USDC to a lending pool on Base Sepolia, with the USDC bridged in by Warp:
+
+```typescript
+import { encodeFunctionData, parseUnits } from "viem";
+
+const amount = parseUnits("25", 6);
+
+const { intentOperationId } = await account.execute({
+  chain: 84532,
+  calls: [
+    {
+      to: USDC_ADDRESS,
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [LENDING_POOL, amount],
+      }),
+    },
+    {
+      to: LENDING_POOL,
+      data: encodeFunctionData({
+        abi: lendingPoolAbi,
+        functionName: "supply",
+        args: [USDC_ADDRESS, amount, account.address, 0],
+      }),
+    },
+  ],
+  tokenRequests: [{ address: "USDC", amount }],
+});
+```
+
+The `calls` run on the destination chain only after the intent passes your Newton policy — `execute` is policy-gated exactly like `transfer`.
+
+---
+
+### `getStatus`
+
+Fetches the current status of an intent by its `intentOperationId`. Poll this after `transfer`, `execute`, or `submitTransfer` to follow the intent to a terminal state.
+
+```typescript
+getStatus(intentOperationId: string): Promise<IntentStatus>
+```
+
+**`IntentStatus`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `IntentStatusValue` | Current state of the intent — see values below. |
+| `destinationChainId` | `number` | The chain the intent settles on. |
+| `userAddress` | `Address` | The smart account address that owns the intent. |
+| `claims` | `IntentClaimStatus[]` | Per-source-chain claim status — one entry per chain liquidity was pulled from. |
+| `fillTimestamp` | `number \| undefined` | Unix timestamp of the destination-chain fill, once available. |
+| `fillTransactionHash` | `Hex \| undefined` | Hash of the destination-chain fill transaction, once available. This is the on-chain receipt the recipient can be pointed at. |
+
+**`status` values:**
+
+| Value | Meaning |
+|-------|---------|
+| `PENDING` | Intent submitted, not yet acted on. |
+| `PRECONFIRMED` | Intent preconfirmed by the orchestrator. |
+| `CLAIMED` | Source-chain liquidity has been claimed. |
+| `FILLED` | The destination-chain transaction has executed — `fillTransactionHash` and `fillTimestamp` are populated. |
+| `COMPLETED` | Intent fully settled across all chains. |
+| `FAILED` | Intent failed. |
+| `EXPIRED` | Intent expired before completing. |
+
+`COMPLETED`, `FAILED`, and `EXPIRED` are terminal — stop polling once you see one of them. `fillTransactionHash` becomes available at `FILLED` and remains set through `COMPLETED`.
+
+**`IntentClaimStatus`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `"PENDING" \| "PRECONFIRMED" \| "COMPLETED" \| "FAILED" \| "EXPIRED"` | State of this source-chain claim. |
+| `chainId` | `number` | The source chain liquidity was claimed from. |
+| `claimTimestamp` | `number \| undefined` | Unix timestamp of the claim, once available. |
+| `claimTransactionHash` | `Hex \| undefined` | Hash of the claim transaction, once available. |
+
+**`IntentCreationResult`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `intentOperationId` | `string` | Identifier for the submitted intent. Pass it to `getStatus`. |
+
+**Example** — poll until terminal:
+
+```typescript
+const { intentOperationId } = await account.transfer({ /* ... */ });
+
+const TERMINAL = new Set(["COMPLETED", "FAILED", "EXPIRED"]);
+
+while (true) {
+  await new Promise((r) => setTimeout(r, 2000));
+  const status = await account.getStatus(intentOperationId);
+
+  if (status.status === "FILLED" || TERMINAL.has(status.status)) {
+    console.log("Fill tx:", status.fillTransactionHash);
+  }
+  if (TERMINAL.has(status.status)) break;
+}
 ```
 
 ---
@@ -182,10 +320,10 @@ signTransfer(prepared: NewtonPreparedTransfer): Promise<NewtonSignedTransfer>
 
 ### `submitTransfer`
 
-Submits a signed intent for Newton policy evaluation and execution.
+Submits a signed intent for Newton policy evaluation and execution. Returns the intent ID — poll `getStatus` to track it.
 
 ```typescript
-submitTransfer(signed: SubmitIntentRequest): Promise<TransactionResult>
+submitTransfer(signed: SubmitIntentRequest): Promise<IntentCreationResult>
 ```
 
 **`SubmitIntentRequest`:**
@@ -211,7 +349,7 @@ import { testnetChains, mainnetChains } from "@newton-xyz/warp";
 | `testnetChains` | Sepolia (`11155111`), Base Sepolia (`84532`) |
 | `mainnetChains` | Ethereum (`1`), Base (`8453`), and additional supported mainnets |
 
-Use the chain `id` field as the `chain` parameter in `transfer`.
+Use the chain `id` field as the `chain` parameter in `transfer` and `execute`.
 
 ## Supported Tokens
 
@@ -229,11 +367,11 @@ The SDK surfaces errors from three layers:
 
 | Layer | When it fires | What it looks like |
 |-------|---------------|--------------------|
-| **Validation** | Invalid `to`, `amount`, `chain`, or `token` at call time | Standard `Error` with a descriptive message |
+| **Validation** | Invalid `to`, `amount`, `chain`, `token`, or malformed `calls`/`tokenRequests` at call time | Standard `Error` with a descriptive message |
 | **Routing** | Warp orchestrator can't route liquidity (insufficient balance, no route) | `Error` from the orchestrator, surfaced through the SDK |
 | **Policy** | Newton policy returned `authorized = false`, or attestation failed | `Error` describing the policy decision |
 
-See [Error Reference](/developers/reference/error-reference) for cross-SDK error codes.
+Once an intent is accepted, downstream failures surface as a `FAILED` or `EXPIRED` status from `getStatus` rather than a thrown error. See [Error Reference](/developers/reference/error-reference) for cross-SDK error codes.
 
 ## Next Steps
 
