@@ -21,7 +21,7 @@ Moving tokens is just the common case. `execute` is the general one: any contrac
 
 **Compliance-gated payouts** — Issue a smart account to each user or counterparty. Write a Rego policy (using [Newton Verifiable Credentials](/developers/verified-credential/overview) or your own data oracles) that enforces who can be paid, how much, and under what conditions. Every intent is checked before it settles.
 
-**AI agent accounts** — Give an agent a smart account whose policy constrains it (allow-listed counterparties and contracts, per-period spend caps, KYC checks on recipients). The agent gets one account it can spend from or transact with across every supported chain; you keep deterministic guardrails.
+**AI agent accounts** — Give an agent a smart account whose policy constrains it (allow-listed counterparties and contracts, per-period spend caps, KYC checks on recipients). The agent gets one account it can spend from or transact with across every supported chain; you keep deterministic guardrails. This is all built into the SDK.
 
 ## How It Works
 

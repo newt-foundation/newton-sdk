@@ -24,28 +24,11 @@ npm install @newton-xyz/warp viem
 This guide reflects `@newton-xyz/warp` version `0.2.1-alpha-2083766.0`. The package is pre-release — pin a version if you need reproducible installs while it's in alpha.
 </Note>
 
-## Step 2: Configure Environment
-
-The SDK needs three values: your API key, your policy client address, and the Warp orchestrator URL. The testnet orchestrator is hosted at:
-
-```
-https://warp.api.stagef.newt.foundation/intents
-```
-
-Pass this as `warpUrl` when you construct the SDK.
-
-```bash
-# .env
-NEWTON_API_KEY=gw_...
-POLICY_CLIENT=0x...                       # your deployed policy client
-WARP_URL=https://warp.api.stagef.newt.foundation/intents
-```
-
 <Warning>
 The SDK runs in the browser in the demo for simplicity, but in production you should keep the API key and owner signer on a backend. Treat the owner signer as a hot signer that's bounded by your Newton policy — never expose it client-side with real funds.
 </Warning>
 
-## Step 3: Initialize the SDK
+## Step 2: Initialize the SDK
 
 ```typescript
 import { NewtonAccountSDK } from "@newton-xyz/warp";
@@ -53,14 +36,13 @@ import { NewtonAccountSDK } from "@newton-xyz/warp";
 const sdk = new NewtonAccountSDK({
   apiKey: process.env.NEWTON_API_KEY!,
   policyClient: process.env.POLICY_CLIENT as `0x${string}`,
-  warpUrl: process.env.WARP_URL,
   isTestnet: true,
 });
 ```
 
 The `policyClient` you pass here is the contract that will gate every intent the account produces. The account becomes meaningless without it — there's no "ungated" mode.
 
-## Step 4: Create an Account
+## Step 3: Create an Account
 
 `createAccount` takes an `owner` — a `viem` `Account` — and returns a `NewtonAccountInstance`:
 
@@ -73,13 +55,13 @@ const account = await sdk.createAccount({ owner });
 console.log("Smart account address:", account.address);
 ```
 
-The account is an ERC-7579 smart account. If it hasn't been deployed yet, it will be deployed lazily when the first transaction lands on a given chain — you don't need to fund or deploy it ahead of time.
+The account is an ERC-7579 smart account. If it hasn't been deployed yet, it will be deployed just-in-time when the first transaction lands on a given chain — you don't need to fund or deploy it ahead of time.
 
 <Note>
 Fund the smart account by sending USDC/USDT/ETH to `account.address` on any supported chain. You don't need to pre-fund the destination chain — Warp will route liquidity from wherever the balance lives.
 </Note>
 
-## Step 5: Send a Transfer
+## Step 4: Send a Transfer
 
 `account.transfer` builds the intent, routes liquidity, and submits it to Newton for policy evaluation. It resolves to an `IntentCreationResult` — an `intentOperationId` you'll use to track the intent. It does **not** wait for on-chain settlement.
 
@@ -89,7 +71,7 @@ import { parseUnits } from "viem";
 const { intentOperationId } = await account.transfer({
   to: "0xdc35091f632DB9610205DF3db0FF1169C5052b6a",
   amount: parseUnits("5", 6),   // 5 USDC (6 decimals)
-  token: "USDC",
+  token: "USDC",                // USDC, ETH and USDT are supported
   chain: 11155111,              // settle on Sepolia
 });
 ```
@@ -104,7 +86,7 @@ A few things to notice:
 **Need to call a contract, not just move tokens?** Use `account.execute({ chain, calls, tokenRequests })` instead of `transfer`. It runs arbitrary contract calls on the destination chain — swaps, deposits, mints, approvals — while Warp bridges in the tokens those calls need. It's the same policy-gated path and returns the same `intentOperationId`, so the tracking in Step 6 applies unchanged. See [`execute` in the reference](/developers/smart-account/reference#execute) for the full request shape and an example.
 </Note>
 
-## Step 6: Track the Intent with `getStatus`
+## Step 5: Track the Intent with `getStatus`
 
 `transfer` returns once the intent is submitted. To follow it to completion, poll `account.getStatus(intentOperationId)`. It returns an `IntentStatus` whose `status` field moves through the intent lifecycle and ends in one of three terminal states: `COMPLETED`, `FAILED`, or `EXPIRED`.
 
@@ -166,9 +148,13 @@ const { intentOperationId } = await account.submitTransfer({
 const final = await waitForIntent(intentOperationId);
 ```
 
+Note that waitForIntent is a method written for this demo, not part of the sdk
+
 `account.transfer()` is exactly this three-step flow stitched together — reach for the split form only when you need it.
 
 ## What Policies Look Like
+
+
 
 Every intent — whether from `transfer` or `execute` — is evaluated against the Rego policy attached to your policy client. A minimal example that pairs the Smart Account with [Newton VC](/developers/verified-credential/overview) to require KYC on the sender:
 
@@ -186,11 +172,21 @@ authorized if {
 
 See [Writing Policies](/developers/guides/writing-policies) and the [Identity Policy Reference](/developers/verified-credential/identity-policy-reference) for the full surface.
 
+The format of the intent data is as follows:
+
+```
+struct Call {
+        address to;
+        uint256 value;
+        bytes data;
+}
+```
+
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---------|--------------|
-| `createAccount` hangs | `warpUrl` points at a Warp service that isn't running. Double-check the URL — the default is localhost. |
 | `transfer` / `execute` throws a policy error | The policy returned `authorized = false`. Check inputs against the Rego policy attached to your `policyClient`. |
 | `transfer` / `execute` throws an insufficient-liquidity error | The smart account doesn't hold enough of the source token(s) on any chain. Top up `account.address`. |
 | `getStatus` returns `FAILED` | The intent was accepted but failed downstream (e.g. a `calls` revert on the destination chain). Inspect `claims[]` and the destination chain. |
