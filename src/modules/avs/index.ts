@@ -93,7 +93,7 @@ const waitForTaskResponded = async (
     toBlock: 'latest',
   })
 
-  const match = (past as TaskRespondedLog[]).find(
+  const match = (past as unknown as TaskRespondedLog[]).find(
     log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
   )
   if (match) return convertLogToTaskResponse(match)
@@ -128,7 +128,7 @@ const waitForTaskResponded = async (
       abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
       onLogs: logs => {
-        for (const log of logs as TaskRespondedLog[]) {
+        for (const log of logs as unknown as TaskRespondedLog[]) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 })
           if (id === targetTaskId) {
             const res = convertLogToTaskResponse(log)
@@ -193,7 +193,7 @@ const getTaskStatus = async (
     toBlock: 'latest',
   })
 
-  const match = (past as TaskRespondedLog[]).find(
+  const match = (past as unknown as TaskRespondedLog[]).find(
     log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId,
   )
   if (!match) {
