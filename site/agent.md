@@ -891,7 +891,7 @@ cd newton-sdk-app
 ### 6.2 Install dependencies
 
 ```bash
-npm install @magicnewton/newton-protocol-sdk@0.3.15 viem
+npm install @newton-xyz/sdk@0.3.15 viem
 ```
 
 ### 6.3 Set up environment variables
@@ -1188,7 +1188,7 @@ import { useState } from "react";
 import { Hex, createWalletClient, webSocket } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { newtonWalletClientActions } from "@magicnewton/newton-protocol-sdk";
+import { newtonWalletClientActions } from "@newton-xyz/sdk";
 import {
   SEPOLIA_ALCHEMY_WS_URL,
   NEWTON_API_KEY,

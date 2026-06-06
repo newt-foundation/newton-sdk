@@ -11,7 +11,7 @@ This guide walks you through encrypting sensitive data and submitting a privacy-
 ## Installation
 
 ```bash
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @newton-xyz/sdk viem
 ```
 
 The privacy module depends on `@hpke/core`, `@hpke/chacha20poly1305`, and `@noble/curves`, which are included as dependencies of the SDK.
@@ -22,7 +22,7 @@ The privacy module depends on `@hpke/core`, `@hpke/chacha20poly1305`, and `@nobl
 import { createWalletClient, http } from 'viem'
 import { sepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
-import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk'
+import { newtonWalletClientActions } from '@newton-xyz/sdk'
 
 // Your wallet signer (EVM account for transaction signing)
 const account = privateKeyToAccount('0xYourPrivateKey')

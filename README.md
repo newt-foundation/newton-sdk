@@ -17,7 +17,7 @@ TypeScript SDK for the [Newton Protocol](https://docs.newton.xyz/developers/over
 
 ```bash
 # Install dependencies
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @newton-xyz/sdk viem
 ```
 
 ## Exports
@@ -26,7 +26,7 @@ The SDK provides several entry points:
 
 ```typescript
 // Public Client Actions
-import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
+import { newtonPublicClientActions } from '@newton-xyz/sdk';
 import { createPublicClient, webSocket } from 'viem';
 import { sepolia } from 'viem/chains';
 
@@ -42,7 +42,7 @@ const newtonPublicClient = createPublicClient({
 newtonPublicClient.getTaskStatus({ taskId: '0x...' });
 
 // Wallet Client Actions
-import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+import { newtonWalletClientActions } from '@newton-xyz/sdk';
 import { createWalletClient, webSocket } from 'viem';
 import { sepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -162,13 +162,13 @@ To test the locally built SDK from a different local project, you can use one of
 
    ```bash
    # Link to the globally linked SDK
-   pnpm link --global @magicnewton/newton-protocol-sdk
+   pnpm link --global @newton-xyz/sdk
    ```
 
 3. **Import and use in your test project:**
 
    ```typescript
-   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@newton-xyz/sdk';
    // Your test code here
    ```
 
@@ -188,7 +188,7 @@ To test the locally built SDK from a different local project, you can use one of
    ```json
    {
      "dependencies": {
-       "@magicnewton/newton-protocol-sdk": "file:../path/to/newton-protocol-sdk"
+       "@newton-xyz/sdk": "file:../path/to/newton-protocol-sdk"
      }
    }
    ```
@@ -201,7 +201,7 @@ To test the locally built SDK from a different local project, you can use one of
 
 3. **Import and use normally:**
    ```typescript
-   import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+   import { newtonWalletClientActions } from '@newton-xyz/sdk';
    ```
 
 ### Method 3: Using npm link (Alternative)
@@ -217,7 +217,7 @@ If you prefer npm over pnpm:
 
 2. **In your test project directory:**
    ```bash
-   npm link @magicnewton/newton-protocol-sdk
+   npm link @newton-xyz/sdk
    ```
 
 ### Unlinking
@@ -226,7 +226,7 @@ When you're done testing:
 
 ```bash
 # In your test project directory
-pnpm unlink @magicnewton/newton-protocol-sdk
+pnpm unlink @newton-xyz/sdk
 
 # In the SDK directory
 pnpm unlink --global

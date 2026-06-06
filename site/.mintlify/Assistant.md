@@ -21,7 +21,7 @@ Use these terms precisely:
 
 ## Tech stack
 
-- The TypeScript SDK (`@magicnewton/newton-protocol-sdk`) extends viem clients. Always show viem-based examples, never ethers.js.
+- The TypeScript SDK (`@newton-xyz/sdk`) extends viem clients. Always show viem-based examples, never ethers.js.
 - Policies are written in Rego (Open Policy Agent language).
 - PolicyData oracles are WASM components (compiled from JavaScript, Python, or Rust).
 - The CLI tool is `newton-cli`.

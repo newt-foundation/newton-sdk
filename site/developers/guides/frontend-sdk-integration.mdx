@@ -17,7 +17,7 @@ This guide walks through building a Next.js application that uses the Newton SDK
 npx create-next-app@latest newton-sdk-app \
   --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 cd newton-sdk-app
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @newton-xyz/sdk viem
 ```
 
 ## Step 2: Environment Variables
@@ -78,7 +78,7 @@ import { useMemo } from "react";
 import { createWalletClient, webSocket, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { newtonWalletClientActions } from "@magicnewton/newton-protocol-sdk";
+import { newtonWalletClientActions } from "@newton-xyz/sdk";
 import { SEPOLIA_ALCHEMY_WS_URL } from "@/const/config";
 
 export const useNewtonClient = (privateKey: Hex, apiKey: string) => {

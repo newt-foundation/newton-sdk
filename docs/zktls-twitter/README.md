@@ -47,7 +47,7 @@ Follow-up work to track in Linear:
    optional `tls_proof` field. The gateway should verify the proof signature,
    freshness, and server identity before storing the encrypted identity payload
    in Postgres.
-2. **SDK follow-up** — update the main `@magicnewton/newton-protocol-sdk`
+2. **SDK follow-up** — update the main `@newton-xyz/sdk`
    `uploadIdentityEncrypted` wrapper to accept the optional proof, then add a
    convenience method that chains proof generation → identity upload → task
    submission.
@@ -76,7 +76,7 @@ scripts/zktls-tutorial-doctor.sh      # tutorial environment and fixture checker
 bin/deploy/docker-compose.gateway-local.yml
 ```
 
-The example SDK package (`examples/zktls-twitter/sdk/`) is `"private": true` and is not published to npm. It demonstrates the proof → CID → task pipeline against a running gateway and attester sidecar. Production integrations should use `@magicnewton/newton-protocol-sdk` from the repo root.
+The example SDK package (`examples/zktls-twitter/sdk/`) is `"private": true` and is not published to npm. It demonstrates the proof → CID → task pipeline against a running gateway and attester sidecar. Production integrations should use `@newton-xyz/sdk` from the repo root.
 
 ## Validation commands used for this tutorial pack
 

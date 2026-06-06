@@ -4,7 +4,7 @@ Example-scoped TypeScript helpers for the Newton Protocol Twitter/X zkTLS tutori
 
 > **Production SDK boundary:** this package lives under `examples/` and is a
 > reference implementation for the Twitter/X zkTLS flow. Production integrations
-> should use `@magicnewton/newton-protocol-sdk` for gateway RPC, task submission,
+> should use `@newton-xyz/sdk` for gateway RPC, task submission,
 > identity, privacy, and secrets APIs, then compose only the zkTLS-specific pieces
 > from this example (`AttesterClient`, `ProofClient`, and wasm-argument helpers)
 > while the thin-extension path is developed.
@@ -23,7 +23,7 @@ pnpm build
 ```
 
 Then import directly from the relative path or via a workspace dependency. For
-production integrations, use `@magicnewton/newton-protocol-sdk` instead.
+production integrations, use `@newton-xyz/sdk` instead.
 
 ## Quick Start
 

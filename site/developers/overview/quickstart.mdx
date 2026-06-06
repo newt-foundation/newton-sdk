@@ -24,21 +24,21 @@ Simulate a policy evaluation in under 5 minutes. The example policy performs **O
 ```bash pnpm (recommended)
 mkdir newton-quickstart && cd newton-quickstart
 pnpm init
-pnpm add @magicnewton/newton-protocol-sdk viem
+pnpm add @newton-xyz/sdk viem
 ```
 
 
 ```bash npm
 mkdir newton-quickstart && cd newton-quickstart
 npm init -y
-npm install @magicnewton/newton-protocol-sdk viem
+npm install @newton-xyz/sdk viem
 ```
 
 
 ```bash yarn
 mkdir newton-quickstart && cd newton-quickstart
 yarn init -y
-yarn add @magicnewton/newton-protocol-sdk viem
+yarn add @newton-xyz/sdk viem
 ```
 
 </CodeGroup>
@@ -53,7 +53,7 @@ import { sepolia } from 'viem/chains';
 import {
   newtonPublicClientActions,
   newtonWalletClientActions,
-} from '@magicnewton/newton-protocol-sdk';
+} from '@newton-xyz/sdk';
 
 const API_KEY = process.env.NEWTON_API_KEY!;
 const RPC_URL = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY';
