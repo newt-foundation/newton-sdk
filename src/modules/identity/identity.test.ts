@@ -1,4 +1,4 @@
-import { type Hex, keccak256, toBytes } from 'viem'
+import { type Hex, type WalletClient, keccak256, toBytes } from 'viem'
 import { describe, expect, it, vi } from 'vitest'
 import { identityDomainHash, registerIdentityData } from './index'
 
@@ -27,7 +27,7 @@ describe('identity module', () => {
         chain: { id: 11155111 },
         account: { address: '0x1234567890abcdef1234567890abcdef12345678' },
         writeContract: mockWriteContract,
-      } as any
+      } as unknown as WalletClient
 
       const params = {
         identityDomain: identityDomainHash('kyc'),
@@ -51,7 +51,7 @@ describe('identity module', () => {
       const walletClient = {
         chain: undefined,
         account: { address: '0x1234567890abcdef1234567890abcdef12345678' },
-      } as any
+      } as unknown as WalletClient
 
       await expect(
         registerIdentityData(walletClient, {
@@ -67,7 +67,7 @@ describe('identity module', () => {
       const walletClient = {
         chain: { id: 999999 },
         account: { address: '0x1234567890abcdef1234567890abcdef12345678' },
-      } as any
+      } as unknown as WalletClient
 
       await expect(
         registerIdentityData(walletClient, {

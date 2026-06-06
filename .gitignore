@@ -48,3 +48,5 @@ dist
 **/plans/
 **/superpowers/
 .omx/
+.agents/
+
