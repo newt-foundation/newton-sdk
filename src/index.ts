@@ -25,7 +25,7 @@ import {
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 } from './modules/identity'
-import { policyReadFunctions, policyWriteFunctions } from './modules/policy'
+import { type InitializePolicyArgs, policyReadFunctions, policyWriteFunctions } from './modules/policy'
 import {
   createSecureEnvelope,
   generateSigningKeyPair,
@@ -163,15 +163,12 @@ const newtonWalletClientActions =
       ): Promise<SimulatePolicyDataWithClientResult> =>
         simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
 
-      initialize: (args: {
-        factory: Address
-        entrypoint: string
-        policyCid: string
-        schemaCid: string
-        policyData: Address[]
-        metadataCid: string
-        owner: Address
-      }): Promise<`0x${string}`> => {
+      /**
+       * Initialize a NewtonPolicy contract on-chain. Caller must supply either
+       * `policyCodeHash` (pre-computed `keccak256` of the Rego policy bytes) or
+       * `policyBytes` (raw bytes; SDK computes the hash). See {@link InitializePolicyArgs}.
+       */
+      initialize: (args: InitializePolicyArgs): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
         return policyWriteFunctions.initialize({
           walletClient,

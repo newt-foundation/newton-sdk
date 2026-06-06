@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi'
 import type { PolicyId, PolicyParamsJson } from '@core/types/policy'
-import { type Address, type PublicClient, type WalletClient, encodePacked, fromHex, keccak256 } from 'viem'
+import { type Address, type Hex, type PublicClient, type WalletClient, encodePacked, fromHex, keccak256 } from 'viem'
 
 // Read function wrappers - exact same names as on-chain functions
 
@@ -427,13 +427,7 @@ const precomputePolicyId = ({
   }
 }
 
-const initialize = async ({
-  walletClient,
-  policyContractAddress,
-  ...args
-}: {
-  walletClient: WalletClient
-  policyContractAddress: Address
+type InitializeContractArgs = {
   factory: Address
   entrypoint: string
   policyCid: string
@@ -441,11 +435,41 @@ const initialize = async ({
   policyData: Address[]
   metadataCid: string
   owner: Address
-}): Promise<`0x${string}`> => {
+}
+
+/**
+ * Args for `initialize`. Callers must supply the policy code hash one of two ways:
+ *
+ * - `policyCodeHash`: pre-computed `keccak256` of the Rego policy bytes (e.g. read from
+ *   `policy_cids.json` or another out-of-band source). Takes precedence when both are set.
+ * - `policyBytes`: the raw Rego policy bytes — the SDK computes `keccak256` for you. Use
+ *   this when fetching from IPFS via `policyCid`, reading a local file, or any other
+ *   transport. Bringing the bytes lets the SDK stay browser/edge friendly without taking
+ *   an opinion on an IPFS gateway.
+ *
+ * Mirrors the resolution strategy in `newton-cli` (`commands/policy.rs`).
+ */
+export type InitializePolicyArgs = InitializeContractArgs & ({ policyCodeHash: Hex } | { policyBytes: Uint8Array })
+
+type InitializeArgs = InitializePolicyArgs & {
+  walletClient: WalletClient
+  policyContractAddress: Address
+}
+
+/**
+ * Initialize a NewtonPolicy contract on-chain.
+ *
+ * The contract's `initialize` requires `keccak256` of the Rego policy bytes as
+ * `_policyCodeHash` so the on-chain hash matches the policy referenced by `policyCid`.
+ * See {@link InitializePolicyArgs} for how to provide it.
+ */
+const initialize = async ({ walletClient, policyContractAddress, ...args }: InitializeArgs): Promise<`0x${string}`> => {
   try {
     if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client')
     }
+
+    const policyCodeHash = 'policyCodeHash' in args ? args.policyCodeHash : keccak256(args.policyBytes)
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0]
     const hash = await walletClient.writeContract({
@@ -460,6 +484,7 @@ const initialize = async ({
         args.policyData,
         args.metadataCid,
         args.owner,
+        policyCodeHash,
       ],
       chain: walletClient.chain,
       account,

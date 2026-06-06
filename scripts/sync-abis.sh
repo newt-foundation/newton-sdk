@@ -1,76 +1,115 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Sync contract ABIs from newton-prover-avs repository (main branch)
+# Sync contract ABIs from newton-contracts repository (main branch).
 # Usage: ./scripts/sync-abis.sh
 #
-# Requires: gh CLI authenticated with access to newt-foundation org
-# Source: newton-prover-avs/contracts/out/ (Foundry build artifacts)
+# Requires: git, forge (Foundry), node
+# Source: newton-contracts — Foundry build artifacts under out/<Name>.sol/<Name>.json
+#
+# newton-contracts does not commit build artifacts (out/ is gitignored), so we
+# clone the repo into a tempdir and run `forge build` to produce them.
+#
+# This script generates three ABI files consumed by the SDK:
+#   - src/abis/newtonAbi.ts                 (NewtonProverTaskManager, AttestationValidator)
+#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy)
+#   - src/abis/newtonIdentityRegistryAbi.ts (IdentityRegistry)
 
-REPO="newt-foundation/newton-prover-avs"
+REPO_URL="https://github.com/newt-foundation/newton-contracts.git"
 BRANCH="main"
 OUT_DIR="src/abis"
 
-# Newton core contracts to sync.
-# Format: "SolidityFileName:ExportName"
-# SolidityFileName maps to contracts/out/<name>.sol/<name>.json
-CONTRACTS=(
-  "NewtonProverTaskManager:NewtonProverTaskManagerAbi"
-  "AttestationValidator:AttestationValidatorAbi"
-  "NewtonPolicy:NewtonPolicyAbi"
-  "NewtonPolicyFactory:NewtonPolicyFactoryAbi"
-  "NewtonPolicyData:NewtonPolicyDataAbi"
-  "NewtonProverServiceManager:NewtonProverServiceManagerAbi"
-  "IdentityRegistry:IdentityRegistryAbi"
-  "PolicyClientRegistry:PolicyClientRegistryAbi"
-  "OperatorRegistry:OperatorRegistryAbi"
-  "NewtonPolicyClient:NewtonPolicyClientAbi"
-  # Cross-chain (destination L2s)
-  "NewtonProverDestTaskManager:NewtonProverDestTaskManagerAbi"
+# Format: "SolidityFileName:ExportName:OutFile"
+# Forge writes artifacts as out/<SolidityFileName>.sol/<SolidityFileName>.json
+# regardless of where the source lives in the repo tree.
+ENTRIES=(
+  "NewtonProverTaskManager:NewtonProverTaskManagerAbi:newtonAbi.ts"
+  "AttestationValidator:AttestationValidatorAbi:newtonAbi.ts"
+  "NewtonPolicy:NewtonPolicyAbi:newtonPolicyAbi.ts"
+  "IdentityRegistry:IdentityRegistryAbi:newtonIdentityRegistryAbi.ts"
 )
 
-echo "Syncing ABIs from $REPO@$BRANCH..."
+command -v forge >/dev/null || { echo "forge not found — install Foundry"; exit 1; }
+command -v node >/dev/null  || { echo "node not found"; exit 1; }
 
-fetch_abi() {
+WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$WORKDIR"' EXIT
+
+echo "Cloning $REPO_URL@$BRANCH..."
+git clone --depth 1 --branch "$BRANCH" --recurse-submodules --shallow-submodules \
+  "$REPO_URL" "$WORKDIR/newton-contracts" >/dev/null 2>&1
+
+pushd "$WORKDIR/newton-contracts" >/dev/null
+echo "Building contracts (forge build)..."
+forge build --silent
+popd >/dev/null
+
+ART_DIR="$WORKDIR/newton-contracts/out"
+
+extract_abi() {
   local contract_name="$1"
-  gh api "repos/$REPO/contents/contracts/out/${contract_name}.sol/${contract_name}.json?ref=$BRANCH" \
-    --jq '.content' | base64 -d | node -e "
-      const fs = require('fs');
-      const json = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
-      console.log(JSON.stringify(json.abi, null, 2));
-    "
+  local artifact="$ART_DIR/${contract_name}.sol/${contract_name}.json"
+  [[ -f "$artifact" ]] || { echo "missing artifact: $artifact" >&2; exit 1; }
+  node -e "
+    const fs = require('fs');
+    const j = JSON.parse(fs.readFileSync('$artifact', 'utf8'));
+    process.stdout.write(JSON.stringify(j.abi, null, 2));
+  "
 }
 
-# Fetch all ABIs
-declare -A ABIS
-for entry in "${CONTRACTS[@]}"; do
-  contract_name="${entry%%:*}"
-  echo "  Fetching ${contract_name}..."
-  ABIS["$entry"]=$(fetch_abi "$contract_name")
+# Group entries by output file and emit one file per group.
+declare -A FILES
+for entry in "${ENTRIES[@]}"; do
+  out_file="${entry##*:}"
+  FILES["$out_file"]=1
 done
 
-# Generate single output file
-cat > "$OUT_DIR/newtonAbi.ts" << 'HEADER'
-// Auto-generated from newton-prover-avs contracts. DO NOT EDIT.
+for out_file in "${!FILES[@]}"; do
+  out_path="$OUT_DIR/$out_file"
+  echo "Generating $out_path..."
+
+  cat > "$out_path" << 'HEADER'
+// Auto-generated from newton-contracts. DO NOT EDIT.
 // Regenerate with: pnpm sync-abis
 
 HEADER
 
-for entry in "${CONTRACTS[@]}"; do
-  export_name="${entry##*:}"
-  echo "export const ${export_name} = ${ABIS["$entry"]} as const" >> "$OUT_DIR/newtonAbi.ts"
-  echo "" >> "$OUT_DIR/newtonAbi.ts"
+  if [[ "$out_file" == "newtonAbi.ts" ]]; then
+    cat >> "$out_path" << 'IMPORTS'
+import type { GetContractEventsReturnType } from 'viem'
+
+IMPORTS
+  fi
+
+  for entry in "${ENTRIES[@]}"; do
+    file="${entry##*:}"
+    [[ "$file" == "$out_file" ]] || continue
+    name="${entry%%:*}"
+    rest="${entry#*:}"
+    export_name="${rest%%:*}"
+    echo "  Extracting ${name} → ${export_name}"
+    abi_json="$(extract_abi "$name")"
+    {
+      echo "export const ${export_name} = ${abi_json} as const"
+      echo ""
+    } >> "$out_path"
+  done
+
+  if [[ "$out_file" == "newtonAbi.ts" ]]; then
+    cat >> "$out_path" << 'FOOTER'
+// Derived from the NewtonProverTaskManager ABI so the type stays in lockstep
+// with the on-chain event. Do not hand-write — regenerate via `pnpm sync-abis`.
+export type TaskRespondedLog = GetContractEventsReturnType<
+  typeof NewtonProverTaskManagerAbi,
+  'TaskResponded',
+  true
+>[number]
+FOOTER
+  fi
 done
 
-# Append convenience type re-exports
-cat >> "$OUT_DIR/newtonAbi.ts" << 'FOOTER'
-// Re-export the TaskResponded event log type for convenience
-export type TaskRespondedLog = typeof NewtonProverTaskManagerAbi extends readonly (infer T)[]
-  ? T extends { type: 'event'; name: 'TaskResponded' }
-    ? T
-    : never
-  : never
-FOOTER
-
-echo "Done. ABIs written to $OUT_DIR/newtonAbi.ts"
-echo "Contracts synced: ${#CONTRACTS[@]}"
+echo "Done. ABIs written:"
+for out_file in "${!FILES[@]}"; do
+  echo "  $OUT_DIR/$out_file"
+done
+echo "Contracts synced: ${#ENTRIES[@]}"

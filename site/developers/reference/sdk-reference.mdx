@@ -505,6 +505,11 @@ simulatePolicyDataWithClient(
 
 Initializes a Newton Policy contract with the given configuration. This is a one-time setup call.
 
+The contract requires `keccak256` of the Rego policy bytes as `_policyCodeHash` so the on-chain hash matches the policy referenced by `policyCid`. Provide it one of two ways:
+
+- `policyCodeHash` -- pre-computed hex hash (from `policy_cids.json` or another out-of-band source). Takes precedence when both are set.
+- `policyBytes` -- the raw Rego policy bytes; the SDK computes `keccak256` for you. Useful when fetching from IPFS via `policyCid`, reading a local file, or any other transport.
+
 ```ts
 const txHash = await walletClient.initialize({
   factory: '0x...',
@@ -514,13 +519,14 @@ const txHash = await walletClient.initialize({
   policyData: ['0x...', '0x...'],
   metadataCid: 'bafyrei...',
   owner: '0x...',
+  policyBytes: await fetchPolicyBytes(policyCid),
 });
 ```
 
 **Signature:**
 
 ```ts
-initialize(args: {
+type InitializePolicyArgs = {
   factory: Address;
   entrypoint: string;
   policyCid: string;
@@ -528,20 +534,24 @@ initialize(args: {
   policyData: Address[];
   metadataCid: string;
   owner: Address;
-}): Promise<`0x${string}`>
+} & ({ policyCodeHash: Hex } | { policyBytes: Uint8Array });
+
+initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 ```
 
 **Parameters:**
 
-| Parameter     | Type        | Required | Description                                            |
-| ------------- | ----------- | -------- | ------------------------------------------------------ |
-| `factory`     | `Address`   | Yes      | Address of the deploying factory contract              |
-| `entrypoint`  | `string`    | Yes      | Policy entrypoint path (e.g., `"newton/policy/allow"`) |
-| `policyCid`   | `string`    | Yes      | Content identifier (CID) of the policy WASM            |
-| `schemaCid`   | `string`    | Yes      | Content identifier (CID) of the policy schema          |
-| `policyData`  | `Address[]` | Yes      | Array of PolicyData contract addresses                 |
-| `metadataCid` | `string`    | Yes      | Content identifier (CID) of the policy metadata        |
-| `owner`       | `Address`   | Yes      | Owner address of the policy contract                   |
+| Parameter        | Type         | Required          | Description                                                              |
+| ---------------- | ------------ | ----------------- | ------------------------------------------------------------------------ |
+| `factory`        | `Address`    | Yes               | Address of the deploying factory contract                                |
+| `entrypoint`     | `string`     | Yes               | Policy entrypoint path (e.g., `"newton/policy/allow"`)                   |
+| `policyCid`      | `string`     | Yes               | Content identifier (CID) of the policy WASM                              |
+| `schemaCid`      | `string`     | Yes               | Content identifier (CID) of the policy schema                            |
+| `policyData`     | `Address[]`  | Yes               | Array of PolicyData contract addresses                                   |
+| `metadataCid`    | `string`     | Yes               | Content identifier (CID) of the policy metadata                          |
+| `owner`          | `Address`    | Yes               | Owner address of the policy contract                                     |
+| `policyCodeHash` | `Hex`        | One of these two  | Pre-computed `keccak256` of the Rego policy bytes                        |
+| `policyBytes`    | `Uint8Array` | One of these two  | Raw Rego policy bytes; SDK computes `keccak256(policyBytes)` for you     |
 
 **Returns:** `` `0x${string}` `` -- The transaction hash.
 

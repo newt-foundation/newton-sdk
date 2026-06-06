@@ -1,506 +1,590 @@
+// Auto-generated from newton-contracts. DO NOT EDIT.
+// Regenerate with: pnpm sync-abis
+
 export const NewtonPolicyAbi = [
   {
-    type: 'function',
-    name: 'clientToPolicyId',
-    inputs: [
-      {
-        name: '',
-        type: 'address',
-        internalType: 'address',
-      },
-    ],
-    outputs: [
-      {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
-    ],
-    stateMutability: 'view',
+    "type": "constructor",
+    "inputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: 'function',
-    name: 'entrypoint',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "clientToPolicyId",
+    "inputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: 'view',
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'factory',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "entrypoint",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'address',
-        internalType: 'address',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getEntrypoint',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getMetadataCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "getEntrypoint",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getPolicyCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "getMetadataCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getPolicyConfig',
-    inputs: [
+    "type": "function",
+    "name": "getPolicyCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: 'policyId',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    outputs: [
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPolicyCodeHash",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'tuple',
-        internalType: 'struct INewtonPolicy.PolicyConfig',
-        components: [
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPolicyConfig",
+    "inputs": [
+      {
+        "name": "policyId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct INewtonPolicy.PolicyConfig",
+        "components": [
           {
-            name: 'policyParams',
-            type: 'bytes',
-            internalType: 'bytes',
+            "name": "policyParams",
+            "type": "bytes",
+            "internalType": "bytes"
           },
           {
-            name: 'expireAfter',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-        ],
-      },
+            "name": "expireAfter",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getPolicyData',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "getPolicyData",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'address[]',
-        internalType: 'address[]',
-      },
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getPolicyId',
-    inputs: [
+    "type": "function",
+    "name": "getPolicyId",
+    "inputs": [
       {
-        name: 'client',
-        type: 'address',
-        internalType: 'address',
-      },
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'getSchemaCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "getSchemaCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'initialize',
-    inputs: [
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
       {
-        name: '_factory',
-        type: 'address',
-        internalType: 'address',
+        "name": "_factory",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: '_entrypoint',
-        type: 'string',
-        internalType: 'string',
+        "name": "_entrypoint",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: '_policyCid',
-        type: 'string',
-        internalType: 'string',
+        "name": "_policyCid",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: '_schemaCid',
-        type: 'string',
-        internalType: 'string',
+        "name": "_schemaCid",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: '_policyData',
-        type: 'address[]',
-        internalType: 'address[]',
+        "name": "_policyData",
+        "type": "address[]",
+        "internalType": "address[]"
       },
       {
-        name: '_metadataCid',
-        type: 'string',
-        internalType: 'string',
+        "name": "_metadataCid",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: '_owner',
-        type: 'address',
-        internalType: 'address',
+        "name": "_owner",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "_policyCodeHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    outputs: [],
-    stateMutability: 'nonpayable',
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: 'function',
-    name: 'isPolicyVerified',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "isPolicyVerified",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'bool',
-        internalType: 'bool',
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'metadataCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "metadataCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'owner',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'address',
-        internalType: 'address',
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'policyCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "policyCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'policyData',
-    inputs: [
+    "type": "function",
+    "name": "policyCodeHash",
+    "inputs": [],
+    "outputs": [
       {
-        name: '',
-        type: 'uint256',
-        internalType: 'uint256',
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    outputs: [
-      {
-        name: '',
-        type: 'address',
-        internalType: 'address',
-      },
-    ],
-    stateMutability: 'view',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'renounceOwnership',
-    inputs: [],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'schemaCid',
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "policyData",
+    "inputs": [
       {
-        name: '',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'setMetadataCid',
-    inputs: [
+    "outputs": [
       {
-        name: '_metadataCid',
-        type: 'string',
-        internalType: 'string',
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: 'nonpayable',
+    "stateMutability": "view"
   },
   {
-    type: 'function',
-    name: 'setPolicy',
-    inputs: [
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "schemaCid",
+    "inputs": [],
+    "outputs": [
       {
-        name: 'policyConfig',
-        type: 'tuple',
-        internalType: 'struct INewtonPolicy.PolicyConfig',
-        components: [
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setMetadataCid",
+    "inputs": [
+      {
+        "name": "_metadataCid",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPolicy",
+    "inputs": [
+      {
+        "name": "policyConfig",
+        "type": "tuple",
+        "internalType": "struct INewtonPolicy.PolicyConfig",
+        "components": [
           {
-            name: 'policyParams',
-            type: 'bytes',
-            internalType: 'bytes',
-          },
-          {
-            name: 'expireAfter',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-        ],
-      },
-    ],
-    outputs: [
-      {
-        name: '',
-        type: 'bytes32',
-        internalType: 'bytes32',
-      },
-    ],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'supportsInterface',
-    inputs: [
-      {
-        name: 'interfaceId',
-        type: 'bytes4',
-        internalType: 'bytes4',
-      },
-    ],
-    outputs: [
-      {
-        name: '',
-        type: 'bool',
-        internalType: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'transferOwnership',
-    inputs: [
-      {
-        name: 'newOwner',
-        type: 'address',
-        internalType: 'address',
-      },
-    ],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'event',
-    name: 'Initialized',
-    inputs: [
-      {
-        name: 'version',
-        type: 'uint8',
-        indexed: false,
-        internalType: 'uint8',
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: 'event',
-    name: 'OwnershipTransferred',
-    inputs: [
-      {
-        name: 'previousOwner',
-        type: 'address',
-        indexed: true,
-        internalType: 'address',
-      },
-      {
-        name: 'newOwner',
-        type: 'address',
-        indexed: true,
-        internalType: 'address',
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: 'event',
-    name: 'PolicySet',
-    inputs: [
-      {
-        name: 'client',
-        type: 'address',
-        indexed: true,
-        internalType: 'address',
-      },
-      {
-        name: 'policyId',
-        type: 'bytes32',
-        indexed: true,
-        internalType: 'bytes32',
-      },
-      {
-        name: 'policy',
-        type: 'tuple',
-        indexed: false,
-        internalType: 'struct INewtonPolicy.SetPolicyInfo',
-        components: [
-          {
-            name: 'policyId',
-            type: 'bytes32',
-            internalType: 'bytes32',
+            "name": "policyParams",
+            "type": "bytes",
+            "internalType": "bytes"
           },
           {
-            name: 'policyAddress',
-            type: 'address',
-            internalType: 'address',
+            "name": "expireAfter",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "version",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PolicySet",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "policyId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "policy",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct INewtonPolicy.SetPolicyInfo",
+        "components": [
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
           },
           {
-            name: 'owner',
-            type: 'address',
-            internalType: 'address',
+            "name": "policyAddress",
+            "type": "address",
+            "internalType": "address"
           },
           {
-            name: 'policyCid',
-            type: 'string',
-            internalType: 'string',
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
           },
           {
-            name: 'schemaCid',
-            type: 'string',
-            internalType: 'string',
+            "name": "policyCid",
+            "type": "string",
+            "internalType": "string"
           },
           {
-            name: 'entrypoint',
-            type: 'string',
-            internalType: 'string',
+            "name": "schemaCid",
+            "type": "string",
+            "internalType": "string"
           },
           {
-            name: 'policyConfig',
-            type: 'tuple',
-            internalType: 'struct INewtonPolicy.PolicyConfig',
-            components: [
+            "name": "entrypoint",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "policyConfig",
+            "type": "tuple",
+            "internalType": "struct INewtonPolicy.PolicyConfig",
+            "components": [
               {
-                name: 'policyParams',
-                type: 'bytes',
-                internalType: 'bytes',
+                "name": "policyParams",
+                "type": "bytes",
+                "internalType": "bytes"
               },
               {
-                name: 'expireAfter',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
-            ],
+                "name": "expireAfter",
+                "type": "uint32",
+                "internalType": "uint32"
+              }
+            ]
           },
           {
-            name: 'policyData',
-            type: 'address[]',
-            internalType: 'address[]',
+            "name": "policyData",
+            "type": "address[]",
+            "internalType": "address[]"
           },
-        ],
-      },
+          {
+            "name": "policyCodeHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "version",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: 'event',
-    name: 'policyMetadataCidUpdated',
-    inputs: [
+    "type": "event",
+    "name": "policyMetadataCidUpdated",
+    "inputs": [
       {
-        name: 'metadataCid',
-        type: 'string',
-        indexed: false,
-        internalType: 'string',
-      },
+        "name": "metadataCid",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: 'error',
-    name: 'InterfaceNotSupported',
-    inputs: [],
+    "type": "error",
+    "name": "InterfaceNotSupported",
+    "inputs": []
   },
   {
-    type: 'error',
-    name: 'OnlyPolicyClient',
-    inputs: [],
+    "type": "error",
+    "name": "InvalidPolicyCodeHash",
+    "inputs": []
   },
-] as const;
+  {
+    "type": "error",
+    "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyPolicyClient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StringTooLong",
+    "inputs": [
+      {
+        "name": "str",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  }
+] as const
+
