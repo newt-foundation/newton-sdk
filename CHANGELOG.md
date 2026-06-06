@@ -1,3 +1,24 @@
+# v1.0.0 (Sat Jun 06 2026)
+
+#### 💥 Breaking Change
+
+- feat!: rename npm package to @newton-xyz/sdk [#159](https://github.com/newt-foundation/newton-sdk/pull/159) ([@denniswon](https://github.com/denniswon))
+
+#### 🚀 Enhancement
+
+- fix: sync contract ABIs from newton-contracts [#157](https://github.com/newt-foundation/newton-sdk/pull/157) ([@wesl-ee](https://github.com/wesl-ee) [@denniswon](https://github.com/denniswon))
+
+#### ⚠️ Pushed to `main`
+
+- chore: gitignore update ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 2
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- wesl-ee ([@wesl-ee](https://github.com/wesl-ee))
+
+---
+
 # v0.9.0 (Fri May 08 2026)
 
 #### 🚀 Enhancement
