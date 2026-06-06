@@ -171,6 +171,8 @@ const newtonWalletClientActions =
         policyData: Address[]
         metadataCid: string
         owner: Address
+        policyCodeHash?: Hex
+        policyBytes?: Uint8Array
       }): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
         return policyWriteFunctions.initialize({

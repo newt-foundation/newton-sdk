@@ -7,16 +7,16 @@ export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseRes
     ...log.args.taskResponse,
     intent: {
       ...log.args.taskResponse.intent,
-      value: BigInt(log.args.taskResponse.intent.value),
+      value: log.args.taskResponse.intent.value,
       data: log.args.taskResponse.intent.data,
-      chainId: BigInt(log.args.taskResponse.intent.chainId),
+      chainId: log.args.taskResponse.intent.chainId,
     },
     evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
   }
 
   const responseCertificate = {
-    taskResponsedBlock: Number(log.args.responseCertificate.taskResponsedBlock),
-    responseExpireBlock: Number(log.args.responseCertificate.responseExpireBlock),
+    taskResponsedBlock: log.args.responseCertificate.referenceBlock,
+    responseExpireBlock: log.args.responseCertificate.responseExpireBlock,
     hashOfNonSigners: log.args.responseCertificate.hashOfNonSigners,
   }
 

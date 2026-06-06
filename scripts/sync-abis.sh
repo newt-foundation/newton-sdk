@@ -9,18 +9,24 @@ set -euo pipefail
 #
 # newton-contracts does not commit build artifacts (out/ is gitignored), so we
 # clone the repo into a tempdir and run `forge build` to produce them.
+#
+# This script generates three ABI files consumed by the SDK:
+#   - src/abis/newtonAbi.ts                 (NewtonProverTaskManager, AttestationValidator)
+#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy)
+#   - src/abis/newtonIdentityRegistryAbi.ts (IdentityRegistry)
 
 REPO_URL="https://github.com/newt-foundation/newton-contracts.git"
 BRANCH="main"
 OUT_DIR="src/abis"
 
-# Newton core contracts to sync.
-# Format: "SolidityFileName:ExportName"
+# Format: "SolidityFileName:ExportName:OutFile"
 # Forge writes artifacts as out/<SolidityFileName>.sol/<SolidityFileName>.json
 # regardless of where the source lives in the repo tree.
-CONTRACTS=(
-  "NewtonProverTaskManager:NewtonProverTaskManagerAbi"
-  "AttestationValidator:AttestationValidatorAbi"
+ENTRIES=(
+  "NewtonProverTaskManager:NewtonProverTaskManagerAbi:newtonAbi.ts"
+  "AttestationValidator:AttestationValidatorAbi:newtonAbi.ts"
+  "NewtonPolicy:NewtonPolicyAbi:newtonPolicyAbi.ts"
+  "IdentityRegistry:IdentityRegistryAbi:newtonIdentityRegistryAbi.ts"
 )
 
 command -v forge >/dev/null || { echo "forge not found — install Foundry"; exit 1; }
@@ -51,55 +57,59 @@ extract_abi() {
   "
 }
 
-declare -A ABIS
-for entry in "${CONTRACTS[@]}"; do
-  name="${entry%%:*}"
-  echo "  Extracting ${name}..."
-  ABIS["$entry"]=$(extract_abi "$name")
+# Group entries by output file and emit one file per group.
+declare -A FILES
+for entry in "${ENTRIES[@]}"; do
+  out_file="${entry##*:}"
+  FILES["$out_file"]=1
 done
 
-cat > "$OUT_DIR/newtonAbi.ts" << 'HEADER'
+for out_file in "${!FILES[@]}"; do
+  out_path="$OUT_DIR/$out_file"
+  echo "Generating $out_path..."
+
+  cat > "$out_path" << 'HEADER'
 // Auto-generated from newton-contracts. DO NOT EDIT.
 // Regenerate with: pnpm sync-abis
 
-import type { Address, Hex, Log } from 'viem'
-
 HEADER
 
-for entry in "${CONTRACTS[@]}"; do
-  export_name="${entry##*:}"
-  echo "export const ${export_name} = ${ABIS["$entry"]} as const" >> "$OUT_DIR/newtonAbi.ts"
-  echo "" >> "$OUT_DIR/newtonAbi.ts"
+  if [[ "$out_file" == "newtonAbi.ts" ]]; then
+    cat >> "$out_path" << 'IMPORTS'
+import type { GetContractEventsReturnType } from 'viem'
+
+IMPORTS
+  fi
+
+  for entry in "${ENTRIES[@]}"; do
+    file="${entry##*:}"
+    [[ "$file" == "$out_file" ]] || continue
+    name="${entry%%:*}"
+    rest="${entry#*:}"
+    export_name="${rest%%:*}"
+    echo "  Extracting ${name} → ${export_name}"
+    abi_json="$(extract_abi "$name")"
+    {
+      echo "export const ${export_name} = ${abi_json} as const"
+      echo ""
+    } >> "$out_path"
+  done
+
+  if [[ "$out_file" == "newtonAbi.ts" ]]; then
+    cat >> "$out_path" << 'FOOTER'
+// Derived from the NewtonProverTaskManager ABI so the type stays in lockstep
+// with the on-chain event. Do not hand-write — regenerate via `pnpm sync-abis`.
+export type TaskRespondedLog = GetContractEventsReturnType<
+  typeof NewtonProverTaskManagerAbi,
+  'TaskResponded',
+  true
+>[number]
+FOOTER
+  fi
 done
 
-# Append convenience type re-exports
-cat >> "$OUT_DIR/newtonAbi.ts" << 'FOOTER'
-export type TaskRespondedLog = Log & {
-  args: {
-    taskResponse: {
-      taskId: Hex;
-      policyClient: Address;
-      policyId: Hex;
-      policyAddress: Address;
-      intent: {
-        from: Address;
-        to: Address;
-        value: string; // string representation of big int
-        data: Hex;
-        chainId: string; // string representation of big int
-        functionSignature: Hex;
-      };
-      intentSignature: Hex;
-      evaluationResult: Hex;
-    };
-    responseCertificate: {
-      taskResponsedBlock: string;
-      responseExpireBlock: string;
-      hashOfNonSigners: Hex;
-    };
-  };
-};
-FOOTER
-
-echo "Done. ABIs written to $OUT_DIR/newtonAbi.ts"
-echo "Contracts synced: ${#CONTRACTS[@]}"
+echo "Done. ABIs written:"
+for out_file in "${!FILES[@]}"; do
+  echo "  $OUT_DIR/$out_file"
+done
+echo "Contracts synced: ${#ENTRIES[@]}"

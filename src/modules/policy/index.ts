@@ -1,6 +1,6 @@
 import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi'
 import type { PolicyId, PolicyParamsJson } from '@core/types/policy'
-import { type Address, type PublicClient, type WalletClient, encodePacked, fromHex, keccak256 } from 'viem'
+import { type Address, type Hex, type PublicClient, type WalletClient, encodePacked, fromHex, keccak256 } from 'viem'
 
 // Read function wrappers - exact same names as on-chain functions
 
@@ -441,11 +441,15 @@ const initialize = async ({
   policyData: Address[]
   metadataCid: string
   owner: Address
+  policyCodeHash?: Hex
+  policyBytes?: Uint8Array
 }): Promise<`0x${string}`> => {
   try {
     if (!walletClient.chain) {
       throw new Error('Newton SDK: account and chain must be set on Wallet client')
     }
+
+    const policyCodeHash = resolvePolicyCodeHash(args.policyCodeHash, args.policyBytes)
 
     const account = walletClient.account ?? (await walletClient.getAddresses())[0]
     const hash = await walletClient.writeContract({
@@ -460,6 +464,7 @@ const initialize = async ({
         args.policyData,
         args.metadataCid,
         args.owner,
+        policyCodeHash,
       ],
       chain: walletClient.chain,
       account,
@@ -468,6 +473,12 @@ const initialize = async ({
   } catch (error) {
     throw new Error(`Newton SDK: Failed to initialize - ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
+}
+
+function resolvePolicyCodeHash(policyCodeHash: Hex | undefined, policyBytes: Uint8Array | undefined): Hex {
+  if (policyCodeHash) return policyCodeHash
+  if (policyBytes) return keccak256(policyBytes)
+  throw new Error('Newton SDK: initialize requires either policyCodeHash or policyBytes')
 }
 
 const renounceOwnership = async ({

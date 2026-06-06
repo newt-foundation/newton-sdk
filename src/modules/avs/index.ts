@@ -1,4 +1,4 @@
-import { AttestationValidatorAbi, NewtonProverTaskManagerAbi, type TaskRespondedLog } from '@core/abis/newtonAbi'
+import { AttestationValidatorAbi, NewtonProverTaskManagerAbi } from '@core/abis/newtonAbi'
 import { GATEWAY_METHODS } from '@core/const'
 import {
   type GatewayCreateTaskResult,
@@ -91,11 +91,10 @@ const waitForTaskResponded = async (
     eventName: 'TaskResponded',
     fromBlock: fromBlockParam,
     toBlock: 'latest',
+    strict: true,
   })
 
-  const match = (past as unknown as TaskRespondedLog[]).find(
-    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId,
-  )
+  const match = past.find(log => padHex(log.args.taskResponse.taskId, { size: 32 }) === targetTaskId)
   if (match) return convertLogToTaskResponse(match)
 
   // 2) If not found, subscribe and resolve on first match.
@@ -127,8 +126,9 @@ const waitForTaskResponded = async (
       address: taskManagerAddress,
       abi: NewtonProverTaskManagerAbi,
       eventName: 'TaskResponded',
+      strict: true,
       onLogs: logs => {
-        for (const log of logs as unknown as TaskRespondedLog[]) {
+        for (const log of logs) {
           const id = padHex(log.args.taskResponse.taskId, { size: 32 })
           if (id === targetTaskId) {
             const res = convertLogToTaskResponse(log)
@@ -191,11 +191,10 @@ const getTaskStatus = async (
     eventName: 'TaskResponded',
     fromBlock: SafeFromBlock[publicClient.chain?.id ?? 1],
     toBlock: 'latest',
+    strict: true,
   })
 
-  const match = (past as unknown as TaskRespondedLog[]).find(
-    log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId,
-  )
+  const match = past.find(log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId)
   if (!match) {
     throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`)
   }

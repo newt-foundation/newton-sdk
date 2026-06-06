@@ -2,34 +2,59 @@ import type { TaskRespondedLog } from '@core/abis/newtonAbi'
 import { describe, expect, it } from 'vitest'
 import { convertLogToTaskResponse } from './task'
 
-function createMockLog(overrides?: Partial<TaskRespondedLog['args']>): TaskRespondedLog {
+function createMockLog(overrides?: {
+  taskResponse?: Partial<TaskRespondedLog['args']['taskResponse']>
+  responseCertificate?: Partial<TaskRespondedLog['args']['responseCertificate']>
+}): TaskRespondedLog {
   return {
+    address: '0x0000000000000000000000000000000000000000',
+    blockHash: '0xblock',
+    blockNumber: 1n,
+    data: '0x',
+    logIndex: 0,
+    transactionHash: '0xtx',
+    transactionIndex: 0,
+    removed: false,
+    topics: [],
+    eventName: 'TaskResponded',
     args: {
       taskResponse: {
-        taskId: '0xabc123' as `0x${string}`,
-        policyClient: '0x1111111111111111111111111111111111111111' as `0x${string}`,
-        policyId: '0xdef456' as `0x${string}`,
-        policyAddress: '0x2222222222222222222222222222222222222222' as `0x${string}`,
+        taskId: '0xabc123',
+        policyClient: '0x1111111111111111111111111111111111111111',
+        policyId: '0xdef456',
+        policyAddress: '0x2222222222222222222222222222222222222222',
         intent: {
-          from: '0x3333333333333333333333333333333333333333' as `0x${string}`,
-          to: '0x4444444444444444444444444444444444444444' as `0x${string}`,
-          value: '1000',
-          data: '0x' as `0x${string}`,
-          chainId: '11155111',
-          functionSignature: '0xdeadbeef' as `0x${string}`,
+          from: '0x3333333333333333333333333333333333333333',
+          to: '0x4444444444444444444444444444444444444444',
+          value: 1000n,
+          data: '0x',
+          chainId: 11155111n,
+          functionSignature: '0xdeadbeef',
         },
-        intentSignature: '0xsig' as `0x${string}`,
-        evaluationResult: '0x01' as `0x${string}`,
+        intentSignature: '0xsig',
+        evaluationResult: '0x01',
+        policyTaskData: {
+          policyId: '0xdef456',
+          policyAddress: '0x2222222222222222222222222222222222222222',
+          policy: '0x',
+          policyData: [],
+          policyConfig: {
+            policyParams: '0x',
+            expireAfter: 0,
+          },
+        },
+        initializationTimestamp: 0n,
         ...overrides?.taskResponse,
       },
       responseCertificate: {
-        taskResponsedBlock: '100',
-        responseExpireBlock: '200',
-        hashOfNonSigners: '0xhash' as `0x${string}`,
+        referenceBlock: 100,
+        responseExpireBlock: 200,
+        hashOfNonSigners: '0xhash',
+        signatureData: '0x',
         ...overrides?.responseCertificate,
       },
     },
-  } as TaskRespondedLog
+  } as unknown as TaskRespondedLog
 }
 
 describe('convertLogToTaskResponse', () => {
@@ -41,7 +66,7 @@ describe('convertLogToTaskResponse', () => {
     expect(result.taskResponse.intent.chainId).toBe(11155111n)
   })
 
-  it('converts responseCertificate block numbers to number', () => {
+  it('maps responseCertificate.referenceBlock to taskResponsedBlock', () => {
     const log = createMockLog()
     const result = convertLogToTaskResponse(log)
 
@@ -58,8 +83,8 @@ describe('convertLogToTaskResponse', () => {
 
   it('converts zero evaluationResult to false', () => {
     const log = createMockLog({
-      taskResponse: { evaluationResult: '0x00' as `0x${string}` },
-    } as Partial<TaskRespondedLog['args']>)
+      taskResponse: { evaluationResult: '0x00' },
+    })
     const result = convertLogToTaskResponse(log)
 
     expect(result.taskResponse.evaluationResult).toBe(false)

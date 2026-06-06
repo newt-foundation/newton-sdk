@@ -1,7 +1,7 @@
 // Auto-generated from newton-contracts. DO NOT EDIT.
 // Regenerate with: pnpm sync-abis
 
-import type { Address, Hex, Log } from 'viem'
+import type { GetContractEventsReturnType } from 'viem'
 
 export const NewtonProverTaskManagerAbi = [
   {
@@ -5614,28 +5614,10 @@ export const AttestationValidatorAbi = [
   }
 ] as const
 
-export type TaskRespondedLog = Log & {
-  args: {
-    taskResponse: {
-      taskId: Hex;
-      policyClient: Address;
-      policyId: Hex;
-      policyAddress: Address;
-      intent: {
-        from: Address;
-        to: Address;
-        value: string; // string representation of big int
-        data: Hex;
-        chainId: string; // string representation of big int
-        functionSignature: Hex;
-      };
-      intentSignature: Hex;
-      evaluationResult: Hex;
-    };
-    responseCertificate: {
-      taskResponsedBlock: string;
-      responseExpireBlock: string;
-      hashOfNonSigners: Hex;
-    };
-  };
-};
+// Derived from the NewtonProverTaskManager ABI so the type stays in lockstep
+// with the on-chain event. Do not hand-write — regenerate via `pnpm sync-abis`.
+export type TaskRespondedLog = GetContractEventsReturnType<
+  typeof NewtonProverTaskManagerAbi,
+  'TaskResponded',
+  true
+>[number]
