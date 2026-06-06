@@ -1,6 +1,6 @@
 ---
 title: "TypeScript SDK Reference"
-description: "Complete API reference for @magicnewton/newton-protocol-sdk. Viem client extensions for policy evaluation, task submission, and attestation verification."
+description: "Complete API reference for @newton-xyz/sdk. Viem client extensions for policy evaluation, task submission, and attestation verification."
 keywords:
   - newton sdk
   - viem client extension
@@ -11,7 +11,7 @@ keywords:
 
 # Newton Protocol SDK Reference
 
-Official TypeScript SDK for the Newton Protocol. This page provides a complete reference for all exported methods, types, interfaces, and utilities in the `@magicnewton/newton-protocol-sdk` package.
+Official TypeScript SDK for the Newton Protocol. This page provides a complete reference for all exported methods, types, interfaces, and utilities in the `@newton-xyz/sdk` package.
 
 <Info>
   The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and `WalletClient` instances with Newton-specific actions. Make sure you are familiar with viem basics before proceeding.
@@ -24,17 +24,17 @@ Official TypeScript SDK for the Newton Protocol. This page provides a complete r
 <CodeGroup>
 
 ```bash npm
-npm install @magicnewton/newton-protocol-sdk
+npm install @newton-xyz/sdk
 ```
 
 
 ```bash pnpm (recommended)
-pnpm add @magicnewton/newton-protocol-sdk
+pnpm add @newton-xyz/sdk
 ```
 
 
 ```bash yarn
-yarn add @magicnewton/newton-protocol-sdk
+yarn add @newton-xyz/sdk
 ```
 
 </CodeGroup>
@@ -80,7 +80,7 @@ Extends a viem `PublicClient` with Newton Protocol read methods.
 ```ts
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { newtonPublicClientActions } from '@magicnewton/newton-protocol-sdk';
+import { newtonPublicClientActions } from '@newton-xyz/sdk';
 
 const publicClient = createPublicClient({
   chain: sepolia,        // or baseSepolia, base, mainnet
@@ -119,7 +119,7 @@ Extends a viem `WalletClient` with Newton Protocol write methods.
 ```ts
 import { createWalletClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { newtonWalletClientActions } from '@magicnewton/newton-protocol-sdk';
+import { newtonWalletClientActions } from '@newton-xyz/sdk';
 
 const walletClient = createWalletClient({
   chain: sepolia,        // or baseSepolia, base, mainnet
@@ -1734,7 +1734,7 @@ identityDomainHash(domainName: string): Hex
 **Example:**
 
 ```ts
-import { identityDomainHash } from '@magicnewton/newton-protocol-sdk';
+import { identityDomainHash } from '@newton-xyz/sdk';
 
 const kycDomain = identityDomainHash('kyc');
 // Returns keccak256 of "kyc" as 0x-prefixed bytes32
@@ -2647,8 +2647,8 @@ The SDK provides multiple entry points for tree-shaking and targeted imports.
 
 | Import Path                                 | Description                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| `@magicnewton/newton-protocol-sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
-| `@magicnewton/newton-protocol-sdk/types`    | Type definitions and interfaces only                                              |
+| `@newton-xyz/sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
+| `@newton-xyz/sdk/types`    | Type definitions and interfaces only                                              |
 
 <Info>
   Use subpath exports to minimize bundle size when you only need a subset of SDK functionality.

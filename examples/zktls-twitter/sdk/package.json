@@ -1,7 +1,7 @@
 {
   "name": "@newton-protocol/zktls-twitter-example",
   "version": "0.1.0",
-  "description": "Example SDK demonstrating zkTLS Twitter/X proof-to-task flow for Newton Protocol. For production use, install @magicnewton/newton-protocol-sdk instead.",
+  "description": "Example SDK demonstrating zkTLS Twitter/X proof-to-task flow for Newton Protocol. For production use, install @newton-xyz/sdk instead.",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",

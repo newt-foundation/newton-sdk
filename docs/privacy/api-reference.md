@@ -12,7 +12,7 @@ import {
   generateSigningKeyPair,
   storeEncryptedSecrets,
   signPrivacyAuthorization,
-} from '@magicnewton/newton-protocol-sdk'
+} from '@newton-xyz/sdk'
 ```
 
 ## Wallet Client Methods

@@ -63,7 +63,7 @@ The gateway layer handles encrypted data submission. The on-chain layer manages 
 
 ## Relationship to Newton SDK
 
-The Newton SDK (`@magicnewton/newton-protocol-sdk`) provides TypeScript wrappers for the on-chain layer:
+The Newton SDK (`@newton-xyz/sdk`) provides TypeScript wrappers for the on-chain layer:
 
 - `registerIdentityData()` — store identity data reference on-chain with gateway co-signature
 - `identityDomainHash()` — compute keccak256 domain identifier

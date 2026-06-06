@@ -65,7 +65,7 @@ allow if {
 ### SDK Usage
 
 ```typescript
-import { registerIdentityData, identityDomainHash, linkIdentityAsSignerAndUser } from '@magicnewton/newton-protocol-sdk'
+import { registerIdentityData, identityDomainHash, linkIdentityAsSignerAndUser } from '@newton-xyz/sdk'
 
 // Step 1: Upload is handled by the newton-identity popup (not the SDK)
 // Step 2: Register on-chain
@@ -120,7 +120,7 @@ sequenceDiagram
 2. **Encrypt and upload** via the SDK:
 
 ```typescript
-import { uploadConfidentialData } from '@magicnewton/newton-protocol-sdk'
+import { uploadConfidentialData } from '@newton-xyz/sdk'
 
 const result = await uploadConfidentialData(
   11155111, // chainId
@@ -230,7 +230,7 @@ All three flows use the same HPKE encryption scheme:
 The gateway's HPKE public key is available via `newt_getPrivacyPublicKey` or through the SDK:
 
 ```typescript
-import { getPrivacyPublicKey } from '@magicnewton/newton-protocol-sdk'
+import { getPrivacyPublicKey } from '@newton-xyz/sdk'
 
 const { public_key } = await getPrivacyPublicKey(11155111, 'your-api-key')
 ```

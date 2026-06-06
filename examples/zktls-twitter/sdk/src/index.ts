@@ -3,7 +3,7 @@
  *
  * Example-scoped TypeScript helpers for the Newton Protocol Twitter/X zkTLS
  * flow. Production integrations should use the main
- * `@magicnewton/newton-protocol-sdk` package for gateway RPC, task submission,
+ * `@newton-xyz/sdk` package for gateway RPC, task submission,
  * identity, privacy, and secrets flows; this package keeps the tutorial
  * self-contained until the zkTLS-specific pieces are promoted into a thin
  * extension on top of the main SDK.
@@ -98,7 +98,7 @@ export interface NewtonSDK {
  *
  * This factory intentionally keeps the example runnable without additional
  * setup. It should not be treated as a production replacement for
- * `@magicnewton/newton-protocol-sdk`; production apps should compose the main
+ * `@newton-xyz/sdk`; production apps should compose the main
  * SDK with the zkTLS-only pieces exported here (`AttesterClient`,
  * `ProofClient`, and wasm-argument helpers).
  *

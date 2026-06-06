@@ -15,7 +15,7 @@ import {
   uploadEncryptedData,
   signPrivacyAuthorization,
   getPrivacyPublicKey,
-} from '@magicnewton/newton-protocol-sdk'
+} from '@newton-xyz/sdk'
 
 // -- Setup --
 
@@ -126,7 +126,7 @@ import {
   uploadEncryptedData,
   signPrivacyAuthorization,
   getPrivacyPublicKey,
-} from '@magicnewton/newton-protocol-sdk'
+} from '@newton-xyz/sdk'
 
 interface KycData {
   firstName: string
@@ -251,7 +251,7 @@ For applications that need fine-grained control, use `createSecureEnvelope` dire
 - You're building a custom upload flow
 
 ```typescript
-import { createSecureEnvelope, generateSigningKeyPair } from '@magicnewton/newton-protocol-sdk'
+import { createSecureEnvelope, generateSigningKeyPair } from '@newton-xyz/sdk'
 
 const keys = generateSigningKeyPair()
 
