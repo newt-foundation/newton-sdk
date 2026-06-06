@@ -5,12 +5,7 @@ import { hexToBigInt } from 'viem'
 export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseResult {
   const taskResponse = {
     ...log.args.taskResponse,
-    intent: {
-      ...log.args.taskResponse.intent,
-      value: log.args.taskResponse.intent.value,
-      data: log.args.taskResponse.intent.data,
-      chainId: log.args.taskResponse.intent.chainId,
-    },
+    intent: { ...log.args.taskResponse.intent },
     evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
   }
 
