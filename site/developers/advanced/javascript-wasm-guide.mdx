@@ -41,8 +41,9 @@ npm install -g @bytecodealliance/componentize-js
 Create **`newton-provider.wit`** in the project root:
 
 ```wit
-package newton:provider@0.1.0;
+package newton:provider@0.2.0;
 
+// HTTP host interface
 interface http {
     record http-request {
         url: string,
@@ -60,8 +61,54 @@ interface http {
     fetch: func(request: http-request) -> result<http-response, string>;
 }
 
+// Secrets host interface
+interface secrets {
+    record secret-response {
+        // Raw bytes of the decrypted secrets JSON object.
+        // The scope (policy_client, policy_data) is bound by the host execution context.
+        value: list<u8>,
+    }
+
+    get: func() -> result<secret-response, string>;
+}
+
+// [NEW] TLSNotary verification interface
+interface tlsn {
+    record verified-data {
+        /// Authenticated server name (e.g. "api.x.com")
+        server-name: string,
+        /// Unix timestamp (seconds) of the TLS connection
+        connection-time: u64,
+        /// Sent transcript bytes (unauthenticated bytes masked as 0x58 'X')
+        sent-transcript: list<u8>,
+        /// Received transcript bytes (unauthenticated bytes masked as 0x58 'X')
+        received-transcript: list<u8>,
+        /// SHA-256 fingerprint of the presentation notary verifying key, hex-encoded.
+        notary-key-fingerprint: string,
+    }
+
+    /// Download a TLSNotary Presentation from IPFS by CID, verify it, and return authenticated data.
+    ///
+    /// The host implementation:
+    ///   1. Downloads from IPFS (5 MiB cap — returns error if exceeded)
+    ///   2. Re-verifies the CID multihash against the downloaded bytes (defends against malicious IPFS gateways)
+    ///   3. BCS-deserializes the bytes into a Presentation
+    ///   4. Calls verify_presentation() from newton-tls-notary
+    ///
+    /// This bypasses the WASM HTTP 1 MiB limit since the host fetches directly.
+    verify-from-cid: func(proof-cid: string) -> result<verified-data, string>;
+
+    /// Verify a TLSNotary Presentation from raw BCS-serialized bytes.
+    ///
+    /// Useful for small proofs or testing where bytes are already available.
+    verify: func(presentation-bytes: list<u8>) -> result<verified-data, string>;
+}
+
 world newton-provider {
     import http;
+    import secrets;
+    import tlsn;
+
     export run: func(input: string) -> result<string, string>;
 }
 ```
