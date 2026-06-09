@@ -27,6 +27,14 @@
             ]
           },
           {
+            "group": "Newton for Vaults",
+            "pages": [
+              "developers/vaults/overview",
+              "developers/vaults/policies",
+              "developers/vaults/vault-sdk"
+            ]
+          },
+          {
             "group": "Verifiable Credential",
             "pages": [
               "developers/verified-credential/overview",
