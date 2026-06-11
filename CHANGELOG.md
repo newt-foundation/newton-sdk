@@ -1,3 +1,15 @@
+# v1.0.1 (Thu Jun 11 2026)
+
+#### 🐛 Bug Fix
+
+- check SPENT_SENTINEL instead of scanning logs in getTaskStatus [#162](https://github.com/newt-foundation/newton-sdk/pull/162) ([@wesl-ee](https://github.com/wesl-ee))
+
+#### Authors: 1
+
+- wesl-ee ([@wesl-ee](https://github.com/wesl-ee))
+
+---
+
 # v1.0.0 (Sat Jun 06 2026)
 
 #### 💥 Breaking Change
