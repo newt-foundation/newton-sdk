@@ -185,43 +185,23 @@ const getTaskStatus = async (
     return TaskStatus.Created
   }
 
-  const past = await publicClient.getContractEvents({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
-    eventName: 'TaskResponded',
-    fromBlock: SafeFromBlock[publicClient.chain?.id ?? 1],
-    toBlock: 'latest',
-    strict: true,
-  })
-
-  const match = past.find(log => padHex(log.args.taskResponse.taskId, { size: 32 }) === args.taskId)
-  if (!match) {
-    throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`)
-  }
-
-  const taskResponse = convertLogToTaskResponse(match)
-  const currentBlock = await publicClient.getBlockNumber()
-  if (
-    taskResponse?.responseCertificate?.responseExpireBlock &&
-    currentBlock > taskResponse.responseCertificate.responseExpireBlock
-  ) {
-    return TaskStatus.AttestationExpired
-  }
-
-  const attestationHash = await publicClient.readContract({
+  // attestationExpirations: 0 = no attestation (negative eval), uint32 max = spent, else expiry block
+  const SPENT_SENTINEL = 0xffffffff
+  const expiration = await publicClient.readContract({
     address: attestationValidatorAddress,
     abi: AttestationValidatorAbi,
-    functionName: 'attestations',
+    functionName: 'attestationExpirations',
     args: [args.taskId],
   })
 
-  const attestationHashBigInt = hexToBigInt(attestationHash as Hex)
+  if (expiration === SPENT_SENTINEL) return TaskStatus.AttestationSpent
 
-  if (!attestationHashBigInt) return TaskStatus.AttestationSpent
+  if (expiration !== 0) {
+    const currentBlock = await publicClient.getBlockNumber()
+    if (currentBlock > BigInt(expiration)) return TaskStatus.AttestationExpired
+  }
 
-  if (isTaskResponded) return TaskStatus.Responded
-
-  return TaskStatus.Created
+  return TaskStatus.Responded
 }
 
 async function submitEvaluationRequest(
