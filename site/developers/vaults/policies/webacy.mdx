@@ -1,0 +1,110 @@
+---
+title: "Webacy Depositor Reputation"
+description: "Use Webacy data in Newton policies to gate vault deposits based on wallet reputation, sanctions, exploit exposure, and deposit size."
+keywords:
+  - webacy
+  - depositor reputation
+  - wallet risk
+  - vault deposit policy
+  - newton vault policies
+---
+
+The Webacy policy evaluates depositor wallet reputation before allowing a deposit or other user action. It lets a vault apply different controls to low-, medium-, high-risk, and sanctioned wallets.
+
+## Data Inputs
+
+The Webacy data oracle uses Webacy's [Risk Score API](https://docs.webacy.com/api-reference/introduction), including the address risk profile endpoint for wallet-level exposure to threats and malicious entities.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `dd_score` | A numeric risk score normalized from Webacy response fields such as `overallRisk`, `ddScore`, `score`, or `medium`, depending on the response shape. | Used to classify the wallet into a risk bucket. |
+| `bucket` | Policy-level risk classification derived from `dd_score` and sanctions hits. The policy oracle returns `sanctioned`, `high`, `medium`, or `low`. | Gives the Rego policy a simple risk level to enforce. |
+| `sanctions_hits` | Count of issues whose tags indicate sanctions, OFAC, or blocklist exposure. Webacy also exposes a sanctions-check endpoint for wallet addresses. | Forces `bucket` to `sanctioned` when sanctions-related signals appear. |
+| `exploit_exposure_hits` | Count of issues whose tags indicate exploit, hack, drainer, or stolen-fund exposure. | Denies deposits from wallets with too much exposure to known exploit-related activity. |
+| `flag_count` | Number of issues Webacy returned for the wallet. | Useful for display and review workflows. |
+| `flag_categories` | Distinct normalized issue tags or categories found in the Webacy response. | Helps explain why a wallet was bucketed as risky. |
+| `address` | The checked depositor or actor address. | Binds the policy data to the wallet taking the vault action. |
+| `chain` | Optional chain context for the wallet-risk request. Webacy supports chain-specific query parameters for networks such as Ethereum, Base, BSC, Polygon, Optimism, Solana, and Arbitrum. | Narrows the risk profile to the chain relevant to the vault action. |
+
+## Rego Checks
+
+Use these exact Rego checks to enforce each guardrail.
+
+### Sanctioned Depositor
+
+This check blocks a wallet when the oracle classifies it as `sanctioned`. The oracle sets that bucket when Webacy returns sanctions, OFAC, or blocklist-related issue tags.
+
+```rego
+deny contains "sanctioned" if {
+    t.deny_on_sanctioned
+    v.bucket == "sanctioned"
+}
+```
+
+### High-Risk Depositor
+
+This check blocks a wallet when the oracle classifies it as `high`. In the current oracle, wallets with a risk score above the high-risk threshold are placed into this bucket unless they are already sanctioned.
+
+```rego
+deny contains "high_risk" if {
+    t.deny_on_high_risk
+    v.bucket == "high"
+}
+```
+
+### Exploit Exposure
+
+This check blocks a wallet when Webacy issue tags show at least `exploit_exposure_hits_max` exploit-related hits. The oracle counts tags related to exploits, hacks, drainers, or stolen funds.
+
+```rego
+deny contains "exploit_exposure" if v.exploit_exposure_hits >= t.exploit_exposure_hits_max
+```
+
+### Medium-Risk Deposit Cap
+
+This check lets a vault treat medium-risk wallets differently based on deposit size. A medium-risk wallet can still deposit below the configured cap, but deposits above `medium_risk_max_deposit_usd` are denied.
+
+```rego
+deny contains "medium_risk_over_cap" if {
+    v.bucket == "medium"
+    input.deposit_amount_usd > t.medium_risk_max_deposit_usd
+}
+```
+
+### Final Allow Rule
+
+```rego
+allow if count(deny) == 0
+```
+
+## Complete Policy
+
+```rego
+package webacy_depositor_reputation
+
+import future.keywords
+
+default allow := false
+
+t := data.params
+v := data.wasm
+
+deny contains "sanctioned" if {
+    t.deny_on_sanctioned
+    v.bucket == "sanctioned"
+}
+
+deny contains "high_risk" if {
+    t.deny_on_high_risk
+    v.bucket == "high"
+}
+
+deny contains "exploit_exposure" if v.exploit_exposure_hits >= t.exploit_exposure_hits_max
+
+deny contains "medium_risk_over_cap" if {
+    v.bucket == "medium"
+    input.deposit_amount_usd > t.medium_risk_max_deposit_usd
+}
+
+allow if count(deny) == 0
+```

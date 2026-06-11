@@ -1,0 +1,49 @@
+---
+title: "Policy Overview"
+description: "Use Newton vault policies to enforce risk, compliance, and oracle checks before vault actions execute."
+keywords:
+  - vault policies
+  - vault data oracles
+  - newton for vaults
+  - defi risk policies
+---
+
+Newton vault policies combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
+
+In the Newton dashboard, use **Explore Data Oracles** to browse available data oracles, inspect the data they provide, and add the relevant oracle to a policy. Vault policies can combine multiple oracles, so a single vault action can be checked against risk, compliance, and market data before it is approved.
+
+## Available Policies
+
+| Policy | Use it for |
+| --- | --- |
+| [Vaults.fyi Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
+| [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
+| [Webacy Depositor Reputation](/developers/vaults/policies/webacy) | Applying wallet-reputation controls to deposits and other user actions |
+| [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+
+## Composing Policies
+
+Vault policies are most useful when combined. For example, a regulated yield vault might require:
+
+- A Webacy depositor reputation check before deposit
+- Chainalysis sanctions screening for the depositor address
+- Vaults.fyi risk checks before accepting additional capital
+- RedStone oracle divergence checks before curator reallocations
+
+The result is a vault whose rules are explicit, inspectable, and enforced before execution.
+
+<Card title="Vaults.fyi Vault Risk Rating" icon="chart-line" href="/developers/vaults/policies/vaultsfyi">
+  Check vault APY, TVL drawdown, risk score, allocation changes, flags, and corruption status.
+</Card>
+
+<Card title="Chainalysis Address Screening" icon="shield-alert" href="/developers/vaults/policies/chainalysis">
+  Screen addresses against sanctions and risk categories.
+</Card>
+
+<Card title="Webacy Depositor Reputation" icon="user-check" href="/developers/vaults/policies/webacy">
+  Gate deposits based on wallet reputation and exploit exposure.
+</Card>
+
+<Card title="RedStone Oracle Divergence" icon="activity" href="/developers/vaults/policies/redstone">
+  Compare RedStone price data against onchain oracle data before allowing actions.
+</Card>
