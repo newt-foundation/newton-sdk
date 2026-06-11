@@ -1,0 +1,126 @@
+---
+title: "Reference"
+description: "Target API reference for the coming-soon Newton Shield SDK."
+keywords:
+  - vault sdk reference
+  - newton shield api
+  - createShield
+  - shield runtime
+  - morpho vault sdk
+---
+
+<Note>
+  The Newton Shield SDK is coming soon. This reference describes the target API surface and may change before general availability.
+</Note>
+
+## Package
+
+```bash
+pnpm add @newton-xyz/newton-shield-sdk viem zod
+```
+
+`viem` and `zod` are peer dependencies. Vendor SDKs, such as `@morpho-org/blue-sdk-viem`, are also peer dependencies so applications only install the vault integrations they use.
+
+## Supported Chains
+
+| Chain | Chain ID |
+| --- | --- |
+| Ethereum | `1` |
+| Base | `8453` |
+| Sepolia | `11155111` |
+| Base Sepolia | `84532` |
+
+Calling `createShield` on an unsupported chain is expected to fail before sending a transaction.
+
+## `createShield`
+
+Creates or attaches to a Shield for a curator and vault.
+
+```typescript
+const shield = await createShield({
+  owner,
+  vault,
+  pack,
+  params,
+  walletClient,
+})
+```
+
+### Parameters
+
+| Field | Description |
+| --- | --- |
+| `owner` | Curator or owner address that controls the Shield |
+| `vault` | Vault address protected by the Shield |
+| `pack` | Policy pack used for the vault |
+| `params` | Typed policy parameters for the selected pack |
+| `walletClient` | Viem wallet client used to deploy or execute through the Shield |
+
+## Shield Runtime
+
+The Shield runtime turns a typed call into:
+
+1. Intent construction
+2. Newton AVS policy evaluation
+3. Policy attestation retrieval
+4. Onchain execution through the Shield contract
+
+Vendor modules are expected to be runtime-pluggable with a viem-style `.extend(...)` pattern.
+
+```typescript
+const shield = await createShield(config).extend(morpho())
+```
+
+## Morpho Module
+
+The Morpho module is expected to expose typed vault-management actions such as:
+
+```typescript
+await shield.morpho.reallocate(args)
+await shield.morpho.setCap(args)
+```
+
+## Guarded Call
+
+For vendors or actions without a first-class module, use the guarded call escape hatch.
+
+```typescript
+await shield.guardedCall({
+  to: '0xTargetAddress',
+  data: '0xCalldata',
+  functionSignature: 'setCap(bytes32,uint184)',
+  wasmArgs: {
+    vaultAddress: '0xVaultAddress',
+    network: 'base',
+  },
+})
+```
+
+When using `guardedCall`, the integration owns the intent integrity for the target call.
+
+## Policy Packs
+
+Policy packs are expected to be available as subpath imports:
+
+```typescript
+import { vaultRiskPack } from '@newton-xyz/newton-shield-sdk/packs/vault-risk'
+```
+
+Each pack provides typed params and helper logic for fetching freshness-bound policy inputs.
+
+## Errors
+
+The target SDK error hierarchy includes:
+
+| Error | When it occurs |
+| --- | --- |
+| `PolicyDeniedError` | Newton evaluates the policy and denies the action |
+| `AttestationTimeoutError` | The SDK does not receive an attestation in time |
+| `ShieldExecutionError` | The Shield contract execution fails |
+| `ParamMismatchError` | An existing Shield has parameters that do not match the requested config |
+| `GatewayError` | The Newton gateway request fails |
+| `UnsupportedChainError` | The app tries to use a chain without Shield deployments |
+
+## Browser Safety
+
+The target SDK core is browser-safe and avoids `node:*` imports.

@@ -1,0 +1,125 @@
+---
+title: "Integration Guide"
+description: "Preview how to integrate Newton Shield SDK into a Morpho vault curator workflow."
+keywords:
+  - vault sdk integration
+  - morpho integration
+  - newton shield sdk
+  - vault curator workflow
+---
+
+<Note>
+  The Newton Shield SDK is coming soon. This guide shows the target integration shape for early planning.
+</Note>
+
+The Shield SDK is designed to sit beside the Morpho SDK rather than replace it. Your app prepares the same typed vault-management action it would normally send through Morpho, then routes execution through a Shield that requires a Newton attestation.
+
+## 1. Install Packages
+
+When available, install the Shield SDK and the peer dependencies your app uses:
+
+```bash
+pnpm add @newton-xyz/newton-shield-sdk viem zod @morpho-org/blue-sdk-viem
+```
+
+## 2. Create a Wallet Client
+
+```typescript
+import { createWalletClient, http } from 'viem'
+import { base } from 'viem/chains'
+import { privateKeyToAccount } from 'viem/accounts'
+
+const account = privateKeyToAccount(process.env.CURATOR_PRIVATE_KEY as `0x${string}`)
+
+const walletClient = createWalletClient({
+  account,
+  chain: base,
+  transport: http(process.env.BASE_RPC_URL),
+})
+```
+
+## 3. Create or Attach to a Shield
+
+```typescript
+import { createShield } from '@newton-xyz/newton-shield-sdk'
+import { vaultRiskPack } from '@newton-xyz/newton-shield-sdk/packs/vault-risk'
+import { morpho } from '@newton-xyz/newton-shield-sdk/vendors/morpho'
+
+const shield = await createShield({
+  owner: account.address,
+  vault: '0xVaultAddress',
+  pack: vaultRiskPack,
+  params: {
+    vaultsFyi: {
+      network: 'base',
+      riskScoreFloor: 70,
+      tvlDrawdown24hMaxPct: 10,
+      tvlDrawdown7dMaxPct: 20,
+      denyOnCriticalFlag: true,
+    },
+    oracleDivergence: {
+      maxFeedAgeSeconds: 300,
+      warnBp: 50,
+      denyBp: 100,
+    },
+  },
+  walletClient,
+}).extend(morpho())
+```
+
+`createShield` is intended to be idempotent. It predicts a deterministic Shield address from the curator and vault, attaches to an existing Shield when parameters match, or deploys one when needed.
+
+## 4. Execute a Morpho Action
+
+```typescript
+import { parseUnits } from 'viem'
+
+await shield.morpho.setCap({
+  marketId: '0xMorphoMarketId',
+  cap: parseUnits('5000000', 6),
+  wasmArgs: {
+    vaultAddress: '0xVaultAddress',
+    network: 'base',
+    symbol: 'USDC',
+    rpcUrl: process.env.BASE_RPC_URL,
+  },
+})
+```
+
+In this example, `setCap` is only forwarded to Morpho if Newton approves the intent. If the Vaults.fyi or oracle-divergence checks fail, the SDK raises a typed policy error instead of sending the vault-management transaction.
+
+## 5. Handle Policy Errors
+
+```typescript
+import { PolicyDeniedError } from '@newton-xyz/newton-shield-sdk'
+
+try {
+  await shield.morpho.setCap({
+    marketId: '0xMorphoMarketId',
+    cap: parseUnits('5000000', 6),
+    wasmArgs: {
+      vaultAddress: '0xVaultAddress',
+      network: 'base',
+      symbol: 'USDC',
+      rpcUrl: process.env.BASE_RPC_URL,
+    },
+  })
+} catch (error) {
+  if (error instanceof PolicyDeniedError) {
+    console.error('Vault action denied by policy', error)
+    return
+  }
+
+  throw error
+}
+```
+
+## Next Steps
+
+<Card title="Vault Policies" icon="shield-check" href="/developers/vaults/policies/overview">
+  Choose the policy checks to enforce before vault actions execute.
+</Card>
+
+<Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
+  Review the target SDK API surface.
+</Card>

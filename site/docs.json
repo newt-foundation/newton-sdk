@@ -27,14 +27,6 @@
             ]
           },
           {
-            "group": "Newton for Vaults",
-            "pages": [
-              "developers/vaults/overview",
-              "developers/vaults/policies",
-              "developers/vaults/vault-sdk"
-            ]
-          },
-          {
             "group": "Verifiable Credential",
             "pages": [
               "developers/verified-credential/overview",
@@ -109,6 +101,35 @@
               "developers/resources/newton-explorer",
               "developers/resources/developer-terms-of-service",
               "developers/reference/context-file"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Newton for Vaults",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "developers/vaults/overview"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "developers/vaults/sdk/overview",
+              "developers/vaults/sdk/integration-guide",
+              "developers/vaults/sdk/reference"
+            ]
+          },
+          {
+            "group": "Policies",
+            "pages": [
+              "developers/vaults/policies/overview",
+              "developers/vaults/policies/vaultsfyi",
+              "developers/vaults/policies/chainalysis",
+              "developers/vaults/policies/webacy",
+              "developers/vaults/policies/redstone"
             ]
           }
         ]
@@ -230,6 +251,14 @@
     {
       "source": "/developers/advanced/building-policies",
       "destination": "/developers/guides/writing-policies"
+    },
+    {
+      "source": "/developers/vaults/policies",
+      "destination": "/developers/vaults/policies/overview"
+    },
+    {
+      "source": "/developers/vaults/vault-sdk",
+      "destination": "/developers/vaults/sdk/overview"
     },
     {
       "source": "/developers/overview/newton-explorer",

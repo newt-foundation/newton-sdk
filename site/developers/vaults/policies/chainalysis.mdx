@@ -1,0 +1,87 @@
+---
+title: "Chainalysis Address Screening"
+description: "Use Chainalysis data in Newton policies to screen addresses for sanctions and high-risk categories before vault actions execute."
+keywords:
+  - chainalysis
+  - address screening
+  - sanctions screening
+  - vault compliance
+  - newton vault policies
+---
+
+The Chainalysis policy screens an address for sanctions and risk categories. It is useful for vault deposits, withdrawals, curator operations, or any flow where the vault needs address-level compliance and AML controls.
+
+## Data Inputs
+
+The Chainalysis data oracle returns values such as:
+
+- `sanctioned`
+- `is_high_risk`
+- `risk_categories`
+
+## Rego Checks
+
+Use these exact Rego checks to enforce each guardrail.
+
+### Sanctioned Address
+
+```rego
+deny contains "chainalysis_sanctioned" if {
+    t.deny_on_sanctioned
+    v.sanctioned
+}
+```
+
+### High-Risk Address
+
+```rego
+deny contains "high_risk_address" if {
+    t.deny_on_high_risk_category
+    v.is_high_risk
+}
+```
+
+### Blocklisted Risk Category
+
+```rego
+deny contains "risk_category_blocklisted" if {
+    some cat in v.risk_categories
+    cat in t.risk_categories_blocklist
+}
+```
+
+### Final Allow Rule
+
+```rego
+allow if count(deny) == 0
+```
+
+## Complete Policy
+
+```rego
+package chainalysis_address_screening
+
+import future.keywords
+
+default allow := false
+
+t := data.params
+v := data.wasm
+
+deny contains "chainalysis_sanctioned" if {
+    t.deny_on_sanctioned
+    v.sanctioned
+}
+
+deny contains "high_risk_address" if {
+    t.deny_on_high_risk_category
+    v.is_high_risk
+}
+
+deny contains "risk_category_blocklisted" if {
+    some cat in v.risk_categories
+    cat in t.risk_categories_blocklist
+}
+
+allow if count(deny) == 0
+```
