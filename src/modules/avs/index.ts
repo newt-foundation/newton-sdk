@@ -187,12 +187,12 @@ const getTaskStatus = async (
 
   // attestationExpirations: 0 = no attestation (negative eval), uint32 max = spent, else expiry block
   const SPENT_SENTINEL = 0xffffffff
-  const expiration = (await publicClient.readContract({
+  const expiration = await publicClient.readContract({
     address: attestationValidatorAddress,
     abi: AttestationValidatorAbi,
     functionName: 'attestationExpirations',
     args: [args.taskId],
-  })) as number
+  })
 
   if (expiration === SPENT_SENTINEL) return TaskStatus.AttestationSpent
 
