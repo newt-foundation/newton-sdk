@@ -114,31 +114,7 @@ await shield.morpho.submitCap({
 
 In this example, `submitCap` is only forwarded to MetaMorpho if Newton approves the intent. If the Vaults.fyi or oracle-divergence checks fail, the SDK raises a typed policy error instead of sending the vault-management transaction.
 
-## 6. Execute a generic vault action
-
-```typescript
-import { encodeFunctionData } from 'viem'
-import { EulerEarnAbi } from './constants/abis'
-
-await shield.sendCall({
-  to: '0xEulerEarnContract',
-  data: encodeFunctionData({
-    abi: EulerEarnAbi,
-    functionName: 'reallocate',
-    args: [marketAllocations],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-  wasmArgs: {
-    vaultAddress: '0xVaultAddress',
-    network: 'base',
-    symbol: 'USDC',
-  },
-})
-```
-
-In this example, the same policy checks are performed as before, the only difference being explicit encoding of the function calldata to be performed if the policy check succeeds.
-
-## 7. Handle Policy Errors
+## 6. Handle Policy Errors
 
 ```typescript
 import { PolicyDeniedError } from '@newton-xyz/newton-shield-sdk'
@@ -167,6 +143,10 @@ try {
 
 <Card title="Vault Policies" icon="shield-check" href="/developers/vaults/policies/overview">
   Choose the policy checks to enforce before vault actions execute.
+</Card>
+
+<Card title="Euler" icon="code" href="/developers/vaults/sdk/euler">
+  Use the generic SDK call path for Euler Earn reallocations and other Euler vault actions.
 </Card>
 
 <Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
