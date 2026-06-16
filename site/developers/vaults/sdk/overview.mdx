@@ -1,30 +1,30 @@
 ---
 title: "Overview"
-description: "Newton Shield SDK is a coming-soon TypeScript SDK for vault curators that wraps vault-management actions behind Newton policy attestations."
+description: "Newton VaultKit is a coming-soon TypeScript SDK for vault curators that wraps vault-management actions behind Newton policy attestations."
 keywords:
   - vault sdk
-  - newton shield sdk
+  - newton vaultkit
   - morpho vaults
   - vault curator sdk
   - defi vault guardrails
 ---
 
 <Note>
-  The Newton Shield SDK is coming soon. The API described here is the target shape for the pre-release SDK and may change before general availability.
+  Newton VaultKit is coming soon. The API described here is the target shape for the pre-release SDK and may change before general availability.
 </Note>
 
-The Newton Shield SDK is a TypeScript SDK for vault curators. It wraps vault-management actions behind Newton policy attestations so the curator's manager role cannot execute actions that violate the configured policy.
+Newton VaultKit is a TypeScript SDK for vault curators. It wraps vault-management actions behind Newton policy attestations so the curator's manager role cannot execute actions that violate the configured policy.
 
-The first target integration is Morpho. Curators continue using the vendor SDK they already know, such as `@morpho-org/blue-sdk-viem`, while Newton Shield handles policy evaluation and onchain enforcement.
+The first target integration is Morpho. Curators continue using the vendor SDK they already know, such as `@morpho-org/blue-sdk-viem`, while Newton VaultKit handles policy evaluation and onchain enforcement.
 
 ## What It Does
 
-Newton Shield turns a vault action into this flow:
+Newton VaultKit turns a vault action into this flow:
 
 ```mermaid
 sequenceDiagram
     participant App as Curator App
-    participant SDK as Newton Shield SDK
+    participant SDK as Newton VaultKit
     participant AVS as Newton AVS
     participant Shield as Shield Contract
     participant Vendor as Vault Protocol
@@ -47,7 +47,7 @@ sequenceDiagram
 - **Browser-safe core:** The target SDK avoids `node:*` imports in the core package.
 
 <Card title="Integration Guide" icon="code" href="/developers/vaults/sdk/integration-guide">
-  See how a Morpho curator integration would use Newton Shield.
+  See how a Morpho curator integration would use Newton VaultKit.
 </Card>
 
 <Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
