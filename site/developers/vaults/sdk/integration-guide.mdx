@@ -1,6 +1,6 @@
 ---
 title: "Integration Guide"
-description: "Preview how to integrate Newton Shield SDK into a Morpho vault curator workflow."
+description: "How to integrate Newton Shield SDK into a vault curator workflow."
 keywords:
   - vault sdk integration
   - morpho integration
@@ -46,62 +46,93 @@ import { vaultRiskPack } from '@newton-xyz/newton-shield-sdk/packs/vault-risk'
 import { morpho } from '@newton-xyz/newton-shield-sdk/vendors/morpho'
 
 const shield = await createShield({
-  owner: account.address,
-  vault: '0xVaultAddress',
-  pack: vaultRiskPack,
-  params: {
-    vaultsFyi: {
-      network: 'base',
-      riskScoreFloor: 70,
-      tvlDrawdown24hMaxPct: 10,
-      tvlDrawdown7dMaxPct: 20,
-      denyOnCriticalFlag: true,
-    },
-    oracleDivergence: {
-      maxFeedAgeSeconds: 300,
-      warnBp: 50,
-      denyBp: 100,
-    },
-  },
+  apiKey: "YOUR_NEWTON_API_KEY",
   walletClient,
+  rpc: process.env.BASE_RPC_URL,
+  pack: vaultRiskPack,
+  vault: yourVaultAddress,
+  mustDeploy: true,
 }).extend(morpho())
 ```
 
-`createShield` is intended to be idempotent. It predicts a deterministic Shield address from the curator and vault, attaches to an existing Shield when parameters match, or deploys one when needed.
+`createShield` is intended to be idempotent. It predicts a deterministic Shield address from the curator and vault, attaches to an existing Shield when parameters match, or deploys one when needed. In the above example, the call requries the function to deploy the contract. If instead attaching to an existing deployed instance, it is adviseable to make sure it has the expected policy params as so:
+
+```typescript
+import { createShield } from '@newton-xyz/newton-shield-sdk'
+import { vaultRiskPack } from '@newton-xyz/newton-shield-sdk/packs/vault-risk'
+import { morpho } from '@newton-xyz/newton-shield-sdk/vendors/morpho'
+
+const shield = await createShield({
+  apiKey: "YOUR_NEWTON_API_KEY",
+  // not required but adviseable. fully determined by walletClient, vault, and version params
+  policyClientAddress: expectedPolicyClientAddress,
+  walletClient,
+  rpc: process.env.BASE_RPC_URL,
+  pack: vaultRiskPack,
+  vault: yourVaultAddress,
+  version: 1,
+  expectedParams: {
+    // typed policy params defined by the chosen policy pack
+    ...params
+  },
+}).extend(morpho())
+```
 
 ## 4. Execute a Morpho Action
 
 ```typescript
 import { parseUnits } from 'viem'
 
-await shield.morpho.setCap({
+await shield.morpho.submitCap({
   marketId: '0xMorphoMarketId',
   cap: parseUnits('5000000', 6),
   wasmArgs: {
     vaultAddress: '0xVaultAddress',
     network: 'base',
     symbol: 'USDC',
-    rpcUrl: process.env.BASE_RPC_URL,
   },
 })
 ```
 
-In this example, `setCap` is only forwarded to Morpho if Newton approves the intent. If the Vaults.fyi or oracle-divergence checks fail, the SDK raises a typed policy error instead of sending the vault-management transaction.
+In this example, `submitCap` is only forwarded to MetaMorpho if Newton approves the intent. If the Vaults.fyi or oracle-divergence checks fail, the SDK raises a typed policy error instead of sending the vault-management transaction.
 
-## 5. Handle Policy Errors
+## 5. Execute a generic vault action
+
+```typescript
+import { encodeFunctionData } from 'viem'
+import { EulerEarnAbi } from './constants/abis'
+
+await shield.sendCall({
+  to: '0xEulerEarnContract',
+  data: encodeFunctionData({
+    abi: EulerEarnAbi,
+    functionName: 'reallocate',
+    args: [marketAllocations],
+  }),
+  functionSignature: 'reallocate((bytes32,uint256)[])',
+  wasmArgs: {
+    vaultAddress: '0xVaultAddress',
+    network: 'base',
+    symbol: 'USDC',
+  },
+})
+```
+
+In this example, the same policy checks are performed as before, the only difference being explicit encoding of the function calldata to be performed if the policy check succeeds.
+
+## 6. Handle Policy Errors
 
 ```typescript
 import { PolicyDeniedError } from '@newton-xyz/newton-shield-sdk'
 
 try {
-  await shield.morpho.setCap({
+  await shield.morpho.submitCap({
     marketId: '0xMorphoMarketId',
     cap: parseUnits('5000000', 6),
     wasmArgs: {
       vaultAddress: '0xVaultAddress',
       network: 'base',
       symbol: 'USDC',
-      rpcUrl: process.env.BASE_RPC_URL,
     },
   })
 } catch (error) {
