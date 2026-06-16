@@ -1,0 +1,73 @@
+---
+title: "Euler"
+description: "How to route Euler Earn vault actions through Newton VaultKit using the generic sendCall path."
+keywords:
+  - euler earn
+  - euler vaults
+  - newton vaultkit
+  - vault sdk
+  - sendcall
+---
+
+<Note>
+  Newton VaultKit is coming soon. This page shows the target integration shape for early planning.
+</Note>
+
+Euler Earn vaults can use the same Newton policy checks as first-class SDK integrations. Until a dedicated Euler module is available, route Euler actions through the generic `shield.sendCall(...)` path.
+
+`sendCall` is useful when the vault protocol already exposes a contract method you want to call directly. Your app encodes the Euler calldata, Newton evaluates the configured vault policy, and the Shield contract forwards the call only when the policy returns an approval attestation.
+
+## When to Use This Path
+
+Use the generic Euler path when:
+
+- You are integrating an Euler Earn vault action that does not yet have a typed VaultKit helper.
+- Your app already owns the Euler ABI and action parameters.
+- You want the same Newton policy pack to guard Euler reallocations, cap changes, or other manager actions.
+
+For vendor-specific helpers such as Morpho actions, start with the [Integration Guide](/developers/vaults/sdk/integration-guide). For the full generic call signature, see the [SDK Reference](/developers/vaults/sdk/reference).
+
+## Reallocate an Euler Earn Vault
+
+```typescript
+import { encodeFunctionData } from 'viem'
+import { EulerEarnAbi } from './constants/abis'
+
+await shield.sendCall({
+  to: '0xEulerEarnContract',
+  data: encodeFunctionData({
+    abi: EulerEarnAbi,
+    functionName: 'reallocate',
+    args: [marketAllocations],
+  }),
+  functionSignature: 'reallocate((bytes32,uint256)[])',
+  wasmArgs: {
+    vaultAddress: '0xVaultAddress',
+    network: 'base',
+    symbol: 'USDC',
+  },
+})
+```
+
+The important difference from a typed helper is that your app is responsible for encoding the calldata and supplying the function signature. Newton still evaluates the configured policy before execution. If the policy denies the action, the SDK raises a typed policy error and the Shield does not forward the Euler call.
+
+## What Newton Checks
+
+The `wasmArgs` object carries the vault context used by the selected policy pack. In the example above, the policy can evaluate the vault address, network, asset symbol, and any uploaded secrets or configured thresholds before deciding whether the Euler reallocation should proceed.
+
+Keep `wasmArgs` aligned with the policy pack your Shield was created with. If your policy expects additional fields, include them in the same object so the AVS has the complete context it needs to evaluate the action.
+
+## Implementation Notes
+
+- `to` should be the Euler contract that will receive the forwarded call.
+- `data` should be ABI-encoded calldata for the exact Euler function you want to execute.
+- `functionSignature` should match the function being called so policy logs and attestations can identify the action.
+- `wasmArgs` should contain the policy inputs required by your selected vault policy pack.
+
+<Card title="Integration Guide" icon="code" href="/developers/vaults/sdk/integration-guide">
+  Set up Newton VaultKit, create a Shield, and configure vault policy parameters.
+</Card>
+
+<Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
+  Review the generic `sendCall` API and expected error types.
+</Card>

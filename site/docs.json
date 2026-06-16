@@ -119,6 +119,7 @@
             "pages": [
               "developers/vaults/sdk/overview",
               "developers/vaults/sdk/integration-guide",
+              "developers/vaults/sdk/euler",
               "developers/vaults/sdk/reference"
             ]
           },
