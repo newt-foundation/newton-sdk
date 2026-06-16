@@ -11,12 +11,18 @@ For client-side helpers that wrap these RPC calls, see the [SDK Reference](/deve
 
 | Network | Environment | URL |
 |---------|-------------|-----|
-| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
-| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
-| Mainnet | Production | `https://gateway.newton.xyz` |
-| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz/rpc` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
+| Mainnet | Production | `https://gateway.newton.xyz/rpc` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz/rpc` |
 
 **Protocol:** JSON-RPC 2.0 over HTTPS
+
+<Note>
+Gateway JSON-RPC requests must be sent to the `/rpc` endpoint. Requests to the host root, such as `https://gateway.testnet.newton.xyz`, return a 404 response instead of a JSON-RPC response.
+</Note>
+
+Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON-RPC 2.0 specification, but the Newton Gateway expects request IDs as strings.
 
 <CodeGroup>
 ```json Request Format
@@ -24,7 +30,7 @@ For client-side helpers that wrap these RPC calls, see the [SDK Reference](/deve
   "jsonrpc": "2.0",
   "method": "<method_name>",
   "params": { ... },
-  "id": "<request_id>"
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -72,10 +78,10 @@ API keys are issued with specific permissions. See [Getting an API Key](/develop
 ### Example
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_api_key_here" \
-  -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
 ```
 
 ### Policy Client Ownership
@@ -143,6 +149,25 @@ Following Ethereum JSON-RPC conventions:
 0x1234567890123456789012345678901234567890   (20-byte address)
 0x28dca9f7                                   (4-byte function selector)
 0x                                           (empty data)
+```
+
+### WASM Arguments
+
+`wasm_args` values are hex-encoded UTF-8 JSON strings.
+
+| Method | `wasm_args` format |
+|---|---|
+| SDK `evaluateIntentDirect` | `0x`-prefixed hex string; the SDK normalizes the value before sending it to the Gateway |
+| `newt_createTask` RPC | Hex string accepted by the Gateway; examples use the canonical `0x` prefix |
+| `newt_simulatePolicy` RPC | `0x`-prefixed hex string in each `policy_data[].wasm_args` entry |
+| `newt_simulatePolicyData` RPC | `0x`-prefixed hex string |
+| `newt_simulatePolicyDataWithClient` RPC | `0x`-prefixed hex string |
+
+```typescript
+const wasmArgs = `0x${Buffer.from(
+  JSON.stringify({ timezone: "Etc/UTC" }),
+  "utf8",
+).toString("hex")}`;
 ```
 
 ### Address Format
@@ -278,7 +303,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
     },
     "timeout": 30
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -321,7 +346,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
     "error": null,
     "timestamp": 1705123456
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -335,7 +360,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
     "error": "Policy evaluation failed: insufficient permissions",
     "timestamp": 1705123456
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -387,7 +412,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
       "function_signature": "0x627579"
     }
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -400,7 +425,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
     "message": "Task submitted for async processing",
     "timestamp": 1705123456
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -512,7 +537,7 @@ Forwards a policy simulation request to an available operator and returns the re
       ]
     }
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </Expandable>
@@ -530,7 +555,7 @@ Forwards a policy simulation request to an available operator and returns the re
     "error": null,
     "details": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -601,7 +626,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "policy_data_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
     "envelope": "<json-serialized-hpke-secure-envelope>"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -620,7 +645,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     },
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -632,7 +657,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "schema": null,
     "error": "policy_client is owned by a different user"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -644,7 +669,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "schema": null,
     "error": "Secrets upload validation failed: missing required field 'API_KEY'"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -709,7 +734,7 @@ The `policy_data` object contains:
     "secrets": "<base64-encoded-encrypted-secrets>",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -721,7 +746,7 @@ The `policy_data` object contains:
     "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -741,7 +766,7 @@ The `policy_data` object contains:
     },
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -753,7 +778,7 @@ The `policy_data` object contains:
     "policy_data": null,
     "error": "WASM execution failed: missing required secret 'API_KEY'"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -808,7 +833,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "policy_client": "0x1234567890123456789012345678901234567890",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -828,7 +853,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     },
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -839,7 +864,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "code": -32002,
     "message": "Authorization failed: policy client 0x1234... is owned by another user"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -851,7 +876,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "policy_data": null,
     "error": "No secrets found for policy_client 0x1234... and policy_data 0xaaaa.... Upload secrets via newt_storeEncryptedSecrets first, or use newt_simulatePolicyData with directly provided secrets."
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -956,7 +981,7 @@ Each entry in `missing_secrets`:
       "max_price": 50000
     }
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </Expandable>
@@ -989,7 +1014,7 @@ Each entry in `missing_secrets`:
     },
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1008,7 +1033,7 @@ Each entry in `missing_secrets`:
     },
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1021,7 +1046,7 @@ Each entry in `missing_secrets`:
     "error": "Rego evaluation failed: undefined rule 'trading.allow'",
     "error_details": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1032,7 +1057,7 @@ Each entry in `missing_secrets`:
     "code": -32002,
     "message": "Authorization failed: policy client 0x1234... is owned by another user"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1062,7 +1087,7 @@ Each entry in `missing_secrets`:
       ]
     }
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </Expandable>
@@ -1105,7 +1130,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
     "secret": "your-hmac-secret-here",
     "failure_types": ["timeout", "quorum_not_reached", "onchain_submission_failed"]
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1116,7 +1141,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
     "success": true,
     "message": "Webhook registered for https://api.example.com/newton/webhook"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1137,7 +1162,7 @@ Removes the webhook configuration for this API key.
   "jsonrpc": "2.0",
   "method": "newt_unregisterWebhook",
   "params": {},
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1148,7 +1173,7 @@ Removes the webhook configuration for this API key.
     "success": true,
     "message": "Webhook unregistered"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1376,7 +1401,7 @@ None.
   "jsonrpc": "2.0",
   "method": "newt_getPrivacyPublicKey",
   "params": {},
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1388,7 +1413,7 @@ None.
     "key_type": "x25519",
     "encryption_suite": "HPKE-Base-X25519-HKDF-SHA256-ChaCha20Poly1305"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1423,7 +1448,7 @@ None.
   "jsonrpc": "2.0",
   "method": "newt_getSecretsPublicKey",
   "params": {},
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1435,7 +1460,7 @@ None.
     "key_type": "x25519",
     "encryption_suite": "HPKE-Base-X25519-HKDF-SHA256-ChaCha20Poly1305"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1484,7 +1509,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
     "identity_domain": "0x...",
     "chain_id": 11155111
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1496,7 +1521,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
     "gateway_signature": "0x...",
     "deadline": 1705127056
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1535,7 +1560,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
   "params": {
     "data_ref_id": "0xabcdef1234567890..."
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1547,7 +1572,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
     "identity_domain": "0x...",
     "identity_owner": "0x1234567890abcdef1234567890abcdef12345678"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 </CodeGroup>
@@ -1581,7 +1606,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
     "chain_id": 11155111
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1593,7 +1618,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
     "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
     "error": null
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1624,7 +1649,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
   "params": {
     "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 
@@ -1635,7 +1660,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
     "data_type": "confidential"
   },
-  "id": 1
+  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 

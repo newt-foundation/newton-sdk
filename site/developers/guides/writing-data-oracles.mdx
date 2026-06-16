@@ -103,16 +103,24 @@ The `http` import provides the `fetch` function for making HTTP requests from wi
 Create `policy.js`:
 
 ```js
+import { fetch as httpFetch } from "newton:provider/http@0.2.0";
+
 export function run(wasm_args) {
   const args = JSON.parse(wasm_args);
 
   // Example: fetch an external API
-  const response = httpFetch({
+  const result = httpFetch({
     url: `https://api.example.com/data?symbol=${args.base_symbol}`,
     method: "GET",
     headers: [["Accept", "application/json"]],
     body: null,
   });
+
+  if (result.tag === "err") {
+    return JSON.stringify({ error: result.val });
+  }
+
+  const response = result.val;
 
   if (response.status !== 200) {
     return JSON.stringify({ error: "API request failed" });
@@ -131,7 +139,7 @@ export function run(wasm_args) {
 ```
 
 <Note>
-The `httpFetch` function is provided by the Newton WASM runtime — you do not need to import it. It maps to the `http.fetch` function defined in the WIT interface.
+Import `httpFetch` from `newton:provider/http@0.2.0` at the top level of your module. The function returns a tagged result: when `result.tag === "err"`, `result.val` contains the error string; otherwise `result.val` is the HTTP response with `status`, `headers`, and `body`.
 </Note>
 
 <Warning>
@@ -206,7 +214,7 @@ newton-cli policy-data simulate \
 You can also test via the Gateway RPC:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -216,7 +224,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
       "policy_data_address": "0x...",
       "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 

@@ -123,7 +123,7 @@ Create **`app.js`**:
 // Import the WIT import exactly like the ComponentizeJS usage pattern:
 // e.g. import { log } from 'local:hello/logger' in their docs.
 // Here our package is newton:provider and interface is http.
-import { fetch as httpFetch } from "newton:provider/http@0.1.0";
+import { fetch as httpFetch } from "newton:provider/http@0.2.0";
 
 // WIT: export run: func(input: string) -> result<string, string>
 // We return a JSON string on success AND on "errors"
@@ -153,7 +153,7 @@ export function run(input) {
 }
 ```
 
-> **Note:** Keep this import at the top level of your module; ComponentizeJS resolves virtual specifiers like `'newton:provider/http@0.1.0'` when you build the component.
+> **Note:** Keep this import at the top level of your module; ComponentizeJS resolves virtual specifiers like `'newton:provider/http@0.2.0'` when you build the component.
 
 ---
 

@@ -148,7 +148,7 @@ For an oracle that needs secrets, test through the Gateway:
 | `newt_simulatePolicyDataWithClient` | Read from stored, uploaded secrets | PolicyClient owner |
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -158,7 +158,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
       "policy_data_address": "0xYourPolicyData",
       "wasm_args": "0x7b226e6574776f726b223a226d61696e6e6574227d"
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
@@ -169,7 +169,7 @@ See [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-ora
 The final step before deploying: evaluate the complete policy (Rego + every oracle + merged data) against a sample intent with `newt_simulatePolicy`. Pass one entry per oracle in `policy_data` and namespaced `policy_params`:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -192,7 +192,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
       ],
       "policy_params": { "vaultsfyi": { "apy_z_max": 4, "risk_score_floor": 60 } }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 

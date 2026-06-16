@@ -147,7 +147,7 @@ newton-cli version info
 newton-cli version check-compatibility
 
 # Run a final simulation
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -164,7 +164,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
         "function_signature": "0x"
       }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 

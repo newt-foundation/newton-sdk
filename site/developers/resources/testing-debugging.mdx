@@ -43,7 +43,7 @@ Simulate a full policy evaluation via the Gateway RPC without any on-chain inter
 Tests the complete evaluation pipeline (data oracle + policy) for a specific PolicyClient:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -60,7 +60,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
         "function_signature": "0x"
       }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
@@ -69,7 +69,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
 Test full Rego policy evaluation, running each referenced oracle and merging its output into `data.wasm`. Pass the Rego source, one entry per oracle in `policy_data`, and `policy_params`:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -83,7 +83,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
       "policy_data": [ { "policy_data_address": "0xYourPolicyData" } ],
       "policy_params": { "max_price": 50000 }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
@@ -94,7 +94,7 @@ Test a WASM oracle execution via the Gateway:
 <Tabs>
   <Tab title="With inline secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz \
+    curl -X POST https://gateway.testnet.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
@@ -105,14 +105,14 @@ Test a WASM oracle execution via the Gateway:
           "wasm_args": "0x7b2261646472657373223a22307830227d",
           "chain_id": 11155111
         },
-        "id": 1
+        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
       }'
     ```
     <Note>Pass encrypted secrets via the optional `secrets` field (base64-encoded ciphertext) to test with credentials. See the [RPC API](/developers/reference/rpc-api#newt-simulatepolicydata).</Note>
   </Tab>
   <Tab title="With stored secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz \
+    curl -X POST https://gateway.testnet.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
@@ -123,7 +123,7 @@ Test a WASM oracle execution via the Gateway:
           "policy_client": "0xYourPolicyClientAddress",
           "wasm_args": "0x7b2261646472657373223a22307830227d"
         },
-        "id": 1
+        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
       }'
     ```
     <Note>Requires ownership of the PolicyClient. The Gateway reads secrets stored via `newt_storeEncryptedSecrets`.</Note>
@@ -198,7 +198,7 @@ const client = createPublicClient({
   transport: http(),
 }).extend(newtonPublicClientActions({
   apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz',
+  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
 }));
 
 // Simulate first to debug

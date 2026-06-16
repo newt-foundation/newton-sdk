@@ -183,16 +183,23 @@ The WASM oracle is a JavaScript file that exports a `run` function. Its sole res
 Create `policy.js` (skeleton — replace the body with your actual data fetching logic):
 
 ```js
+import { fetch as httpFetch } from "newton:provider/http@0.2.0";
+
 export function run(wasm_args) {
   const wasmArgs = JSON.parse(wasm_args);
 
-  const response = httpFetch({
+  const result = httpFetch({
     url: `https://api.example.com/price?token=${wasmArgs.token_address}`,
     method: "GET",
     headers: [],
     body: null
   });
 
+  if (result.tag === "err") {
+    return JSON.stringify({ error: result.val });
+  }
+
+  const response = result.val;
   const body = JSON.parse(
     new TextDecoder().decode(new Uint8Array(response.body))
   );
@@ -205,7 +212,7 @@ export function run(wasm_args) {
 }
 ```
 
-The `httpFetch` built-in is provided by the Newton WASM runtime (imported from the WIT interface). Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
+Import `httpFetch` from `newton:provider/http@0.2.0` at the top level of your module. The function returns a tagged result: when `result.tag === "err"`, `result.val` contains the error string; otherwise `result.val` is the HTTP response with `status`, `headers`, and `body`. Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
 
 > **Secrets:** if your oracle needs an API key, read it via the `newton:provider/secrets@0.2.0` host interface: `import { get } from "newton:provider/secrets@0.2.0"`, call `get()`, and decode the returned `value` (a `list<u8>`) as the decrypted secrets JSON. Upload the key with `newton-cli secrets upload` (scoped per `policy_data_address`). Full walkthrough: [Uploading & Accessing Secrets in Oracles](https://docs.newton.xyz/developers/guides/secrets-in-oracles).
 >
@@ -1456,15 +1463,15 @@ To test policy rejection, modify `wasmArgs` to return data that would cause a Re
 
 | Network | Environment | URL |
 |---------|-------------|-----|
-| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
-| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
-| Mainnet | Production | `https://gateway.newton.xyz` |
-| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz/rpc` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
+| Mainnet | Production | `https://gateway.newton.xyz/rpc` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz/rpc` |
 
 Example curl against the production testnet gateway:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -1481,7 +1488,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
         "function_signature": "0x"
       }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 

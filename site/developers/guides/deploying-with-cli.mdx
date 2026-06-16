@@ -133,7 +133,7 @@ newton-cli policy-client status \
 You can also test the full policy via the Gateway:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -153,7 +153,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
       "policy_data": [{"policy_data_address": "0xPolicyDataAddress"}],
       "policy_params": {}
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 

@@ -129,7 +129,7 @@ Before deploying, simulate the full policy against both oracles with the Gateway
 
 <CodeGroup>
 ```bash Gateway RPC
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -156,7 +156,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
         "webacy":    { "deny_on_collapsed": true }
       }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
@@ -172,7 +172,7 @@ const client = createWalletClient({
   transport: http(),
 }).extend(newtonWalletClientActions({
   apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz',
+  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
 }))
 
 const result = await client.simulatePolicy({
