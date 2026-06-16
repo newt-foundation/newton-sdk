@@ -1,22 +1,22 @@
 ---
 title: "Integration Guide"
-description: "How to integrate Newton Shield SDK into a vault curator workflow."
+description: "How to integrate Newton VaultKit into a vault curator workflow."
 keywords:
   - vault sdk integration
   - morpho integration
-  - newton shield sdk
+  - newton vaultkit
   - vault curator workflow
 ---
 
 <Note>
-  The Newton Shield SDK is coming soon. This guide shows the target integration shape for early planning.
+  Newton VaultKit is coming soon. This guide shows the target integration shape for early planning.
 </Note>
 
-The Shield SDK is designed to sit beside the Morpho SDK rather than replace it. Your app prepares the same typed vault-management action it would normally send through Morpho, then routes execution through a Shield that requires a Newton attestation.
+Newton VaultKit is designed to sit beside the Morpho SDK rather than replace it. Your app prepares the same typed vault-management action it would normally send through Morpho, then routes execution through a Shield that requires a Newton attestation.
 
 ## 1. Install Packages
 
-When available, install the Shield SDK and the peer dependencies your app uses:
+When available, install Newton VaultKit and the peer dependencies your app uses:
 
 ```bash
 pnpm add @newton-xyz/newton-shield-sdk viem zod @morpho-org/blue-sdk-viem
