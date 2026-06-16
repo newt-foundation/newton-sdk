@@ -78,7 +78,25 @@ const shield = await createShield({
 }).extend(morpho())
 ```
 
-## 4. Execute a Morpho Action
+## 4. Configure your Shield contract.
+
+```typescript
+await shield.setParams({
+  risk_score_floor: 85,
+  tvl_drawdown_24h_max_pct: 5,
+  tvl_drawdown_7d_max_pct: 20,
+  etc...
+})
+await shield.uploadSecrets({
+  api_key: "MY_API_KEY",
+  rpc_url: "MY_RCP_URL",
+  etc...
+})
+```
+
+After creating a Shield contract for the first time or if you want to tweak the parameters later, you must configure the policy defined in the policy pack you are using to fit your needs. These parameters apply to each evaluation and represent a global configuration of the security of your vault.
+
+## 5. Execute a Morpho Action
 
 ```typescript
 import { parseUnits } from 'viem'
@@ -96,7 +114,7 @@ await shield.morpho.submitCap({
 
 In this example, `submitCap` is only forwarded to MetaMorpho if Newton approves the intent. If the Vaults.fyi or oracle-divergence checks fail, the SDK raises a typed policy error instead of sending the vault-management transaction.
 
-## 5. Execute a generic vault action
+## 6. Execute a generic vault action
 
 ```typescript
 import { encodeFunctionData } from 'viem'
@@ -120,7 +138,7 @@ await shield.sendCall({
 
 In this example, the same policy checks are performed as before, the only difference being explicit encoding of the function calldata to be performed if the policy check succeeds.
 
-## 6. Handle Policy Errors
+## 7. Handle Policy Errors
 
 ```typescript
 import { PolicyDeniedError } from '@newton-xyz/newton-shield-sdk'
