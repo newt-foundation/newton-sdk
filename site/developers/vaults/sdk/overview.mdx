@@ -39,9 +39,10 @@ sequenceDiagram
 ## Target Capabilities
 
 - **Create or attach to a Shield:** `createShield({ owner, vault, pack, params })` predicts a deterministic Shield address for a curator and vault, attaches to an existing Shield when parameters match, or deploys one when needed.
+- **Configure your Policy:** `shield.setParams( params )` and `shield.uploadSecrets( secrets )` functions allow you to configure your policy to fit your needs.
 - **Typed vault actions:** The Shield runtime exposes vendor-specific methods such as `shield.morpho.reallocate(...)` and `shield.morpho.setCap(...)`.
 - **Policy packs:** Open-source policy packs are available in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are exposed as subpath imports like `@newton-xyz/newton-shield-sdk/packs/<name>` with typed parameters and helper queries.
-- **Guarded escape hatch:** `shield.guardedCall({ to, data, functionSignature, wasmArgs })` supports vendors or actions that do not yet have a first-class module.
+- **Direct intent evaluation/execution:** `shield.sendCall({ to, data, functionSignature, wasmArgs })` supports any vendor or action even if they do not yet have a first-class module.
 - **Typed errors:** The SDK is expected to expose errors such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.
 - **Browser-safe core:** The target SDK avoids `node:*` imports in the core package.
 
