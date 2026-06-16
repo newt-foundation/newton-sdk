@@ -39,13 +39,18 @@
             "group": "Guides",
             "pages": [
               "developers/guides/integration-guide",
-              "developers/guides/zktls-twitter",
               "developers/guides/writing-data-oracles",
               "developers/guides/writing-policies",
+              "developers/guides/secrets-in-oracles",
+              "developers/guides/chaining-data-oracles",
+              "developers/guides/policy-packs",
               "developers/guides/deploying-with-cli",
               "developers/guides/smart-contract-integration",
               "developers/guides/frontend-sdk-integration",
-              "developers/guides/privacy-flows"
+              "developers/guides/using-the-dashboard",
+              "developers/guides/testing-policies",
+              "developers/guides/privacy-flows",
+              "developers/guides/zktls-twitter"
             ]
           },
           {

@@ -141,7 +141,7 @@ curl -X POST https://gateway.testnet.newton.xyz \
     "method": "newt_simulatePolicy",
     "params": {
       "policy_client": "0xYourPolicyClientAddress",
-      "policy": "package your_policy\ndefault allow := false\nallow if { data.data.success }",
+      "policy": "package your_policy\ndefault allow := false\nallow if { data.wasm.success }",
       "intent": {
         "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",

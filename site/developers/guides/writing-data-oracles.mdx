@@ -9,7 +9,7 @@ keywords:
   - newton policy data
 ---
 
-Data oracles are WebAssembly (WASM) components that fetch or compute external data at evaluation time. The Newton network executes your WASM, and the output is fed into your Rego policy as `data.data`.
+Data oracles are WebAssembly (WASM) components that fetch or compute external data at evaluation time. The Newton network executes your WASM, and the output is fed into your Rego policy as `data.wasm`.
 
 ## What is a Data Oracle?
 
@@ -17,7 +17,7 @@ A data oracle is a JavaScript (or Rust/Python) program compiled to WASM that:
 
 1. Receives input arguments (`wasm_args`) as a JSON string
 2. Optionally fetches external data via HTTP
-3. Returns a JSON string that becomes available to your Rego policy as `data.data`
+3. Returns a JSON string that becomes available to your Rego policy as `data.wasm`
 
 ## WIT Interface
 
@@ -137,6 +137,38 @@ The `httpFetch` function is provided by the Newton WASM runtime — you do not n
 <Warning>
 **WASM sandbox network restrictions**: Newton operators execute WASM in sandboxed Wasmtime. Private IPs (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`), and link-local (`169.254.0.0/16`) are blocked. Any HTTP endpoint your WASM calls must be on a public URL.
 </Warning>
+
+## Declare the input schema
+
+The `wasm_args` your oracle receives are documented and validated by a `wasm_args_schema.json` file — a JSON Schema describing the inputs passed to `run(input)` at evaluation time. Ship it alongside your oracle so callers know exactly what to send.
+
+```json
+{
+  "type": "object",
+  "description": "Inputs passed to the oracle WASM at evaluation time",
+  "properties": {
+    "network": {
+      "type": "string",
+      "description": "Network name (e.g. 'mainnet', 'base')."
+    },
+    "vaultAddress": {
+      "type": "string",
+      "description": "Vault contract address (0x-prefixed) to inspect."
+    }
+  },
+  "required": ["network", "vaultAddress"]
+}
+```
+
+An oracle ships up to three schemas, each describing a distinct input:
+
+| Schema file | Describes | Read in Rego as |
+|-------------|-----------|-----------------|
+| `wasm_args_schema.json` | Per-call inputs passed to the oracle's `run(input)` (the `wasm_args` on each task) | — (consumed by the WASM, not Rego) |
+| `secrets_schema.json` | Scoped credentials the oracle reads via the secrets host interface (see [Secrets in Oracles](/developers/guides/secrets-in-oracles)) | — (read inside the WASM) |
+| `params_schema.json` | Policy thresholds the contract owner configures | `data.params.*` |
+
+Callers pass `wasm_args` as hex-encoded JSON on `newt_createTask` / `newt_simulatePolicyData`. Validating against this schema before submission catches malformed inputs early.
 
 ## Build WASM
 

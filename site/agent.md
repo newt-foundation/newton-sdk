@@ -178,7 +178,7 @@ world newton-provider {
 
 ### 1.2 Create `policy.js`
 
-The WASM oracle is a JavaScript file that exports a `run` function. Its sole responsibility is **data retrieval** — fetch external data and return it as structured JSON. Do not encode policy decisions here; all allow/deny logic belongs in Rego. The return value becomes available in Rego as `data.data.*`.
+The WASM oracle is a JavaScript file that exports a `run` function. Its sole responsibility is **data retrieval** — fetch external data and return it as structured JSON. Do not encode policy decisions here; all allow/deny logic belongs in Rego. The return value becomes available in Rego as `data.wasm.*`.
 
 Create `policy.js` (skeleton — replace the body with your actual data fetching logic):
 
@@ -206,6 +206,10 @@ export function run(wasm_args) {
 ```
 
 The `httpFetch` built-in is provided by the Newton WASM runtime (imported from the WIT interface). Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
+
+> **Secrets:** if your oracle needs an API key, read it via the `newton:provider/secrets@0.2.0` host interface: `import { get } from "newton:provider/secrets@0.2.0"`, call `get()`, and decode the returned `value` (a `list<u8>`) as the decrypted secrets JSON. Upload the key with `newton-cli secrets upload` (scoped per `policy_data_address`). Full walkthrough: [Uploading & Accessing Secrets in Oracles](https://docs.newton.xyz/developers/guides/secrets-in-oracles).
+>
+> **Multi-oracle policies:** to gate one action on several signals, wrap each oracle's output under a unique pack-id key (`return JSON.stringify({ my_oracle: {...} })`). The network merges every oracle's output into `data.wasm`, and Rego reads `data.wasm.<pack-id>.*`. See [Chaining Multiple Data Oracles](https://docs.newton.xyz/developers/guides/chaining-data-oracles) and the prebuilt [Policy Packs](https://docs.newton.xyz/developers/guides/policy-packs) (vaults.fyi, Webacy, RedStone, Chainalysis). Deploy multi-oracle policies via the [dashboard](https://docs.newton.xyz/developers/guides/using-the-dashboard) — the CLI binds a single `--policy-data-address` per policy today.
 
 ### 1.3 Build `policy.wasm` using `jco componentize`
 
@@ -235,14 +239,14 @@ max_value := data.params.max_value_wei
 allowed_recipients := data.params.allowed_recipients
 ```
 
-#### WASM data output (`data.data.*`)
+#### WASM data output (`data.wasm.*`)
 
-The JSON object returned by your WASM oracle's `run` function. Newton runs the WASM component before evaluating Rego, and the returned fields are available under `data.data`.
+The JSON object returned by your WASM oracle's `run` function. Newton runs the WASM component before evaluating Rego, and the returned fields are available under `data.wasm`. When a policy references multiple oracles, each oracle namespaces its output under its pack id (`data.wasm.<pack-id>.*`) — see the Multi-oracle policies note below.
 
 ```rego
 # Access data fetched by your WASM oracle
-token_price := data.data.price_usd
-last_updated := data.data.last_updated
+token_price := data.wasm.price_usd
+last_updated := data.wasm.last_updated
 ```
 
 #### Intent attributes (`input.*`)
@@ -402,7 +406,7 @@ is_whitelisted_recipient if {
 
 # Check token price from WASM oracle is below max
 price_acceptable if {
-    data.data.price_usd <= data.params.max_price_usd
+    data.wasm.price_usd <= data.params.max_price_usd
 }
 
 # Check transaction value is within limit
@@ -438,7 +442,7 @@ default allow := false
 # All conditions must hold for a transaction to be allowed
 
 price_acceptable if {
-    data.data.price_usd <= data.params.max_price_usd
+    data.wasm.price_usd <= data.params.max_price_usd
 }
 
 value_within_limit if {
@@ -555,7 +559,7 @@ Expected output (for the skeleton `policy.js`):
 }
 ```
 
-This output is what becomes `data.data.*` in your Rego rules. Verify the field names match exactly what your Rego policy references before moving on.
+This output is what becomes `data.wasm.*` in your Rego rules. Verify the field names match exactly what your Rego policy references before moving on.
 
 ### 3.2 Simulate the full policy (`policy simulate`)
 
@@ -1497,7 +1501,7 @@ npx jco componentize ...
 ### Simulation failures
 
 - Ensure `CHAIN_ID` is exported: `export CHAIN_ID=11155111`
-- Verify field names in `data.data.*` match exactly what your WASM returns — run `policy-data simulate` first and inspect the output
+- Verify field names in `data.wasm.*` match exactly what your WASM returns — run `policy-data simulate` first and inspect the output
 - The `--entrypoint` flag should be `package_name.rule_name` (e.g., `your_policy.allow`) — do not include the `data.` prefix
 
 ### Foundry deployment issues
@@ -1516,9 +1520,9 @@ The wallet MUST use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` as the Newton T
 
 ### Rego policy always returns `allow: false`
 
-- Verify rule conditions use the correct attribute paths (`data.params.*`, `data.data.*`, `input.*`)
+- Verify rule conditions use the correct attribute paths (`data.params.*`, `data.wasm.*`, `input.*`)
 - Run `policy-data simulate` first and inspect the oracle output — confirm exact field names and value types
-- Do not write decision logic in the oracle and check a boolean flag in Rego (e.g., `allow if { data.data.success }`) — all conditions belong in Rego
+- Do not write decision logic in the oracle and check a boolean flag in Rego (e.g., `allow if { data.wasm.success }`) — all conditions belong in Rego
 - Run `policy simulate` to test the full pipeline with your specific intent values
 - Remember Rego uses `==` for equality checks, not `=`
 

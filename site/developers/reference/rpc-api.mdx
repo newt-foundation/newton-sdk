@@ -860,7 +860,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 ### newt_simulatePolicy
 
-Simulates full Rego policy evaluation locally. This is the final testing step before deploying a policy on-chain.
+Simulates full Rego policy evaluation locally. This is the final testing step before deploying a policy on-chain. To simulate a multi-oracle policy, pass one entry per oracle in `policy_data` — each oracle's output is merged into `data.wasm` under its namespace. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles).
 
 **Permission:** `RpcRead`
 
@@ -908,7 +908,7 @@ The `evaluation_result` object contains:
 |---|---|---|
 | `policy` | `String` | Evaluated policy source |
 | `parsed_intent` | `Object` | Parsed and decoded intent |
-| `policy_params_and_data` | `Object` | Combined `{ params, data }` context |
+| `policy_params_and_data` | `Object` | Combined `{ params, wasm }` context — `params` is your configured parameters, `wasm` is the merged oracle output |
 | `entrypoint` | `String` | Evaluated Rego entrypoint |
 | `result` | `Any` | Rego evaluation result (`true`, `false`, or complex value) |
 | `expire_after` | `Number` | Expiration time (0 for simulation) |
@@ -936,7 +936,7 @@ Each entry in `missing_secrets`:
   "method": "newt_simulatePolicy",
   "params": {
     "policy_client": "0x1234567890123456789012345678901234567890",
-    "policy": "package trading\n\ndefault allow := false\n\nallow if {\n    input.value == 0\n    data.data.price < data.params.max_price\n}",
+    "policy": "package trading\n\ndefault allow := false\n\nallow if {\n    input.value == 0\n    data.wasm.price < data.params.max_price\n}",
     "intent": {
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
@@ -981,7 +981,7 @@ Each entry in `missing_secrets`:
       },
       "policy_params_and_data": {
         "params": { "max_price": 50000 },
-        "data": { "price": 42000.50, "base_symbol": "BTC" }
+        "wasm": { "price": 42000.50, "base_symbol": "BTC" }
       },
       "entrypoint": "trading.allow",
       "result": true,
