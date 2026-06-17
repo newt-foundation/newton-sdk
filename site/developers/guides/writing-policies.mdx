@@ -12,7 +12,7 @@ keywords:
   - payment authorization rules
 ---
 
-A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.data`).
+A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.wasm`).
 
 ## What Makes Up a Policy
 
@@ -34,7 +34,7 @@ Your Rego policy can access three data namespaces:
 |------|--------|-------------|
 | `input` | Intent | The transaction intent being evaluated (from, to, value, data, chain_id, function_signature) |
 | `data.params` | PolicyClient | Configuration parameters set by the contract owner (thresholds, allowlists) |
-| `data.data` | PolicyData WASM | Runtime data returned by your WASM oracle (prices, KYC status) |
+| `data.wasm` | PolicyData WASM | Runtime data returned by your WASM oracle(s) (prices, KYC status). With multiple oracles, each is namespaced under its pack id — see [Consuming Multiple Oracles](#consuming-multiple-oracles) |
 
 ## Your First Policy
 
@@ -47,7 +47,7 @@ default allow := false
 
 # Allow the transaction if the oracle reports no sanctions match
 allow if {
-    data.data.is_sanctioned == false
+    data.wasm.is_sanctioned == false
 }
 
 # Also allow if the sender is on the explicit allowlist
@@ -88,7 +88,7 @@ allow if {
 
 ## Using Oracle Data
 
-The `data.data` path contains whatever your WASM oracle returned:
+The `data.wasm` path contains whatever your WASM oracle returned:
 
 ```rego
 package price_check
@@ -97,10 +97,38 @@ default allow := false
 
 # Only allow trades when the price is below the configured maximum
 allow if {
-    data.data.price < data.params.max_price
-    data.data.symbol == "BTC"
+    data.wasm.price < data.params.max_price
+    data.wasm.symbol == "BTC"
 }
 ```
+
+<Note>
+A single oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). When a policy reads multiple oracles, each oracle namespaces its output under a pack id (`data.wasm.<pack-id>.price`) — see [Consuming Multiple Oracles](#consuming-multiple-oracles).
+</Note>
+
+## Consuming Multiple Oracles
+
+A policy can read from more than one PolicyData oracle. When it does, each oracle namespaces its output under a unique **pack id**, and the network merges them into a single `data.wasm` object. Your Rego then reads `data.wasm.<pack-id>.*` and `data.params.<pack-id>.*`:
+
+```rego
+package vault_gate
+
+import rego.v1
+
+default allow := false
+
+allow if count(deny) == 0
+
+deny contains "risk floor" if {
+    data.wasm.vaultsfyi.risk_score < data.params.vaultsfyi.risk_score_floor
+}
+
+deny contains "token collapsed" if {
+    data.wasm.webacy.is_collapsed
+}
+```
+
+See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the full merge model and the deny-set pattern, and [Policy Packs](/developers/guides/policy-packs) for prebuilt oracles you can compose.
 
 ## Parameter Schema
 
