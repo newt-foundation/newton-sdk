@@ -75,11 +75,11 @@ Create `src/lib/use-newton-client.ts`:
 "use client";
 
 import { useMemo } from "react";
-import { createWalletClient, webSocket, Hex } from "viem";
+import { createPublicClient, createWalletClient, http, webSocket, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { newtonWalletClientActions } from "@newton-xyz/sdk";
-import { SEPOLIA_ALCHEMY_WS_URL } from "@/const/config";
+import { SEPOLIA_ALCHEMY_URL, SEPOLIA_ALCHEMY_WS_URL } from "@/const/config";
 
 export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
   const client = useMemo(() => {
@@ -90,7 +90,12 @@ export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
       transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
     }).extend(newtonWalletClientActions({ apiKey }));
 
-    return { walletClient, account };
+    const publicClient = createPublicClient({
+      chain: sepolia,
+      transport: http(SEPOLIA_ALCHEMY_URL),
+    });
+
+    return { walletClient, publicClient, account };
   }, [privateKey]);
 
   return client;
@@ -119,6 +124,7 @@ export type EvaluationRequestParams = {
   targetAddress: Hex;
   value: bigint;
   data: Hex;
+  functionSignature?: Hex;
   wasmArgs: Record<string, unknown>;
 };
 
@@ -127,12 +133,9 @@ export const createEvaluationRequest = ({
   targetAddress,
   value,
   data,
+  functionSignature,
   wasmArgs,
 }: EvaluationRequestParams) => {
-  const functionSignature = stringToHexBytes(
-    "validateAndExecuteDirect(address,uint256,bytes,(bytes32,address,uint32,uint32,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,bytes),(bytes32,address,bytes32,address,(address,address,uint256,bytes,uint256,bytes),bytes,bytes,(bytes32,address,bytes,(bytes,bytes,bytes,address,uint32)[]),(bytes,uint32)),bytes)"
-  );
-
   return {
     policyClient: POLICY_WALLET_ADDRESS,
     intent: {
@@ -141,7 +144,9 @@ export const createEvaluationRequest = ({
       value: `0x${value.toString(16)}` as Hex,
       data: data,
       chainId: sepolia.id,
-      functionSignature: functionSignature,
+      // Use "0x" for a native ETH transfer or any intent with no calldata.
+      // For a contract call, pass stringToHexBytes("transfer(address,uint256)").
+      functionSignature: functionSignature ?? "0x",
     },
     wasmArgs: stringToHexBytes(JSON.stringify(wasmArgs)),
     timeout: 60,
@@ -149,13 +154,69 @@ export const createEvaluationRequest = ({
 };
 ```
 
+The `functionSignature` value is for the intended transaction in `intent.data`, not for the later Newton wallet execution helper. For example:
+
+```typescript
+const nativeEthIntent = createEvaluationRequest({
+  signerAddress,
+  targetAddress: recipient,
+  value: 1n,
+  data: "0x",
+  wasmArgs,
+});
+
+const erc20TransferIntent = createEvaluationRequest({
+  signerAddress,
+  targetAddress: tokenAddress,
+  value: 0n,
+  data: encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, amount],
+  }),
+  functionSignature: stringToHexBytes("transfer(address,uint256)"),
+  wasmArgs,
+});
+```
+
 ## Step 6: Execute an Attested Transaction
 
 Use `evaluateIntentDirect` to get an attestation, then submit the attested transaction on-chain:
 
 ```typescript
+const domain = await readEip712Domain(evalRequest.policyClient, publicClient);
+if (!domain) {
+  throw new Error(
+    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
+  );
+}
+
+const intentSignature = await walletClient.signTypedData({
+  account,
+  domain,
+  types: {
+    Intent: [
+      { name: "from", type: "address" },
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "data", type: "bytes" },
+      { name: "chainId", type: "uint256" },
+      { name: "functionSignature", type: "bytes" },
+    ],
+  },
+  primaryType: "Intent",
+  message: {
+    ...evalRequest.intent,
+    value: BigInt(evalRequest.intent.value),
+    chainId: BigInt(evalRequest.intent.chainId),
+  },
+});
+
 // Evaluate intent — returns attestation data
-const evalResponse = await walletClient.evaluateIntentDirect(evalRequest);
+const evalResponse = await walletClient.evaluateIntentDirect({
+  ...evalRequest,
+  intentSignature,
+});
 const { evaluationResult, task, taskResponse, blsSignature } = evalResponse.result;
 
 if (!evaluationResult) {
@@ -173,6 +234,50 @@ const txHash = await walletClient.sendTransaction({
   to: POLICY_WALLET_ADDRESS,
   data: functionData,
 });
+```
+
+Add this EIP-5267 helper near your wallet/public client setup:
+
+```typescript
+import { Address } from "viem";
+
+const EIP712_DOMAIN_ABI = [
+  {
+    type: "function",
+    name: "eip712Domain",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "fields", type: "bytes1" },
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+      { name: "salt", type: "bytes32" },
+      { name: "extensions", type: "uint256[]" },
+    ],
+  },
+] as const;
+
+export async function readEip712Domain(policyClient: Address, publicClient) {
+  try {
+    const [, name, version, chainId, verifyingContract] =
+      await publicClient.readContract({
+        address: policyClient,
+        abi: EIP712_DOMAIN_ABI,
+        functionName: "eip712Domain",
+      });
+
+    return {
+      name,
+      version,
+      chainId: Number(chainId),
+      verifyingContract,
+    };
+  } catch {
+    return null;
+  }
+}
 ```
 
 ## Gateway Response Handling
@@ -243,12 +348,15 @@ function decodePolicyAllowed(taskResponse: Record<string, unknown>): boolean {
 ### Function Signature Encoding
 
 <Warning>
-The `functionSignature` field in the intent is the **hex-encoded human-readable ABI**, not the 4-byte selector. The gateway needs the full signature to decode calldata into `decoded_function_arguments` for Rego. Using the 4-byte selector (`0xa9059cbb`) instead causes decoding to fail silently.
+The `functionSignature` field in the intent is the **hex-encoded human-readable ABI**, not the 4-byte selector. Use `"0x"` when `data` is `"0x"`. For contract calls, the gateway needs the full signature to decode calldata into `decoded_function_arguments` for Rego. Using the 4-byte selector (`0xa9059cbb`) instead causes decoding to fail silently.
 
 ```typescript
 // Correct: hex-encode the full human-readable signature
-const functionSig = "function transfer(address,uint256)";
+const functionSig = "transfer(address,uint256)";
 const functionSigHex = `0x${Buffer.from(functionSig).toString("hex")}`;
+
+// Correct for native ETH transfer or no calldata
+const noCalldataFunctionSig = "0x";
 
 // Wrong: using the 4-byte selector
 const wrong = "0xa9059cbb";

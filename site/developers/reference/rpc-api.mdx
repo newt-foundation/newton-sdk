@@ -195,7 +195,7 @@ Represents a transaction intent to be evaluated against a policy.
 | `value` | `Quantity` | Yes | Wei value to transfer (hex encoded) |
 | `data` | `Data` | Yes | Transaction calldata (hex encoded) |
 | `chain_id` | `Quantity` | Yes | Target chain ID (hex encoded) |
-| `function_signature` | `Data` | Yes | ABI-encoded function signature (hex encoded) |
+| `function_signature` | `Data` | Yes | Hex-encoded human-readable ABI signature used for calldata decoding, or `"0x"` when the intent has no calldata |
 
 <Expandable title="TaskIntent Example">
 ```json
@@ -203,12 +203,21 @@ Represents a transaction intent to be evaluated against a policy.
   "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
   "value": "0x0",
-  "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
+  "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
   "chain_id": "0xaa36a7",
   "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
 }
 ```
 </Expandable>
+
+#### Function signature examples
+
+`function_signature` is not the 4-byte selector. For contract calls, hex-encode the human-readable ABI signature without the `function ` prefix, for example `transfer(address,uint256)`. For native ETH transfers or any intent with no calldata, set both `data` and `function_signature` to `"0x"`.
+
+| Intent kind | `data` | `function_signature` |
+|---|---|---|
+| Native ETH transfer | `"0x"` | `"0x"` |
+| Contract call | ABI-encoded calldata | Hex-encoded signature, for example `transfer(address,uint256)` |
 
 ### PolicyDataInput
 
@@ -256,13 +265,96 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
 | `intent` | `TaskIntent` | Yes | Transaction intent to evaluate |
-| `intent_signature` | `Data` | No | Hex-encoded signature of the intent |
+| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Optional in the base schema, but required by policies and identity flows that consume `input.intent_signature` |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes, e.g., `"00"` for quorum 0) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
 | `timeout` | `Number` | No | Timeout in seconds (default: 30) |
 | `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 | `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
+
+<Warning>
+Some policy clients and identity-backed flows require `intent_signature` even though the RPC schema marks it optional. Passing an empty signature such as `"0x"` can fail before policy evaluation with an error like `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
+</Warning>
+
+Sign the exact intent with EIP-712 before calling `newt_createTask`. For PolicyClients that expose EIP-5267, read the signing domain from the contract's `eip712Domain()` method so the signature is bound to the deployed client:
+
+```ts
+const EIP712_DOMAIN_ABI = [
+  {
+    type: "function",
+    name: "eip712Domain",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "fields", type: "bytes1" },
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+      { name: "salt", type: "bytes32" },
+      { name: "extensions", type: "uint256[]" },
+    ],
+  },
+] as const;
+
+async function readEip712Domain(policyClient, publicClient) {
+  try {
+    const [, name, version, chainId, verifyingContract] =
+      await publicClient.readContract({
+        address: policyClient,
+        abi: EIP712_DOMAIN_ABI,
+        functionName: "eip712Domain",
+      });
+
+    return {
+      name,
+      version,
+      chainId: Number(chainId),
+      verifyingContract,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const domain = await readEip712Domain(policyClient, publicClient);
+if (!domain) {
+  throw new Error(
+    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
+  );
+}
+
+const intentSignature = await walletClient.signTypedData({
+  account,
+  domain,
+  types: {
+    Intent: [
+      { name: "from", type: "address" },
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "data", type: "bytes" },
+      { name: "chainId", type: "uint256" },
+      { name: "functionSignature", type: "bytes" },
+    ],
+  },
+  primaryType: "Intent",
+  message: {
+    ...intent,
+    value: BigInt(intent.value),
+    chainId: BigInt(intent.chainId),
+  },
+});
+```
+
+For manual fallback, the typed-data domain must match the policy client's Solidity `EIP712(name, version)` constructor values and deployed address:
+
+| Solidity / deployment value | EIP-712 domain field |
+|---|---|
+| `EIP712("NewtonPolicyWallet", "1")` first argument | `name: "NewtonPolicyWallet"` |
+| `EIP712("NewtonPolicyWallet", "1")` second argument | `version: "1"` |
+| Target chain | `chainId` |
+| Deployed PolicyClient address | `verifyingContract` |
 
 #### Returns
 
@@ -297,10 +389,11 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
+      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x627579"
+      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
     },
+    "intent_signature": "0x...",
     "timeout": 30
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -379,7 +472,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
 | `intent` | `TaskIntent` | Yes | Transaction intent to evaluate |
-| `intent_signature` | `Data` | No | Hex-encoded signature of the intent |
+| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
@@ -407,10 +500,11 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0x28dca9f7",
+      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x627579"
-    }
+      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
+    },
+    "intent_signature": "0x..."
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
@@ -518,7 +612,7 @@ Forwards a policy simulation request to an available operator and returns the re
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
+      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
       "chain_id": "31337",
       "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
     },
@@ -916,7 +1010,7 @@ Before using this endpoint:
 | `entrypoint` | `String` | No | Rego rule path (default: `"policy.allow"`) |
 | `policy_data` | `Array<PolicyDataInput>` | Yes | PolicyData sources with optional wasm_args |
 | `policy_params` | `Object` | No | Policy parameters JSON (default: `{}`) |
-| `intent_signature` | `Data` | No | Hex-encoded intent signature |
+| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
 
 #### Returns
 
@@ -966,9 +1060,9 @@ Each entry in `missing_secrets`:
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
+      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x627579"
+      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
     },
     "entrypoint": "trading.allow",
     "policy_data": [
