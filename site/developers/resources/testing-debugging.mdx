@@ -7,16 +7,20 @@ Newton provides simulation endpoints and local tools at every layer of the stack
 
 ## Local Policy Simulation
 
-Test Rego policy logic without the network using the Newton CLI:
+Test Rego policy logic without the network using the Newton CLI. Pass policy and data files with `-d` (repeatable), the intent with `-i`, and the query as a positional argument:
 
 ```bash
 newton-cli regorus eval \
-  --policy policy.rego \
-  --input '{"from":"0xAbC...","to":"0xDeF...","value":"0x0","data":"0x","chainId":"0xaa36a7","functionSignature":"0x"}' \
-  --data '{"params":{"max_amount":"1000"},"data":{"eth_price_usd":2500}}'
+  -d policy.rego \
+  -d data.json \
+  -i intent.json \
+  --non-strict \
+  "data.policy.allow"
 ```
 
-This evaluates your Rego policy locally with full support for Newton crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`).
+This evaluates your Rego policy locally with full support for Newton crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`). Use `--non-strict` for OPA-compatible evaluation.
+
+For writing Rego unit tests with `opa test`, see [Testing Policies & Oracles](/developers/guides/testing-policies).
 
 ## Local Oracle Simulation
 
@@ -39,7 +43,7 @@ Simulate a full policy evaluation via the Gateway RPC without any on-chain inter
 Tests the complete evaluation pipeline (data oracle + policy) for a specific PolicyClient:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
@@ -56,28 +60,30 @@ curl -X POST https://gateway.testnet.newton.xyz \
         "function_signature": "0x"
       }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
 ### Simulate Policy Only
 
-Test Rego policy evaluation with provided inputs (no oracle execution):
+Test full Rego policy evaluation, running each referenced oracle and merging its output into `data.wasm`. Pass the Rego source, one entry per oracle in `policy_data`, and `policy_params`:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz \
+curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_api_key>" \
   -d '{
     "jsonrpc": "2.0",
     "method": "newt_simulatePolicy",
     "params": {
-      "policy_cid": "bafyrei...",
-      "intent": { ... },
-      "data": { "eth_price_usd": 2500 },
-      "params": { "max_amount": "1000" }
+      "policy_client": "0xYourPolicyClient",
+      "policy": "package trading\n\ndefault allow := false\n...",
+      "entrypoint": "trading.allow",
+      "intent": { "from": "0x...", "to": "0x...", "value": "0x0", "data": "0x", "chain_id": "0xaa36a7", "function_signature": "0x" },
+      "policy_data": [ { "policy_data_address": "0xYourPolicyData" } ],
+      "policy_params": { "max_price": 50000 }
     },
-    "id": 1
+    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
@@ -88,33 +94,36 @@ Test a WASM oracle execution via the Gateway:
 <Tabs>
   <Tab title="With inline secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz \
+    curl -X POST https://gateway.testnet.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
         "jsonrpc": "2.0",
         "method": "newt_simulatePolicyData",
         "params": {
-          "policy_data_cid": "bafyrei...",
-          "input": "{\"address\":\"0x...\"}",
-          "secrets": { "API_KEY": "sk-test-xxx" }
+          "policy_data_address": "0xYourPolicyData",
+          "wasm_args": "0x7b2261646472657373223a22307830227d",
+          "chain_id": 11155111
         },
-        "id": 1
+        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
       }'
     ```
+    <Note>Pass encrypted secrets via the optional `secrets` field (base64-encoded ciphertext) to test with credentials. See the [RPC API](/developers/reference/rpc-api#newt-simulatepolicydata).</Note>
   </Tab>
   <Tab title="With stored secrets">
     ```bash
-    curl -X POST https://gateway.testnet.newton.xyz \
+    curl -X POST https://gateway.testnet.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{
         "jsonrpc": "2.0",
         "method": "newt_simulatePolicyDataWithClient",
         "params": {
-          "policy_client": "0xYourPolicyClientAddress"
+          "policy_data_address": "0xYourPolicyData",
+          "policy_client": "0xYourPolicyClientAddress",
+          "wasm_args": "0x7b2261646472657373223a22307830227d"
         },
-        "id": 1
+        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
       }'
     ```
     <Note>Requires ownership of the PolicyClient. The Gateway reads secrets stored via `newt_storeEncryptedSecrets`.</Note>
@@ -189,7 +198,7 @@ const client = createPublicClient({
   transport: http(),
 }).extend(newtonPublicClientActions({
   apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz',
+  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
 }));
 
 // Simulate first to debug

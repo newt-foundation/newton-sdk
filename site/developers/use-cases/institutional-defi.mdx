@@ -43,7 +43,7 @@ package newton
 default allow = false
 
 allow if {
-    data.data.current_protocol_exposure + input.intent.value <= data.params.max_protocol_exposure
+    data.wasm.current_protocol_exposure + input.intent.value <= data.params.max_protocol_exposure
 }
 ```
 
@@ -71,10 +71,10 @@ package newton
 default allow = false
 
 allow if {
-    not data.data.is_sanctioned
-    data.data.jurisdiction_allowed
+    not data.wasm.is_sanctioned
+    data.wasm.jurisdiction_allowed
     input.intent.value <= data.params.single_transaction_limit
-    data.data.daily_volume + input.intent.value <= data.params.daily_limit
+    data.wasm.daily_volume + input.intent.value <= data.params.daily_limit
 }
 ```
 

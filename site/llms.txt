@@ -23,9 +23,14 @@ Docs: https://docs.newton.xyz
 - [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide): End-to-end walkthrough of integrating Newton into your project.
 - [Writing Data Oracles](https://docs.newton.xyz/developers/guides/writing-data-oracles): Build WASM PolicyData oracles in JavaScript, Python, or Rust.
 - [Writing Policies](https://docs.newton.xyz/developers/guides/writing-policies): Write Rego policies for transaction authorization.
+- [Uploading & Accessing Secrets in Oracles](https://docs.newton.xyz/developers/guides/secrets-in-oracles): Declare, upload, and read API keys inside PolicyData oracles via the newton:provider/secrets host interface.
+- [Chaining Multiple Data Oracles](https://docs.newton.xyz/developers/guides/chaining-data-oracles): Compose more than one oracle under one policy — output namespacing, multi-oracle Rego, and simulation.
+- [Policy Packs](https://docs.newton.xyz/developers/guides/policy-packs): Prebuilt, deployed oracles (vaults.fyi, Webacy, RedStone, Chainalysis) and how to combine them.
 - [Deploying with CLI](https://docs.newton.xyz/developers/guides/deploying-with-cli): Deploy policies, schemas, and WASM oracles using newton-cli.
 - [Smart Contract Integration](https://docs.newton.xyz/developers/guides/smart-contract-integration): Inherit NewtonPolicyClient in your Solidity contracts.
 - [Frontend SDK Integration](https://docs.newton.xyz/developers/guides/frontend-sdk-integration): Use the TypeScript SDK with viem to submit and track tasks.
+- [Using the Dashboard](https://docs.newton.xyz/developers/guides/using-the-dashboard): Build, simulate, and deploy policies from the browser without the CLI.
+- [Testing Policies & Oracles](https://docs.newton.xyz/developers/guides/testing-policies): Unit-test Rego with opa test, test WASM oracles, and run end-to-end simulations.
 - [Privacy Flows](https://docs.newton.xyz/developers/guides/privacy-flows): Three privacy data modes — identity (user), confidential (provider), and ephemeral (per-task inline).
 
 ## Use Cases

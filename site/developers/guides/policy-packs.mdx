@@ -1,0 +1,233 @@
+---
+title: "Policy Packs"
+description: "Newton policy packs are prebuilt, deployed data oracles — vaults.fyi, Webacy, RedStone, and Chainalysis — with published Rego templates, schemas, and on-chain PolicyData addresses. Use one directly or chain several under a single policy."
+keywords:
+  - newton policy pack
+  - prebuilt data oracle
+  - vaults.fyi oracle
+  - chainalysis sanctions
+  - webacy depeg
+  - redstone divergence
+---
+
+A **policy pack** is a prebuilt, deployed data oracle published by Newton. Instead of writing and deploying your own WASM oracle, you reference a pack's already-deployed PolicyData contract, configure its parameters, and (for packs that call an authenticated API) upload its API key. Packs are designed to compose — chain several under one policy to gate an action on multiple signals at once.
+
+Each pack ships:
+
+- A **WASM oracle** (`policy.js` compiled to WASM) deployed as a `NewtonPolicyData` contract on each supported chain.
+- A reference **Rego template** (`policy.rego`) you can use as-is or adapt.
+- Three JSON Schemas: `params_schema.json` (thresholds you configure), `secrets_schema.json` (API keys it requires), and `wasm_args_schema.json` (per-call inputs).
+- A typed TypeScript binding published to npm as `@newton-xyz/policy-pack-<name>`.
+
+Every pack namespaces its output under its **pack id** — its WASM returns `{ "<pack-id>": { ...fields } }` — so multiple packs merge into `data.wasm` without key collisions. Your Rego reads `data.wasm.<pack-id>.*` and `data.params.<pack-id>.*`. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the merge model.
+
+<Note>
+The canonical deployed Policy and PolicyData addresses for every pack, chain, and environment live in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) in the [newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) repo. The [Deployed addresses](#deployed-addresses) table below lists current production addresses, but treat `deployments.json` as the source of truth — addresses change on redeploy.
+</Note>
+
+## Deployed addresses
+
+Production `PolicyData` addresses for each pack. These are what you reference when adopting a pack or composing several. Staging (`stagef`) addresses are in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
+
+| Pack | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
+|------|-------------------------------|------------------------|
+| vaults.fyi | `0xb89d568393f3e4d1f2A48B7E979d095E5A82160c` | `0xCb047e80808112E51e0DcAA866311D7CC56D4e35` |
+| Webacy | `0xc6DDEe4D4585518f3Aa4bB24FFF79Ab222396a9e` | `0xa1c0CB602D2a337F6eBdAA8FBa4D92918689E108` |
+| RedStone | `0xEF57d7C9641c8687A193F96A425966207fa7c9b1` | `0x6C9068e1213fD6dba4Eb8A9767dEb5bD320a6885` |
+| Chainalysis | `0x39c217a97809118aBc3C89FfcF54F21993493BE7` | `0x90eE95F6aaF91fCe2538218e58d8df1809E14Aa7` |
+
+## Catalog
+
+### vaults.fyi — vault risk rating
+
+**Pack id:** `vaultsfyi` · **Secret:** `VAULTS_FYI_API_KEY`
+
+Gates a vault deposit on [vaults.fyi](https://vaults.fyi) risk signals: APY anomalies, TVL drawdowns, a risk-score floor, allocation-change detection, critical flags, and corruption.
+
+| Field | Description |
+|-------|-------------|
+| `data.wasm.vaultsfyi.risk_score` | Vault risk score (0–100, or `null`) |
+| `data.wasm.vaultsfyi.apy_z_score` | APY anomaly (current vs 30-day) |
+| `data.wasm.vaultsfyi.tvl_drawdown_24h_pct` / `tvl_drawdown_7d_pct` | TVL drawdown percentages |
+| `data.wasm.vaultsfyi.has_critical_flag` | Critical/high-severity flag present |
+| `data.wasm.vaultsfyi.is_corrupted` | Vault reported corrupted by the data source |
+| `data.wasm.vaultsfyi.allocation_changed_since_last` | Strategy/allocation changed since last evaluation |
+
+**Params** (`data.params.vaultsfyi`): `apy_z_max`, `tvl_drawdown_24h_max_pct`, `tvl_drawdown_7d_max_pct`, `risk_score_floor`, `deny_on_allocation_change`, `deny_on_critical_flag`, `deny_on_corrupted`.
+
+**wasm_args:** `network` (e.g. `"mainnet"`, `"base"`), `vaultAddress` (required), `lastKnownAllocationHash` (optional).
+
+### Webacy — depeg & reputation risk
+
+**Pack id:** `webacy` · **Secret:** `WEBACY_API_KEY`
+
+Gates on [Webacy](https://webacy.com) signals for pegged tokens: collapse events, recent depeg events, days below peg, staleness, and absolute deviation from peg.
+
+| Field | Description |
+|-------|-------------|
+| `data.wasm.webacy.is_collapsed` | Token structurally collapsed |
+| `data.wasm.webacy.recent_depeg_event_count` | Depeg events in the lookback window |
+| `data.wasm.webacy.consecutive_days_below_peg` | Days the token has stayed below peg |
+| `data.wasm.webacy.within_expected_range` | Currently within expected peg range |
+| `data.wasm.webacy.abs_dev_clean` | Absolute deviation from peg (fraction) |
+| `data.wasm.webacy.stale` | Webacy flagged the response as stale |
+
+**Params** (`data.params.webacy`): `deny_on_collapsed`, `max_recent_depeg_events`, `max_consecutive_days_below_peg`, `deny_on_stale_data`, `max_abs_dev_pct`.
+
+**wasm_args:** `address` (required), `chain` (optional, e.g. `"eth"`), `lookback_days` (1–30, default 7).
+
+### RedStone — oracle divergence
+
+**Pack id:** `redstone` · **Secret:** _none (public RedStone cluster)_
+
+Compares the [RedStone](https://redstone.finance) median price to the on-chain oracle a vault relies on, and denies when divergence exceeds a hard cap, the feed is stale, or divergence is sustained.
+
+| Field | Description |
+|-------|-------------|
+| `data.wasm.redstone.divergence_bp` | Divergence (basis points) between RedStone and the on-chain oracle |
+| `data.wasm.redstone.redstone_feed_age_seconds` | Age of the RedStone feed |
+| `data.wasm.redstone.prev_snapshot_present` | Whether a prior snapshot was supplied |
+| `data.wasm.redstone.prev_divergence_bp` / `sustained_seconds` | Sustained-divergence tracking |
+
+**Params** (`data.params.redstone`): `max_feed_age_seconds`, `deny_bp`, `warn_bp`, `enable_sustained_check`, `deny_sustained_seconds`.
+
+**wasm_args:** `symbol` (required), `rpcUrl` (required), `onchainOracle` (required: `address` + `selector`, optional `decimals`), `provider` (optional), `prevSnapshot` (optional).
+
+### Chainalysis — sanctions & address screening
+
+**Pack id:** `chainalysis` · **Secrets:** `CHAINALYSIS_SANCTIONS_KEY` (required), `CHAINALYSIS_SCREENING_KEY` (optional, for full categorization)
+
+Screens an address against [Chainalysis](https://www.chainalysis.com) Sanctions Screening (OFAC) and Address Screening, and denies on sanctions hits, high-risk classification, or blocklisted risk categories.
+
+| Field | Description |
+|-------|-------------|
+| `data.wasm.chainalysis.sanctioned` | Address matched a sanctions list |
+| `data.wasm.chainalysis.is_high_risk` | Address classified high-risk |
+| `data.wasm.chainalysis.risk_categories` | Array of risk category strings |
+
+**Params** (`data.params.chainalysis`): `deny_on_sanctioned`, `deny_on_high_risk_category`, `risk_categories_blocklist`.
+
+**wasm_args:** `address` (required) — the wallet to screen.
+
+## Using a single pack
+
+1. **Get the addresses.** Read your pack's `policy` and `policyData` addresses for your chain and environment from `deployments.json`.
+2. **Bind the policy to your PolicyClient** and **set params** (namespaced under the pack id). See [Smart Contract Integration](/developers/guides/smart-contract-integration) and the CLI [`policy-client`](/developers/reference/command-line-tool#policy-client) commands.
+3. **Upload the pack's secret** to the pack's PolicyData address, if it requires one. See [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles).
+4. **Simulate**, then submit tasks. See [Testing Policies & Oracles](/developers/guides/testing-policies).
+
+The simplest path through all of this — picking packs, setting params, uploading secrets, and deploying — is the [Newton Dashboard](/developers/guides/using-the-dashboard).
+
+## Combining vaults.fyi and Webacy
+
+A worked two-pack example: gate a deposit on **both** vault risk (vaults.fyi) **and** depeg risk (Webacy) in one policy.
+
+### 1. Author the composite Rego
+
+Read each pack from its namespace and contribute deny rules for each. Allow only when nothing denies:
+
+```rego
+package vault_deposit_gate
+
+import rego.v1
+
+default allow := false
+
+allow if count(deny) == 0
+
+# --- vaults.fyi: vault risk ---
+deny contains msg if {
+    score := data.wasm.vaultsfyi.risk_score
+    score != null
+    score < data.params.vaultsfyi.risk_score_floor
+    msg := sprintf("vaultsfyi: risk score %v below floor", [score])
+}
+
+deny contains "vaultsfyi: 24h tvl drawdown" if {
+    data.wasm.vaultsfyi.tvl_drawdown_24h_pct > data.params.vaultsfyi.tvl_drawdown_24h_max_pct
+}
+
+# --- Webacy: depeg risk ---
+deny contains "webacy: token collapsed" if {
+    data.params.webacy.deny_on_collapsed
+    data.wasm.webacy.is_collapsed
+}
+
+deny contains "webacy: outside peg range" if {
+    data.wasm.webacy.within_expected_range == false
+}
+
+# --- fail closed on oracle errors ---
+deny contains "vaultsfyi: oracle error" if { data.wasm.vaultsfyi.error }
+deny contains "webacy: oracle error" if { data.wasm.webacy.error }
+```
+
+### 2. Configure namespaced params
+
+```json
+{
+  "vaultsfyi": {
+    "apy_z_max": 4,
+    "tvl_drawdown_24h_max_pct": 25,
+    "tvl_drawdown_7d_max_pct": 50,
+    "risk_score_floor": 60,
+    "deny_on_allocation_change": true,
+    "deny_on_critical_flag": true,
+    "deny_on_corrupted": true
+  },
+  "webacy": {
+    "deny_on_collapsed": true,
+    "max_recent_depeg_events": 0,
+    "max_consecutive_days_below_peg": 0,
+    "deny_on_stale_data": true,
+    "max_abs_dev_pct": 0.005
+  }
+}
+```
+
+### 3. Upload both secrets
+
+Secrets are scoped **per PolicyData address**, so upload each pack's key to that pack's PolicyData contract:
+
+```bash
+# vaults.fyi key → vaults.fyi PolicyData address
+echo '{ "VAULTS_FYI_API_KEY": "..." }' > vaultsfyi-secrets.json
+newton-cli --chain-id 11155111 secrets upload \
+  --secrets-file vaultsfyi-secrets.json \
+  --policy-client 0xYourPolicyClient \
+  --policy-data-address 0xVAULTSFYI_POLICY_DATA \
+  --api-key $NEWTON_API_KEY
+
+# Webacy key → Webacy PolicyData address
+echo '{ "WEBACY_API_KEY": "..." }' > webacy-secrets.json
+newton-cli --chain-id 11155111 secrets upload \
+  --secrets-file webacy-secrets.json \
+  --policy-client 0xYourPolicyClient \
+  --policy-data-address 0xWEBACY_POLICY_DATA \
+  --api-key $NEWTON_API_KEY
+```
+
+### 4. Simulate the combined policy
+
+Pass both PolicyData addresses to `newt_simulatePolicy` (see [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles#simulating-a-multi-oracle-policy) for the full request). Confirm the merged `data.wasm` contains both `vaultsfyi` and `webacy` keys before deploying.
+
+### 5. Deploy
+
+Deploy the multi-oracle policy through the [Newton Dashboard](/developers/guides/using-the-dashboard), which binds one `NewtonPolicy` to both PolicyData addresses. (CLI multi-PolicyData deploy is coming soon.)
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+  The merge model and Rego patterns behind composites
+</Card>
+<Card icon="key" href="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">
+  Upload and access each pack's API key
+</Card>
+<Card icon="grid-2" href="/developers/guides/using-the-dashboard" title="Using the Dashboard">
+  Configure and deploy packs without the CLI
+</Card>
+<Card icon="flask" href="/developers/guides/testing-policies" title="Testing Policies">
+  Unit-test and simulate before going live
+</Card>
+</CardGroup>

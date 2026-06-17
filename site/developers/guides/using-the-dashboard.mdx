@@ -1,0 +1,79 @@
+---
+title: "Using the Dashboard"
+description: "Build, simulate, and deploy Newton policies from the browser — no CLI required. Sign in, generate an API key, add data oracles, configure secrets and params, simulate, and deploy a policy bound to your PolicyClient."
+keywords:
+  - newton dashboard
+  - policy editor
+  - deploy policy no cli
+  - newton shield
+  - configure data oracles
+---
+
+The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for building on Newton. It lets you generate an API key, author a Rego policy in the browser, attach one or more data oracles, configure their parameters and secrets, simulate against sample intents, and deploy the policy on-chain — all from a web UI. Everything in this guide can also be done with [`newton-cli`](/developers/reference/command-line-tool) and the [SDK](/developers/reference/sdk-reference); the dashboard packages the same operations into a guided flow.
+
+## Sign in
+
+Go to [dashboard.newton.xyz](https://dashboard.newton.xyz) and sign in. You'll need an **email** (for the one-time sign-in code) and a **wallet** (to sign the on-chain transactions for registering and deploying).
+
+## Generate an API key
+
+Open **API Keys** in the left navigation. Your key is generated and ready to use — copy it for SDK or CLI integration. API keys authenticate calls to the Newton Gateway and authorize secrets management. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys) for permissions, rotation, and programmatic key management.
+
+## Create a project
+
+Creating a project walks through naming it, choosing a chain (Sepolia or Base Sepolia), setting a PolicyClient, and selecting data oracles. Pick oracles from the built-in [policy packs](/developers/guides/policy-packs) (Chainalysis, vaults.fyi, Webacy, RedStone) or add a custom one by its deployed PolicyData address. Selecting a built-in oracle pre-fills a Rego template, default parameters, and the list of secrets it requires, so you start from a working baseline.
+
+<Note>
+A PolicyClient is required to get into the editor. Either enter the address of an existing one (a contract that inherits `NewtonPolicyClient` — see [Smart Contract Integration](/developers/guides/smart-contract-integration)), or click **Deploy a sample one** to have the dashboard deploy a template `NewtonPolicyWallet` for you.
+</Note>
+
+## Edit the policy
+
+The policy editor is a three-pane workspace:
+
+- **Rego editor** — a Monaco editor with syntax highlighting for your `policy.rego`. Edit the rules directly.
+- **Oracle sidebar** — add or remove data oracles. Adding more than one produces a [multi-oracle policy](/developers/guides/chaining-data-oracles); each oracle's output is namespaced under its pack id, so reference it in Rego as `data.wasm.<pack-id>.*`.
+- **Configuration** — per oracle, set:
+  - **Parameters** — the thresholds your Rego reads from `data.params.<pack-id>.*` (e.g. `risk_score_floor`).
+  - **Secrets** — the API key(s) the oracle needs (e.g. `VAULTS_FYI_API_KEY`). The dashboard encrypts these client-side and uploads them per PolicyData address, exactly like [`newton-cli secrets upload`](/developers/guides/secrets-in-oracles).
+
+## Simulate
+
+Before deploying, run a simulation from the editor. Provide:
+
+- **WASM args** — the per-call inputs each oracle expects (e.g. `{ "network": "mainnet", "vaultAddress": "0x..." }`).
+- **Intent** — the transaction being evaluated (`from`, `to`, `value`, `data`, `chain_id`).
+- **Params** — your namespaced parameters.
+
+The dashboard runs the full pipeline — executes every oracle, merges outputs into `data.wasm`, and evaluates your Rego — then shows the allow/deny result and the merged data the policy saw. Use this to confirm your Rego references resolve and the decision is what you expect. This is the same evaluation `newt_simulatePolicy` performs; see [Testing Policies & Oracles](/developers/guides/testing-policies).
+
+## Deploy
+
+When the policy behaves correctly, deploy it. The dashboard:
+
+1. Generates CIDs for your Rego and schemas and uploads them to IPFS.
+2. Deploys the PolicyData contract(s) and the `NewtonPolicy` contract — bound to **all** selected oracle addresses, so multi-oracle policies deploy in one step.
+3. Binds the policy to your PolicyClient and records the deployed addresses.
+
+This is the recommended way to deploy a [multi-oracle policy](/developers/guides/chaining-data-oracles) today, since the CLI currently binds a single PolicyData address per `policy deploy`.
+
+## Integrate with Newton Shield
+
+For projects using the Newton Shield template, the dashboard generates a ready-to-paste integration snippet — the `NewtonShield` setup with your API key, PolicyClient address, and chain — plus the deployed contract addresses and links to inspect transactions. Copy it into your application to start submitting intents. For custom integrations, wire the deployed policy address into your smart contract per [Smart Contract Integration](/developers/guides/smart-contract-integration).
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card icon="key" href="/developers/overview/dashboard-api-keys" title="Dashboard & API Keys">
+  Permissions, rotation, and programmatic key management
+</Card>
+<Card icon="cubes" href="/developers/guides/policy-packs" title="Policy Packs">
+  The oracles available in the editor
+</Card>
+<Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+  How multiple oracles compose under one policy
+</Card>
+<Card icon="terminal" href="/developers/reference/command-line-tool" title="CLI Reference">
+  The same operations from the command line
+</Card>
+</CardGroup>

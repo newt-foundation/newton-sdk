@@ -88,10 +88,10 @@ To integrate a reference oracle into your project:
      --input-json '{"address": "0x..."}'
    ```
 5. **Deploy on-chain** — use the CLI to upload your WASM to IPFS and deploy a PolicyData contract. See [Deploying with CLI](/developers/guides/deploying-with-cli).
-6. **Reference in your policy** — access the oracle output in your Rego policy via `data.data`:
+6. **Reference in your policy** — access the oracle output in your Rego policy via `data.wasm`:
 
    ```rego
-   risk_score := data.data.risk_score
+   risk_score := data.wasm.risk_score
    allow if risk_score < 50
    ```
 
