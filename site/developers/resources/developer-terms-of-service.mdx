@@ -1,0 +1,221 @@
+---
+title: "Developer Terms of Service"
+description: "Developer Terms of Service for accessing and using the Newton Protocol developer platform, APIs, SDKs, dashboards, documentation, and related tools."
+---
+
+**Effective Date:** June 23, 2026
+
+These Developer Terms of Use ("Developer Terms") govern your access to and use of the Newton Protocol developer platform, including any APIs, SDKs, developer dashboards, documentation, and related tools (collectively, the "Developer Services") provided by Magic Newton Operations Ltd., a British Virgin Islands business company ("Platform Operator," "we," "us," or "our").
+
+These Developer Terms supplement and incorporate by reference the general Terms of Use available at newton.xyz ("General Terms"). Capitalized terms used but not defined here have the meanings given in the General Terms. In the event of a conflict between these Developer Terms and the General Terms, these Developer Terms control with respect to your use of the Developer Services.
+
+By accessing or using the Developer Services, or by clicking "I agree" or a similar button, you agree to be bound by these Developer Terms. If you are accessing the Developer Services on behalf of an organization, you represent that you have authority to bind that organization, and references to "you" and "Developer" include that organization.
+
+If you do not agree to these Developer Terms, do not access or use the Developer Services.
+
+## 1. The Newton Protocol and Developer Services
+
+Newton Protocol is a pre-settlement transaction authorization layer that enables applications to evaluate transactions against programmable policy rules before on-chain settlement. Operators run policy evaluation, and results are cryptographically attested for consumption by integrated smart contracts.
+
+The Developer Services provide tools that facilitate interaction with Newton Protocol, including:
+
+- the Newton Protocol SDK (`@magicnewton/newton-protocol-sdk`) and any successor or companion SDKs (collectively, "Newton SDKs");
+- any developer dashboards;
+- access keys and associated authentication credentials;
+- documentation, sample code, and reference implementations published by the Platform Operator; and
+- any other tools, services, or functionality we make available to developers from time to time.
+
+The Developer Services are interfaces to Newton Protocol. They are not essential to accessing the Protocol directly. Developers and other parties are free to interact with Newton Protocol's underlying smart contracts and open-source components without using the Developer Services, subject to any applicable open-source license terms available at https://github.com/Magic-Newton-Foundation.
+
+The Platform Operator does not control the actions of network operators, the outcome of policy evaluations, or transactions executed on any blockchain. Use of the Developer Services does not guarantee any particular compliance outcome or that any transaction or application will satisfy applicable legal or regulatory requirements. You remain solely responsible for ensuring your application and its use of Newton Protocol comply with all applicable laws and regulations.
+
+## 2. Eligibility
+
+To access the Developer Services, you must:
+
+- be at least 18 years of age;
+- not be a Restricted Person as defined in the General Terms; and
+- if acting on behalf of an organization, have the authority to bind that organization to these Developer Terms.
+
+We may require you to provide accurate registration information, including a valid email address or wallet address, in order to obtain keys or access the developer dashboard. You represent that all information you provide is accurate and current, and you agree to update it promptly if it changes.
+
+## 3. Access Keys and Account Security
+
+Access to certain Developer Services requires one or more access keys issued by the Platform Operator. Access keys are associated with specific permissions, which may include task submission, secrets management, or administrative access, as described in our developer documentation.
+
+With respect to your keys and developer account credentials, you agree to:
+
+- keep all keys and credentials confidential and not share them with unauthorized parties;
+- use keys only for the purposes authorized under these Developer Terms;
+- implement reasonable security measures to prevent unauthorized access to or use of your keys;
+- promptly notify us at legal@newt.foundation if you suspect unauthorized access or compromise of any key; and
+- not transfer, sell, sublicense, or otherwise assign keys or developer account access to any third party without our prior written consent.
+
+You are responsible for all activity that occurs under your keys, whether or not authorized by you. The Platform Operator is not liable for any loss or damage arising from unauthorized use of your keys or credentials.
+
+We reserve the right to revoke, suspend, or rate-limit any key at any time, including if we reasonably believe the key is being used in violation of these Developer Terms or in a manner that could harm the Developer Services, the Protocol, or other users.
+
+## 4. Permitted Use and License
+
+Subject to your compliance with these Developer Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to access and use the Developer Services solely to:
+
+- build, test, and deploy applications that integrate with Newton Protocol (each, an "Application");
+- access the Developer Services to submit policy evaluation requests and receive attestations;
+- use documentation and sample code published by the Platform Operator to support your integration; and
+- evaluate and test the Developer Services for integration purposes, including through simulated task flows.
+
+This license does not include the right to resell or sublicense access to the Developer Services themselves as a standalone product; provided, however, you may build Applications that incorporate the Developer Services so as to leverage Newton Protocol, commercialize and market those Applications to your customers, and charge fees for your Applications, provided that the primary value of your Application reflects your own development, features, and functionality rather than merely repackaging raw access to the Developer Services. If you build an Application that allows your own end users to interact with Newton Protocol through your integration, that is a permitted use, provided you comply with Section 6 (Developer Obligations) and all other applicable terms.
+
+## 5. Restrictions
+
+You agree not to, and not to permit any third party to:
+
+- use the Developer Services to build any application or product that facilitates, enables, or promotes activity that violates applicable laws or regulations, including sanctions laws, anti-money laundering laws, or laws prohibiting the provision of services to Restricted Persons;
+- use the Developer Services to process, store, or transmit data belonging to Restricted Persons or to circumvent sanctions screening or other policy enforcement mechanisms;
+- use bots, automated tools, or scripting to generate API requests at volumes materially exceeding normal application usage patterns, or in a manner intended to circumvent rate limits or abuse detection;
+- attempt to probe, scan, or test the vulnerability of the Developer Services or any related infrastructure, or attempt unauthorized access to any API endpoint, database, or system;
+- reverse-engineer, decompile, or attempt to derive the source code of any non-open-source components of the Developer Services;
+- misrepresent the source, nature, or properties of policy evaluation results or attestations generated through Newton Protocol, including by presenting attestations as guarantees of legal compliance or as investment advice;
+- use the Developer Services in a manner that interferes with or degrades the operation of Newton Protocol, the Gateway, or the experience of other developers or end users;
+- use the Developer Services to develop, train, or improve any machine learning model or AI system without our prior written consent; or
+- encourage, assist, or permit any third party to engage in any of the foregoing.
+
+## 6. Developer Obligations
+
+### 6.1 End User Compliance
+
+If your Application is made available to end users, you are responsible for ensuring that your end users are not Restricted Persons and that their use of your Application complies with applicable laws and regulations. You may not use the Developer Services as a substitute for your own compliance obligations, and Newton Protocol attestations do not constitute legal compliance determinations.
+
+You agree to implement and maintain appropriate terms of service and privacy notices for your Application that accurately describe how you collect, use, and process data, including any data submitted to Newton Protocol through your integration.
+
+### 6.2 Data Handling
+
+To the extent your integration with Newton Protocol involves the submission of personal data or other sensitive information (including KYC credentials, wallet addresses associated with individuals, or identity-linked data), you are responsible for:
+
+- having a lawful basis for collecting and processing such data;
+- providing appropriate disclosures to the individuals whose data is processed;
+- ensuring that any third-party identity verification, KYC, or data vendor agreements applicable to your integration permit the use, submission, or transmission of resulting verification data or outputs through Newton Protocol, including any domain-scoped or linked credential submissions;
+- complying with applicable data protection laws, including but not limited to the GDPR and any other jurisdiction-specific requirements applicable to your operations; and
+- not submitting data to Newton Protocol that you are not authorized to process or share.
+
+The Platform Operator makes no representation that your use of Newton Protocol satisfies the terms of any such vendor agreement, and compliance with those agreements is solely your responsibility. The Platform Operator is not a data controller or data processor with respect to data submitted through your Application, except to the limited extent described in our Privacy Policy. Your use of Newton Protocol's identity and credential features does not transfer data protection liability to the Platform Operator.
+
+### 6.3 Accurate Representations
+
+You agree not to make representations to your end users or any third party that overstate the capabilities of Newton Protocol or the Developer Services. In particular, you agree not to represent that Newton Protocol:
+
+- guarantees legal compliance with any regulatory framework;
+- eliminates sanctions or AML risk;
+- constitutes legal, financial, or investment advice; or
+- is error-free, always available, or operates in any specific manner (e.g., centralized, permissioned, etc.)
+
+Accurate descriptions include language such as "supports," "enables configurable policy controls," "provides verifiable authorization constraints," or "helps enforce." The Platform Operator reserves the right to require you to correct inaccurate public representations about Newton Protocol.
+
+### 6.4 Open Source Compliance
+
+Portions of Newton Protocol and the Developer Services are subject to open-source licenses. You are responsible for reviewing and complying with any applicable open-source license terms for software components you use in your integration. Open-source license terms are available at https://github.com/newt-foundation.
+
+## 7. Fees and Usage
+
+Access to the Developer Services may require the payment of protocol-level fees denominated in NEWT or other digital assets, as set by the Protocol from time to time. The applicable fee structure, if any, will be described in our developer documentation or communicated to you separately.
+
+The Platform Operator reserves the right to introduce, modify, or discontinue fees at any time, with reasonable notice where practicable. Continued use of the Developer Services after notice of fee changes constitutes your acceptance of those changes.
+
+You are responsible for all taxes, duties, and similar charges arising from your use of the Developer Services or your Application's use of Newton Protocol, except for taxes on the Platform Operator's net income.
+
+## 8. Intellectual Property
+
+### 8.1 Platform Operator IP
+
+Except for components subject to open-source licenses, the Developer Services, including the Newton SDKs, documentation, and all related materials, are owned by or licensed to the Platform Operator and are protected by applicable intellectual property laws. These Developer Terms do not grant you any ownership interest in the Developer Services or any Platform Operator intellectual property.
+
+### 8.2 Your Applications
+
+As between you and the Platform Operator, you retain ownership of your Application and any original code, content, or materials you develop independently. You grant the Platform Operator a non-exclusive, royalty-free license to use and display your name, logo, and Application description for the purpose of identifying you as a developer building on Newton Protocol, including in developer directories, case studies, and marketing materials, unless you notify us in writing that you object to such use.
+
+### 8.3 Feedback
+
+If you submit feedback, suggestions, or ideas about the Developer Services ("Feedback"), you grant the Platform Operator a perpetual, irrevocable, royalty-free, worldwide license to use, modify, and incorporate that Feedback into the Developer Services or any other product or service, without any obligation of attribution or compensation to you.
+
+## 9. Confidentiality
+
+From time to time, the Platform Operator may provide you with access to non-public information about the Developer Services, including pre-release features, technical roadmaps, or other materials designated as confidential ("Confidential Information"). You agree to:
+
+- hold Confidential Information in strict confidence;
+- not disclose Confidential Information to any third party without the Platform Operator's prior written consent; and
+- use Confidential Information only for the purpose of developing your Application or otherwise exercising your rights under these Developer Terms.
+
+These obligations do not apply to information that: (a) is or becomes publicly available through no fault of yours; (b) was rightfully known to you before disclosure by the Platform Operator; (c) is disclosed to you by a third party without confidentiality obligations; or (d) you are required to disclose by law, provided you give us reasonable advance notice and cooperate with any effort to seek a protective order.
+
+## 10. Term and Termination
+
+These Developer Terms are effective when you first access the Developer Services and continue until terminated.
+
+Either party may terminate these Developer Terms at any time:
+
+- you, by ceasing to use the Developer Services and deleting all keys associated with your developer account; or
+- the Platform Operator, by providing notice to you via email, the developer dashboard, or other reasonable means, or immediately and without notice if we determine that you have materially violated these Developer Terms.
+
+Upon termination, your license to use the Developer Services ends immediately, and you must cease all use of keys, Newton SDKs, and other Developer Services materials. Sections 5, 6, 8, 9, 10, 11, 12, and 13 survive termination.
+
+We may also suspend your access to the Developer Services immediately and without prior notice if we reasonably believe your use poses a security risk, violates applicable law, or could harm the Developer Services, the Protocol, or other users. We will endeavor to provide notice and an opportunity to cure where practicable.
+
+## 11. Disclaimer of Warranties
+
+**THE DEVELOPER SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE PLATFORM OPERATOR EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, AND SECURITY.**
+
+**THE PLATFORM OPERATOR DOES NOT WARRANT THAT THE DEVELOPER SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VULNERABILITIES; THAT API RESPONSES OR POLICY EVALUATION RESULTS WILL BE ACCURATE, COMPLETE, OR TIMELY; OR THAT ANY ATTESTATION OR AUTHORIZATION GENERATED THROUGH NEWTON PROTOCOL WILL SATISFY ANY LEGAL OR REGULATORY STANDARD APPLICABLE TO YOUR APPLICATION OR YOUR END USERS.**
+
+**YOU ASSUME FULL RESPONSIBILITY FOR DETERMINING WHETHER USE OF THE DEVELOPER SERVICES AND NEWTON PROTOCOL IS APPROPRIATE FOR YOUR APPLICATION AND FOR YOUR COMPLIANCE WITH ALL APPLICABLE LAWS AND REGULATIONS.**
+
+## 12. Limitation of Liability
+
+**TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL THE PLATFORM OPERATOR, ITS AFFILIATES, DIRECTORS, OFFICERS, EMPLOYEES, AGENTS, LICENSORS, OR SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS OPPORTUNITIES, ARISING OUT OF OR IN CONNECTION WITH THESE DEVELOPER TERMS OR YOUR USE OF OR INABILITY TO USE THE DEVELOPER SERVICES, EVEN IF THE PLATFORM OPERATOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.**
+
+**TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE PLATFORM OPERATOR'S TOTAL AGGREGATE LIABILITY TO YOU ARISING OUT OF OR IN CONNECTION WITH THESE DEVELOPER TERMS, WHETHER IN CONTRACT, TORT, OR OTHERWISE, WILL NOT EXCEED THE GREATER OF (A) THE AMOUNTS YOU HAVE PAID TO THE PLATFORM OPERATOR FOR THE DEVELOPER SERVICES IN THE TWELVE MONTHS PRECEDING THE CLAIM, OR (B) ONE HUNDRED UNITED STATES DOLLARS (US$100).**
+
+**THE LIMITATIONS IN THIS SECTION REFLECT A REASONABLE ALLOCATION OF RISK BETWEEN THE PARTIES AND ARE A FUNDAMENTAL ELEMENT OF THE BASIS OF THE BARGAIN BETWEEN YOU AND THE PLATFORM OPERATOR. SOME JURISDICTIONS DO NOT PERMIT THE EXCLUSION OR LIMITATION OF CERTAIN DAMAGES, SO SOME OF THESE LIMITATIONS MAY NOT APPLY TO YOU.**
+
+## 13. Indemnification
+
+You agree to defend, indemnify, and hold harmless the Platform Operator and its affiliates, directors, officers, employees, agents, and licensors from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising out of or in connection with:
+
+- your Application, including any end user's use of your Application;
+- your violation of these Developer Terms or the General Terms;
+- your violation of any applicable law or regulation, including data protection laws or sanctions regulations;
+- your infringement of any third-party intellectual property or other rights; or
+- your breach of any representation or warranty made in these Developer Terms.
+
+The Platform Operator reserves the right to assume exclusive control of the defense of any matter subject to indemnification at your expense, and you agree to cooperate with us in that defense.
+
+## 14. Modifications to Developer Terms
+
+We reserve the right to modify these Developer Terms at any time. If we make material changes, we will provide notice by posting the updated Developer Terms to our developer documentation, by email, or by other reasonable means. Your continued access to or use of the Developer Services after the effective date of any modifications constitutes your acceptance of the updated Developer Terms.
+
+If you do not agree to any modifications, you must stop using the Developer Services. We may also modify, suspend, or discontinue any aspect of the Developer Services at any time, with or without notice, and without liability to you.
+
+## 15. Governing Law and Dispute Resolution
+
+These Developer Terms are governed by and construed in accordance with the laws of the British Virgin Islands, without regard to conflict of law principles.
+
+The dispute resolution provisions of the General Terms, including the mandatory arbitration clause, the class action waiver, and the opt-out procedure, apply to disputes arising under or in connection with these Developer Terms as if fully set forth here. Please review Section 15 of the General Terms carefully.
+
+For clarity, the exclusive jurisdiction for any disputes not subject to arbitration under the General Terms is the courts of the British Virgin Islands, and each party waives any objection to jurisdiction or venue in those courts.
+
+## 16. Miscellaneous
+
+These Developer Terms, together with the General Terms and any other agreements or policies incorporated by reference, constitute the entire agreement between you and the Platform Operator with respect to the Developer Services and supersede any prior agreements or understandings on the same subject matter.
+
+If any provision of these Developer Terms is found to be invalid, unlawful, or unenforceable, that provision will be limited or severed to the minimum extent necessary, and the remaining provisions will continue in full force and effect.
+
+The Platform Operator's failure to enforce any right or provision of these Developer Terms will not constitute a waiver of that right or provision.
+
+You may not assign or transfer any of your rights or obligations under these Developer Terms without the prior written consent of the Platform Operator. The Platform Operator may assign these Developer Terms or any of its rights or obligations hereunder at any time without notice or consent.
+
+Nothing in these Developer Terms creates a joint venture, partnership, employment, agency, or franchise relationship between you and the Platform Operator.
+
+Notices to the Platform Operator under these Developer Terms should be sent to legal@newt.foundation. Notices to you will be sent to the email address associated with your developer account, or as otherwise provided in the General Terms.
+
+These Developer Terms are in addition to, and do not replace, any obligations you have under applicable law. Where applicable law imposes obligations that cannot be waived by contract, those obligations apply notwithstanding anything to the contrary in these Developer Terms.
+
+If you have questions about these Developer Terms, please contact us at legal@newt.foundation or by mail at: Magic Newton Operations Ltd., 2nd Floor, Jayla Place, Road Town, Tortola, British Virgin Islands.
