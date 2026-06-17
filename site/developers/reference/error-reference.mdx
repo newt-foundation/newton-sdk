@@ -19,7 +19,7 @@ This page documents all error codes and messages you may encounter when interact
 
 | Code | Name | Description | Resolution |
 |------|------|-------------|------------|
-| -32615 | PolicyEvaluationError | Rego policy evaluation failed | Check Rego syntax, verify `data.wasm` and `data.params` are populated correctly |
+| -32615 | PolicyEvaluationError | Rego policy evaluation failed | Check Rego syntax, verify `data.data` and `data.params` are populated correctly |
 | -32616 | ContractError | Smart contract interaction failed | Verify contract addresses are correct and contracts are deployed |
 | -32617 | OperatorNotRegistered | Calling operator is not registered with the AVS | Ensure operator registration is complete |
 | -32618 | IncompatiblePolicyVersion | Policy version mismatch between client and protocol | Run `newton-cli version check-compatibility` and migrate if needed |

@@ -35,7 +35,7 @@ A **Policy** is a Rego program that defines the conditions an Intent must meet t
 
 Policies can reference two data sources:
 - **`data.params`** — configuration parameters set by the PolicyClient owner (e.g., spend limits, allowlists)
-- **`data.wasm`** — runtime data fetched by PolicyData WASM oracles (e.g., token prices, KYC status)
+- **`data.data`** — runtime data fetched by PolicyData WASM oracles (e.g., token prices, KYC status)
 
 You write policies in [Step 2 of the integration guide](/developers/guides/writing-policies). See the [Rego syntax guide](/developers/advanced/rego-syntax-guide) for language reference.
 
@@ -68,7 +68,7 @@ A **PolicyClient** is a smart contract that validates attestations before execut
 
 ### PolicyData
 
-A **PolicyData** oracle is a WASM component that fetches or computes external data at evaluation time. The output is fed to the Rego policy as `data.wasm`. Examples include fetching token prices, checking sanctions lists, or verifying KYC status. See [Writing Data Oracles](/developers/guides/writing-data-oracles) to build one.
+A **PolicyData** oracle is a WASM component that fetches or computes external data at evaluation time. The output is fed to the Rego policy as `data.data`. Examples include fetching token prices, checking sanctions lists, or verifying KYC status. See [Writing Data Oracles](/developers/guides/writing-data-oracles) to build one.
 
 ### Operator
 

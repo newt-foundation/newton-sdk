@@ -246,47 +246,16 @@ submitEvaluationRequest(
 Evaluates an intent directly through the gateway without waiting for on-chain task response confirmation. Results are intended for use with `validateAttestationDirect` on `NewtonPolicyClient` (`NewtonProverTaskManagerShared`).
 
 ```ts
-const domain = await readEip712Domain(policyClient, publicClient);
-if (!domain) {
-  throw new Error(
-    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
-  );
-}
-
-const intent = {
-  from: account.address,
-  to: '0x...',
-  value: '0x0',
-  data: '0x',
-  chainId: 11155111,
-  functionSignature: '0x',
-} as const;
-
-const intentSignature = await walletClient.signTypedData({
-  account,
-  domain,
-  types: {
-    Intent: [
-      { name: 'from', type: 'address' },
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' },
-      { name: 'data', type: 'bytes' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'functionSignature', type: 'bytes' },
-    ],
-  },
-  primaryType: 'Intent',
-  message: {
-    ...intent,
-    value: BigInt(intent.value),
-    chainId: BigInt(intent.chainId),
-  },
-});
-
 const { result } = await walletClient.evaluateIntentDirect({
-  policyClient,
-  intent,
-  intentSignature,
+  policyClient: '0x...',
+  intent: {
+    from: '0x...',
+    to: '0x...',
+    value: '0x0',
+    data: '0x...',
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    functionSignature: '0x...',
+  },
   timeout: 30000,
 });
 
@@ -317,7 +286,6 @@ evaluateIntentDirect(
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
 | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia) or `84532` (Base Sepolia). |
-| `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
 | `timeout`      | `number`           | No       | Request timeout in milliseconds                                                                    |
 
 **Returns:**
@@ -326,59 +294,6 @@ evaluateIntentDirect(
 - `result.task` (`Task`) -- The full task object
 - `result.taskResponse` -- The raw task response from the operator
 - `result.blsSignature` -- The BLS aggregate signature
-
-<Warning>
-Some policy clients and identity-backed flows require `intentSignature` even though it is optional in the base request type. If you omit it or pass `"0x"`, the gateway can fail before policy evaluation with `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
-</Warning>
-
-Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
-
-```ts
-import type { Address } from 'viem';
-
-const EIP712_DOMAIN_ABI = [
-  {
-    type: 'function',
-    name: 'eip712Domain',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [
-      { name: 'fields', type: 'bytes1' },
-      { name: 'name', type: 'string' },
-      { name: 'version', type: 'string' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'verifyingContract', type: 'address' },
-      { name: 'salt', type: 'bytes32' },
-      { name: 'extensions', type: 'uint256[]' },
-    ],
-  },
-] as const;
-
-export async function readEip712Domain(
-  policyClient: Address,
-  publicClient,
-) {
-  try {
-    const [, name, version, chainId, verifyingContract] =
-      await publicClient.readContract({
-        address: policyClient,
-        abi: EIP712_DOMAIN_ABI,
-        functionName: 'eip712Domain',
-      });
-
-    return {
-      name,
-      version,
-      chainId: Number(chainId),
-      verifyingContract,
-    };
-  } catch {
-    return null;
-  }
-}
-```
-
-If you deploy a custom policy client that does not implement EIP-5267, hardcoded signing domains must match the contract's `EIP712(name, version)` constructor values and the deployed policy client address.
 
 ---
 

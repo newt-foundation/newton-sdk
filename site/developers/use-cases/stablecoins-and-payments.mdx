@@ -43,8 +43,8 @@ package newton
 default allow = false
 
 allow if {
-    not data.wasm.is_sanctioned_sender
-    not data.wasm.is_sanctioned_recipient
+    not data.data.is_sanctioned_sender
+    not data.data.is_sanctioned_recipient
 }
 ```
 

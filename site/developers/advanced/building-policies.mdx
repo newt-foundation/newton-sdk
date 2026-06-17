@@ -13,7 +13,7 @@ data.params.attribute_policy_parameter1
 
 # Data WASM attributes
 # e.g., if your data WASM returns {attribute_wasm_data1: string}
-data.wasm.attribute_datawasm_data1
+data.data.attribute_datawasm_data1
 
 # Intent attributes
 input.from
@@ -66,9 +66,9 @@ token := input.decoded_function_arguments[0]
 amount_out := to_number(input.decoded_function_arguments[1])
 allowed_action := data.params.allowed_actions[input.chain_id]
 whitelist_token := data.params.token_whitelist[input.chain_id]
-base_symbol := data.wasm.base_symbol
-price := to_number(data.wasm.price)
-quote_symbol := data.wasm.quote_symbol
+base_symbol := data.data.base_symbol
+price := to_number(data.data.price)
+quote_symbol := data.data.quote_symbol
 ```
 
 ---

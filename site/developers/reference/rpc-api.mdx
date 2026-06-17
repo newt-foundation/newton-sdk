@@ -11,18 +11,12 @@ For client-side helpers that wrap these RPC calls, see the [SDK Reference](/deve
 
 | Network | Environment | URL |
 |---------|-------------|-----|
-| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz/rpc` |
-| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
-| Mainnet | Production | `https://gateway.newton.xyz/rpc` |
-| Mainnet | Staging | `https://gateway.stagef.newton.xyz/rpc` |
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
+| Mainnet | Production | `https://gateway.newton.xyz` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
 
 **Protocol:** JSON-RPC 2.0 over HTTPS
-
-<Note>
-Gateway JSON-RPC requests must be sent to the `/rpc` endpoint. Requests to the host root, such as `https://gateway.testnet.newton.xyz`, return a 404 response instead of a JSON-RPC response.
-</Note>
-
-Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON-RPC 2.0 specification, but the Newton Gateway expects request IDs as strings.
 
 <CodeGroup>
 ```json Request Format
@@ -30,7 +24,7 @@ Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON
   "jsonrpc": "2.0",
   "method": "<method_name>",
   "params": { ... },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": "<request_id>"
 }
 ```
 
@@ -78,10 +72,10 @@ API keys are issued with specific permissions. See [Getting an API Key](/develop
 ### Example
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_api_key_here" \
-  -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
+  -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":1}'
 ```
 
 ### Policy Client Ownership
@@ -151,25 +145,6 @@ Following Ethereum JSON-RPC conventions:
 0x                                           (empty data)
 ```
 
-### WASM Arguments
-
-`wasm_args` values are hex-encoded UTF-8 JSON strings.
-
-| Method | `wasm_args` format |
-|---|---|
-| SDK `evaluateIntentDirect` | `0x`-prefixed hex string; the SDK normalizes the value before sending it to the Gateway |
-| `newt_createTask` RPC | Hex string accepted by the Gateway; examples use the canonical `0x` prefix |
-| `newt_simulatePolicy` RPC | `0x`-prefixed hex string in each `policy_data[].wasm_args` entry |
-| `newt_simulatePolicyData` RPC | `0x`-prefixed hex string |
-| `newt_simulatePolicyDataWithClient` RPC | `0x`-prefixed hex string |
-
-```typescript
-const wasmArgs = `0x${Buffer.from(
-  JSON.stringify({ timezone: "Etc/UTC" }),
-  "utf8",
-).toString("hex")}`;
-```
-
 ### Address Format
 
 Ethereum addresses are 20-byte hex strings with `0x` prefix:
@@ -195,7 +170,7 @@ Represents a transaction intent to be evaluated against a policy.
 | `value` | `Quantity` | Yes | Wei value to transfer (hex encoded) |
 | `data` | `Data` | Yes | Transaction calldata (hex encoded) |
 | `chain_id` | `Quantity` | Yes | Target chain ID (hex encoded) |
-| `function_signature` | `Data` | Yes | Hex-encoded human-readable ABI signature used for calldata decoding, or `"0x"` when the intent has no calldata |
+| `function_signature` | `Data` | Yes | ABI-encoded function signature (hex encoded) |
 
 <Expandable title="TaskIntent Example">
 ```json
@@ -203,21 +178,12 @@ Represents a transaction intent to be evaluated against a policy.
   "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
   "value": "0x0",
-  "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+  "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
   "chain_id": "0xaa36a7",
   "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
 }
 ```
 </Expandable>
-
-#### Function signature examples
-
-`function_signature` is not the 4-byte selector. For contract calls, hex-encode the human-readable ABI signature without the `function ` prefix, for example `transfer(address,uint256)`. For native ETH transfers or any intent with no calldata, set both `data` and `function_signature` to `"0x"`.
-
-| Intent kind | `data` | `function_signature` |
-|---|---|---|
-| Native ETH transfer | `"0x"` | `"0x"` |
-| Contract call | ABI-encoded calldata | Hex-encoded signature, for example `transfer(address,uint256)` |
 
 ### PolicyDataInput
 
@@ -265,96 +231,13 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
 | `intent` | `TaskIntent` | Yes | Transaction intent to evaluate |
-| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Optional in the base schema, but required by policies and identity flows that consume `input.intent_signature` |
+| `intent_signature` | `Data` | No | Hex-encoded signature of the intent |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes, e.g., `"00"` for quorum 0) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
 | `timeout` | `Number` | No | Timeout in seconds (default: 30) |
 | `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 | `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
-
-<Warning>
-Some policy clients and identity-backed flows require `intent_signature` even though the RPC schema marks it optional. Passing an empty signature such as `"0x"` can fail before policy evaluation with an error like `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
-</Warning>
-
-Sign the exact intent with EIP-712 before calling `newt_createTask`. For PolicyClients that expose EIP-5267, read the signing domain from the contract's `eip712Domain()` method so the signature is bound to the deployed client:
-
-```ts
-const EIP712_DOMAIN_ABI = [
-  {
-    type: "function",
-    name: "eip712Domain",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [
-      { name: "fields", type: "bytes1" },
-      { name: "name", type: "string" },
-      { name: "version", type: "string" },
-      { name: "chainId", type: "uint256" },
-      { name: "verifyingContract", type: "address" },
-      { name: "salt", type: "bytes32" },
-      { name: "extensions", type: "uint256[]" },
-    ],
-  },
-] as const;
-
-async function readEip712Domain(policyClient, publicClient) {
-  try {
-    const [, name, version, chainId, verifyingContract] =
-      await publicClient.readContract({
-        address: policyClient,
-        abi: EIP712_DOMAIN_ABI,
-        functionName: "eip712Domain",
-      });
-
-    return {
-      name,
-      version,
-      chainId: Number(chainId),
-      verifyingContract,
-    };
-  } catch {
-    return null;
-  }
-}
-
-const domain = await readEip712Domain(policyClient, publicClient);
-if (!domain) {
-  throw new Error(
-    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
-  );
-}
-
-const intentSignature = await walletClient.signTypedData({
-  account,
-  domain,
-  types: {
-    Intent: [
-      { name: "from", type: "address" },
-      { name: "to", type: "address" },
-      { name: "value", type: "uint256" },
-      { name: "data", type: "bytes" },
-      { name: "chainId", type: "uint256" },
-      { name: "functionSignature", type: "bytes" },
-    ],
-  },
-  primaryType: "Intent",
-  message: {
-    ...intent,
-    value: BigInt(intent.value),
-    chainId: BigInt(intent.chainId),
-  },
-});
-```
-
-For manual fallback, the typed-data domain must match the policy client's Solidity `EIP712(name, version)` constructor values and deployed address:
-
-| Solidity / deployment value | EIP-712 domain field |
-|---|---|
-| `EIP712("NewtonPolicyWallet", "1")` first argument | `name: "NewtonPolicyWallet"` |
-| `EIP712("NewtonPolicyWallet", "1")` second argument | `version: "1"` |
-| Target chain | `chainId` |
-| Deployed PolicyClient address | `verifyingContract` |
 
 #### Returns
 
@@ -389,14 +272,13 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
+      "function_signature": "0x627579"
     },
-    "intent_signature": "0x...",
     "timeout": 30
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -439,7 +321,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
     "error": null,
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -453,7 +335,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
     "error": "Policy evaluation failed: insufficient permissions",
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -472,7 +354,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
 | `intent` | `TaskIntent` | Yes | Transaction intent to evaluate |
-| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
+| `intent_signature` | `Data` | No | Hex-encoded signature of the intent |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
@@ -500,13 +382,12 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+      "data": "0x28dca9f7",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
-    },
-    "intent_signature": "0x..."
+      "function_signature": "0x627579"
+    }
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -519,7 +400,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
     "message": "Task submitted for async processing",
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -612,7 +493,7 @@ Forwards a policy simulation request to an available operator and returns the re
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
       "chain_id": "31337",
       "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
     },
@@ -631,7 +512,7 @@ Forwards a policy simulation request to an available operator and returns the re
       ]
     }
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </Expandable>
@@ -649,7 +530,7 @@ Forwards a policy simulation request to an available operator and returns the re
     "error": null,
     "details": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -720,7 +601,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "policy_data_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
     "envelope": "<json-serialized-hpke-secure-envelope>"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -739,7 +620,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     },
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -751,7 +632,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "schema": null,
     "error": "policy_client is owned by a different user"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -763,7 +644,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
     "schema": null,
     "error": "Secrets upload validation failed: missing required field 'API_KEY'"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -828,7 +709,7 @@ The `policy_data` object contains:
     "secrets": "<base64-encoded-encrypted-secrets>",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -840,7 +721,7 @@ The `policy_data` object contains:
     "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -860,7 +741,7 @@ The `policy_data` object contains:
     },
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -872,7 +753,7 @@ The `policy_data` object contains:
     "policy_data": null,
     "error": "WASM execution failed: missing required secret 'API_KEY'"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -927,7 +808,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "policy_client": "0x1234567890123456789012345678901234567890",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -947,7 +828,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     },
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -958,7 +839,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "code": -32002,
     "message": "Authorization failed: policy client 0x1234... is owned by another user"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -970,7 +851,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
     "policy_data": null,
     "error": "No secrets found for policy_client 0x1234... and policy_data 0xaaaa.... Upload secrets via newt_storeEncryptedSecrets first, or use newt_simulatePolicyData with directly provided secrets."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -979,7 +860,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 ### newt_simulatePolicy
 
-Simulates full Rego policy evaluation locally. This is the final testing step before deploying a policy on-chain. To simulate a multi-oracle policy, pass one entry per oracle in `policy_data` — each oracle's output is merged into `data.wasm` under its namespace. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles).
+Simulates full Rego policy evaluation locally. This is the final testing step before deploying a policy on-chain.
 
 **Permission:** `RpcRead`
 
@@ -1010,7 +891,7 @@ Before using this endpoint:
 | `entrypoint` | `String` | No | Rego rule path (default: `"policy.allow"`) |
 | `policy_data` | `Array<PolicyDataInput>` | Yes | PolicyData sources with optional wasm_args |
 | `policy_params` | `Object` | No | Policy parameters JSON (default: `{}`) |
-| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
+| `intent_signature` | `Data` | No | Hex-encoded intent signature |
 
 #### Returns
 
@@ -1027,7 +908,7 @@ The `evaluation_result` object contains:
 |---|---|---|
 | `policy` | `String` | Evaluated policy source |
 | `parsed_intent` | `Object` | Parsed and decoded intent |
-| `policy_params_and_data` | `Object` | Combined `{ params, wasm }` context — `params` is your configured parameters, `wasm` is the merged oracle output |
+| `policy_params_and_data` | `Object` | Combined `{ params, data }` context |
 | `entrypoint` | `String` | Evaluated Rego entrypoint |
 | `result` | `Any` | Rego evaluation result (`true`, `false`, or complex value) |
 | `expire_after` | `Number` | Expiration time (0 for simulation) |
@@ -1055,14 +936,14 @@ Each entry in `missing_secrets`:
   "method": "newt_simulatePolicy",
   "params": {
     "policy_client": "0x1234567890123456789012345678901234567890",
-    "policy": "package trading\n\ndefault allow := false\n\nallow if {\n    input.value == 0\n    data.wasm.price < data.params.max_price\n}",
+    "policy": "package trading\n\ndefault allow := false\n\nallow if {\n    input.value == 0\n    data.data.price < data.params.max_price\n}",
     "intent": {
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+      "data": "0x28dca9f7000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe22",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
+      "function_signature": "0x627579"
     },
     "entrypoint": "trading.allow",
     "policy_data": [
@@ -1075,7 +956,7 @@ Each entry in `missing_secrets`:
       "max_price": 50000
     }
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </Expandable>
@@ -1100,7 +981,7 @@ Each entry in `missing_secrets`:
       },
       "policy_params_and_data": {
         "params": { "max_price": 50000 },
-        "wasm": { "price": 42000.50, "base_symbol": "BTC" }
+        "data": { "price": 42000.50, "base_symbol": "BTC" }
       },
       "entrypoint": "trading.allow",
       "result": true,
@@ -1108,7 +989,7 @@ Each entry in `missing_secrets`:
     },
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1127,7 +1008,7 @@ Each entry in `missing_secrets`:
     },
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1140,7 +1021,7 @@ Each entry in `missing_secrets`:
     "error": "Rego evaluation failed: undefined rule 'trading.allow'",
     "error_details": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1151,7 +1032,7 @@ Each entry in `missing_secrets`:
     "code": -32002,
     "message": "Authorization failed: policy client 0x1234... is owned by another user"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1181,7 +1062,7 @@ Each entry in `missing_secrets`:
       ]
     }
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </Expandable>
@@ -1224,7 +1105,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
     "secret": "your-hmac-secret-here",
     "failure_types": ["timeout", "quorum_not_reached", "onchain_submission_failed"]
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1235,7 +1116,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
     "success": true,
     "message": "Webhook registered for https://api.example.com/newton/webhook"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1256,7 +1137,7 @@ Removes the webhook configuration for this API key.
   "jsonrpc": "2.0",
   "method": "newt_unregisterWebhook",
   "params": {},
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1267,7 +1148,7 @@ Removes the webhook configuration for this API key.
     "success": true,
     "message": "Webhook unregistered"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1495,7 +1376,7 @@ None.
   "jsonrpc": "2.0",
   "method": "newt_getPrivacyPublicKey",
   "params": {},
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1507,7 +1388,7 @@ None.
     "key_type": "x25519",
     "encryption_suite": "HPKE-Base-X25519-HKDF-SHA256-ChaCha20Poly1305"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1542,7 +1423,7 @@ None.
   "jsonrpc": "2.0",
   "method": "newt_getSecretsPublicKey",
   "params": {},
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1554,7 +1435,7 @@ None.
     "key_type": "x25519",
     "encryption_suite": "HPKE-Base-X25519-HKDF-SHA256-ChaCha20Poly1305"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1603,7 +1484,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
     "identity_domain": "0x...",
     "chain_id": 11155111
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1615,7 +1496,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
     "gateway_signature": "0x...",
     "deadline": 1705127056
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1654,7 +1535,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
   "params": {
     "data_ref_id": "0xabcdef1234567890..."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1666,7 +1547,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
     "identity_domain": "0x...",
     "identity_owner": "0x1234567890abcdef1234567890abcdef12345678"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 </CodeGroup>
@@ -1700,7 +1581,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
     "chain_id": 11155111
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1712,7 +1593,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
     "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
     "error": null
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1743,7 +1624,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
   "params": {
     "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 
@@ -1754,7 +1635,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
     "data_type": "confidential"
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": 1
 }
 ```
 

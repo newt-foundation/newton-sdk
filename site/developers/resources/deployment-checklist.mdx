@@ -23,7 +23,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --wasm-file policy.wasm \
       --input-json '{...}'
     ```
-    Confirm the output matches your policy's `data.wasm` expectations.
+    Confirm the output matches your policy's `data.data` expectations.
   </Step>
   <Step title="Gateway simulation succeeds">
     Run `newt_simulateTask` with realistic intent parameters and verify the response includes a valid attestation.
@@ -147,7 +147,7 @@ newton-cli version info
 newton-cli version check-compatibility
 
 # Run a final simulation
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -164,7 +164,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
         "function_signature": "0x"
       }
     },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+    "id": 1
   }'
 ```
 

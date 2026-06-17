@@ -60,7 +60,7 @@ Create `~/.newton/newton-cli.toml` for persistent defaults:
 
 ```toml
 eth_rpc_url = "https://base-sepolia.gateway.tenderly.co"
-gateway_url = "https://gateway.testnet.newton.xyz/rpc"
+gateway_url = "https://gateway.testnet.newton.xyz"
 
 [signer]
 private_key = "0x..."
@@ -199,7 +199,7 @@ newton-cli --chain-id 84532 policy-data simulate \
 newton-cli --chain-id 84532 policy-data simulate \
   --policy-data-address 0x... \
   --wasm-args '{"base_symbol":"BTC"}' \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -266,7 +266,7 @@ newton-cli --chain-id 84532 policy simulate \
   --intent-to 0xb1ad...36b69 \
   --intent-value 0x0 \
   --intent-data 0x... \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -488,7 +488,7 @@ Fetch the gateway's HPKE public key for client-side encryption.
 
 ```bash
 newton-cli --chain-id 84532 privacy get-public-key \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -509,7 +509,7 @@ newton-cli --chain-id 84532 privacy identity upload \
   --data-file identity.json \
   --domain kyc \
   --policy-client 0x... \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -528,7 +528,7 @@ Upload provider-managed confidential data (blacklists, allowlists).
 newton-cli --chain-id 84532 privacy confidential upload \
   --data-file blacklist.json \
   --domain blacklist \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -547,7 +547,7 @@ Encrypt ephemeral data for inline use in task requests. Ephemeral data exists on
 newton-cli --chain-id 84532 privacy ephemeral encrypt \
   --data '{"credit_score": 750}' \
   --policy-client 0x... \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
+  --gateway-url https://gateway.testnet.newton.xyz \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -586,7 +586,7 @@ newton-cli --chain-id 84532 task submit-evaluation-request \
   --intent-data 0x... \
   --intent-chain-id 84532 \
   --api-key $NEWTON_API_KEY \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc
+  --gateway-url https://gateway.testnet.newton.xyz
 ```
 
 The response includes `signature_data` for on-chain attestation validation.

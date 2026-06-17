@@ -104,9 +104,8 @@ mkdir -p policy-files
 The WIT (WebAssembly Interface Types) file defines the interface your WASM component implements. Create `newton-provider.wit`:
 
 ```
-package newton:provider@0.2.0;
+package newton:provider@0.1.0;
 
-// HTTP host interface
 interface http {
     record http-request {
         url: string,
@@ -124,82 +123,29 @@ interface http {
     fetch: func(request: http-request) -> result<http-response, string>;
 }
 
-// Secrets host interface
-interface secrets {
-    record secret-response {
-        // Raw bytes of the decrypted secrets JSON object.
-        // The scope (policy_client, policy_data) is bound by the host execution context.
-        value: list<u8>,
-    }
-
-    get: func() -> result<secret-response, string>;
-}
-
-// [NEW] TLSNotary verification interface
-interface tlsn {
-    record verified-data {
-        /// Authenticated server name (e.g. "api.x.com")
-        server-name: string,
-        /// Unix timestamp (seconds) of the TLS connection
-        connection-time: u64,
-        /// Sent transcript bytes (unauthenticated bytes masked as 0x58 'X')
-        sent-transcript: list<u8>,
-        /// Received transcript bytes (unauthenticated bytes masked as 0x58 'X')
-        received-transcript: list<u8>,
-        /// SHA-256 fingerprint of the presentation notary verifying key, hex-encoded.
-        notary-key-fingerprint: string,
-    }
-
-    /// Download a TLSNotary Presentation from IPFS by CID, verify it, and return authenticated data.
-    ///
-    /// The host implementation:
-    ///   1. Downloads from IPFS (5 MiB cap — returns error if exceeded)
-    ///   2. Re-verifies the CID multihash against the downloaded bytes (defends against malicious IPFS gateways)
-    ///   3. BCS-deserializes the bytes into a Presentation
-    ///   4. Calls verify_presentation() from newton-tls-notary
-    ///
-    /// This bypasses the WASM HTTP 1 MiB limit since the host fetches directly.
-    verify-from-cid: func(proof-cid: string) -> result<verified-data, string>;
-
-    /// Verify a TLSNotary Presentation from raw BCS-serialized bytes.
-    ///
-    /// Useful for small proofs or testing where bytes are already available.
-    verify: func(presentation-bytes: list<u8>) -> result<verified-data, string>;
-}
-
 world newton-provider {
     import http;
-    import secrets;
-    import tlsn;
-
     export run: func(input: string) -> result<string, string>;
 }
 ```
 
 ### 1.2 Create `policy.js`
 
-The WASM oracle is a JavaScript file that exports a `run` function. Its sole responsibility is **data retrieval** — fetch external data and return it as structured JSON. Do not encode policy decisions here; all allow/deny logic belongs in Rego. The return value becomes available in Rego as `data.wasm.*`.
+The WASM oracle is a JavaScript file that exports a `run` function. Its sole responsibility is **data retrieval** — fetch external data and return it as structured JSON. Do not encode policy decisions here; all allow/deny logic belongs in Rego. The return value becomes available in Rego as `data.data.*`.
 
 Create `policy.js` (skeleton — replace the body with your actual data fetching logic):
 
 ```js
-import { fetch as httpFetch } from "newton:provider/http@0.2.0";
-
 export function run(wasm_args) {
   const wasmArgs = JSON.parse(wasm_args);
 
-  const result = httpFetch({
+  const response = httpFetch({
     url: `https://api.example.com/price?token=${wasmArgs.token_address}`,
     method: "GET",
     headers: [],
     body: null
   });
 
-  if (result.tag === "err") {
-    return JSON.stringify({ error: result.val });
-  }
-
-  const response = result.val;
   const body = JSON.parse(
     new TextDecoder().decode(new Uint8Array(response.body))
   );
@@ -212,11 +158,7 @@ export function run(wasm_args) {
 }
 ```
 
-Import `httpFetch` from `newton:provider/http@0.2.0` at the top level of your module. The function returns a tagged result: when `result.tag === "err"`, `result.val` contains the error string; otherwise `result.val` is the HTTP response with `status`, `headers`, and `body`. Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
-
-> **Secrets:** if your oracle needs an API key, read it via the `newton:provider/secrets@0.2.0` host interface: `import { get } from "newton:provider/secrets@0.2.0"`, call `get()`, and decode the returned `value` (a `list<u8>`) as the decrypted secrets JSON. Upload the key with `newton-cli secrets upload` (scoped per `policy_data_address`). Full walkthrough: [Uploading & Accessing Secrets in Oracles](https://docs.newton.xyz/developers/guides/secrets-in-oracles).
->
-> **Multi-oracle policies:** to gate one action on several signals, wrap each oracle's output under a unique pack-id key (`return JSON.stringify({ my_oracle: {...} })`). The network merges every oracle's output into `data.wasm`, and Rego reads `data.wasm.<pack-id>.*`. See [Chaining Multiple Data Oracles](https://docs.newton.xyz/developers/guides/chaining-data-oracles) and the prebuilt [Policy Packs](https://docs.newton.xyz/developers/guides/policy-packs) (vaults.fyi, Webacy, RedStone, Chainalysis). Deploy multi-oracle policies via the [dashboard](https://docs.newton.xyz/developers/guides/using-the-dashboard) — the CLI binds a single `--policy-data-address` per policy today.
+The `httpFetch` built-in is provided by the Newton WASM runtime (imported from the WIT interface). Return only the raw data fields your Rego rules need — keep the oracle free of any conditional logic.
 
 ### 1.3 Build `policy.wasm` using `jco componentize`
 
@@ -246,14 +188,14 @@ max_value := data.params.max_value_wei
 allowed_recipients := data.params.allowed_recipients
 ```
 
-#### WASM data output (`data.wasm.*`)
+#### WASM data output (`data.data.*`)
 
-The JSON object returned by your WASM oracle's `run` function. Newton runs the WASM component before evaluating Rego, and the returned fields are available under `data.wasm`. When a policy references multiple oracles, each oracle namespaces its output under its pack id (`data.wasm.<pack-id>.*`) — see the Multi-oracle policies note below.
+The JSON object returned by your WASM oracle's `run` function. Newton runs the WASM component before evaluating Rego, and the returned fields are available under `data.data`.
 
 ```rego
 # Access data fetched by your WASM oracle
-token_price := data.wasm.price_usd
-last_updated := data.wasm.last_updated
+token_price := data.data.price_usd
+last_updated := data.data.last_updated
 ```
 
 #### Intent attributes (`input.*`)
@@ -413,7 +355,7 @@ is_whitelisted_recipient if {
 
 # Check token price from WASM oracle is below max
 price_acceptable if {
-    data.wasm.price_usd <= data.params.max_price_usd
+    data.data.price_usd <= data.params.max_price_usd
 }
 
 # Check transaction value is within limit
@@ -449,7 +391,7 @@ default allow := false
 # All conditions must hold for a transaction to be allowed
 
 price_acceptable if {
-    data.wasm.price_usd <= data.params.max_price_usd
+    data.data.price_usd <= data.params.max_price_usd
 }
 
 value_within_limit if {
@@ -566,7 +508,7 @@ Expected output (for the skeleton `policy.js`):
 }
 ```
 
-This output is what becomes `data.wasm.*` in your Rego rules. Verify the field names match exactly what your Rego policy references before moving on.
+This output is what becomes `data.data.*` in your Rego rules. Verify the field names match exactly what your Rego policy references before moving on.
 
 ### 3.2 Simulate the full policy (`policy simulate`)
 
@@ -1463,15 +1405,15 @@ To test policy rejection, modify `wasmArgs` to return data that would cause a Re
 
 | Network | Environment | URL |
 |---------|-------------|-----|
-| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz/rpc` |
-| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
-| Mainnet | Production | `https://gateway.newton.xyz/rpc` |
-| Mainnet | Staging | `https://gateway.stagef.newton.xyz/rpc` |
+| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz` |
+| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz` |
+| Mainnet | Production | `https://gateway.newton.xyz` |
+| Mainnet | Staging | `https://gateway.stagef.newton.xyz` |
 
 Example curl against the production testnet gateway:
 
 ```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
+curl -X POST https://gateway.testnet.newton.xyz \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
   -d '{
@@ -1488,7 +1430,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
         "function_signature": "0x"
       }
     },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+    "id": 1
   }'
 ```
 
@@ -1508,7 +1450,7 @@ npx jco componentize ...
 ### Simulation failures
 
 - Ensure `CHAIN_ID` is exported: `export CHAIN_ID=11155111`
-- Verify field names in `data.wasm.*` match exactly what your WASM returns — run `policy-data simulate` first and inspect the output
+- Verify field names in `data.data.*` match exactly what your WASM returns — run `policy-data simulate` first and inspect the output
 - The `--entrypoint` flag should be `package_name.rule_name` (e.g., `your_policy.allow`) — do not include the `data.` prefix
 
 ### Foundry deployment issues
@@ -1527,9 +1469,9 @@ The wallet MUST use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` as the Newton T
 
 ### Rego policy always returns `allow: false`
 
-- Verify rule conditions use the correct attribute paths (`data.params.*`, `data.wasm.*`, `input.*`)
+- Verify rule conditions use the correct attribute paths (`data.params.*`, `data.data.*`, `input.*`)
 - Run `policy-data simulate` first and inspect the oracle output — confirm exact field names and value types
-- Do not write decision logic in the oracle and check a boolean flag in Rego (e.g., `allow if { data.wasm.success }`) — all conditions belong in Rego
+- Do not write decision logic in the oracle and check a boolean flag in Rego (e.g., `allow if { data.data.success }`) — all conditions belong in Rego
 - Run `policy simulate` to test the full pipeline with your specific intent values
 - Remember Rego uses `==` for equality checks, not `=`
 

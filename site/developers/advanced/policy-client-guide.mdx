@@ -357,35 +357,11 @@ const intent = {
     value: withdrawAmount,
     data: encodeWithdrawCall(amount, recipient),
     chainId: currentChainId,
-    functionSignature: stringToHexBytes("withdraw(uint256,address)")
+    functionSignature: "withdraw(uint256,address)"
 };
 
-// 2. Read the PolicyClient EIP-712 domain and sign the exact intent
-const domain = await readEip712Domain(vaultAddress, publicClient);
-if (!domain) {
-    throw new Error("This policy client does not expose an EIP-712 domain.");
-}
-
-const intentSignature = await walletClient.signTypedData({
-    account,
-    domain,
-    types: {
-        Intent: [
-            { name: "from", type: "address" },
-            { name: "to", type: "address" },
-            { name: "value", type: "uint256" },
-            { name: "data", type: "bytes" },
-            { name: "chainId", type: "uint256" },
-            { name: "functionSignature", type: "bytes" },
-        ],
-    },
-    primaryType: "Intent",
-    message: {
-        ...intent,
-        value: BigInt(intent.value),
-        chainId: BigInt(intent.chainId),
-    },
-});
+// 2. User signs the intent
+const intentSignature = await wallet.signTypedData(intent);
 
 // 3. Submit to Newton Gateway
 const attestation = await newtonGateway.createTask({
@@ -397,8 +373,6 @@ const attestation = await newtonGateway.createTask({
 // 4. Call your contract with the attestation
 await vault.withdraw(attestation);
 ```
-
-For `functionSignature`, use `"0x"` when `data` is `"0x"` (for example, a native ETH transfer). For contract calls, hex-encode the human-readable ABI signature without the `function ` prefix, such as `withdraw(uint256,address)`. The intent signature domain should come from the deployed PolicyClient's EIP-5267 `eip712Domain()` method when available; if you hardcode it, `name` and `version` must match the contract's `EIP712(name, version)` constructor values and `verifyingContract` must be the PolicyClient address.
 
 ---
 

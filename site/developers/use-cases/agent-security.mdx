@@ -88,8 +88,8 @@ package newton
 default allow = false
 
 allow if {
-    data.wasm.transactions_last_hour < data.params.max_hourly_transactions
-    data.wasm.spend_last_hour < data.params.max_hourly_spend
+    data.data.transactions_last_hour < data.params.max_hourly_transactions
+    data.data.spend_last_hour < data.params.max_hourly_spend
 }
 ```
 
