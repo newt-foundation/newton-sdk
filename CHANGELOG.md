@@ -1,3 +1,23 @@
+# v1.0.2 (Wed Jun 17 2026)
+
+#### 🐛 Bug Fix
+
+- rm table of addresses [#166](https://github.com/newt-foundation/newton-sdk/pull/166) ([@alecsavvy](https://github.com/alecsavvy))
+- docs: update developer terms effective date [#164](https://github.com/newt-foundation/newton-sdk/pull/164) ([@vmathur](https://github.com/vmathur))
+- docs: add developer terms of service [#163](https://github.com/newt-foundation/newton-sdk/pull/163) ([@vmathur](https://github.com/vmathur))
+- docs: clarify intent signature signing [#160](https://github.com/newt-foundation/newton-sdk/pull/160) ([@vmathur](https://github.com/vmathur))
+- pr comments [#160](https://github.com/newt-foundation/newton-sdk/pull/160) ([@alecsavvy](https://github.com/alecsavvy))
+- docs: clarify gateway rpc usage [#160](https://github.com/newt-foundation/newton-sdk/pull/160) ([@vmathur](https://github.com/vmathur))
+- docs update [#160](https://github.com/newt-foundation/newton-sdk/pull/160) ([@alecsavvy](https://github.com/alecsavvy))
+- wit update [#160](https://github.com/newt-foundation/newton-sdk/pull/160) ([@alecsavvy](https://github.com/alecsavvy))
+
+#### Authors: 2
+
+- [@alecsavvy](https://github.com/alecsavvy)
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v1.0.1 (Thu Jun 11 2026)
 
 #### 🐛 Bug Fix
