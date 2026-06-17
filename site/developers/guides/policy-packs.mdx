@@ -22,8 +22,19 @@ Each pack ships:
 Every pack namespaces its output under its **pack id** — its WASM returns `{ "<pack-id>": { ...fields } }` — so multiple packs merge into `data.wasm` without key collisions. Your Rego reads `data.wasm.<pack-id>.*` and `data.params.<pack-id>.*`. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the merge model.
 
 <Note>
-The canonical deployed Policy and PolicyData addresses for every pack on every chain live in the policy-packs repo's `deployments.json`. Always read the address from there for your target chain and environment — addresses below are examples for Ethereum Sepolia (`11155111`).
+The canonical deployed Policy and PolicyData addresses for every pack, chain, and environment live in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) in the [newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) repo. The [Deployed addresses](#deployed-addresses) table below lists current production addresses, but treat `deployments.json` as the source of truth — addresses change on redeploy.
 </Note>
+
+## Deployed addresses
+
+Production `PolicyData` addresses for each pack. These are what you reference when adopting a pack or composing several. Staging (`stagef`) addresses are in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
+
+| Pack | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
+|------|-------------------------------|------------------------|
+| vaults.fyi | `0xb89d568393f3e4d1f2A48B7E979d095E5A82160c` | `0xCb047e80808112E51e0DcAA866311D7CC56D4e35` |
+| Webacy | `0xc6DDEe4D4585518f3Aa4bB24FFF79Ab222396a9e` | `0xa1c0CB602D2a337F6eBdAA8FBa4D92918689E108` |
+| RedStone | `0xEF57d7C9641c8687A193F96A425966207fa7c9b1` | `0x6C9068e1213fD6dba4Eb8A9767dEb5bD320a6885` |
+| Chainalysis | `0x39c217a97809118aBc3C89FfcF54F21993493BE7` | `0x90eE95F6aaF91fCe2538218e58d8df1809E14Aa7` |
 
 ## Catalog
 

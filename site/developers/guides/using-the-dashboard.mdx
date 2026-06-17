@@ -13,12 +13,7 @@ The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for buil
 
 ## Sign in
 
-Go to [dashboard.newton.xyz](https://dashboard.newton.xyz) and sign in with either:
-
-- **Email** — enter your address, then the one-time code sent to your inbox.
-- **Wallet** — connect a wallet and sign a message to link it to your account.
-
-New accounts go through a short onboarding before reaching the editor. You can link a wallet to an email account later to sign on-chain transactions from the dashboard.
+Go to [dashboard.newton.xyz](https://dashboard.newton.xyz) and sign in. You'll need an **email** (for the one-time sign-in code) and a **wallet** (to sign the on-chain transactions for registering and deploying).
 
 ## Generate an API key
 
@@ -26,12 +21,11 @@ Open **API Keys** in the left navigation. Your key is generated and ready to use
 
 ## Create a project
 
-Start a new project and choose:
+Creating a project walks through naming it, choosing a chain (Sepolia or Base Sepolia), setting a PolicyClient, and selecting data oracles. Pick oracles from the built-in [policy packs](/developers/guides/policy-packs) (Chainalysis, vaults.fyi, Webacy, RedStone) or add a custom one by its deployed PolicyData address. Selecting a built-in oracle pre-fills a Rego template, default parameters, and the list of secrets it requires, so you start from a working baseline.
 
-- **Chain** — Sepolia (`11155111`) or Base Sepolia (`84532`).
-- **Data oracles** — pick from the built-in [policy packs](/developers/guides/policy-packs) (Chainalysis, vaults.fyi, Webacy, RedStone) or add a custom oracle by its deployed PolicyData address.
-
-Selecting a built-in oracle pre-fills a Rego template, default parameters, and the list of secrets that oracle requires, so you start from a working baseline rather than a blank file.
+<Note>
+A PolicyClient is required to get into the editor. Either enter the address of an existing one (a contract that inherits `NewtonPolicyClient` — see [Smart Contract Integration](/developers/guides/smart-contract-integration)), or click **Deploy a sample one** to have the dashboard deploy a template `NewtonPolicyWallet` for you.
+</Note>
 
 ## Edit the policy
 
