@@ -1,3 +1,15 @@
+# v1.0.3 (Thu Jun 18 2026)
+
+#### 🐛 Bug Fix
+
+- Add mainnet policy allowlist guidance to docs [#167](https://github.com/newt-foundation/newton-sdk/pull/167) ([@vmathur](https://github.com/vmathur))
+
+#### Authors: 1
+
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v1.0.2 (Wed Jun 17 2026)
 
 #### 🐛 Bug Fix
