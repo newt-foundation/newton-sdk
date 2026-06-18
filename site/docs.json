@@ -132,6 +132,10 @@
               "developers/vaults/policies/webacy",
               "developers/vaults/policies/redstone"
             ]
+          },
+          {
+            "group": "Resources",
+            "pages": ["developers/vaults/resources/legal-terms"]
           }
         ]
       },
