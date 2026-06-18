@@ -1,6 +1,6 @@
 ---
-title: "Overview"
-description: "Newton VaultKit is a coming-soon TypeScript SDK for vault curators that wraps vault-management actions behind Newton policy attestations."
+title: "SDK Overview"
+description: "Newton VaultKit is a TypeScript SDK and Shield contract system for routing vault-manager actions through Newton policy attestations."
 keywords:
   - vault sdk
   - newton vaultkit
@@ -9,17 +9,13 @@ keywords:
   - defi vault guardrails
 ---
 
-<Note>
-  Newton VaultKit is coming soon. The API described here is the target shape for the pre-release SDK and may change before general availability.
-</Note>
+Newton VaultKit is a TypeScript SDK and companion Solidity contract system for vault curators. It routes manager actions through a Newton Policy Protocol attestation gate before the underlying vault receives the call.
 
-Newton VaultKit is a TypeScript SDK for vault curators. It wraps vault-management actions behind Newton policy attestations so the curator's manager role cannot execute actions that violate the configured policy.
-
-The first target integration is Morpho. Curators continue using the vendor SDK they already know, such as `@morpho-org/blue-sdk-viem`, while Newton VaultKit handles policy evaluation and onchain enforcement.
+Curators continue using the vault SDKs and contracts they already know. VaultKit adds a Shield clone between the curator and the vault, packages each action as an exact `Intent`, asks Newton operators to evaluate that intent against the configured policy, and forwards the action only when a valid attestation is available.
 
 ## What It Does
 
-Newton VaultKit turns a vault action into this flow:
+VaultKit turns a vault action into this flow:
 
 ```mermaid
 sequenceDiagram
@@ -30,30 +26,40 @@ sequenceDiagram
     participant Vendor as Vault Protocol
 
     App->>SDK: Call typed vault action
-    SDK->>AVS: Submit intent for policy evaluation
-    AVS-->>SDK: Return policy attestation
-    SDK->>Shield: Execute with attestation
-    Shield->>Vendor: Forward approved action
+    SDK->>AVS: Submit signed intent and policy inputs
+    AVS-->>SDK: Return allow/deny result and attestation data
+    SDK->>Shield: Execute attested intent
+    Shield->>Vendor: Forward approved manager call
 ```
 
-## Target Capabilities
+## Core Pieces
 
-- **Create or attach to a Shield:** `createShield({ owner, vault, pack, params })` predicts a deterministic Shield address for a curator and vault, attaches to an existing Shield when parameters match, or deploys one when needed.
-- **Configure your Policy:** `shield.setParams( params )` and `shield.uploadSecrets( secrets )` functions allow you to configure your policy to fit your needs.
-- **Typed vault actions:** The Shield runtime exposes vendor-specific methods such as `shield.morpho.reallocate(...)` and `shield.morpho.setCap(...)`.
-- **Policy packs:** Open-source policy packs are available in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are exposed as subpath imports like `@newton-xyz/newton-shield-sdk/packs/<name>` with typed parameters and helper queries.
-- **Direct intent evaluation/execution:** `shield.sendCall({ to, data, functionSignature, wasmArgs })` supports any vendor or action even if they do not yet have a first-class module.
-- **Typed errors:** The SDK is expected to expose errors such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.
-- **Browser-safe core:** The target SDK avoids `node:*` imports in the core package.
+- **Shield clones:** One audited implementation per chain, with deterministic per-curator clones deployed through `ShieldFactory`.
+- **Policy packs:** Typed wrappers around Newton policy templates. Packs validate params, prepare `wasmArgs`, and expose per-pack helpers.
+- **Vendor modules:** Typed wrappers for vault-manager actions, starting with Morpho. Vendor modules produce the calldata that the Shield forwards after policy approval.
+- **Generic calls:** `shield.sendCall(...)` supports protocols and manager actions without a first-class vendor module.
+- **Typed errors:** SDK failures map to stable error classes such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.
+- **Browser-safe core:** The main package avoids `node:*` imports. Vendor modules may inherit constraints from the vendor SDKs they wrap.
+
+## Manager Actions Only
+
+VaultKit is for privileged vault operations such as reallocations, cap changes, and other curator or manager calls. End-user deposits and withdrawals still flow through the vault protocol's normal UX unless the vault deliberately routes those actions through a Shield.
+
+## How to Read This Section
+
+- Start with [Getting Started](/developers/vaults/sdk/integration-guide) to install packages, create clients, configure a Shield, and run a Morpho action.
+- Read [Concepts](/developers/vaults/sdk/concepts) if you want the mental model for `createShield`, packs, vendor modules, and `sendCall`.
+- Use [Examples](/developers/vaults/sdk/examples) for copyable integration patterns.
+- Keep [Reference](/developers/vaults/sdk/reference) nearby for parameters, return values, supported chains, and exported errors.
 
 <Card title="Integration Guide" icon="code" href="/developers/vaults/sdk/integration-guide">
-  See how a Morpho curator integration would use Newton VaultKit.
+  Install VaultKit and run a policy-gated vault action.
 </Card>
 
-<Card title="Euler" icon="code" href="/developers/vaults/sdk/euler">
-  Route Euler Earn vault actions through the generic SDK call path.
+<Card title="Concepts" icon="book-open" href="/developers/vaults/sdk/concepts">
+  Understand Shield clients, policy packs, vendor modules, and generic calls.
 </Card>
 
 <Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
-  Review the target API surface, chains, errors, and package structure.
+  Review the API surface, chains, errors, and package structure.
 </Card>

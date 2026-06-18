@@ -1,6 +1,6 @@
 ---
-title: "Reference"
-description: "Target API reference for Newton VaultKit."
+title: "SDK Reference"
+description: "API reference for Newton VaultKit."
 keywords:
   - vault sdk reference
   - newton vaultkit api
@@ -8,10 +8,6 @@ keywords:
   - shield runtime
   - morpho vault sdk
 ---
-
-<Note>
-  Newton VaultKit is coming soon. This reference describes the target API surface and may change before general availability.
-</Note>
 
 ## Package
 
@@ -30,11 +26,11 @@ pnpm add @newton-xyz/newton-shield-sdk viem zod
 | Sepolia | `11155111` |
 | Base Sepolia | `84532` |
 
-Calling `createShield` on an unsupported chain is expected to error before sending a transaction.
+Calling `createShield` on an unsupported chain errors before sending a transaction.
 
 ## `createShield`
 
-Creates or attaches to a Shield for a curator and vault. A newly created ShieldClient requires you to call `setParams` and `uploadSecrets` to configure it.
+Creates or attaches to a Shield for a curator and vault. A newly created Shield client normally requires `setParams(...)` and `uploadSecrets(...)` before it can evaluate the selected policy.
 
 ```typescript
 const shield = await createShield({
@@ -60,42 +56,50 @@ const shield = await createShield({
 
 | Field | Description |
 | --- | --- |
-| `apiKey` | The Newton Protocol Gateway api key. Create one for your project on the [dashboard](https://dashboard.newton.xyz/). |
-| `policyClientAddress?` | The address of the shield contract if attaching to a known, already deployed instance. Leave empty to deploy a Shield if needed or attach to an existing one based on the creation parameters: owner, vault, and version. |
-| `walletClient` | The Viem client for the signer address that will own the shield and sign transactions for it. The address of the wallet client is one of the deploy params that determines the shield address. |
-| `rpc` | The rpc url for sending transactions, polling chain, and other viem PublicClient actions. |
-| `env?` | The Newton Gateway environment. Leave empty for the default of `prod`. |
-| `gatewayUrl?` | The Newton Gateway url, changeable for testing. Leave empty for the apropriate protocol url for the chosen `env`. |
-| `pack` | Policy pack used for the vault. See the [policy pack repo](https://github.com/newt-foundation/newton-policy-packs/) for more details. |
+| `apiKey` | Newton Gateway API key. Create one for your project on the [dashboard](https://dashboard.newton.xyz/). |
+| `policyClientAddress?` | Shield contract address when attaching to a known deployed clone. Leave empty to deploy or attach based on curator, vault, and version. |
+| `walletClient` | Viem wallet client for the signer that will own the Shield and sign intents. The account address participates in deterministic Shield addressing. |
+| `rpc` | RPC URL used for sending transactions, polling chain state, and public-client reads. |
+| `env?` | Newton Gateway environment. Defaults to `prod`. |
+| `gatewayUrl?` | Custom Newton Gateway URL for testing. Defaults to the protocol URL for `env`. |
+| `pack` | Policy pack or composite pack used for the vault. See the [policy pack repo](https://github.com/newt-foundation/newton-policy-packs/) for more details. |
 | `vault` | The vault address to be managed. The vault address is one of the deploy params that determines the shield address. |
-| `version?` | A nonce that is only used for determining the deployment address. Leave empty for `version = 0`. |
-| `expectedParams?` | The typed policy params given the chosen policy pack that you expect the shield instance you are attaching to to have. Will error if the params don't match what is expected. Leave empty to instead just check that the existing params are correctly typed for the chosen pack and the correct policy address is used. Only applicable to attaching to an existing instance, not a new deploy. |
-| `skipPolicyBindingCheck?` | Flag for skipping the policy pack/contract check entirely and blindly attaching to the existing deploy (use with caution!). Only relevant for attaching to existing deploys. |
-| `mustDeploy?` | Flag to error if the call to `createShield` attempts to attach to an existing deploy. Use to avoid attaching to an unexpected existing insance when you intend to deploy. |
-| `bypassDelaySeconds?` | Configuration parameter for the shield owner takeover procedure in the case of an outage in the protocol. Default of 1 week delay, minimum of 1 day. |
-| `attestationExpiration?` | Configuration parameter for the policy approvals. Denotes the number of blocks that an approved policy action is valid for. Default of 50 blocks. |
-| `wsRpcUrl` | An additional websocket url for your rpc provider to allow for `ATTESTATION` based executions. These executions need to poll for Newton Protocol aggregator submission of the TaskResponse on chain. These executions are slightly slower but save significant gas. |
+| `version?` | Addressing nonce. Defaults to `0`. Use a different version when the same curator and vault need another Shield clone. |
+| `expectedParams?` | Typed policy params expected on an existing Shield. If onchain params differ, the SDK errors instead of attaching. |
+| `skipPolicyBindingCheck?` | Skips the policy pack and contract compatibility check when attaching. Use only for recovery or diagnostics. |
+| `mustDeploy?` | Errors if `createShield` would attach to an existing clone. Use when a fresh deployment is required. |
+| `bypassDelaySeconds?` | Timelock for owner bypass execution. Default is one week; minimum is one day. |
+| `attestationExpiration?` | Number of blocks an approved policy action remains valid. Default is 50 blocks. |
+| `wsRpcUrl?` | Optional websocket RPC URL used for standard attestation-mode polling. This mode is slower but can save gas. |
 
 ### Return Value
 
-Calling `createShield` returns a `ShieldClient` object with these properties.
+Calling `createShield` returns a Shield client object with these properties.
 
 | Property | Description |
 | --- | --- |
 | `pack` | The policy pack object that it was configured with. Useful as the policy pack method functions help with the typing of params and secrets objects. |
-| `policyClientAddress` | The address of the shield contract created or attached to by the client. |
-| `encodeParams` | A helper function for encoding the policy params into hex. Useful for comparing to the configuration on chain. |
-| `setParams` | Outlined below, this function is one of the main configuration steps for the policy after the Shield contract has been deployed. |
-| `uploadSecrets` | Outlined below, many policies require api secrets for accessing data during policy evaluation. This function encrypts and stores these values in the Newton Policy Gateway instead of on chain. |
-| `sendCall` | Outlined below, this function is the entrypoint for policy evaluation and intent execution. |
+| `policyClientAddress` | Shield contract address created or attached to by the client. |
+| `encodeParams` | Helper for encoding policy params into hex. Useful when comparing against onchain configuration. |
+| `setParams` | Writes typed policy params to the Shield's bound policy. |
+| `uploadSecrets` | Encrypts and uploads policy secrets to Newton Gateway. |
+| `sendCall` | Generic entrypoint for policy evaluation and intent execution. |
 
 ## `setParams`
 
-Configures a newly created Shield contract or reconfigures an existing one by calling the contract function on the Shield contract with the serialized paramters. Uses the `attestationExpiration` value from the shield client creation.
+Configures a newly created Shield contract or reconfigures an existing one with serialized policy params. Uses the `attestationExpiration` value from Shield client creation.
 
 ```typescript
 await shield.setParams({
-  params,
+  vaultsfyi: {
+    apy_z_max: 3,
+    risk_score_floor: 80,
+    tvl_drawdown_24h_max_pct: 0.05,
+    tvl_drawdown_7d_max_pct: 0.2,
+    deny_on_allocation_change: true,
+    deny_on_critical_flag: true,
+    deny_on_corrupted: true,
+  },
 })
 ```
 
@@ -103,15 +107,17 @@ await shield.setParams({
 
 | Field | Description |
 | --- | --- |
-| `params` | The typed paramter object from the policy pack used. Import the typing of this object from the relevant npm package for the policy you are using. |
+| `params` | Typed parameter object from the selected policy pack. |
 
 ## `uploadSecrets`
 
-Uploads a value for the required api secrets used by the chosen policy pack. The value is encrypted in the sdk and uploaded to the Newton Protocol Gateway where it is stored securely and only accessed to enable policy evaluation.
+Uploads required API secrets used by the selected policy pack. Values are encrypted in the SDK and stored with Newton Gateway for policy evaluation.
 
 ```typescript
 await shield.uploadSecrets({
-  secrets,
+  vaultsfyi: {
+    VAULTS_FYI_API_KEY: process.env.VAULTSFYI_API_KEY!,
+  },
 })
 ```
 
@@ -119,7 +125,7 @@ await shield.uploadSecrets({
 
 | Field | Description |
 | --- | --- |
-| `secrets` | The typed secrets object from the policy pack used. Import the typing of this object from the relevant npm package for the policy you are using. |
+| `secrets` | Typed secrets object from the selected policy pack. |
 
 ## Shield Runtime
 
@@ -130,56 +136,63 @@ The Shield runtime turns a typed call into:
 3. Policy attestation retrieval
 4. Onchain execution through the Shield contract
 
-Vendor modules are expected to be runtime-pluggable with a viem-style `.extend(...)` pattern.
+The pack-aware Shield client uses `sendCall(...)` for vendor actions. Low-level vendor modules can extend `NewtonShield` directly with a viem-style `.extend(...)` pattern.
 
 ```typescript
-const shield = await createShield(config).extend(morpho())
+import { NewtonShield } from '@newton-xyz/newton-shield-sdk'
+import { morphoActions } from '@newton-xyz/newton-shield-sdk/vendors/morpho'
+
+const shield = new NewtonShield(config).extend(morphoActions)
 ```
 
 ## Morpho Module
 
-The Morpho module is expected to expose typed vault-management actions such as:
+The Morpho module exposes `reallocate` on the low-level `NewtonShield` extension path:
 
 ```typescript
-await shield.morpho.reallocate(args)
-await shield.morpho.setCap(args)
+await shield.morpho.reallocate({
+  vault: '0xMetaMorphoVaultAddress',
+  allocations: [{ marketId: '0xMarketId', assets: 1_000_000n }],
+})
 ```
 
 ## `sendCall`
 
-For vendors or actions without a first-class module, use the `sendCall` function. This function requires you to encode the calldata for the delegated contract call yourself. The wasmArgs parameter is a typed object defined by the policy pack used and informs the policy about what must be evaluated for this specific call.
+For vendors or actions without a first-class module, use `sendCall`. This function requires you to encode calldata for the delegated contract call yourself. Pack-specific `prepareQueryOptions` or `wasmArgs` tell the policy what must be evaluated for this call.
 
 ```typescript
-await shield.sendCall(
-  {
-    to: '0xTargetAddress',
-    data: '0xCalldata',
-    functionSignature: 'setCap(bytes32,uint184)',
-    wasmArgs: {
-      vaultAddress: '0xVaultAddress',
-      network: 'base',
+await shield.sendCall({
+  to: '0xTargetAddress',
+  data: '0xCalldata',
+  functionSignature: 'reallocate((bytes32,uint256)[])',
+  prepareQueryOptions: {
+    redstone: {
+      symbol: 'USDC',
+      rpcUrl: 'https://base.example',
+      onchainOracle: {
+        address: '0xOracleAddress',
+        selector: 'latestAnswer()',
+      },
     },
-  }.
-  submissionMode = "DIRECT",
-  timeoutMs = 30_000,
-)
+  },
+}, 'DIRECT', 30_000)
 ```
 
-When using `sendCall`, the integration owns the intent integrity for the target call. Use `submissionMode` of `"ATTESATION"` if you have provided a `wsRpcUrl` when creating your ShieldClient and you wish to save gas at the cost of speed of execution.
+When using `sendCall`, the integration owns intent integrity for the target call. Use `'DIRECT'` for the current curator path. The lower-level runtime also has an attestation mode path for deployments that support it.
 
 ## Policy Packs
 
-Policy packs are developed in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are expected to be available as subpath imports:
+Policy packs are developed in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are available as subpath imports:
 
 ```typescript
-import { vaultRiskPack } from '@newton-xyz/newton-shield-sdk/packs/vault-risk'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 ```
 
-Each pack provides typed params and helper logic for fetching freshness-bound policy inputs.
+Each pack provides typed params and helper logic for freshness-bound policy inputs.
 
 ## Errors
 
-The target SDK error hierarchy includes:
+The SDK error hierarchy includes:
 
 | Error | When it occurs |
 | --- | --- |
@@ -192,10 +205,12 @@ The target SDK error hierarchy includes:
 | `NewtonTaskEvaluationError` | Newton evaluation fails to evaluate the policy correctly. |
 | `AttestationTimeoutError` | The SDK does not receive an attestation in time. |
 | `ShieldExecutionError` | The Shield contract execution fails. |
-| `GatewayHttpError` | The request fails to reach the Newton Gateway. |
+| `GatewayError` / `GatewayHttpError` | The request fails to reach Newton Gateway. |
 | `ShieldDeploymentNotFoundError` | ShieldClient creation tries to use a chain without Shield deployments. |
 | `UnsupportedChainError` | ShieldClient creation tries to use a chain that is unsupported by the Newton Protocol. |
 
-## Browser Safety
+## See Also
 
-The target SDK core is browser-safe and avoids `node:*` imports.
+- [Concepts](/developers/vaults/sdk/concepts)
+- [Examples](/developers/vaults/sdk/examples)
+- [Errors](/developers/vaults/sdk/errors)

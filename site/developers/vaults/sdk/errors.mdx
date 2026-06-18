@@ -1,0 +1,88 @@
+---
+title: "Errors"
+description: "Newton VaultKit SDK errors and retry guidance."
+keywords:
+  - vaultkit errors
+  - policy denied
+  - attestation timeout
+  - shield execution
+---
+
+VaultKit errors share a common base class and stable error code. Catch the base class for unified logging, or a subclass when retry behavior matters.
+
+```typescript
+class NewtonShieldError extends Error {
+  readonly code: string
+  readonly cause?: unknown
+}
+```
+
+## Error Classes
+
+| Error | When it occurs | Retry safe? |
+| --- | --- | --- |
+| `PolicyDeniedError` | Newton operators evaluated the policy and denied the intent. | No. Rebuild the action or accept the denial. |
+| `AttestationTimeoutError` | The gateway did not return attestation data before the SDK timeout. | Yes, with a fresh task. |
+| `GatewayError` / `GatewayHttpError` | The Newton Gateway request failed or returned an invalid response. | Yes, with backoff. |
+| `ParamMismatchError` | An existing Shield clone has policy params that do not match the expected params. | No. Reconcile configuration manually. |
+| `PolicyMismatchError` | An existing Shield clone is bound to a different policy than the selected pack expects. | No. Verify the clone or deploy a new version slot. |
+| `ShieldExecutionError` | `Shield.execute`, `executeDirect`, or `executeBypass` reverted. | Depends on the decoded contract error. |
+| `DecodedContractError` | A decoded onchain custom error carried as a `ShieldExecutionError.cause`. | Depends on the underlying error. |
+| `ShieldDeploymentNotFoundError` | A chain and environment are known, but the SDK has no Shield deployment recorded. | Maybe. Try a different environment or wait for deployment. |
+| `UnsupportedChainError` | The wallet client chain is not supported by VaultKit. | No. |
+
+## Decoded Contract Errors
+
+When a Shield transaction reverts, `ShieldExecutionError.cause` can include decoded revert data:
+
+```typescript
+type DecodedContractError = {
+  errorName: string
+  args: readonly unknown[]
+  rawData: `0x${string}`
+}
+```
+
+Common onchain causes include invalid attestations, expired or replayed tasks, bypass entries that are not ready, unknown bypass ids, and target vault reverts.
+
+## Retry Pattern
+
+```typescript
+import {
+  AttestationTimeoutError,
+  GatewayError,
+  NewtonShieldError,
+} from '@newton-xyz/newton-shield-sdk'
+
+async function retryable<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (error instanceof AttestationTimeoutError || error instanceof GatewayError) {
+        lastError = error
+        await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** i))
+        continue
+      }
+
+      throw error
+    }
+  }
+
+  throw lastError
+}
+
+try {
+  await retryable(() => shield.sendCall(args))
+} catch (error) {
+  if (error instanceof NewtonShieldError) {
+    console.error({ code: error.code, message: error.message, cause: error.cause })
+  }
+
+  throw error
+}
+```
+
+Log `code`, `message`, and `cause` together. The code is stable enough for alerts; the cause is what engineers need for diagnosis.

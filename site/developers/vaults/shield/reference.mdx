@@ -1,0 +1,163 @@
+---
+title: "Shield Reference"
+description: "Public contract surface for Shield and ShieldFactory."
+keywords:
+  - shield reference
+  - shield api
+  - shieldfactory
+  - vaultkit contracts
+---
+
+This page summarizes the onchain surface VaultKit uses. Solidity names are shown for integrators, indexers, and auditors.
+
+## `Shield`
+
+### Constants
+
+```solidity
+uint256 public constant MIN_BYPASS_DELAY = 1 days;
+```
+
+### Public Reads
+
+```solidity
+uint256 public bypassDelaySeconds;
+mapping(bytes32 id => BypassEntry) public bypasses;
+```
+
+`bypasses(id)` returns the queued bypass target, value, calldata, eta, and existence flag.
+
+### `initialize`
+
+```solidity
+function initialize(
+    address policyTaskManager,
+    address policy,
+    address policyClientOwner,
+    uint256 bypassDelaySeconds
+) external initializer;
+```
+
+Called once by `ShieldFactory.createShield`. Reverts if the bypass delay is below `MIN_BYPASS_DELAY`.
+
+### `execute`
+
+```solidity
+function execute(
+    NewtonMessage.Attestation calldata attestation
+) external nonReentrant returns (bytes memory);
+```
+
+Validates an AVS-issued attestation, forwards the approved intent, emits `ShieldExecuted`, and returns target `returnData`.
+
+### `executeDirect`
+
+```solidity
+function executeDirect(
+    INewtonProverTaskManager.Task calldata task,
+    INewtonProverTaskManager.TaskResponse calldata taskResponse,
+    bytes calldata signatureData
+) external nonReentrant returns (bytes memory);
+```
+
+Validates the task response and signature data inline, forwards the approved intent, emits `ShieldExecutedDirect`, and returns target `returnData`.
+
+### Bypass Methods
+
+```solidity
+function queueBypass(
+    address to,
+    uint256 value,
+    bytes calldata data
+) external onlyPolicyClientOwner returns (bytes32 id);
+
+function executeBypass(
+    bytes32 id
+) external nonReentrant onlyPolicyClientOwner returns (bytes memory);
+
+function cancelBypass(bytes32 id) external onlyPolicyClientOwner;
+```
+
+Bypass entries are one-shot. `executeBypass` is only valid after the queued eta, and `cancelBypass` permanently removes the entry.
+
+### Events
+
+```solidity
+event ShieldExecuted(bytes32 indexed taskId, NewtonMessage.Intent intent, bytes returnData);
+event ShieldExecutedDirect(bytes32 indexed taskId, NewtonMessage.Intent intent, bytes returnData);
+event BypassQueued(bytes32 indexed id, address indexed to, uint256 value, bytes data, uint256 eta);
+event BypassExecuted(bytes32 indexed id, address indexed to, uint256 value, bytes data, bytes returnData);
+event BypassCancelled(bytes32 indexed id);
+```
+
+### Common Errors
+
+```solidity
+error InvalidAttestation();
+error IntentExecutionFailed();
+error BypassDelayBelowMinimum(uint256 provided, uint256 minimum);
+error BypassAlreadyQueued(bytes32 id);
+error BypassUnknown(bytes32 id);
+error BypassNotReady(bytes32 id, uint256 eta);
+```
+
+The SDK surfaces many of these through `ShieldExecutionError.cause`.
+
+## Inherited Policy Client Methods
+
+The Shield inherits Newton policy-client owner controls:
+
+```solidity
+function setPolicy(INewtonPolicy.PolicyConfig memory policyConfig)
+    external onlyPolicyClientOwner returns (bytes32 policyId);
+
+function setPolicyAddress(address policy) public onlyPolicyClientOwner;
+function setPolicyClientOwner(address policyClientOwner) public onlyPolicyClientOwner;
+
+function getPolicyAddress() external view returns (address);
+function getPolicyConfig() external view returns (INewtonPolicy.PolicyConfig memory);
+function getPolicyId() external view returns (bytes32);
+```
+
+`setPolicy(...)` updates policy params and returns the new policy id. `setPolicyAddress(...)` binds a different policy contract. `setPolicyClientOwner(...)` transfers owner authority, commonly to a Safe.
+
+## `ShieldFactory`
+
+### Immutables
+
+```solidity
+address public immutable implementation;
+address public immutable taskManager;
+```
+
+### `createShield`
+
+```solidity
+function createShield(
+    address curator,
+    address vault,
+    uint64 version,
+    address policy,
+    uint256 bypassDelaySeconds
+) external returns (address shield);
+```
+
+Deploys and initializes a deterministic clone. Reverts if curator or vault is zero, if the predicted clone already exists, or if initialization fails.
+
+### View Helpers
+
+```solidity
+function predictShieldAddress(
+    address curator,
+    address vault,
+    uint64 version
+) external view returns (address);
+
+function isDeployed(
+    address curator,
+    address vault,
+    uint64 version
+) external view returns (bool);
+```
+
+The SDK uses these helpers to predict addresses and make `createShield(...)` idempotent.

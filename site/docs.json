@@ -111,7 +111,11 @@
           {
             "group": "Overview",
             "pages": [
-              "developers/vaults/overview"
+              "developers/vaults/overview",
+              "developers/vaults/policy-packs",
+              "developers/vaults/protocol/concepts",
+              "developers/vaults/protocol/attestation-flow",
+              "developers/vaults/protocol/guarantees"
             ]
           },
           {
@@ -119,18 +123,20 @@
             "pages": [
               "developers/vaults/sdk/overview",
               "developers/vaults/sdk/integration-guide",
+              "developers/vaults/sdk/concepts",
+              "developers/vaults/sdk/examples",
               "developers/vaults/sdk/euler",
-              "developers/vaults/sdk/reference"
+              "developers/vaults/sdk/reference",
+              "developers/vaults/sdk/errors"
             ]
           },
           {
-            "group": "Policies",
+            "group": "Shield Contract",
             "pages": [
-              "developers/vaults/policies/overview",
-              "developers/vaults/policies/vaultsfyi",
-              "developers/vaults/policies/chainalysis",
-              "developers/vaults/policies/webacy",
-              "developers/vaults/policies/redstone"
+              "developers/vaults/shield/architecture",
+              "developers/vaults/shield/flows",
+              "developers/vaults/shield/reference",
+              "developers/vaults/shield/deployment"
             ]
           },
           {
@@ -259,7 +265,11 @@
     },
     {
       "source": "/developers/vaults/policies",
-      "destination": "/developers/vaults/policies/overview"
+      "destination": "/developers/vaults/policy-packs"
+    },
+    {
+      "source": "/developers/vaults/policies/overview",
+      "destination": "/developers/vaults/policy-packs"
     },
     {
       "source": "/developers/vaults/vault-sdk",

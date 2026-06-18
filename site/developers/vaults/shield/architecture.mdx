@@ -1,0 +1,89 @@
+---
+title: "Shield Architecture"
+description: "How Shield contracts are deployed, addressed, initialized, and bounded onchain."
+keywords:
+  - shield contract
+  - shield factory
+  - create2
+  - eip-1167
+  - vaultkit architecture
+---
+
+A Shield is the onchain policy client that stands between a curator and a vault manager action. It validates Newton attestations, then forwards approved calls to the underlying vault.
+
+## One Implementation per Chain
+
+Each supported chain has a shared `Shield` implementation. Per-curator Shields are EIP-1167 minimal-proxy clones deployed from that implementation.
+
+This keeps the surface small:
+
+- One audited implementation per chain.
+- Every clone shares the same bytecode and storage layout.
+- Curators opt into new implementations by deploying fresh clones rather than accepting proxy-admin upgrades.
+
+## Deterministic Clones
+
+`ShieldFactory.createShield(curator, vault, version, policy, bypassDelaySeconds)` deploys a clone with CREATE2. The salt is derived from:
+
+- `curator`
+- `vault`
+- `version`
+
+The `version` value lets the same curator and vault deploy multiple Shields when they need a new policy, a new bypass delay, or a clean recovery slot.
+
+Anyone can predict the address before deployment:
+
+```solidity
+function predictShieldAddress(
+    address curator,
+    address vault,
+    uint64 version
+) external view returns (address);
+```
+
+The SDK uses this to make `createShield(...)` idempotent.
+
+## Permissionless Factory
+
+`ShieldFactory` is intentionally not owned. It has no pause function, admin setters, or ownership transfer. Anyone can call `createShield`, but the clone owner is the `curator` address passed at deployment, not the caller.
+
+The factory immutably pins:
+
+- The Shield implementation.
+- The Newton task manager used for attestation validation.
+
+## Initialization
+
+Each clone runs `initialize(...)` once. Initialization:
+
+1. Wires the Newton policy-client mixin.
+2. Sets the curator owner.
+3. Binds the initial policy address when provided.
+4. Stores `bypassDelaySeconds`.
+5. Enforces a minimum bypass delay of one day.
+
+`bypassDelaySeconds` does not change after initialization. To use a different delay, deploy a new clone.
+
+## Forwarding Behavior
+
+The Shield forwards approved calls with low-level `call`:
+
+```solidity
+(bool success, bytes memory returnData) = to.call{value: value}(data);
+```
+
+If the target vault reverts with a reason, Shield bubbles that revert data. If the target reverts without a reason, Shield reverts with `IntentExecutionFailed()`.
+
+## Reentrancy
+
+`execute`, `executeDirect`, and `executeBypass` are protected by `nonReentrant`. Attestation replay is blocked by the AVS task manager, and the local guard hardens the bypass and forwarding paths against reentrancy through the target vault.
+
+## Upgrade Posture
+
+Shield clones are not upgradeable. There is no UUPS hook, transparent-proxy admin, or implementation setter. An implementation change means:
+
+1. Deploy a new implementation.
+2. Deploy a new factory pointing at it.
+3. Let curators opt in by creating fresh clones.
+
+This makes the active code path inspectable for curators and depositors.

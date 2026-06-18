@@ -1,0 +1,126 @@
+---
+title: "SDK Concepts"
+description: "How Newton VaultKit models Shield clients, policy packs, vendor modules, intents, and generic calls."
+keywords:
+  - vaultkit concepts
+  - shield client
+  - policy packs
+  - vendor modules
+  - intent
+---
+
+This page defines the SDK pieces that appear across VaultKit integrations.
+
+## Shield Client
+
+`createShield(...)` returns a Shield client for one curator, one vault, one chain, and one policy pack. The client either attaches to a compatible existing Shield clone or deploys a new deterministic clone through `ShieldFactory`.
+
+The Shield client exposes:
+
+- `policyClientAddress`, the Shield clone address.
+- `pack`, the policy pack or composite pack used for evaluation.
+- `setParams(...)`, for writing policy params onchain.
+- `uploadSecrets(...)`, for encrypting policy secrets and storing them with Newton Gateway.
+- `sendCall(...)`, for generic policy-gated calls.
+- Generic manager calls through `shield.sendCall(...)`.
+
+## Intent
+
+An `Intent` is the exact call the curator wants to execute:
+
+```solidity
+struct Intent {
+    address from;
+    address to;
+    uint256 value;
+    bytes data;
+    uint256 chainId;
+    bytes functionSignature;
+}
+```
+
+Every field is bound into the attestation. Operators do not partially approve a call, rewrite calldata, or approve a selector independently from its arguments.
+
+## `wasmArgs`
+
+`wasmArgs` are pack-specific inputs passed to the policy WASM during evaluation. They can include vault addresses, asset symbols, market identifiers, freshness snapshots, or external-data query options.
+
+The SDK gets these values from policy packs. For composite packs, each module can receive its own `prepareQueryOptions` keyed by the pack id:
+
+```typescript
+await shield.sendCall({
+  to: vaultAddress,
+  data,
+  functionSignature: 'someManagerAction(uint256)',
+  prepareQueryOptions: {
+    redstone: {
+      symbol: 'USDC',
+      rpcUrl: 'https://base.example',
+      onchainOracle: {
+        address: '0xOracleAddress',
+        selector: 'latestAnswer()',
+      },
+    },
+  },
+})
+```
+
+## Policy Packs
+
+A policy pack is a typed wrapper around a Newton policy template. A pack usually provides:
+
+- A `zod` schema for params and secrets.
+- An encoder that maps params to `PolicyConfig.policyParams`.
+- A `prepareQuery(...)` helper for producing `wasmArgs`.
+- Helper functions for reading or verifying onchain policy data.
+
+Open-source packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). VaultKit supports composite policies so a single Shield can enforce several modules in one attestation.
+
+## Vendor Modules
+
+The pack-aware `createShield(...)` client exposes `sendCall(...)` for vendor manager actions. It produces a policy-gated intent from calldata your app encodes.
+
+```typescript
+import { encodeFunctionData } from 'viem'
+
+await shield.sendCall({
+  to: vaultAddress,
+  data: encodeFunctionData({
+    abi: metaMorphoAbi,
+    functionName: 'reallocate',
+    args: [allocations],
+  }),
+  functionSignature: 'reallocate((bytes32,uint256)[])',
+})
+```
+
+Low-level vendor modules can also extend `NewtonShield` directly. For example, the Morpho module exports `morphoActions` for `new NewtonShield(config).extend(morphoActions)`. Use this lower-level path only when you are intentionally working with `NewtonShield` rather than the pack-aware `createShield(...)` client.
+
+## Generic Calls
+
+Use `sendCall(...)` when a typed vendor module does not exist yet.
+
+```typescript
+await shield.sendCall({
+  to: vaultAddress,
+  data,
+  functionSignature: 'reallocate((bytes32,uint256)[])',
+})
+```
+
+With `sendCall`, your integration owns intent integrity. Encode calldata carefully, pass the exact human-readable `functionSignature`, and provide the policy inputs required by the selected pack.
+
+## Standard and Direct Execution
+
+VaultKit can use two onchain execution paths:
+
+| Mode | How it works | Trade-off |
+| --- | --- | --- |
+| Standard | Waits for the aggregator to commit the operator quorum response, then calls `Shield.execute(attestation)`. | Lower gas, more latency. |
+| Direct | Submits the raw task response and BLS signature data to `Shield.executeDirect(...)`. | Higher gas, less aggregator wait. |
+
+Both modes enforce the same intent, policy, chain, expiration, and replay invariants. See [Attestation Flow](/developers/vaults/protocol/attestation-flow).
+
+## Browser Safety
+
+The SDK core is browser-safe and avoids `node:*` imports. Vendor modules and policy packs may inherit requirements from the vendor SDKs or data clients they wrap.

@@ -1,0 +1,72 @@
+---
+title: "Deployment"
+description: "Deployment and ownership notes for Shield implementations, factories, clones, and upstream Newton addresses."
+keywords:
+  - shield deployment
+  - shield ownership
+  - safe handoff
+  - vaultkit deployment
+---
+
+This page is for teams operating Shield deployments or reviewing how a VaultKit deployment is wired.
+
+## Per-Chain Artifacts
+
+Each supported chain and environment has a Shield implementation and ShieldFactory deployment. The SDK registry maps `(chainId, env)` to those addresses so `createShield(...)` can predict, attach, or deploy curator clones.
+
+Runtime registry entries and deployment artifact JSON should be updated together when a new deployment lands.
+
+## Upstream Newton Addresses
+
+Shield contracts depend on Newton Policy Protocol addresses, especially the task manager used for attestation validation. Those upstream addresses should come from the pinned Newton contracts deployment artifacts, not from stale hand-maintained tables.
+
+When Newton upstream contracts migrate:
+
+1. Refresh the upstream deployment artifacts.
+2. Re-resolve task manager and related policy-client addresses.
+3. Update Shield deployment artifacts.
+4. Update the SDK deployment registry.
+5. Release an SDK version that points at the new registry values.
+
+## Supported Chains
+
+VaultKit currently documents support for:
+
+| Chain | Chain ID |
+| --- | --- |
+| Ethereum | `1` |
+| Base | `8453` |
+| Sepolia | `11155111` |
+| Base Sepolia | `84532` |
+
+If a chain is unknown to the SDK registry, `createShield(...)` throws `UnsupportedChainError` before sending transactions.
+
+## Ownership Handoff
+
+The factory is not owned and has no admin handoff. Ownership handoff applies to per-curator Shield clones.
+
+The Shield owner can:
+
+- Queue, execute, and cancel bypasses.
+- Update policy params.
+- Change the bound policy address.
+- Transfer Shield ownership.
+
+After deploying a clone with an EOA, curators commonly transfer ownership to a Safe by calling `setPolicyClientOwner(safeAddress)`.
+
+## Post-Handoff Checks
+
+After transferring ownership, verify:
+
+- `getPolicyClientOwner()` returns the Safe address.
+- Owner-gated calls can only be made by the Safe.
+- Monitoring watches `BypassQueued`, `BypassExecuted`, and `BypassCancelled`.
+- The Shield policy address and policy id match the expected pack and params.
+
+## Local Testing
+
+For local or staging work, use a local chain and non-production gateway environment. Local artifacts should not be treated as audit records for production deployment.
+
+## Operational Rule
+
+Do not hardcode upstream Newton addresses in app docs or integration code. Use the SDK registry and deployment artifacts so changes are auditable and versioned.

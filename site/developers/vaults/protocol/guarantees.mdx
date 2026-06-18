@@ -1,0 +1,43 @@
+---
+title: "Guarantees"
+description: "The enforcement guarantees VaultKit relies on when routing vault actions through a Shield."
+keywords:
+  - vaultkit guarantees
+  - shield security
+  - replay protection
+  - policy enforcement
+---
+
+VaultKit's guarantees come from combining signed intents, operator quorum, onchain Shield validation, and a timelocked owner bypass.
+
+## Exact-Intent Binding
+
+The attestation binds to the full `Intent`: signer, target, value, calldata, chain, and function signature. A curator cannot swap calldata after approval, and an attacker cannot reuse an approval for a different vault action.
+
+## Policy Binding
+
+The Shield validates that the attestation's `policyId` matches the policy currently bound to the Shield. If params or policy address change, previously prepared approvals no longer apply to the new policy id.
+
+## Chain Isolation
+
+The intent includes `chainId`, and the Shield checks it against `block.chainid`. An approval for Base cannot be replayed on Ethereum, Sepolia, or Base Sepolia.
+
+## Replay Protection
+
+The AVS task manager tracks consumed task ids. Once an attestation is used, the same task cannot execute again.
+
+## Expiration
+
+Attestations are valid only for a configured block window. After expiration, the curator must request a fresh policy evaluation.
+
+## Fail Closed
+
+If the gateway is unavailable, operators do not reach quorum, policy evaluation denies, or onchain validation fails, the Shield does not forward the vault call.
+
+## Bypass Visibility
+
+The Shield includes an owner-only bypass path for protocol outages and emergency recovery. Bypass calls must be queued, wait at least the configured delay, and emit events before execution. This gives depositors and monitoring systems a visible response window.
+
+## Non-Upgradeable Clones
+
+Shield clones are EIP-1167 minimal proxies to a fixed implementation. There is no proxy-admin upgrade path. A new implementation requires a new factory and curator opt-in through a new clone.
