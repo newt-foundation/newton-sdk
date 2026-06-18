@@ -10,7 +10,7 @@ keywords:
 
 Newton VaultKit sits beside the vault SDK you already use. Your app prepares the same manager action it would normally send to a vault, then routes execution through a Shield that requires a Newton attestation.
 
-This guide shows the Morpho path. For a lower-level generic call, see [Euler](/developers/vaults/sdk/euler) and [Examples](/developers/vaults/sdk/examples).
+This guide shows the common VaultKit setup and a compact generic call. For Morpho-specific curator guidance, including Base Sepolia setup, composite policy options, and MetaMorpho role requirements, see [Morpho](/developers/vaults/sdk/morpho). For another generic call example, see [Euler](/developers/vaults/sdk/euler) and [Examples](/developers/vaults/sdk/examples).
 
 ## Prerequisites
 
@@ -182,6 +182,8 @@ await shield.uploadSecrets({
 `setParams` writes typed policy params onchain through the Shield's bound Newton policy. `uploadSecrets` encrypts API secrets in the SDK and stores them with Newton Gateway so operators can evaluate policies without exposing credentials onchain.
 
 ## 5. Execute a Morpho Action
+
+This compact example uses the generic `sendCall(...)` path. For a full MetaMorpho curator workflow, including clone role setup and Vaults.fyi testnet-data notes, use the [Morpho guide](/developers/vaults/sdk/morpho).
 
 ```typescript
 import { encodeFunctionData } from 'viem'

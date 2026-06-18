@@ -123,6 +123,7 @@
             "pages": [
               "developers/vaults/sdk/overview",
               "developers/vaults/sdk/integration-guide",
+              "developers/vaults/sdk/morpho",
               "developers/vaults/sdk/concepts",
               "developers/vaults/sdk/examples",
               "developers/vaults/sdk/euler",
