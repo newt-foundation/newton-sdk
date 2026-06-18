@@ -51,6 +51,10 @@ The dashboard runs the full pipeline — executes every oracle, merges outputs i
 
 When the policy behaves correctly, deploy it. The dashboard:
 
+<Warning>
+Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, contact [product@newt.foundation](mailto:product@newt.foundation).
+</Warning>
+
 1. Generates CIDs for your Rego and schemas and uploads them to IPFS.
 2. Deploys the PolicyData contract(s) and the `NewtonPolicy` contract — bound to **all** selected oracle addresses, so multi-oracle policies deploy in one step.
 3. Binds the policy to your PolicyClient and records the deployed addresses.
