@@ -10,14 +10,14 @@ keywords:
   - l2 policy enforcement
 ---
 
-Newton Protocol supports policy evaluation across multiple chains. The AVS operators run on Ethereum (the source chain), while PolicyClient contracts can be deployed on destination chains like Base Sepolia.
+Newton Protocol supports policy evaluation across multiple chains. The AVS operators run on Ethereum (the source chain), while PolicyClient contracts can be deployed on destination chains like Base and Base Sepolia.
 
 ## Source vs Destination Chains
 
 | Chain Type | Role | Examples |
 |------------|------|---------|
-| **Source chain** | Where Newton AVS operators are registered and BLS keys are managed | Ethereum Sepolia |
-| **Destination chain** | Where PolicyClient contracts are deployed and transactions execute | Base Sepolia, Ethereum Sepolia |
+| **Source chain** | Where Newton AVS operators are registered and BLS keys are managed | Ethereum Mainnet, Ethereum Sepolia |
+| **Destination chain** | Where PolicyClient contracts are deployed and transactions execute | Base, Base Sepolia, Ethereum Sepolia |
 
 The source chain provides the security foundation (operator registrations, staking, slashing). Destination chains consume attestations via lightweight verifier contracts that use cached operator state.
 
@@ -112,7 +112,7 @@ const { result } = await walletClient.evaluateIntentDirect({
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 84532, // Base Sepolia (destination chain)
+    chainId: 8453, // Base mainnet (destination chain)
     functionSignature: '0x...',
   },
 });
@@ -136,7 +136,8 @@ The SDK automatically routes the task to the correct Gateway and encodes the att
 |-------|----------|------|--------|
 | Ethereum Sepolia | `11155111` | Source + Destination | Active |
 | Base Sepolia | `84532` | Destination | Active |
-| Ethereum Mainnet | `1` | Source + Destination | Forthcoming |
+| Base | `8453` | Destination | Active |
+| Ethereum Mainnet | `1` | Source | Active |
 
 The architecture supports deployment to any EVM-compatible chain as a destination chain.
 

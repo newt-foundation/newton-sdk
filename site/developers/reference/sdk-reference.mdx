@@ -316,7 +316,7 @@ evaluateIntentDirect(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia) or `84532` (Base Sepolia). |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
 | `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
 | `timeout`      | `number`           | No       | Request timeout in milliseconds                                                                    |
 
@@ -426,7 +426,7 @@ submitIntentAndSubscribe(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia) or `84532` (Base Sepolia). |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
 | `timeout`      | `number`           | No       | Request timeout in seconds                                                                         |
 
 **Returns:**
@@ -465,7 +465,7 @@ const result = await walletClient.simulateTask({
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
     functionSignature: '0x...',
   },
   policyTaskData: {
@@ -511,7 +511,7 @@ const result = await walletClient.simulatePolicy({
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia
+    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
     functionSignature: '0x...',
   },
   policyData: [
