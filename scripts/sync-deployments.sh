@@ -5,14 +5,16 @@ set -euo pipefail
 # Usage: ./scripts/sync-deployments.sh
 #
 # Requires: git, node
-# Source: newton-contracts — committed JSON under deployments/
+# Source: newton-contracts — production JSON under deployments/newton-prover
+# and deployments/newton-cross-chain only.
 #
-# This script copies the deployments tree into src/deployments/ and generates
-# manifest.ts so every JSON file can be imported from TypeScript.
+# This script copies those prod deployment files into src/deployments/ and
+# generates manifest.ts so every JSON file can be imported from TypeScript.
 
 REPO_URL="https://github.com/newt-foundation/newton-contracts.git"
 BRANCH="main"
 OUT_DIR="src/deployments"
+SYNC_DIRS=(newton-prover newton-cross-chain)
 
 command -v git >/dev/null || { echo "git not found"; exit 1; }
 command -v node >/dev/null || { echo "node not found"; exit 1; }
@@ -29,7 +31,13 @@ SRC_DIR="$WORKDIR/newton-contracts/deployments"
 rm -rf "$OUT_DIR"/core "$OUT_DIR"/newton-cross-chain "$OUT_DIR"/newton-prover "$OUT_DIR"/policy
 rm -f "$OUT_DIR"/manifest.ts
 mkdir -p "$OUT_DIR"
-cp -R "$SRC_DIR/." "$OUT_DIR/"
+
+for dir in "${SYNC_DIRS[@]}"; do
+  src="$SRC_DIR/$dir"
+  [[ -d "$src" ]] || { echo "missing deployments/$dir in newton-contracts" >&2; exit 1; }
+  mkdir -p "$OUT_DIR/$dir"
+  find "$src" -maxdepth 1 -type f -name '*-prod.json' -exec cp {} "$OUT_DIR/$dir/" \;
+done
 
 OUT_DIR="$OUT_DIR" node <<'NODE'
 const fs = require('fs')

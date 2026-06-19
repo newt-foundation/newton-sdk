@@ -1,56 +1,30 @@
 import type { Hex } from 'viem'
 import { DEPLOYMENTS, type DeploymentKey } from './manifest'
 import {
+  DEPLOYMENT_KEYS,
   type DeploymentAddressKey,
-  type DeploymentEnvironment,
   type DeploymentFile,
-  PROD_DEPLOYMENT_KEYS,
   type SupportedChainId,
   asDeploymentAddress,
 } from './types'
 
 export { DEPLOYMENTS, type DeploymentKey }
-export {
-  type DeploymentAddressKey,
-  type DeploymentEnvironment,
-  type DeploymentFile,
-  type SupportedChainId,
-  PROD_DEPLOYMENT_KEYS,
+export { type DeploymentAddressKey, type DeploymentFile, type SupportedChainId, DEPLOYMENT_KEYS }
+
+export function getDeploymentKey(chainId: number): DeploymentKey | undefined {
+  const key = DEPLOYMENT_KEYS[chainId as SupportedChainId]
+  return key as DeploymentKey | undefined
 }
 
-export function getDeploymentKey(
-  chainId: number,
-  environment: DeploymentEnvironment = 'prod',
-): DeploymentKey | undefined {
-  const prodKey = PROD_DEPLOYMENT_KEYS[chainId as SupportedChainId]
-  if (!prodKey) {
-    return undefined
-  }
-
-  if (environment === 'prod') {
-    return prodKey as DeploymentKey
-  }
-
-  const stagefKey = `${prodKey.replace(/-prod$/, '')}-stagef` as DeploymentKey
-  return stagefKey in DEPLOYMENTS ? stagefKey : undefined
-}
-
-export function getDeployment(
-  chainId: number,
-  environment: DeploymentEnvironment = 'prod',
-): DeploymentFile | undefined {
-  const key = getDeploymentKey(chainId, environment)
+export function getDeployment(chainId: number): DeploymentFile | undefined {
+  const key = getDeploymentKey(chainId)
   return key ? (DEPLOYMENTS[key] as DeploymentFile) : undefined
 }
 
-export function getDeploymentAddress(
-  chainId: number,
-  addressKey: DeploymentAddressKey,
-  environment: DeploymentEnvironment = 'prod',
-): Hex {
-  const deployment = getDeployment(chainId, environment)
+export function getDeploymentAddress(chainId: number, addressKey: DeploymentAddressKey): Hex {
+  const deployment = getDeployment(chainId)
   if (!deployment) {
-    throw new Error(`No ${environment} deployment found for chain ${chainId}`)
+    throw new Error(`No deployment found for chain ${chainId}`)
   }
 
   return asDeploymentAddress(deployment.addresses[addressKey], chainId, addressKey)
@@ -58,7 +32,7 @@ export function getDeploymentAddress(
 
 function buildAddressMap(addressKey: DeploymentAddressKey): Record<number, Hex> {
   return Object.fromEntries(
-    (Object.keys(PROD_DEPLOYMENT_KEYS) as unknown as SupportedChainId[]).map(chainId => [
+    (Object.keys(DEPLOYMENT_KEYS) as unknown as SupportedChainId[]).map(chainId => [
       chainId,
       getDeploymentAddress(chainId, addressKey),
     ]),

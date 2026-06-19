@@ -1,7 +1,5 @@
 import type { Hex } from 'viem'
 
-export type DeploymentEnvironment = 'prod' | 'stagef'
-
 export type DeploymentAddresses = {
   newtonProverTaskManager?: string
   attestationValidator?: string
@@ -28,15 +26,15 @@ export type DeploymentAddressKey =
   | 'policyClientRegistry'
   | 'confidentialDataRegistry'
 
-/** Default production deployment JSON path per supported SDK chain. */
-export const PROD_DEPLOYMENT_KEYS = {
+/** Production deployment JSON path per supported SDK chain. */
+export const DEPLOYMENT_KEYS = {
   11155111: 'newton-prover/11155111-prod',
   1: 'newton-prover/1-prod',
   8453: 'newton-cross-chain/8453-prod',
   84532: 'newton-cross-chain/84532-prod',
 } as const satisfies Record<number, string>
 
-export type SupportedChainId = keyof typeof PROD_DEPLOYMENT_KEYS
+export type SupportedChainId = keyof typeof DEPLOYMENT_KEYS
 
 export function asDeploymentAddress(address: string | undefined, chainId: number, key: DeploymentAddressKey): Hex {
   if (!address) {

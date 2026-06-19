@@ -54,9 +54,8 @@ export {
   getDeploymentAddress,
   getDeploymentKey,
   type DeploymentAddressKey,
-  type DeploymentEnvironment,
   type DeploymentFile,
   type DeploymentKey,
   type SupportedChainId,
-  PROD_DEPLOYMENT_KEYS,
+  DEPLOYMENT_KEYS,
 } from './deployments'
