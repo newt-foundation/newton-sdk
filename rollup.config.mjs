@@ -3,6 +3,7 @@ import { access, copyFile, readFile, readdir, writeFile } from 'node:fs/promises
 import path from 'node:path';
 
 // Rollup plugins
+import json from '@rollup/plugin-json';
 import resolve from '@rollup/plugin-node-resolve';
 import esbuild from 'rollup-plugin-esbuild';
 import externals from 'rollup-plugin-node-externals';
@@ -117,6 +118,8 @@ export default {
 
   plugins: [
     externals(),
+
+    json(),
 
     resolve(),
 

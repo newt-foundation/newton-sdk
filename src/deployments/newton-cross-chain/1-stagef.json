@@ -1,0 +1,11 @@
+{
+  "addresses": {
+    "crossChainRegistry": "0xE6BB8AC82dfdcd0E7A9c6EB554DB45163d0B53ec",
+    "crossChainRegistryImpl": "0xAFc8eBB76540253D7673953c855F8da0a2885159",
+    "operatorTableCalculator": "0x4346e0b1a6C7BADc5b65bffbb80812A50188EeED",
+    "operatorTableCalculatorImpl": "0xd69504d347058c0a5b9A6CCb2cba79bAda2B091D",
+    "pauserRegistry": "0xcb650377D919F5225954a033e01Ca9ffc7c536aE"
+  },
+  "chainId": 1,
+  "deploymentType": "source"
+}

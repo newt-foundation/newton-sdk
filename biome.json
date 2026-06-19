@@ -36,6 +36,6 @@
   },
   "files": {
     "include": ["src/**/*.ts", "src/**/*.tsx"],
-    "ignore": ["dist", "node_modules", "src/abis"]
+    "ignore": ["dist", "node_modules", "src/abis", "src/deployments/manifest.ts"]
   }
 }
