@@ -50,3 +50,6 @@ dist
 .omx/
 .agents/
 
+
+# Gitignored markdown artifacts (PRDs, specs, research, drafts, agent scratch)
+.docs/
