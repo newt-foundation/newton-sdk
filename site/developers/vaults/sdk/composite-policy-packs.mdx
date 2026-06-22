@@ -104,7 +104,7 @@ Secrets are encrypted client-side and uploaded to Newton Gateway. They are not w
 
 ## Depositor Verification
 
-A depositor or monitoring service can verify a Shield without trusting offchain docs:
+A depositor or monitoring service can verify a deployed Shield contract without trusting offchain docs:
 
 1. Read `Shield.getPolicyAddress()`.
 2. Read `INewtonPolicy(policy).getPolicyData()` for the constituent oracles.
@@ -127,4 +127,3 @@ A depositor or monitoring service can verify a Shield without trusting offchain 
 | `CompositePrepareQueryError` | A module's `prepareQuery` failed during composite intent build. |
 | `UnknownPackIdError` | A module short id is not in the published pack registry. Use `allowUnknownPackIds: true` only for bespoke packs. |
 | `MalformedManifestError` / `BadManifestMagicError` / `NotAManifestError` | Manifest bytes could not be decoded. |
-
