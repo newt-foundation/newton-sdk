@@ -124,12 +124,7 @@
               "developers/vaults/policies/vaultsfyi",
               "developers/vaults/policies/chainalysis",
               "developers/vaults/policies/redstone",
-              "developers/vaults/policies/webacy",
-              "developers/vaults/policies/blockaid",
-              "developers/vaults/policies/persona",
-              "developers/vaults/policies/sumsub",
-              "developers/vaults/policies/guardrail",
-              "developers/vaults/policies/balancer"
+              "developers/vaults/policies/webacy"
             ]
           },
           {
