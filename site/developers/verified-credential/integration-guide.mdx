@@ -6,10 +6,11 @@ description: "Step-by-step guide for integrating Newton Verifiable Credentials i
 This guide walks through the end-to-end integration of Newton Verifiable Credentials into your app. Before starting, read the [overview](/developers/verified-credential/overview) to understand how Newton VC works.
 
 <CardGroup cols={2}>
-  <Card icon="github" href="https://github.com/newt-foundation/verifiable-credential-example" title="Example Repo">
+  <Card title="Example Repo" icon="github" href="https://github.com/newt-foundation/verifiable-credential-example">
     Clone the repo and follow the README to run the full VC flow locally
   </Card>
-  <Card icon="browser" href="https://verifiable-credential-example.vercel.app/" title="Live Demo">
+
+  <Card title="Live Demo" icon="browser" href="https://verifiable-credential-example.vercel.app/">
     Try the live demo
   </Card>
 </CardGroup>
@@ -17,10 +18,10 @@ This guide walks through the end-to-end integration of Newton Verifiable Credent
 ## Prerequisites
 
 | Requirement | Details |
-|-------------|---------|
+| --- | --- |
 | **Newton SDK** | `@newton-xyz/sdk` installed in your JavaScript/TypeScript app |
 | **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
-| **Policy client contract** | Must inherit `NewtonPolicyClient` + `EIP712` and be registered with `PolicyClientRegistry` |
+| **Policy client contract** | Must inherit `NewtonPolicyClient` \+ `EIP712` and be registered with `PolicyClientRegistry` |
 | **Identity domain** | A fixed `bytes32` hex value for your application — the output of `keccak256("kyc")` |
 | **KYC vendor** | A third-party vendor to collect user identity data. The vendor's output must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields). |
 
@@ -75,14 +76,14 @@ Define the schema for your policy params, including the `identity_domain`:
 ```
 
 <Note>
-Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
+  Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
 </Note>
 
 ### 1d. Deploy your policy using newton-cli
 
 Your policy directory should look like this before deploying:
 
-```
+```text
 policy_files/
 ├── params_schema.json
 ├── policy.rego
@@ -106,6 +107,7 @@ After deploying, note your policy contract address — you'll need it in Step 2.
 Your policy client must inherit from both `NewtonPolicyClient` and `EIP712`. See the [Reference](/developers/verified-credential/reference#sample-policy-client) for a complete sample contract.
 
 Key requirements:
+
 - Inherit `NewtonPolicyClient` and `EIP712`
 - Call `_initNewtonPolicyClient(policyTaskManager, owner)` in the constructor
 - Register the contract with the `PolicyClientRegistry` — see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration)
@@ -127,6 +129,8 @@ Collect identity data from your users using a third-party KYC vendor. The data y
 
 ## Step 4: Register and Confirm KYC Data
 
+Before invoking the identity popup, your application must display a notice to the user explaining that their identity data will be encrypted and processed by the Newton Protocol. At minimum this notice should state: "Your identity data is encrypted before leaving your device. It is processed by the Newton Protocol to verify your eligibility."  You are responsible for ensuring this disclosure is presented, not buried in your terms of service.
+
 ### 4a. Register KYC Data
 
 Once you have the KYC data from your vendor, call `registerUserData` to register it with Newton, scoped to your identity domain:
@@ -144,7 +148,7 @@ await walletClient.registerUserData({
 ```
 
 <Note>
-When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
+  When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
 </Note>
 
 ### 4b. User Confirms KYC Data
@@ -298,14 +302,15 @@ await walletClient.unlinkApp({
 ## Reference Pages
 
 <CardGroup cols={2}>
-  <Card icon="code" href="/developers/verified-credential/reference" title="SDK & Contract Reference">
+  <Card title="SDK & Contract Reference" icon="code" href="/developers/verified-credential/reference">
     Full SDK method signatures and contract functions
   </Card>
-  <Card icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
+
+  <Card title="Identity Policy Reference" icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference">
     All Rego built-in functions for identity checks
   </Card>
 </CardGroup>
 
-<Card icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
+<Card title="Have questions?" icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team">
   Get in touch with someone from the Newton team to discuss your integration
 </Card>

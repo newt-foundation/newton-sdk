@@ -15,6 +15,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --input '{"from":"0x...","to":"0x...","value":"0x0","data":"0x","chainId":"0xaa36a7","functionSignature":"0x"}' \
       --data '{"params":{...},"data":{...}}'
     ```
+
     Verify `allow`, `deny`, and `cap` paths all produce expected results.
   </Step>
   <Step title="Data oracle returns valid JSON">
@@ -23,6 +24,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --wasm-file policy.wasm \
       --input-json '{...}'
     ```
+
     Confirm the output matches your policy's `data.wasm` expectations.
   </Step>
   <Step title="Gateway simulation succeeds">
@@ -49,6 +51,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --wasm-cid bafyrei... \
       --secrets-schema-cid bafyrei...
     ```
+
     Record the deployed `PolicyData` address.
   </Step>
   <Step title="Policy contract deployed">
@@ -57,6 +60,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --rego-cid bafyrei... \
       --policy-data-address 0x...
     ```
+
     Record the deployed `Policy` address.
   </Step>
   <Step title="PolicyClient contract deployed">
@@ -87,6 +91,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     newton-cli --chain-id 11155111 policy-client status \
       --policy-client-address 0x...
     ```
+
     Confirm `active: true` and policy reference is correct.
   </Step>
 </Steps>
@@ -112,6 +117,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     ```bash
     pnpm add @newton-xyz/sdk viem
     ```
+
     Verify `newtonPublicClientActions` and `newtonWalletClientActions` are properly extended on your viem clients.
   </Step>
   <Step title="Environment variables set">
@@ -132,13 +138,24 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 
 ## Security
 
-- [ ] PolicyClient ownership verified on-chain (not just in your local config)
-- [ ] API keys stored in environment variables, never committed to source control
-- [ ] WASM oracle does not log or expose secrets
-- [ ] Attestation expiration is checked before on-chain submission
-- [ ] Challenge window (100 blocks) is accounted for in your UX
-- [ ] Contract uses `_validateAttestation` or `_validateAttestationDirect` correctly
-- [ ] Intent fields (`from`, `to`, `value`, `data`, `chainId`) are validated before submission
+- PolicyClient ownership verified on-chain (not just in your local config)
+- API keys stored in environment variables, never committed to source control
+- WASM oracle does not log or expose secrets
+- Attestation expiration is checked before on-chain submission
+- Challenge window (100 blocks) is accounted for in your UX
+- Contract uses `_validateAttestation` or `_validateAttestationDirect` correctly
+- Intent fields (`from`, `to`, `value`, `data`, `chainId`) are validated before submission
+
+## User Data
+
+If your integration uses the Newton identity popup or any privacy data flow involving end-user personal data:
+
+- Display a notice to users before invoking the identity popup, and anywhere else at or before the point of data collection, explaining that their data will be encrypted and processed by the Newton Protocol.
+- Surface a cross-developer credential reuse disclosure to users at the point of linking their identity to your application.
+- Implement a visible revocation flow so users can unlink their identity from your application. 
+- Invoke the Newton VC SDK only in response to a deliberate user action. Do not call it on page load, on session start, or without an explicit user trigger.
+- If your policy requires special category data (health records, biometric data, criminal background, or similar), ensure your application provides an explicit disclosure to users before evaluation occurs.
+- Set a retention period for any identity or confidential data your application manages. Do not configure indefinite retention.
 
 ## Pre-Launch Verification
 
@@ -173,9 +190,10 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 
 ## Next Steps
 
-<Card icon="question" href="/developers/resources/faq" title="FAQ & Troubleshooting">
+<Card title="FAQ & Troubleshooting" icon="question" href="/developers/resources/faq">
   Common questions and error solutions
 </Card>
-<Card icon="code" href="/developers/reference/contract-addresses" title="Contract Addresses">
+
+<Card title="Contract Addresses" icon="code" href="/developers/reference/contract-addresses">
   Deployed contracts on all networks
 </Card>
