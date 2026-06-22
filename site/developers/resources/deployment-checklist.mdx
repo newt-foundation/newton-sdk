@@ -157,6 +157,13 @@ If your integration uses the Newton identity popup or any privacy data flow invo
 - If your policy requires special category data (health records, biometric data, criminal background, or similar), ensure your application provides an explicit disclosure to users before evaluation occurs.
 - Set a retention period for any identity or confidential data your application manages. Do not configure indefinite retention.
 
+- Display a notice to users before invoking the identity popup, and anywhere else at or before the point of data collection, explaining that their data will be encrypted and processed by the Newton Protocol.
+- Surface a cross-developer credential reuse disclosure to users at the point of linking their identity to your application.
+- Implement a visible revocation flow so users can unlink their identity from your application.
+- Invoke the Newton VC SDK only in response to a deliberate user action. Do not call it on page load, on session start, or without an explicit user trigger.
+- If your policy requires special category data (health records, biometric data, criminal background, or similar), ensure your application provides an explicit disclosure to users before evaluation occurs.
+- Set a retention period for any identity or confidential data your application manages. Do not configure indefinite retention.
+
 ## Pre-Launch Verification
 
 ```bash
