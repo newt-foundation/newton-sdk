@@ -1,5 +1,5 @@
 ---
-title: "SDK Reference"
+title: "Reference"
 description: "API reference for Newton VaultKit."
 keywords:
   - vault sdk reference
@@ -12,10 +12,10 @@ keywords:
 ## Package
 
 ```bash
-pnpm add @newton-xyz/newton-shield-sdk viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
 ```
 
-`viem` and `zod` are peer dependencies. Vendor SDKs, such as `@morpho-org/blue-sdk-viem`, are also peer dependencies so applications only install the vault integrations they use.
+`viem`, `zod`, and `@newton-xyz/policy-pack-shared` are peer dependencies. Vendor SDKs, such as `@morpho-org/blue-sdk-viem`, are optional peer dependencies so applications only install the vault integrations they use.
 
 ## Supported Chains
 
@@ -62,7 +62,7 @@ const shield = await createShield({
 | `rpc` | RPC URL used for sending transactions, polling chain state, and public-client reads. |
 | `env?` | Newton Gateway environment. Defaults to `prod`. |
 | `gatewayUrl?` | Custom Newton Gateway URL for testing. Defaults to the protocol URL for `env`. |
-| `pack` | Policy pack or composite pack used for the vault. See the [policy pack repo](https://github.com/newt-foundation/newton-policy-packs/) for more details. |
+| `pack` | `CompositePolicyPack` from `defineComposite(...)`. See [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs). |
 | `vault` | The vault address to be managed. The vault address is one of the deploy params that determines the shield address. |
 | `version?` | Addressing nonce. Defaults to `0`. Use a different version when the same curator and vault need another Shield clone. |
 | `expectedParams?` | Typed policy params expected on an existing Shield. If onchain params differ, the SDK errors instead of attaching. |
@@ -81,9 +81,11 @@ Calling `createShield` returns a Shield client object with these properties.
 | `pack` | The policy pack object that it was configured with. Useful as the policy pack method functions help with the typing of params and secrets objects. |
 | `policyClientAddress` | Shield contract address created or attached to by the client. |
 | `encodeParams` | Helper for encoding policy params into hex. Useful when comparing against onchain configuration. |
-| `setParams` | Writes typed policy params to the Shield's bound policy. |
+| `setParams` | Writes the versioned onchain manifest envelope to the Shield's bound policy. |
 | `uploadSecrets` | Encrypts and uploads policy secrets to Newton Gateway. |
 | `sendCall` | Generic entrypoint for policy evaluation and intent execution. |
+| `prepareIntent` | Builds and signs the intent without submitting it. |
+| `extend` | Attaches a typed vendor overlay such as `shield.morpho.*`. |
 
 ## `setParams`
 
@@ -94,8 +96,8 @@ await shield.setParams({
   vaultsfyi: {
     apy_z_max: 3,
     risk_score_floor: 80,
-    tvl_drawdown_24h_max_pct: 0.05,
-    tvl_drawdown_7d_max_pct: 0.2,
+    tvl_drawdown_24h_max_pct: 25,
+    tvl_drawdown_7d_max_pct: 40,
     deny_on_allocation_change: true,
     deny_on_critical_flag: true,
     deny_on_corrupted: true,
@@ -136,29 +138,32 @@ The Shield runtime turns a typed call into:
 3. Policy attestation retrieval
 4. Onchain execution through the Shield contract
 
-The pack-aware Shield client uses `sendCall(...)` for vendor actions. Low-level vendor modules can extend `NewtonShield` directly with a viem-style `.extend(...)` pattern.
+The Shield client uses typed vendor overlays for supported protocols and keeps `sendCall(...)` as the escape hatch for unwrapped vendors.
 
 ```typescript
-import { NewtonShield } from '@newton-xyz/newton-shield-sdk'
-import { morphoActions } from '@newton-xyz/newton-shield-sdk/vendors/morpho'
+import { createShield } from '@newton-xyz/vaultkit'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const shield = new NewtonShield(config).extend(morphoActions)
+const shield = (await createShield(config)).extend(morphoActions)
 ```
 
 ## Morpho Module
 
-The Morpho module exposes `reallocate` on the low-level `NewtonShield` extension path:
+The Morpho module exposes manager actions under `shield.morpho.*`. `reallocate` is positional in the published module:
 
 ```typescript
-await shield.morpho.reallocate({
-  vault: '0xMetaMorphoVaultAddress',
-  allocations: [{ marketId: '0xMarketId', assets: 1_000_000n }],
-})
+await shield.morpho.reallocate(
+  vault,
+  [{ marketParams, assets: 1_000_000n }],
+  { prepareQueryOptions: { vaultsfyi: { previousAllocationHash: '0x...' } } },
+)
 ```
+
+The overlay wraps MetaMorpho manager and allocator actions such as `setCurator`, `setIsAllocator`, `submitCap`, `acceptCap`, `setSupplyQueue`, `updateWithdrawQueue`, and `reallocate`. End-user `deposit`, `mint`, `withdraw`, and `redeem` flows are not wrapped.
 
 ## `sendCall`
 
-For vendors or actions without a first-class module, use `sendCall`. This function requires you to encode calldata for the delegated contract call yourself. Pack-specific `prepareQueryOptions` or `wasmArgs` tell the policy what must be evaluated for this call.
+For vendors or actions without a first-class module, use `sendCall`. This function requires you to encode calldata for the delegated contract call yourself. Pack-specific `prepareQueryOptions` tell the composite policy what must be evaluated for this call.
 
 ```typescript
 await shield.sendCall({
@@ -180,6 +185,31 @@ await shield.sendCall({
 
 When using `sendCall`, the integration owns intent integrity for the target call. Use `'DIRECT'` for the current curator path. The lower-level runtime also has an attestation mode path for deployments that support it.
 
+## Composite Manifest
+
+`shield.setParams(...)` writes a versioned UTF-8 JSON manifest into `NewtonPolicy.PolicyConfig.policyParams`. The manifest is the shape operators read and the AVS validates:
+
+```json
+{
+  "_manifest": { "magic": "NPM1", "version": 1 },
+  "modules": [
+    {
+      "id": "vaultsfyi/risk-envelope/v1",
+      "policyDataAddress": "0xVAULTSFYI_PD...",
+      "wasmCid": "bafybei..."
+    }
+  ],
+  "params": {
+    "vaultsfyi": {
+      "risk_score_floor": 80,
+      "tvl_drawdown_24h_max_pct": 25
+    }
+  }
+}
+```
+
+For the full verifier path and `introspectComposite(...)`, see [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs).
+
 ## Policy Packs
 
 Policy packs are developed in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are available as subpath imports:
@@ -197,15 +227,18 @@ The SDK error hierarchy includes:
 | Error | When it occurs |
 | --- | --- |
 | `InvalidConfigurationError` | Error for when a parameter for `createShield` is invalid. |
+| `IntentConfigurationError` | Intent submission parameters are malformed before network or chain submission. |
 | `ParamMismatchError` | The expected params or param typing does not match the configuration of an attached Shield contract. |
 | `PolicyMismatchError` | The expected policy from the pack does not match the configuration of an attached Shield contract. |
 | `ShieldExecutionError` | The execution of the intent on chain encounters an error. |
-| `DecodedContractError` | The error found when simulation of execution reverts. |
 | `PolicyDeniedError` | Newton evaluates the policy and denies the action. |
 | `NewtonTaskEvaluationError` | Newton evaluation fails to evaluate the policy correctly. |
 | `AttestationTimeoutError` | The SDK does not receive an attestation in time. |
-| `ShieldExecutionError` | The Shield contract execution fails. |
-| `GatewayError` / `GatewayHttpError` | The request fails to reach Newton Gateway. |
+| `GatewayError` / `GatewayHttpError` / `GatewayRpcError` / `GatewayTimeoutError` | The request fails to reach Newton Gateway or Gateway returns a protocol error. |
+| `ConcurrentIntentError` | A second gated call was started against the same clone while another is in flight. |
+| `ExtendCollisionError` | A vendor overlay would overwrite an existing client member. |
+| `TransactionFailedError` | An onchain transaction failed outside the Shield-specific decode path. |
+| `IntentMismatchError` | The task and task-response intents differ in direct execution. |
 | `ShieldDeploymentNotFoundError` | ShieldClient creation tries to use a chain without Shield deployments. |
 | `UnsupportedChainError` | ShieldClient creation tries to use a chain that is unsupported by the Newton Protocol. |
 

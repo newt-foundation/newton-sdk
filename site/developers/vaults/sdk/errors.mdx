@@ -8,10 +8,10 @@ keywords:
   - shield execution
 ---
 
-VaultKit errors share a common base class and stable error code. Catch the base class for unified logging, or a subclass when retry behavior matters.
+VaultKit errors share a common base class and stable error code. Catch the base class for unified logging, or a subclass when retry behavior matters. `NewtonShieldError` remains as a compatibility alias, but new code should import `ShieldError`.
 
 ```typescript
-class NewtonShieldError extends Error {
+class ShieldError extends Error {
   readonly code: string
   readonly cause?: unknown
 }
@@ -22,18 +22,27 @@ class NewtonShieldError extends Error {
 | Error | When it occurs | Retry safe? |
 | --- | --- | --- |
 | `PolicyDeniedError` | Newton operators evaluated the policy and denied the intent. | No. Rebuild the action or accept the denial. |
+| `NewtonTaskEvaluationError` | `newt_createTask` failed or returned a malformed or negative evaluation result. Check the gateway result's `operator_errors[]` before retrying. | Depends. A `retryable: false` operator error is deterministic. |
 | `AttestationTimeoutError` | The gateway did not return attestation data before the SDK timeout. | Yes, with a fresh task. |
-| `GatewayError` / `GatewayHttpError` | The Newton Gateway request failed or returned an invalid response. | Yes, with backoff. |
+| `GatewayError` | A gateway transport or envelope failure occurred. | Usually yes, with backoff. |
+| `GatewayHttpError` | Gateway returned a non-success HTTP response such as `401` or a surviving `5xx`. | Depends. Retry `5xx`; fix auth or request issues for `4xx`. |
+| `GatewayRpcError` | Gateway returned a JSON-RPC `error`. | Depends on the RPC code. |
+| `GatewayTimeoutError` | A gateway request timed out before a response arrived. | Yes, with backoff. |
 | `ParamMismatchError` | An existing Shield clone has policy params that do not match the expected params. | No. Reconcile configuration manually. |
 | `PolicyMismatchError` | An existing Shield clone is bound to a different policy than the selected pack expects. | No. Verify the clone or deploy a new version slot. |
 | `ShieldExecutionError` | `Shield.execute`, `executeDirect`, or `executeBypass` reverted. | Depends on the decoded contract error. |
-| `DecodedContractError` | A decoded onchain custom error carried as a `ShieldExecutionError.cause`. | Depends on the underlying error. |
+| `InvalidConfigurationError` | Caller configuration is invalid before network or chain calls begin. | No. |
+| `IntentConfigurationError` | Intent submission parameters are malformed. | No. |
+| `IntentMismatchError` | Direct execution saw a task intent that differs from the task-response intent. | No. Rebuild and re-attest. |
+| `ConcurrentIntentError` | Another gated call is already in flight for the same clone. | Yes, after the prior call settles. |
+| `ExtendCollisionError` | A vendor overlay would overwrite an existing client member. | No. |
+| `TransactionFailedError` | A transaction failed outside the Shield-specific execution decode path. | Depends on `cause`. |
 | `ShieldDeploymentNotFoundError` | A chain and environment are known, but the SDK has no Shield deployment recorded. | Maybe. Try a different environment or wait for deployment. |
 | `UnsupportedChainError` | The wallet client chain is not supported by VaultKit. | No. |
 
 ## Decoded Contract Errors
 
-When a Shield transaction reverts, `ShieldExecutionError.cause` can include decoded revert data:
+When a Shield transaction reverts, the SDK decodes Shield custom errors and exposes them on `ShieldExecutionError.decoded`:
 
 ```typescript
 type DecodedContractError = {
@@ -43,7 +52,22 @@ type DecodedContractError = {
 }
 ```
 
-Common onchain causes include invalid attestations, expired or replayed tasks, bypass entries that are not ready, unknown bypass ids, and target vault reverts.
+Common onchain causes include `InvalidAttestation`, `IntentMismatch`, `NotApprovedDelegate`, `IntentExecutionFailed`, `BypassNotReady`, `BypassUnknown`, `BypassAlreadyQueued`, `BypassDelayBelowMinimum`, and target vault reverts.
+
+## Failed Task Diagnostics
+
+`NewtonTaskEvaluationError.message` carries the gateway's top-level summary, which can be less actionable than the operator-level detail. Always inspect the raw gateway result's `operator_errors[]` before deciding a failure is transient.
+
+For example, a top-level "Quorum not reached" summary can still include a deterministic operator error such as:
+
+```json
+{
+  "message": "Policy evaluation failed: Failed to validate params schema: Missing required property 'vaultsfyi' at ''",
+  "retryable": false
+}
+```
+
+In that case, retrying will not help. The fix is to align the onchain composite params schema with the manifest envelope `{ "_manifest", "modules", "params" }` and nest pack params under `params.<short-id>`.
 
 ## Retry Pattern
 
@@ -51,8 +75,8 @@ Common onchain causes include invalid attestations, expired or replayed tasks, b
 import {
   AttestationTimeoutError,
   GatewayError,
-  NewtonShieldError,
-} from '@newton-xyz/newton-shield-sdk'
+  ShieldError,
+} from '@newton-xyz/vaultkit'
 
 async function retryable<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let lastError: unknown
@@ -77,7 +101,7 @@ async function retryable<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
 try {
   await retryable(() => shield.sendCall(args))
 } catch (error) {
-  if (error instanceof NewtonShieldError) {
+  if (error instanceof ShieldError) {
     console.error({ code: error.code, message: error.message, cause: error.cause })
   }
 

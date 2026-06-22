@@ -1,0 +1,21 @@
+---
+title: "Balancer Data Checks"
+description: "Use keyless Balancer data in Newton policies for vault manager-action gates."
+keywords:
+  - balancer
+  - vault policy packs
+  - keyless policy
+---
+
+The Balancer policy pack uses keyless Balancer data in composite policies. It is useful when a manager action depends on Balancer pool or market state.
+
+## Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| None | Keyless | [balancer.fi](https://balancer.fi) |
+
+## Usage
+
+Install the pack package, include its module in `defineComposite(...)`, and pass any per-call inputs the pack's `prepareQuery` requires under `prepareQueryOptions.balancer`.
+

@@ -1,5 +1,5 @@
 ---
-title: "Morpho"
+title: "Morpho Guide"
 description: "How to gate MetaMorpho curator actions with Newton VaultKit and composite policy packs."
 keywords:
   - morpho vaultkit
@@ -9,7 +9,7 @@ keywords:
   - reallocate
 ---
 
-Morpho vault curators can route MetaMorpho manager actions through a Newton Shield before the vault receives the call. Your app still builds the Morpho action with the Morpho contracts or SDKs it already uses; VaultKit packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
+Morpho vault curators can route MetaMorpho manager actions through a Newton Shield before the vault receives the call. VaultKit's Morpho overlay builds the MetaMorpho calldata with Morpho's SDK, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
 This guide focuses on `reallocate`, a curator-only MetaMorpho action. End-user deposits and withdrawals continue through the normal Morpho vault flow.
 
@@ -24,15 +24,16 @@ This guide focuses on `reallocate`, a curator-only MetaMorpho action. End-user d
 
 The public end-to-end Morpho examples use **Base Sepolia** (`84532`) with Newton `prod`, also called testnet production. Base Sepolia is used because the MetaMorpho V1.1 factory is deployed there for testnet curator flows.
 
-Newton environments are separate stacks. A `gw_` API key minted for `stagef` will return `401` against `prod`, and a `prod` key will not authenticate against `stagef`. Create the key from the Newton dashboard for the same environment your Shield uses.
+Newton environments are separate stacks. Create the key from the Newton dashboard for the same environment your Shield uses. The public Base Sepolia example uses `prod`.
 
 ## Install Packages
 
-Every VaultKit Morpho integration needs the Shield SDK, Viem, and the policy packs you plan to enforce:
+Every VaultKit Morpho integration needs VaultKit, Viem, policy-pack shared helpers, the policy packs you plan to enforce, and Morpho's SDK:
 
 ```bash
-pnpm add @newton-xyz/newton-shield-sdk @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
 pnpm add @newton-xyz/policy-pack-vaultsfyi
+pnpm add @morpho-org/blue-sdk @morpho-org/blue-sdk-viem @morpho-org/morpho-ts
 ```
 
 For a two-module policy that also screens an address, add Chainalysis:
@@ -41,13 +42,7 @@ For a two-module policy that also screens an address, add Chainalysis:
 pnpm add @newton-xyz/policy-pack-chainalysis
 ```
 
-Install Morpho's SDK only if your app uses it to read vault state or build allocations:
-
-```bash
-pnpm add @morpho-org/blue-sdk-viem
-```
-
-If your app already has the MetaMorpho ABI and allocation logic, you can encode `reallocate` directly with `viem`.
+The Morpho packages are optional peer dependencies of VaultKit. Curators who use the generic `sendCall(...)` escape hatch can encode calldata themselves, but the typed path below uses `shield.morpho.reallocate(...)`.
 
 ## Build the Composite Policy Pack
 
@@ -89,9 +84,10 @@ The module list must match the policy's onchain `getPolicyData()` exactly. If th
 Create one Shield for the curator, vault, chain, policy pack, and version slot:
 
 ```typescript
-import { createShield } from '@newton-xyz/newton-shield-sdk'
+import { createShield } from '@newton-xyz/vaultkit'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const shield = await createShield({
+const shield = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.BASE_SEPOLIA_RPC_URL!,
@@ -99,7 +95,7 @@ const shield = await createShield({
   pack,
   vault: '0xMetaMorphoVaultAddress',
   bypassDelaySeconds: 7n * 24n * 60n * 60n,
-})
+})).extend(morphoActions)
 
 console.log(shield.policyClientAddress)
 ```
@@ -115,8 +111,8 @@ await shield.setParams({
   vaultsfyi: {
     apy_z_max: 3,
     risk_score_floor: 80,
-    tvl_drawdown_24h_max_pct: 0.05,
-    tvl_drawdown_7d_max_pct: 0.2,
+    tvl_drawdown_24h_max_pct: 25,
+    tvl_drawdown_7d_max_pct: 40,
     deny_on_allocation_change: true,
     deny_on_critical_flag: true,
     deny_on_corrupted: true,
@@ -134,6 +130,22 @@ For a Vaults.fyi + Chainalysis composite, include the Chainalysis params and sec
 
 ## Grant the Shield a Morpho Role
 
+The Shield has two separate authorization gates:
+
+- Shield's delegate gate controls who can call `execute` or `executeDirect`.
+- MetaMorpho's manager roles control what the forwarded call can do on the vault.
+
+The initial Shield owner is approved as a delegate at clone initialization. After an ownership handoff or when using a separate hot key, approve the executor explicitly:
+
+```typescript
+await walletClient.writeContract({
+  address: shield.policyClientAddress,
+  abi: shieldAbi,
+  functionName: 'setApprovedDelegate',
+  args: [account.address, true],
+})
+```
+
 MetaMorpho protects `reallocate` with its allocator-role check. The Shield clone must be one of:
 
 - the vault curator,
@@ -146,32 +158,30 @@ If the Shield can configure policy params but `reallocate` reverts, check this r
 
 ## Execute `reallocate`
 
-With the pack-aware Shield client, encode the MetaMorpho calldata and call `sendCall(...)`:
+With the Morpho overlay attached, call the typed action:
 
 ```typescript
-import { encodeFunctionData, maxUint256 } from 'viem'
-
 const allocations = [
-  { marketId: '0xMarketIdA' as `0x${string}`, assets: 1_000_000n },
-  { marketId: '0xMarketIdB' as `0x${string}`, assets: maxUint256 },
+  { marketParams: marketParamsA, assets: 1_000_000n },
+  { marketParams: marketParamsB, assets: 0n },
 ]
 
-const result = await shield.sendCall({
-  to: '0xMetaMorphoVaultAddress',
-  data: encodeFunctionData({
-    abi: metaMorphoAbi,
-    functionName: 'reallocate',
-    args: [allocations],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-})
+const result = await shield.morpho.reallocate(
+  '0xMetaMorphoVaultAddress',
+  allocations,
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+)
 ```
 
-For a Vaults.fyi + Chainalysis composite, include the per-call screening input your deployed pack expects under `prepareQueryOptions.chainalysis`. Omit it for a Vaults.fyi-only policy.
+`reallocate` takes positional arguments: `(vault, allocations, options?)`. Each allocation uses Morpho's `marketParams` shape plus `assets`. For a Vaults.fyi + Chainalysis composite, include the per-call screening input your deployed pack expects under `prepareQueryOptions.chainalysis`. Omit it for a Vaults.fyi-only policy.
 
 The returned result includes the onchain transaction hash and Newton task context. A successful run with `allow: true` means the full path worked: exact calldata, policy evaluation, attestation, and Shield execution.
 
-The SDK also exposes lower-level Morpho actions for direct `NewtonShield` extension flows. Use the pack-aware `sendCall(...)` path above unless you are intentionally building on the lower-level `NewtonShield` runtime.
+Use `shield.sendCall(...)` only as an escape hatch for vendors or actions that VaultKit does not wrap yet. With `sendCall`, your integration owns calldata integrity.
 
 ## Read-Only Versus Full Reproduce
 
@@ -180,7 +190,7 @@ You can validate most of a Morpho integration before granting a vault role:
 | Path | What it proves | Requirements |
 | --- | --- | --- |
 | Read-only inspection | Policy source, params, and deployed Shield configuration are coherent. | Public RPC and deployed addresses. |
-| Type-check and encode | Your app compiles against the published package surface and produces MetaMorpho calldata. | Node, package install, and ABI or Morpho SDK. |
+| Type-check and encode | Your app compiles against the published package surface and produces MetaMorpho calldata. | Node, package install, and Morpho SDK. |
 | Setup stages | `defineComposite`, `createShield`, `setParams`, and `uploadSecrets` work. | Funded curator key and Newton/API secrets. |
 | Full execution | MetaMorpho accepts the Shield-forwarded `reallocate`. | Shield clone has curator, owner, or allocator permissions. |
 

@@ -22,7 +22,7 @@ The Shield client exposes:
 - `setParams(...)`, for writing policy params onchain.
 - `uploadSecrets(...)`, for encrypting policy secrets and storing them with Newton Gateway.
 - `sendCall(...)`, for generic policy-gated calls.
-- Generic manager calls through `shield.sendCall(...)`.
+- `extend(...)`, for attaching typed vendor overlays such as `shield.morpho.*`.
 
 ## Intent
 
@@ -74,27 +74,21 @@ A policy pack is a typed wrapper around a Newton policy template. A pack usually
 - A `prepareQuery(...)` helper for producing `wasmArgs`.
 - Helper functions for reading or verifying onchain policy data.
 
-Open-source packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). VaultKit supports composite policies so a single Shield can enforce several modules in one attestation.
+Open-source packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). VaultKit supports composite policies so a single Shield can enforce several modules in one attestation. See [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs) for the onchain manifest envelope.
 
 ## Vendor Modules
 
-The pack-aware `createShield(...)` client exposes `sendCall(...)` for vendor manager actions. It produces a policy-gated intent from calldata your app encodes.
+Typed vendor modules attach to the `createShield(...)` client with `.extend(...)`. They produce calldata through the vendor's own SDK, then route through the same attestation and Shield execution path as `sendCall(...)`.
 
 ```typescript
-import { encodeFunctionData } from 'viem'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-await shield.sendCall({
-  to: vaultAddress,
-  data: encodeFunctionData({
-    abi: metaMorphoAbi,
-    functionName: 'reallocate',
-    args: [allocations],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-})
+const morphoShield = shield.extend(morphoActions)
+
+await morphoShield.morpho.reallocate(vaultAddress, allocations)
 ```
 
-Low-level vendor modules can also extend `NewtonShield` directly. For example, the Morpho module exports `morphoActions` for `new NewtonShield(config).extend(morphoActions)`. Use this lower-level path only when you are intentionally working with `NewtonShield` rather than the pack-aware `createShield(...)` client.
+Use typed vendor modules when they exist. Today Morpho exposes manager and allocator actions under `shield.morpho.*`.
 
 ## Generic Calls
 

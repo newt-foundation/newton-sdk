@@ -11,6 +11,15 @@ keywords:
 
 The Chainalysis policy screens an address for sanctions and risk categories. It is useful for vault deposits, withdrawals, curator operations, or any flow where the vault needs address-level compliance and AML controls.
 
+## Secrets
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `CHAINALYSIS_SANCTIONS_KEY` | Required by schema | [chainalysis.com](https://www.chainalysis.com) |
+| `CHAINALYSIS_SCREENING_KEY` | Required only for paid risk screening APIs | [chainalysis.com](https://www.chainalysis.com) |
+
+The sanctions endpoint is public/keyless, so a placeholder can satisfy schemas that require `CHAINALYSIS_SANCTIONS_KEY`. Use `CHAINALYSIS_SCREENING_KEY` only when your deployed policy calls the paid risk API.
+
 ## Data Inputs
 
 The Chainalysis data oracle returns values such as:

@@ -15,7 +15,7 @@ These snippets assume you have `publicClient`, `walletClient`, a Newton API key,
 `createShield` predicts the deterministic clone address and either attaches to an existing compatible clone or deploys a new one.
 
 ```typescript
-import { createShield } from '@newton-xyz/newton-shield-sdk'
+import { createShield } from '@newton-xyz/vaultkit'
 import { defineComposite } from '@newton-xyz/policy-pack-shared'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
@@ -41,27 +41,24 @@ console.log(shield.policyClientAddress)
 
 If a clone exists but the policy binding or params do not match your expectations, the SDK raises a typed configuration error instead of attaching silently.
 
-## Generic Vendor Call
+## Typed Morpho Call
 
-Use `sendCall(...)` for vendor manager actions when your app already has the target ABI and arguments.
+Use the typed Morpho overlay for MetaMorpho manager actions.
 
 ```typescript
-import { encodeFunctionData } from 'viem'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const result = await shield.sendCall({
-  to: '0xMetaMorphoVaultAddress',
-  data: encodeFunctionData({
-    abi: metaMorphoAbi,
-    functionName: 'reallocate',
-    args: [[{ marketId: '0xMarketId', assets: 1_000_000n }]],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-})
+const morphoShield = shield.extend(morphoActions)
+
+const result = await morphoShield.morpho.reallocate(
+  '0xMetaMorphoVaultAddress',
+  [{ marketParams, assets: 1_000_000n }],
+)
 
 await publicClient.waitForTransactionReceipt({ hash: result.transactionHash })
 ```
 
-Newton operators evaluate the configured policy before the Shield forwards the encoded calldata.
+Newton operators evaluate the configured policy before the Shield forwards the typed calldata.
 
 ## Generic `sendCall`
 
@@ -95,7 +92,7 @@ import {
   GatewayError,
   PolicyDeniedError,
   ShieldExecutionError,
-} from '@newton-xyz/newton-shield-sdk'
+} from '@newton-xyz/vaultkit'
 
 try {
   await shield.sendCall(args)

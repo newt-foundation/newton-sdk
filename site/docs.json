@@ -119,25 +119,30 @@
             ]
           },
           {
+            "group": "Policy Packs",
+            "pages": [
+              "developers/vaults/policies/vaultsfyi",
+              "developers/vaults/policies/chainalysis",
+              "developers/vaults/policies/redstone",
+              "developers/vaults/policies/webacy",
+              "developers/vaults/policies/blockaid",
+              "developers/vaults/policies/persona",
+              "developers/vaults/policies/sumsub",
+              "developers/vaults/policies/guardrail",
+              "developers/vaults/policies/balancer"
+            ]
+          },
+          {
             "group": "SDK",
             "pages": [
               "developers/vaults/sdk/overview",
               "developers/vaults/sdk/integration-guide",
-              "developers/vaults/sdk/morpho",
-              "developers/vaults/sdk/concepts",
               "developers/vaults/sdk/examples",
-              "developers/vaults/sdk/euler",
               "developers/vaults/sdk/reference",
-              "developers/vaults/sdk/errors"
-            ]
-          },
-          {
-            "group": "Shield Contract",
-            "pages": [
-              "developers/vaults/shield/architecture",
-              "developers/vaults/shield/flows",
-              "developers/vaults/shield/reference",
-              "developers/vaults/shield/deployment"
+              "developers/vaults/sdk/errors",
+              "developers/vaults/sdk/morpho",
+              "developers/vaults/sdk/euler",
+              "developers/vaults/sdk/composite-policy-packs"
             ]
           },
           {

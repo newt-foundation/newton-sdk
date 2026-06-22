@@ -1,0 +1,21 @@
+---
+title: "Guardrail Risk Checks"
+description: "Use Guardrail data in Newton policies as an optional risk signal for vault manager actions."
+keywords:
+  - guardrail
+  - risk checks
+  - vault policy packs
+---
+
+The Guardrail policy pack adds a Guardrail risk signal to composite policies for manager-action gates.
+
+## Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `GUARDRAIL_API_KEY` | Optional | [guardrail.so](https://guardrail.so) |
+
+## Usage
+
+Install the pack package, include its module in `defineComposite(...)`, and upload `GUARDRAIL_API_KEY` only when your deployment requires it. Per-call inputs go under `prepareQueryOptions.guardrail`.
+

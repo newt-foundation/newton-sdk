@@ -10,7 +10,7 @@ keywords:
 
 Newton VaultKit sits beside the vault SDK you already use. Your app prepares the same manager action it would normally send to a vault, then routes execution through a Shield that requires a Newton attestation.
 
-This guide shows the common VaultKit setup and a compact generic call. For Morpho-specific curator guidance, including Base Sepolia setup, composite policy options, and MetaMorpho role requirements, see [Morpho](/developers/vaults/sdk/morpho). For another generic call example, see [Euler](/developers/vaults/sdk/euler) and [Examples](/developers/vaults/sdk/examples).
+This guide shows the common VaultKit setup and the typed Morpho path most curators should start with: `defineComposite(...)`, `createShield(...)`, grant the clone its manager role, then call `shield.morpho.reallocate(...)`. For Morpho-specific curator guidance, including Base Sepolia setup and MetaMorpho role requirements, see [Morpho](/developers/vaults/sdk/morpho). For lower-level examples, see [Euler](/developers/vaults/sdk/euler) and [Examples](/developers/vaults/sdk/examples).
 
 ## Prerequisites
 
@@ -29,12 +29,12 @@ VaultKit integrations use a core SDK package, a shared policy-pack helper packag
 Install these for every VaultKit integration:
 
 ```bash
-pnpm add @newton-xyz/newton-shield-sdk @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
 ```
 
 | Package | When you need it |
 | --- | --- |
-| `@newton-xyz/newton-shield-sdk` | Always. Provides `createShield`, the Shield client, generic `sendCall`, SDK errors, and vendor extension support. |
+| `@newton-xyz/vaultkit` | Always. Provides `createShield`, the Shield client, typed vendor overlays, generic `sendCall`, and SDK errors. |
 | `@newton-xyz/policy-pack-shared` | Always when using published policy packs. Provides helpers such as `defineComposite(...)` for combining one or more policy modules into the pack object passed to `createShield`. |
 | `viem` | Always. VaultKit uses Viem clients for chain reads, signing, and transaction submission. |
 | `zod` | Usually. Policy packs use Zod schemas to validate typed params and secrets. |
@@ -58,18 +58,18 @@ pnpm add @newton-xyz/policy-pack-vaultsfyi @newton-xyz/policy-pack-chainalysis @
 | `@newton-xyz/policy-pack-vaultsfyi` | Use when enforcing Vaults.fyi vault-risk checks such as risk score, APY movement, TVL drawdown, critical flags, or corrupted data. |
 | `@newton-xyz/policy-pack-chainalysis` | Use when enforcing Chainalysis sanctions, AML, or high-risk address screening. |
 | `@newton-xyz/policy-pack-redstone` | Use when enforcing RedStone oracle-divergence checks for stale, divergent, or sustained price-feed issues. |
-| `@newton-xyz/policy-pack-webacy` | Use when enforcing Webacy wallet or depositor reputation checks. |
+| `@newton-xyz/policy-pack-webacy` | Use when enforcing Webacy depeg-risk checks for pegged assets. |
 | Other policy packs | Add only when your policy uses another data source or guardrail. |
 
 ### Vendor SDKs
 
-Install vendor SDKs only when your app uses them directly. The examples below use VaultKit's generic `sendCall(...)` path and `viem` ABI encoding, so they do not require a Morpho SDK.
+Install vendor SDKs only when your app uses them directly. The typed Morpho overlay uses Morpho's published SDK under the hood, so Morpho integrations install the Morpho peer dependency:
 
 ```bash
 pnpm add @morpho-org/blue-sdk-viem
 ```
 
-If you use `shield.sendCall(...)` and encode calldata yourself, you do not need a vendor SDK.
+If you use `shield.sendCall(...)` and encode calldata yourself, you do not need a vendor SDK. Prefer typed vendor overlays when VaultKit ships one for your protocol.
 
 ## 1. Create Viem Clients
 
@@ -116,16 +116,17 @@ const pack = await defineComposite({
 ## 3. Create or Attach to a Shield
 
 ```typescript
-import { createShield } from '@newton-xyz/newton-shield-sdk'
+import { createShield } from '@newton-xyz/vaultkit'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const shield = await createShield({
+const shield = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.BASE_RPC_URL!,
   pack,
   vault: '0xMetaMorphoVaultAddress',
   bypassDelaySeconds: 7n * 24n * 60n * 60n,
-})
+})).extend(morphoActions)
 ```
 
 `createShield` is idempotent. It predicts the deterministic Shield address from the curator, vault, and version. If a clone exists with compatible configuration, the SDK attaches to it; otherwise it deploys a new clone through `ShieldFactory`.
@@ -145,8 +146,8 @@ const shield = await createShield({
     vaultsfyi: {
       apy_z_max: 3,
       risk_score_floor: 80,
-      tvl_drawdown_24h_max_pct: 0.05,
-      tvl_drawdown_7d_max_pct: 0.2,
+      tvl_drawdown_24h_max_pct: 25,
+      tvl_drawdown_7d_max_pct: 40,
       deny_on_allocation_change: true,
       deny_on_critical_flag: true,
       deny_on_corrupted: true,
@@ -164,8 +165,8 @@ await shield.setParams({
   vaultsfyi: {
     apy_z_max: 3,
     risk_score_floor: 80,
-    tvl_drawdown_24h_max_pct: 0.05,
-    tvl_drawdown_7d_max_pct: 0.2,
+    tvl_drawdown_24h_max_pct: 25,
+    tvl_drawdown_7d_max_pct: 40,
     deny_on_allocation_change: true,
     deny_on_critical_flag: true,
     deny_on_corrupted: true,
@@ -181,56 +182,60 @@ await shield.uploadSecrets({
 
 `setParams` writes typed policy params onchain through the Shield's bound Newton policy. `uploadSecrets` encrypts API secrets in the SDK and stores them with Newton Gateway so operators can evaluate policies without exposing credentials onchain.
 
-## 5. Execute a Morpho Action
+## 5. Grant the Shield Its Roles
 
-This compact example uses the generic `sendCall(...)` path. For a full MetaMorpho curator workflow, including clone role setup and Vaults.fyi testnet-data notes, use the [Morpho guide](/developers/vaults/sdk/morpho).
+`execute` and `executeDirect` are gated by Shield's approved-delegate map. The initial owner is approved at clone initialization, but any hot key or Safe module that will submit actions through the Shield must be explicitly approved:
 
 ```typescript
-import { encodeFunctionData } from 'viem'
+await walletClient.writeContract({
+  address: shield.policyClientAddress,
+  abi: shieldAbi,
+  functionName: 'setApprovedDelegate',
+  args: [account.address, true],
+})
+```
 
-const morphoReallocateCall = {
-  to: '0xMetaMorphoVaultAddress' as `0x${string}`,
-  data: encodeFunctionData({
-    abi: [
-      {
-        type: 'function',
-        name: 'reallocate',
-        stateMutability: 'nonpayable',
-        inputs: [
-          {
-            name: 'allocations',
-            type: 'tuple[]',
-            components: [
-              { name: 'marketId', type: 'bytes32' },
-              { name: 'assets', type: 'uint256' },
-            ],
-          },
-        ],
-        outputs: [],
-      },
-    ] as const,
-    functionName: 'reallocate',
-    args: [[{ marketId: '0xMarketId' as `0x${string}`, assets: 1_000_000n }]],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-}
+The Shield clone also needs the vendor-side manager role required by the action. For MetaMorpho `reallocate`, grant the clone allocator authority, or make it the curator:
 
-await shield.sendCall(morphoReallocateCall)
+```typescript
+await metaMorpho.write.setIsAllocator([shield.policyClientAddress, true])
+```
+
+## 6. Execute a Morpho Action
+
+For Morpho, use the typed overlay. It builds the MetaMorpho calldata through Morpho's SDK, lets the composite pack derive `wasmArgs`, requests the Newton attestation, and submits `executeDirect`.
+
+```typescript
+const result = await shield.morpho.reallocate(
+  '0xMetaMorphoVaultAddress',
+  [{ marketParams, assets: 1_000_000n }],
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+)
+
+const receipt = await publicClient.waitForTransactionReceipt({
+  hash: result.transactionHash,
+})
 ```
 
 The SDK builds the exact `Intent`, signs it with the curator wallet, asks Newton operators to evaluate the configured policy, and submits the attested call through the Shield. If the policy denies the action, the SDK raises a typed policy error and the vault call is not forwarded.
 
-## 6. Handle Policy Errors
+Use `shield.sendCall(...)` only for vendors or actions without a typed overlay. With `sendCall`, your integration owns the target, calldata, function signature, and any pack-specific per-call inputs.
+
+## 7. Handle Policy Errors
 
 ```typescript
 import {
   AttestationTimeoutError,
   GatewayError,
   PolicyDeniedError,
-} from '@newton-xyz/newton-shield-sdk'
+} from '@newton-xyz/vaultkit'
 
 try {
-  await shield.sendCall(morphoReallocateCall)
+  await shield.morpho.reallocate('0xMetaMorphoVaultAddress', allocations)
 } catch (error) {
   if (error instanceof PolicyDeniedError) {
     console.error('Vault action denied by policy', error)

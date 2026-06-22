@@ -22,14 +22,19 @@ For more detail on how packs work, how they are implemented, and how to build po
 | --- | --- |
 | [Vaults.fyi Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
 | [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
-| [Webacy Depositor Reputation](/developers/vaults/policies/webacy) | Applying wallet-reputation controls to deposits and other user actions |
+| [Webacy Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
 | [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+| [Blockaid Transaction Screening](/developers/vaults/policies/blockaid) | Adding transaction or address risk screening |
+| [Persona Identity Checks](/developers/vaults/policies/persona) | Adding identity or verification signals |
+| [Sumsub Verification Checks](/developers/vaults/policies/sumsub) | Adding KYC or verification signals |
+| [Guardrail Risk Checks](/developers/vaults/policies/guardrail) | Adding optional Guardrail risk signals |
+| [Balancer Data Checks](/developers/vaults/policies/balancer) | Adding keyless Balancer market or pool signals |
 
 ## Composing Policy Packs
 
 Vault policy packs are most useful when combined. For example, a regulated yield vault might require:
 
-- A Webacy depositor reputation check before deposit
+- Webacy depeg-risk checks for pegged-token exposure
 - Chainalysis sanctions screening for the depositor address
 - Vaults.fyi risk checks before accepting additional capital
 - RedStone oracle divergence checks before curator reallocations
@@ -48,10 +53,30 @@ The result is a vault whose rules are explicit, inspectable, and enforced before
   Screen addresses against sanctions and risk categories.
 </Card>
 
-<Card title="Webacy Depositor Reputation" icon="user-check" href="/developers/vaults/policies/webacy">
-  Gate deposits based on wallet reputation and exploit exposure.
+<Card title="Webacy Depeg Risk" icon="user-check" href="/developers/vaults/policies/webacy">
+  Monitor pegged-token depeg risk before manager actions execute.
 </Card>
 
 <Card title="RedStone Oracle Divergence" icon="activity" href="/developers/vaults/policies/redstone">
   Compare RedStone price data against onchain oracle data before allowing actions.
+</Card>
+
+<Card title="Blockaid Transaction Screening" icon="shield-check" href="/developers/vaults/policies/blockaid">
+  Add transaction or address risk screening.
+</Card>
+
+<Card title="Persona Identity Checks" icon="badge-check" href="/developers/vaults/policies/persona">
+  Add Persona identity signals.
+</Card>
+
+<Card title="Sumsub Verification Checks" icon="id-card" href="/developers/vaults/policies/sumsub">
+  Add Sumsub verification signals.
+</Card>
+
+<Card title="Guardrail Risk Checks" icon="shield" href="/developers/vaults/policies/guardrail">
+  Add optional Guardrail risk data.
+</Card>
+
+<Card title="Balancer Data Checks" icon="scale" href="/developers/vaults/policies/balancer">
+  Add keyless Balancer data.
 </Card>

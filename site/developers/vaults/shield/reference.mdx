@@ -45,10 +45,10 @@ Called once by `ShieldFactory.createShield`. Reverts if the bypass delay is belo
 ```solidity
 function execute(
     NewtonMessage.Attestation calldata attestation
-) external nonReentrant returns (bytes memory);
+) external nonReentrant onlyApprovedDelegate returns (bytes memory);
 ```
 
-Validates an AVS-issued attestation, forwards the approved intent, emits `ShieldExecuted`, and returns target `returnData`.
+Validates an AVS-issued attestation, forwards the approved intent, emits `ShieldExecuted`, and returns target `returnData`. Reverts with `NotApprovedDelegate(caller)` when `msg.sender` is not approved.
 
 ### `executeDirect`
 
@@ -57,10 +57,27 @@ function executeDirect(
     INewtonProverTaskManager.Task calldata task,
     INewtonProverTaskManager.TaskResponse calldata taskResponse,
     bytes calldata signatureData
-) external nonReentrant returns (bytes memory);
+) external nonReentrant onlyApprovedDelegate returns (bytes memory);
 ```
 
-Validates the task response and signature data inline, forwards the approved intent, emits `ShieldExecutedDirect`, and returns target `returnData`.
+Validates the task response and signature data inline, forwards the approved intent, emits `ShieldExecutedDirect`, and returns target `returnData`. The task intent and task-response intent must match byte-for-byte or the call reverts with `IntentMismatch()`.
+
+### Delegates
+
+`execute` and `executeDirect` are gated by the `approvedDelegates` map. The policy-client owner controls that map separately from bypass and policy ownership.
+
+```solidity
+mapping(address delegate => bool approved) public approvedDelegates;
+
+function setApprovedDelegate(
+    address delegate,
+    bool approved
+) external onlyPolicyClientOwner;
+
+function isApprovedDelegate(address delegate) external view returns (bool);
+```
+
+The initial `policyClientOwner` is approved during `initialize`, so the owner can execute immediately after deployment. There is no implicit live-owner overlay after ownership changes: if ownership is handed to a Safe or another EOA, the new executor must be approved with `setApprovedDelegate(newExecutor, true)`, and old delegates should be revoked with `setApprovedDelegate(oldDelegate, false)`.
 
 ### Bypass Methods
 
@@ -88,6 +105,7 @@ event ShieldExecutedDirect(bytes32 indexed taskId, NewtonMessage.Intent intent, 
 event BypassQueued(bytes32 indexed id, address indexed to, uint256 value, bytes data, uint256 eta);
 event BypassExecuted(bytes32 indexed id, address indexed to, uint256 value, bytes data, bytes returnData);
 event BypassCancelled(bytes32 indexed id);
+event DelegateUpdated(address indexed delegate, bool indexed approved);
 ```
 
 ### Common Errors
@@ -95,6 +113,8 @@ event BypassCancelled(bytes32 indexed id);
 ```solidity
 error InvalidAttestation();
 error IntentExecutionFailed();
+error IntentMismatch();
+error NotApprovedDelegate(address caller);
 error BypassDelayBelowMinimum(uint256 provided, uint256 minimum);
 error BypassAlreadyQueued(bytes32 id);
 error BypassUnknown(bytes32 id);
