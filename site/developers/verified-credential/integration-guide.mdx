@@ -6,10 +6,11 @@ description: "Step-by-step guide for integrating Newton Verifiable Credentials i
 This guide walks through the end-to-end integration of Newton Verifiable Credentials into your app. Before starting, read the [overview](/developers/verified-credential/overview) to understand how Newton VC works.
 
 <CardGroup cols={2}>
-  <Card icon="github" href="https://github.com/newt-foundation/verifiable-credential-example" title="Example Repo">
+  <Card title="Example Repo" icon="github" href="https://github.com/newt-foundation/verifiable-credential-example">
     Clone the repo and follow the README to run the full VC flow locally
   </Card>
-  <Card icon="browser" href="https://verifiable-credential-example.vercel.app/" title="Live Demo">
+
+  <Card title="Live Demo" icon="browser" href="https://verifiable-credential-example.vercel.app/">
     Try the live demo
   </Card>
 </CardGroup>
@@ -17,10 +18,10 @@ This guide walks through the end-to-end integration of Newton Verifiable Credent
 ## Prerequisites
 
 | Requirement | Details |
-|-------------|---------|
+| --- | --- |
 | **Newton SDK** | `@newton-xyz/sdk` installed in your JavaScript/TypeScript app |
 | **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
-| **Policy client contract** | Must inherit `NewtonPolicyClient` + `EIP712` and be registered with `PolicyClientRegistry` |
+| **Policy client contract** | Must inherit `NewtonPolicyClient` \+ `EIP712` and be registered with `PolicyClientRegistry` |
 | **Identity domain** | A fixed `bytes32` hex value for your application — the output of `keccak256("kyc")` |
 | **KYC vendor** | A third-party vendor to collect user identity data. The vendor's output must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields). |
 
@@ -75,14 +76,14 @@ Define the schema for your policy params, including the `identity_domain`:
 ```
 
 <Note>
-Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
+  Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
 </Note>
 
 ### 1d. Deploy your policy using newton-cli
 
 Your policy directory should look like this before deploying:
 
-```
+```text
 policy_files/
 ├── params_schema.json
 ├── policy.rego
@@ -106,6 +107,7 @@ After deploying, note your policy contract address — you'll need it in Step 2.
 Your policy client must inherit from both `NewtonPolicyClient` and `EIP712`. See the [Reference](/developers/verified-credential/reference#sample-policy-client) for a complete sample contract.
 
 Key requirements:
+
 - Inherit `NewtonPolicyClient` and `EIP712`
 - Call `_initNewtonPolicyClient(policyTaskManager, owner)` in the constructor
 - Register the contract with the `PolicyClientRegistry` — see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration)
@@ -144,7 +146,7 @@ await walletClient.registerUserData({
 ```
 
 <Note>
-When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
+  When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
 </Note>
 
 ### 4b. User Confirms KYC Data
@@ -165,7 +167,7 @@ await walletClient.linkApp({
 })
 ```
 
-This creates an association between the user's Newton identity wallet and your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.
+This creates an association between the user's Newton identity wallet and your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.  A user's registered identity data can be reused across any application sharing the same identity domain, not just yours. Before calling `linkApp`, surface this to the user in plain language: linking grants your app access to the same KYC data other apps may already have, and other apps may gain access to data registered here.
 
 You can find the `IdentityRegistry` contract address in [Contract Addresses](/developers/reference/contract-addresses).
 
@@ -295,17 +297,20 @@ await walletClient.unlinkApp({
 })
 ```
 
+Unlinking removes the user's identity association with your policy client. Once unlinked, any policy evaluation that depends on this link will fail until the user re-links. Make it easy for users to find and trigger this action in your app; identity links should be as easy to remove as they are to create.
+
 ## Reference Pages
 
 <CardGroup cols={2}>
-  <Card icon="code" href="/developers/verified-credential/reference" title="SDK & Contract Reference">
+  <Card title="SDK & Contract Reference" icon="code" href="/developers/verified-credential/reference">
     Full SDK method signatures and contract functions
   </Card>
-  <Card icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
+
+  <Card title="Identity Policy Reference" icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference">
     All Rego built-in functions for identity checks
   </Card>
 </CardGroup>
 
-<Card icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
+<Card title="Have questions?" icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team">
   Get in touch with someone from the Newton team to discuss your integration
 </Card>
