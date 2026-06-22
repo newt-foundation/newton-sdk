@@ -16,6 +16,10 @@ The open-source policy packs live in [newt-foundation/newton-policy-packs](https
 
 For more detail on how packs work, how they are implemented, and how to build policies from them, see [Policy Packs](/developers/guides/policy-packs).
 
+<Note>
+The canonical deployment source is [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). The table below is a production-address snapshot for common curator workflows; use `deployments.json` for stage environments, WASM CIDs, deploy dates, and future redeploys.
+</Note>
+
 ## Available Packs
 
 | Policy pack | Use it for |
@@ -29,6 +33,22 @@ For more detail on how packs work, how they are implemented, and how to build po
 | [Sumsub Verification Checks](/developers/vaults/policies/sumsub) | Adding KYC or verification signals |
 | [Guardrail Risk Checks](/developers/vaults/policies/guardrail) | Adding optional Guardrail risk signals |
 | [Balancer Data Checks](/developers/vaults/policies/balancer) | Adding keyless Balancer market or pool signals |
+
+## Deployed PolicyData Addresses
+
+Production `PolicyData` addresses for each pack:
+
+| Pack | Ethereum (`1`) | Base (`8453`) | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
+| --- | --- | --- | --- | --- |
+| Balancer | `0xAd60980C077123A82c574624AC857Dc775b914bd` | `0x53F172A3Aa5C997f0F3CD62Af032FefCab754C42` | `0xA9562499f32BC3570f234fF184B6D90585D0d02F` | `0x245819bE9518a4282D8EA72c82ca853131a87d4c` |
+| Blockaid | `0xa7ab76E81269f48b6C40132d2234A710b0B7A099` | `0x33394324EA2a7a599B368bd73133cc02c1E04753` | `0x849b66977Ac8aCEB246A6b42379F2df4cD6a8DD1` | `0xa086D57d33d030A5209fED5f62be0014f09B0413` |
+| Chainalysis | `0xCacbdEDA32C0048bbE0Ae0d3081Ced3490699049` | `0xceB2027a5fA390740971c7cbb2523841C19CC2f9` | `0x226d196d565b92952669701Fb6cb85B586706996` | `0xdC2e9d30B8e415F907e39f0bfe22974B9894740F` |
+| Guardrail | `0x0953fdC0Ccd8fF98D81B0972F95a94E5815Efb78` | `0x194FD071bED2DaCCe87ef879d3E8CA271c34b791` | `0xFca31181ACc0BfECF88E8D58281dB54282313094` | `0x91e535846ca509D5654DE743081EaF7aCF6E7314` |
+| Persona | `0x85C946F218C00095885ba418bc3F802aE8dD16B0` | `0x3c1cFEa7E26059eE8e88E4A04588C7b191D48Bc1` | `0x87C4AFf01D7bABAcaC791af4e9b2FB44637cFe10` | `0xA3aDce2bcAf62dfd945D627cCfD563158e09eC53` |
+| RedStone | `0xc81371B54F5d71E8aA92a3601f30f3520c34A5a9` | `0xa5aDDdcf0d37C50A338B3C7F8067FB175AFAf6Bf` | `0x6621D7F739a3682054ac974D772AEEBb8548b1BF` | `0xDbfE2fea061e71109e65e511CD11D070f49A187d` |
+| Sumsub | `0x6B8d613bD3003A6e90F1536C576519A231730A1d` | `0x271221cd3bfF4f45b41A28Af4A28a82F4e373265` | `0xa8Dd24EC989CD9Fc5FbFa3fe2B7991A053753E11` | `0x52458F0F5937b703d64B5D206a800384A7fc59e1` |
+| Vaults.fyi | `0xd0947ba40e526E7cdD9d2f9C276cED1B2e089c49` | `0x763800149600164edBd19d0eeE9f858d7ac27836` | `0x90ef32c7D103D5Af2A546f94BdA994BC37372017` | `0x443487D506eEc522e5fb5075eBDbD7496DB454dF` |
+| Webacy | `0xc127976860eEF5FF5d610548C456ABFEE66CD620` | `0x031afeF4c77774960Eb33fb446F9Ce3612C56b5c` | `0xBFf38a5A77262ADfC10667004A550337A97EFB36` | `0x01206E5302794Fba1B71b761594a5e8b4111Be60` |
 
 ## Composing Policy Packs
 
