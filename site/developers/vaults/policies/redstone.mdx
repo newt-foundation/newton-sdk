@@ -78,8 +78,8 @@ import future.keywords
 
 default allow := false
 
-t := data.params
-v := data.wasm
+t := data.params.redstone
+v := data.wasm.redstone
 
 deny contains "redstone_feed_stale" if v.redstone_feed_age_seconds > t.max_feed_age_seconds
 

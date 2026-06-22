@@ -82,8 +82,8 @@ import future.keywords
 
 default allow := false
 
-t := data.params
-v := data.wasm
+t := data.params.chainalysis
+v := data.wasm.chainalysis
 
 deny contains "chainalysis_sanctioned" if {
     t.deny_on_sanctioned

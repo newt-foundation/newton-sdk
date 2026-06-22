@@ -131,8 +131,8 @@ import future.keywords
 
 default allow := false
 
-t := data.params
-v := data.wasm
+t := data.params.vaultsfyi
+v := data.wasm.vaultsfyi
 
 deny contains "apy_spike" if v.apy_z_score > t.apy_z_max
 
