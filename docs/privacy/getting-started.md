@@ -156,7 +156,7 @@ The gateway will:
 1. Validate the dual Ed25519 signatures
 2. Decrypt the referenced data using HPKE
 3. Pass the plaintext to operators via a separate privacy data channel
-4. Operators inject it under `data.data.privacy` for Rego policy evaluation
+4. Operators inject it under `data.privacy` for Rego policy evaluation
 5. Aggregate BLS signatures and return the result
 
 ## Next Steps

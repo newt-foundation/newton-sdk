@@ -1,0 +1,163 @@
+---
+title: "Examples"
+description: "Recipe-shaped Newton VaultKit examples for Shield creation, typed vendor calls, generic calls, error handling, inspection, and multi-chain use."
+keywords:
+  - vaultkit examples
+  - newton shield examples
+  - morpho vaultkit
+  - sendcall
+---
+
+These snippets assume you have `publicClient`, `walletClient`, a Newton API key, and a policy pack set up as shown in [Getting Started](/developers/vaults/sdk/integration-guide).
+
+## Idempotent Attach or Deploy
+
+`createShield` predicts the deterministic clone address and either attaches to an existing compatible clone or deploys a new one.
+
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const pack = await defineComposite({
+  modules: [vaultsfyi],
+  chainId: '8453',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xPolicyAddress',
+})
+
+const shield = await createShield({
+  apiKey: process.env.NEWTON_API_KEY!,
+  walletClient,
+  rpc: process.env.BASE_RPC_URL!,
+  vault: '0xMetaMorphoVaultAddress',
+  pack,
+  bypassDelaySeconds: 7n * 24n * 60n * 60n,
+})
+
+console.log(shield.policyClientAddress)
+```
+
+If a clone exists but the policy binding or params do not match your expectations, the SDK raises a typed configuration error instead of attaching silently.
+
+## Typed Morpho Call
+
+Use the typed Morpho overlay for MetaMorpho manager actions.
+
+```typescript
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
+
+const morphoShield = shield.extend(morphoActions)
+
+const result = await morphoShield.morpho.reallocate(
+  '0xMetaMorphoVaultAddress',
+  [{ marketParams, assets: 1_000_000n }],
+)
+
+await publicClient.waitForTransactionReceipt({ hash: result.transactionHash })
+```
+
+Newton operators evaluate the configured policy before the Shield forwards the typed calldata.
+
+## Generic `sendCall`
+
+Use `sendCall` for a manager action without a first-class vendor helper.
+
+```typescript
+import { encodeFunctionData } from 'viem'
+
+const data = encodeFunctionData({
+  abi: vaultAbi,
+  functionName: 'someManagerAction',
+  args: [42n],
+})
+
+await shield.sendCall({
+  to: vaultAddress,
+  data,
+  functionSignature: 'someManagerAction(uint256)',
+})
+```
+
+Prefer typed vendor modules when they exist. With `sendCall`, your app is responsible for matching the calldata, signature, target, and policy inputs.
+
+## Error Handling
+
+Catch specific subclasses when retry behavior matters.
+
+```typescript
+import {
+  AttestationTimeoutError,
+  GatewayError,
+  PolicyDeniedError,
+  ShieldExecutionError,
+} from '@newton-xyz/vaultkit'
+
+try {
+  await shield.sendCall(args)
+} catch (error) {
+  if (error instanceof PolicyDeniedError) {
+    return
+  }
+
+  if (error instanceof AttestationTimeoutError || error instanceof GatewayError) {
+    await sleep(2_000)
+    return shield.sendCall(args)
+  }
+
+  if (error instanceof ShieldExecutionError) {
+    console.error(error.cause)
+  }
+
+  throw error
+}
+```
+
+`PolicyDeniedError` is not retry-safe without changing the action or accepting the denial. Gateway and timeout failures are usually retry-safe with a fresh task.
+
+## Read-Only Inspection
+
+Anyone can inspect a Shield clone without holding the curator key.
+
+```typescript
+import { introspectComposite } from '@newton-xyz/policy-pack-shared'
+
+const report = await introspectComposite({
+  publicClient,
+  shieldAddress: '0xShieldAddress',
+})
+
+if (!report.verification.onChainPolicyDataMatches) {
+  throw new Error('Policy data does not match the published pack manifest')
+}
+
+console.log(report.policyAddress)
+console.log(report.manifest.params)
+```
+
+This is useful for dashboards, depositor diligence, and operations review.
+
+## Multiple Chains
+
+Create one pack and one Shield client per chain. The SDK reads the chain from each `walletClient`; there is no global chain singleton.
+
+```typescript
+const baseShield = await createShield({
+  apiKey,
+  walletClient: baseWalletClient,
+  rpc: process.env.BASE_RPC_URL!,
+  vault: '0xBaseVault',
+  pack: basePack,
+})
+
+const ethereumShield = await createShield({
+  apiKey,
+  walletClient: ethereumWalletClient,
+  rpc: process.env.ETHEREUM_RPC_URL!,
+  vault: '0xEthereumVault',
+  pack: ethereumPack,
+})
+```
+
+If a chain is not in the SDK deployment registry, `createShield` throws `UnsupportedChainError` before sending a transaction.

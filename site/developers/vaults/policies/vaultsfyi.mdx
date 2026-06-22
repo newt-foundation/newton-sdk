@@ -1,0 +1,164 @@
+---
+title: "Vaults.fyi Vault Risk Rating"
+description: "Use Vaults.fyi data in Newton policies to gate vault actions on APY, TVL, risk score, allocation changes, flags, and corruption status."
+keywords:
+  - vaultsfyi
+  - vault risk rating
+  - vault apy
+  - vault tvl drawdown
+  - newton vault policies
+---
+
+The Vaults.fyi policy checks whether a vault still fits the risk profile configured by the vault owner or curator. It is useful before deposits, cap changes, reallocations, or other actions that should stop when the vault's health changes.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `vaultsfyi` |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `VAULTS_FYI_API_KEY` | Required | [vaults.fyi](https://vaults.fyi) |
+
+## Data Inputs
+
+The Vaults.fyi data oracle normalizes vault performance, TVL, reputation score, flags, capacity, and historical time-series data from the [Vaults.fyi vault data API](https://docs.vaults.fyi/concepts/vault-data).
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `apy_current` | The vault's current 1 day total APY from `apy.1day.total`. Vaults.fyi also exposes 1 hour, 7 day, and 30 day APY windows. | Used as the short-window yield signal for APY anomaly detection. |
+| `apy_30d` | The vault's 30 day total APY from `apy.30day.total`. Vaults.fyi recommends longer windows, such as 7 day or 30 day, for user-facing yield displays because shorter windows are noisier. | Used as the baseline for detecting whether current APY moved unusually far from recent history. |
+| `apy_z_score` | A normalized measure of how far the current APY is from the 30 day APY baseline. In this policy oracle, it is computed from current APY and 30 day APY. | Denies actions when yield changes look anomalous enough to require review. |
+| `tvl_usd` | Total value locked in the vault, denominated in USD. Vaults.fyi also exposes native-asset TVL. | Used to calculate drawdowns and understand vault scale. |
+| `tvl_drawdown_24h_pct` | The percentage drop from the historical TVL point roughly 24 hours ago to current `tvl_usd`. | Denies actions when the vault has lost too much TVL over the last day. |
+| `tvl_drawdown_7d_pct` | The percentage drop from the historical TVL point roughly 7 days ago to current `tvl_usd`. | Denies actions when the vault has had a larger medium-term TVL drawdown. |
+| `risk_score` | Vaults.fyi's composite vault reputation score, after component scores and flag penalties are applied. Higher is better. | Denies actions when the vault score falls below the configured minimum. |
+| `flags` | Active vault flags from Vaults.fyi, including severity and content. Flags can describe warnings such as audits, migrations, paused deposits, or incidents. | Used to detect critical or high-severity warnings that should pause vault actions. |
+| `has_critical_flag` | Boolean derived from `flags` when any flag has `critical` or `high` severity. | Denies actions when severe active warnings are present and `deny_on_critical_flag` is enabled. |
+| `allocation_changed_since_last` | Boolean derived by hashing vault metadata such as protocol, tags, fees, and child vaults, then comparing it to the last known allocation hash. | Denies actions when the vault's observed allocation metadata changed unexpectedly. |
+| `capacity_remaining` / `capacity_max` | Deposit capacity data when the vault has a cap. Vaults.fyi exposes maximum capacity and remaining capacity where applicable. | Useful for display and future policy extensions around deposits near capacity. |
+| `is_corrupted` | Vaults.fyi marks vaults as corrupted when indexed data is known to be unreliable. | Denies actions when the vault data should not be trusted. |
+
+## Rego Checks
+
+Use these exact Rego checks to enforce each guardrail.
+
+### APY Spike
+
+This check compares `apy_z_score` to the configured `apy_z_max`. Use it to stop actions when short-window APY moves too far from the 30 day baseline, which can indicate abnormal rewards, stale data, manipulation, or a strategy regime change.
+
+```rego
+deny contains "apy_spike" if v.apy_z_score > t.apy_z_max
+```
+
+### 24 Hour TVL Drawdown
+
+This check blocks actions when current TVL has fallen by more than `tvl_drawdown_24h_max_pct` compared with the recent 24 hour historical point. It is useful for catching sudden withdrawals, migrations, or confidence shocks.
+
+```rego
+deny contains "tvl_drawdown_24h" if v.tvl_drawdown_24h_pct > t.tvl_drawdown_24h_max_pct
+```
+
+### 7 Day TVL Drawdown
+
+This check blocks actions when current TVL has fallen by more than `tvl_drawdown_7d_max_pct` compared with the 7 day historical point. The 7 day window is less noisy than a daily check and helps catch sustained capital flight.
+
+```rego
+deny contains "tvl_drawdown_7d" if v.tvl_drawdown_7d_pct > t.tvl_drawdown_7d_max_pct
+```
+
+### Risk Score Floor
+
+This check blocks actions when Vaults.fyi returns a non-null reputation score below the configured `risk_score_floor`. Because the score includes multiple components and can include flag penalties, this gives the policy a compact vault-health threshold.
+
+```rego
+deny contains "risk_score_below_floor" if {
+    v.risk_score != null
+    v.risk_score < t.risk_score_floor
+}
+```
+
+### Allocation Change
+
+This check blocks actions when the oracle detects a change from the last known allocation hash and the policy is configured to deny on allocation change. Use it when a vault should pause until an allocator or risk team reviews changed vault metadata.
+
+```rego
+deny contains "allocation_changed" if {
+    v.allocation_changed_since_last
+    t.deny_on_allocation_change
+}
+```
+
+### Critical Flag
+
+This check blocks actions when Vaults.fyi reports a high or critical flag and the policy is configured to deny on critical flags. Use it to pause actions during severe active warnings.
+
+```rego
+deny contains "critical_flag" if {
+    v.has_critical_flag
+    t.deny_on_critical_flag
+}
+```
+
+### Corrupted Vault
+
+This check blocks actions when Vaults.fyi marks the vault's indexed data as corrupted and the policy is configured to deny corrupted vaults. Use it when policy decisions should not proceed on unreliable vault data.
+
+```rego
+deny contains "vault_corrupted" if {
+    v.is_corrupted
+    t.deny_on_corrupted
+}
+```
+
+### Final Allow Rule
+
+```rego
+allow if count(deny) == 0
+```
+
+## Complete Policy
+
+```rego
+package vault_risk_rating
+
+import future.keywords
+
+default allow := false
+
+t := data.params.vaultsfyi
+v := data.wasm.vaultsfyi
+
+deny contains "apy_spike" if v.apy_z_score > t.apy_z_max
+
+deny contains "tvl_drawdown_24h" if v.tvl_drawdown_24h_pct > t.tvl_drawdown_24h_max_pct
+
+deny contains "tvl_drawdown_7d" if v.tvl_drawdown_7d_pct > t.tvl_drawdown_7d_max_pct
+
+deny contains "risk_score_below_floor" if {
+    v.risk_score != null
+    v.risk_score < t.risk_score_floor
+}
+
+deny contains "allocation_changed" if {
+    v.allocation_changed_since_last
+    t.deny_on_allocation_change
+}
+
+deny contains "critical_flag" if {
+    v.has_critical_flag
+    t.deny_on_critical_flag
+}
+
+deny contains "vault_corrupted" if {
+    v.is_corrupted
+    t.deny_on_corrupted
+}
+
+allow if count(deny) == 0
+```

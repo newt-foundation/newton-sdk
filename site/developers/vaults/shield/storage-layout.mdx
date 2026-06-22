@@ -1,0 +1,49 @@
+---
+title: "Storage Layout"
+description: "How Shield storage layout is protected for EIP-1167 clones."
+keywords:
+  - shield storage layout
+  - vaultkit storage
+  - eip-1167 clones
+  - storage snapshot
+---
+
+Shield clones are EIP-1167 minimal proxies. Every curator clone shares the implementation's storage layout slot-for-slot, so storage changes are treated as compatibility changes.
+
+## Rule
+
+The layout is append-only:
+
+- Existing slots cannot move.
+- Existing slots cannot change type.
+- Existing slots cannot be deleted.
+- New storage variables go after the existing layout.
+
+If a change needs to reorder, retype, or remove storage, deploy a new implementation and factory. Curators opt in by deploying new clones.
+
+## Snapshot
+
+The canonical snapshot is `contracts/.storage-layouts/Shield.json` in the Shield repo. It is regenerated from compiled artifacts:
+
+```bash
+cd contracts
+forge inspect Shield storage-layout --json > .storage-layouts/Shield.json
+```
+
+The snapshot records each field's contract, label, slot, offset, and type, plus the type map.
+
+## CI Checks
+
+The Shield repository runs two storage-layout checks:
+
+| Check | What it catches |
+| --- | --- |
+| Append-only validator | Any changed label, slot, offset, or type for existing entries, plus inserted entries below the baseline tail. |
+| Freshness check | A stale committed snapshot that no longer matches `forge inspect`. |
+
+Both must pass before a layout-affecting PR can merge.
+
+## Inherited Storage
+
+Shield inherits `ReentrancyGuardUpgradeable` and `NewtonPolicyClient`. Changes in either inherited contract can still move the effective layout, so the snapshot intentionally catches upstream dependency drift as well as edits to `Shield.sol`.
+

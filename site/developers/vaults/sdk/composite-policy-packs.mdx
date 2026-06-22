@@ -1,0 +1,129 @@
+---
+title: "Composite Policy Packs"
+description: "How VaultKit composes one or more policy-pack modules into the onchain manifest a Shield enforces."
+keywords:
+  - vaultkit composite policy packs
+  - defineComposite
+  - policy manifest
+  - vault policy params
+---
+
+VaultKit treats every Shield policy as a composite, even when it has one module. `defineComposite(...)` reads the deployed `NewtonPolicy.getPolicyData()` list, aligns your modules to that onchain oracle set, and returns the `pack` passed to `createShield(...)`.
+
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+import { chainalysis } from '@newton-xyz/policy-pack-chainalysis'
+
+const pack = await defineComposite({
+  modules: [vaultsfyi, chainalysis],
+  chainId: '8453',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xCompositeNewtonPolicy',
+})
+
+const shield = await createShield({
+  apiKey: process.env.NEWTON_API_KEY!,
+  walletClient,
+  rpc: process.env.RPC_URL!,
+  pack,
+  vault: '0xVaultAddress',
+})
+```
+
+The module list is order-independent when you pass it, but the deployed policy must contain the same oracle set. A missing or extra oracle fails before VaultKit builds an intent.
+
+## Onchain Manifest
+
+`shield.setParams(...)` writes the full manifest envelope to `NewtonPolicy.PolicyConfig.policyParams`. Operators validate this exact byte shape; they do not unwrap `params` before schema validation.
+
+```json
+{
+  "_manifest": { "magic": "NPM1", "version": 1 },
+  "modules": [
+    {
+      "id": "vaultsfyi/risk-envelope/v1",
+      "policyDataAddress": "0xVAULTSFYI_PD...",
+      "wasmCid": "bafybei..."
+    },
+    {
+      "id": "chainalysis/screening/v1",
+      "policyDataAddress": "0xCHAINALYSIS_PD...",
+      "wasmCid": "bafybei..."
+    }
+  ],
+  "params": {
+    "vaultsfyi": {
+      "risk_score_floor": 80,
+      "tvl_drawdown_24h_max_pct": 25
+    },
+    "chainalysis": {
+      "deny_on_sanctioned": true,
+      "deny_on_high_risk": true
+    }
+  }
+}
+```
+
+A composite `params_schema.json` must describe this envelope: required root fields are `_manifest`, `modules`, and `params`; pack params live under `params.<short-id>`.
+
+## Per-Call Options
+
+`shield.sendCall(...)` and typed vendor overlays accept `prepareQueryOptions`, keyed by short pack id. The composite routes each entry to the matching module's `prepareQuery`.
+
+```typescript
+await shield.morpho.reallocate(vault, allocations, {
+  prepareQueryOptions: {
+    vaultsfyi: { previousAllocationHash: '0x...' },
+    chainalysis: { address: curatorAddress },
+  },
+})
+```
+
+Each module's returned `wasmArgs` is validated against that module's schema before the intent is built. A rejected module fails closed.
+
+## Params and Secrets
+
+Params and secrets are both keyed by short pack id:
+
+```typescript
+await shield.setParams({
+  vaultsfyi: { risk_score_floor: 80, tvl_drawdown_24h_max_pct: 25 },
+  chainalysis: { deny_on_sanctioned: true, deny_on_high_risk: true },
+})
+
+await shield.uploadSecrets({
+  vaultsfyi: { VAULTS_FYI_API_KEY: process.env.VAULTS_FYI_API_KEY! },
+  chainalysis: { CHAINALYSIS_SANCTIONS_KEY: process.env.CHAINALYSIS_SANCTIONS_KEY! },
+})
+```
+
+Secrets are encrypted client-side and uploaded to Newton Gateway. They are not written onchain.
+
+## Depositor Verification
+
+A depositor or monitoring service can verify a deployed Shield contract without trusting offchain docs:
+
+1. Read `Shield.getPolicyAddress()`.
+2. Read `INewtonPolicy(policy).getPolicyData()` for the constituent oracles.
+3. Read each oracle's `getWasmCid()`.
+4. Read `Shield.getPolicyConfig().policyParams` and decode the manifest.
+5. Compare manifest `modules[]` and `wasmCid` values against the onchain reads.
+
+`@newton-xyz/policy-pack-shared` exposes `introspectComposite({ publicClient, shieldAddress })` for this path. It returns a report with booleans such as `onChainPolicyDataMatches` and per-module `wasmCidsMatch`; it throws only when the manifest bytes cannot be decoded.
+
+## Recovery Flag
+
+`createShield({ skipPolicyBindingCheck: true })` attaches without validating the onchain manifest. Use it only for first-time or interrupted setup recovery so the next call can write `setParams(...)`; remove it for production runs.
+
+## Composite-Specific Errors
+
+| Error | When |
+| --- | --- |
+| `PolicyMismatchError` | `createShield` attached to a clone whose policy address, oracle set, wasm CID, or params do not match the composite. |
+| `CompositeModuleSetMismatchError` | `defineComposite` could not match the deployed `getPolicyData()` oracle set to the modules passed in. |
+| `CompositePrepareQueryError` | A module's `prepareQuery` failed during composite intent build. |
+| `UnknownPackIdError` | A module short id is not in the published pack registry. Use `allowUnknownPackIds: true` only for bespoke packs. |
+| `MalformedManifestError` / `BadManifestMagicError` / `NotAManifestError` | Manifest bytes could not be decoded. |

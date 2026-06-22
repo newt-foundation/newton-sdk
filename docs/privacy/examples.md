@@ -336,4 +336,4 @@ const result = await newton.evaluateIntentDirect({
 })
 ```
 
-The Rego policy receives all decrypted data under `data.data.privacy` in the evaluation context, so it can cross-reference identity and financial information in a single evaluation pass.
+The Rego policy receives all decrypted data under `data.privacy` in the evaluation context, so it can cross-reference identity and financial information in a single evaluation pass.

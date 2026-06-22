@@ -1,0 +1,223 @@
+---
+title: "Morpho Guide"
+description: "How to gate MetaMorpho curator actions with Newton VaultKit and composite policy packs."
+keywords:
+  - morpho vaultkit
+  - metamorpho
+  - newton shield
+  - vault curator
+  - reallocate
+---
+
+Morpho vault curators can route MetaMorpho manager actions through a Newton Shield before the vault receives the call. VaultKit's Morpho overlay builds the MetaMorpho calldata with Morpho's SDK, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
+
+This guide focuses on `reallocate`, a curator-only MetaMorpho action. End-user deposits and withdrawals continue through the normal Morpho vault flow.
+
+## What This Demonstrates
+
+- **Exact calldata binding:** the attestation is bound to the exact `reallocate` calldata your app encodes.
+- **Composite policy checks:** one Shield can enforce a Vaults.fyi-only policy or a Vaults.fyi + Chainalysis policy in a single evaluation.
+- **Onchain policy parameters:** `setParams(...)` writes the curator's thresholds into the Shield-bound policy manifest.
+- **Manager-action gating:** the Shield clone must hold a MetaMorpho role that can call `reallocate`.
+
+## Target Network
+
+The public end-to-end Morpho examples use **Base Sepolia** (`84532`) with Newton `prod`, also called testnet production. Base Sepolia is used because the MetaMorpho V1.1 factory is deployed there for testnet curator flows.
+
+Newton environments are separate stacks. Create the key from the Newton dashboard for the same environment your Shield uses. The public Base Sepolia example uses `prod`.
+
+## Install Packages
+
+Every VaultKit Morpho integration needs VaultKit, Viem, policy-pack shared helpers, the policy packs you plan to enforce, and Morpho's SDK:
+
+```bash
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/policy-pack-vaultsfyi
+pnpm add @morpho-org/blue-sdk @morpho-org/blue-sdk-viem @morpho-org/morpho-ts
+```
+
+For a two-module policy that also screens an address, add Chainalysis:
+
+```bash
+pnpm add @newton-xyz/policy-pack-chainalysis
+```
+
+The Morpho packages are optional peer dependencies of VaultKit. Curators who use the generic `sendCall(...)` escape hatch can encode calldata themselves, but the typed path below uses `shield.morpho.reallocate(...)`.
+
+## Build the Composite Policy Pack
+
+Use `defineComposite(...)` with the modules deployed in your Newton policy. A Vaults.fyi-only policy looks like this:
+
+```typescript
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const pack = await defineComposite({
+  modules: [vaultsfyi],
+  chainId: '84532',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xCompositePolicyAddress',
+})
+```
+
+For Vaults.fyi plus Chainalysis, install the Chainalysis pack and include both modules:
+
+```typescript
+import { chainalysis } from '@newton-xyz/policy-pack-chainalysis'
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const pack = await defineComposite({
+  modules: [vaultsfyi, chainalysis],
+  chainId: '84532',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xCompositePolicyAddress',
+})
+```
+
+The module list must match the policy's onchain `getPolicyData()` exactly. If the Shield is configured with a policy address that references a different module set, the SDK raises a typed configuration error before executing a vault action.
+
+## Create or Attach to a Shield
+
+Create one Shield for the curator, vault, chain, policy pack, and version slot:
+
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
+
+const shield = (await createShield({
+  apiKey: process.env.NEWTON_API_KEY!,
+  walletClient,
+  rpc: process.env.BASE_SEPOLIA_RPC_URL!,
+  env: 'prod',
+  pack,
+  vault: '0xMetaMorphoVaultAddress',
+  bypassDelaySeconds: 7n * 24n * 60n * 60n,
+})).extend(morphoActions)
+
+console.log(shield.policyClientAddress)
+```
+
+`createShield(...)` is idempotent. It attaches to an existing compatible clone or deploys a new clone through `ShieldFactory`. If a previous run deployed a clone but did not finish writing policy params, pass a new `version` for a fresh clone or use `skipPolicyBindingCheck` only for a recovery run that immediately calls `setParams(...)`.
+
+## Configure Params and Secrets
+
+Write policy thresholds onchain and upload oracle secrets through Newton Gateway:
+
+```typescript
+await shield.setParams({
+  vaultsfyi: {
+    apy_z_max: 3,
+    risk_score_floor: 80,
+    tvl_drawdown_24h_max_pct: 25,
+    tvl_drawdown_7d_max_pct: 40,
+    deny_on_allocation_change: true,
+    deny_on_critical_flag: true,
+    deny_on_corrupted: true,
+  },
+})
+
+await shield.uploadSecrets({
+  vaultsfyi: {
+    VAULTS_FYI_API_KEY: process.env.VAULTSFYI_API_KEY!,
+  },
+})
+```
+
+For a Vaults.fyi + Chainalysis composite, include the Chainalysis params and secrets required by that pack. The OFAC sanctions endpoint is public, but the policy schema may still require a non-empty secret value; use the key or placeholder required by your deployed policy.
+
+## Grant the Shield a Morpho Role
+
+The Shield has two separate authorization gates:
+
+- Shield's delegate gate controls who can call `execute` or `executeDirect`.
+- MetaMorpho's manager roles control what the forwarded call can do on the vault.
+
+The initial Shield owner is approved as a delegate at clone initialization. After an ownership handoff or when using a separate hot key, approve the executor explicitly:
+
+```typescript
+await walletClient.writeContract({
+  address: shield.policyClientAddress,
+  abi: shieldAbi,
+  functionName: 'setApprovedDelegate',
+  args: [account.address, true],
+})
+```
+
+MetaMorpho protects `reallocate` with its allocator-role check. The Shield clone must be one of:
+
+- the vault curator,
+- the vault owner, or
+- an approved allocator.
+
+Grant the role from the vault owner before running the gated action. Most curator integrations use `setCurator(shield.policyClientAddress)` or `setIsAllocator(shield.policyClientAddress, true)`.
+
+If the Shield can configure policy params but `reallocate` reverts, check this role first. Newton can approve the intent, but MetaMorpho will still reject the forwarded call if the Shield clone is not authorized on the vault.
+
+## Execute `reallocate`
+
+With the Morpho overlay attached, call the typed action:
+
+```typescript
+const allocations = [
+  { marketParams: marketParamsA, assets: 1_000_000n },
+  { marketParams: marketParamsB, assets: 0n },
+]
+
+const result = await shield.morpho.reallocate(
+  '0xMetaMorphoVaultAddress',
+  allocations,
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+)
+```
+
+`reallocate` takes positional arguments: `(vault, allocations, options?)`. Each allocation uses Morpho's `marketParams` shape plus `assets`. For a Vaults.fyi + Chainalysis composite, include the per-call screening input your deployed pack expects under `prepareQueryOptions.chainalysis`. Omit it for a Vaults.fyi-only policy.
+
+The returned result includes the onchain transaction hash and Newton task context. A successful run with `allow: true` means the full path worked: exact calldata, policy evaluation, attestation, and Shield execution.
+
+Use `shield.sendCall(...)` only as an escape hatch for vendors or actions that VaultKit does not wrap yet. With `sendCall`, your integration owns calldata integrity.
+
+## Read-Only Versus Full Reproduce
+
+You can validate most of a Morpho integration before granting a vault role:
+
+| Path | What it proves | Requirements |
+| --- | --- | --- |
+| Read-only inspection | Policy source, params, and deployed Shield configuration are coherent. | Public RPC and deployed addresses. |
+| Type-check and encode | Your app compiles against the published package surface and produces MetaMorpho calldata. | Node, package install, and Morpho SDK. |
+| Setup stages | `defineComposite`, `createShield`, `setParams`, and `uploadSecrets` work. | Funded curator key and Newton/API secrets. |
+| Full execution | MetaMorpho accepts the Shield-forwarded `reallocate`. | Shield clone has curator, owner, or allocator permissions. |
+
+## Vaults.fyi Testnet Data
+
+Vaults.fyi indexes production networks, not testnets. When testing a Shield on Base Sepolia, a Vaults.fyi policy can fail closed because there is no testnet vault data for the lookup target.
+
+For demos, point the Vaults.fyi lookup at a real mainnet vault through the policy pack's data-source override fields while the Shield still executes on Base Sepolia. In production, remove the override so the policy describes the same vault the Shield gates.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `401` from Newton Gateway | API key was minted for a different Newton environment. | Create a key for the same stack as `env`, usually `prod` for Base Sepolia testnet production. |
+| `UnsupportedChainError` | Wallet client is not on a VaultKit-supported chain. | Use a supported chain such as Base Sepolia (`84532`) for testnet Morpho flows. |
+| `ShieldDeploymentNotFoundError` | No Shield factory is registered for the selected chain and environment. | Check `env`, chain id, and RPC configuration. |
+| Module-set mismatch or composite policy mismatch | The modules passed to `defineComposite(...)` do not match the policy address. | Use a policy deployed with exactly the selected modules. |
+| `PolicyMismatchError` | An existing Shield clone is bound to different policy data. | Verify the clone, write the expected params in a recovery run, or use a new `version`. |
+| MetaMorpho role revert | The Shield clone is not curator, owner, or allocator. | Grant the clone a qualifying vault role, then rerun the action. |
+| `PolicyDeniedError` | Newton evaluated the policy and denied the intent. | Inspect the error cause, adjust params, or choose inputs that satisfy the policy. |
+| Vaults.fyi oracle errors or unexpected denials | Missing Vaults.fyi secret or no data for the lookup target. | Upload the API key and use a production-network data-source override for testnet demos. |
+| `AttestationTimeoutError` or `GatewayError` | Gateway was slow or unavailable. | Retry with backoff and a fresh task. |
+
+<Card title="Getting Started" icon="code" href="/developers/vaults/sdk/integration-guide">
+  Install VaultKit, configure a Shield, and execute a policy-gated vault action.
+</Card>
+
+<Card title="Errors" icon="triangle-alert" href="/developers/vaults/sdk/errors">
+  Review typed errors and retry guidance.
+</Card>

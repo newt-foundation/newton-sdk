@@ -1,0 +1,78 @@
+---
+title: "Protocol Concepts"
+description: "Core Newton Policy Protocol types and actors used by VaultKit."
+keywords:
+  - vaultkit protocol
+  - newton policy protocol
+  - intent
+  - attestation
+  - task
+---
+
+VaultKit is a Newton policy client. Every protected vault action becomes an `Intent`, every `Intent` is evaluated by Newton operators, and every approved action is bound to an attestation before the Shield forwards it.
+
+## Actors
+
+| Actor | Role |
+| --- | --- |
+| Curator | Builds and signs the manager action. This may be an EOA, application signer, or Safe-controlled workflow. |
+| SDK | Encodes calldata, prepares policy inputs, submits tasks, polls for results, and submits the Shield transaction. |
+| Gateway | Receives tasks from the SDK and coordinates offchain policy evaluation. |
+| Operators | Run policy WASM against the intent, params, and `wasmArgs`, then sign allow or deny results. |
+| Aggregator | Collects operator signatures until quorum and commits the result. |
+| Shield | Onchain policy client that validates attestations and forwards approved calls. |
+| Vault protocol | The underlying protocol contract, such as a MetaMorpho or Euler vault. |
+
+## `Intent`
+
+An `Intent` is the exact delegated call the curator wants the Shield to execute:
+
+```solidity
+struct Intent {
+    address from;
+    address to;
+    uint256 value;
+    bytes data;
+    uint256 chainId;
+    bytes functionSignature;
+}
+```
+
+The attestation binds to all fields. `from` must match the caller of `Shield.execute(...)`, `chainId` must match the execution chain, and `data` must match the exact calldata operators approved.
+
+## `Task`
+
+A `Task` is the offchain evaluation request sent to Newton Gateway. It carries the intent, policy reference, pack-specific `wasmArgs`, expiration metadata, and the curator's signature over the intent.
+
+## `TaskResponse`
+
+A `TaskResponse` is the operator quorum result for a task. Operators sign the result they evaluated; they do not rewrite the intent. A denial response becomes a typed SDK error. An approval response can become an attestation for onchain execution.
+
+## `Attestation`
+
+An `Attestation` is the approval object consumed by the Shield in standard mode:
+
+```solidity
+struct Attestation {
+    bytes32 taskId;
+    bytes32 policyId;
+    address policyClient;
+    uint32 expiration;
+    Intent intent;
+    bytes intentSignature;
+}
+```
+
+The aggregated BLS signature data is recorded through the AVS task manager. The Shield validates the task id, policy id, client address, intent signature, chain, expiration, and replay status before forwarding the call.
+
+## Policy and Params
+
+A Newton policy pins a policy template and a `PolicyConfig`. The config includes `policyParams`, a typed byte blob produced by the selected policy pack. Updating params changes future policy evaluations; it does not rewrite old attestations.
+
+## `wasmArgs`
+
+`wasmArgs` are per-call inputs for the policy WASM. They are not global configuration. They usually include the vault, network, asset, market id, external-data query fields, and freshness snapshots required for the policy to make a decision.
+
+## Fail-Closed Behavior
+
+If Newton operators deny the task, quorum is not reached, the attestation expires, or the Shield validation fails, the vault action is not forwarded. This fail-closed property is the core operating assumption for VaultKit.
