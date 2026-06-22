@@ -141,6 +141,7 @@
               "developers/vaults/sdk/reference",
               "developers/vaults/sdk/errors",
               "developers/vaults/sdk/morpho",
+              "developers/vaults/sdk/euler-vault",
               "developers/vaults/sdk/euler",
               "developers/vaults/sdk/composite-policy-packs"
             ]

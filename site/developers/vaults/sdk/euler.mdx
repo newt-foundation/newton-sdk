@@ -1,62 +1,146 @@
 ---
-title: "Euler Guide"
-description: "How to route Euler Earn vault actions through Newton VaultKit using the generic sendCall path."
+title: "Euler Earn Guide"
+description: "How to gate Euler Earn manager and allocator actions with Newton VaultKit."
 keywords:
   - euler earn
-  - euler vaults
-  - newton vaultkit
-  - vault sdk
-  - sendcall
+  - euler vaultkit
+  - newton shield
+  - vault curator
+  - reallocate
 ---
 
-Euler Earn vaults can use the same Newton policy checks as first-class SDK integrations. Until a dedicated Euler module is available, route Euler actions through the generic `shield.sendCall(...)` path.
+Euler Earn vaults can route curator and allocator actions through a Newton Shield before the Euler Earn vault receives the call. VaultKit's Euler Earn overlay encodes the Euler calldata, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
-`sendCall` is useful when the vault protocol already exposes a contract method you want to call directly. Your app encodes the Euler calldata, Newton evaluates the configured vault policy, and the Shield contract forwards the call only when the policy returns an approval attestation.
+This guide covers `shield.euler.*`, which wraps Euler Earn. For Euler Vault Kit base lending vault governor actions such as `setLTV`, `setCaps`, and `setInterestRateModel`, use the [Euler Guide](/developers/vaults/sdk/euler-vault).
 
-## When to Use This Path
+## Install Packages
 
-Use the generic Euler path when:
-
-- You are integrating an Euler Earn vault action that does not yet have a typed VaultKit helper.
-- Your app already owns the Euler ABI and action parameters.
-- You want the same Newton policy pack to guard Euler reallocations, cap changes, or other manager actions.
-
-For vendor-specific helpers such as Morpho actions, start with the [Integration Guide](/developers/vaults/sdk/integration-guide). For the full generic call signature, see the [SDK Reference](/developers/vaults/sdk/reference).
-
-## Reallocate an Euler Earn Vault
-
-```typescript
-import { encodeFunctionData } from 'viem'
-import { EulerEarnAbi } from './constants/abis'
-
-await shield.sendCall({
-  to: '0xEulerEarnContract',
-  data: encodeFunctionData({
-    abi: EulerEarnAbi,
-    functionName: 'reallocate',
-    args: [marketAllocations],
-  }),
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-})
+```bash
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/policy-pack-vaultsfyi
 ```
 
-The important difference from a typed helper is that your app is responsible for encoding the calldata and supplying the function signature. Newton still evaluates the configured policy before execution. If the policy denies the action, the SDK raises a typed policy error and the Shield does not forward the Euler call.
+Add any other policy-pack modules your Shield enforces, such as Chainalysis:
 
-## What Newton Checks
+```bash
+pnpm add @newton-xyz/policy-pack-chainalysis
+```
 
-The policy pack prepares the vault context used by Newton operators. In the example above, the policy can evaluate the vault address, network, asset symbol, uploaded secrets, and configured thresholds before deciding whether the Euler reallocation should proceed.
+## Attach the Euler Earn Overlay
 
-Keep `prepareQueryOptions` aligned with the policy pack your Shield was created with. If your policy expects additional per-call fields, include them so the operators have the complete context they need to evaluate the action.
+Create or attach to a Shield, then extend the client with `eulerActions`:
 
-## Implementation Notes
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { eulerActions } from '@newton-xyz/vaultkit/vendors/euler'
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-- `to` should be the Euler contract that will receive the forwarded call.
-- `data` should be ABI-encoded calldata for the exact Euler function you want to execute.
-- `functionSignature` should match the function being called so policy logs and attestations can identify the action.
-- `prepareQueryOptions` should contain any extra policy inputs required by your selected vault policy pack.
+const pack = await defineComposite({
+  modules: [vaultsfyi],
+  chainId: '8453',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xCompositePolicyAddress',
+})
 
-<Card title="Getting Started" icon="code" href="/developers/vaults/sdk/integration-guide">
-  Set up Newton VaultKit, create a Shield, and configure vault policy parameters.
+const shield = (await createShield({
+  apiKey: process.env.NEWTON_API_KEY!,
+  walletClient,
+  rpc: process.env.RPC_URL!,
+  env: 'prod',
+  pack,
+  vault: '0xEulerEarnVault',
+})).extend(eulerActions)
+```
+
+`shield.euler.*` produces calldata from Euler Earn's ABI and routes the call through `shield.sendCall(...)`. The composite policy pack still owns `wasmArgs`; pass per-call policy inputs through `prepareQueryOptions`.
+
+## Grant the Shield an Euler Earn Role
+
+Euler Earn manager actions are not end-user deposit or withdrawal flows. The Shield clone must hold a role that can call the forwarded function on the Euler Earn vault:
+
+| Role | Typical actions |
+| --- | --- |
+| Owner | `setCurator`, `setIsAllocator`, `setFeeRecipient`, `setFee`, `submitTimelock`, `submitGuardian`, `setName`, `setSymbol` |
+| Curator | `submitCap`, `acceptCap`, `revokePendingCap`, `submitMarketRemoval`, `revokePendingMarketRemoval` |
+| Allocator | `reallocate`, `setSupplyQueue`, `updateWithdrawQueue` |
+| Guardian | `revokePendingTimelock`, `revokePendingGuardian`, and other veto-style pending changes |
+
+A Shield clone holding the curator role can also call allocator actions. Most integrations grant the clone the curator role or mark it as an allocator before executing policy-gated actions.
+
+## Reallocate
+
+Use the typed reallocation helper for the allocator hot path:
+
+```typescript
+const allocations = [
+  { id: '0xMarketA', assets: 1_000_000n },
+  { id: '0xMarketB', assets: 0n },
+]
+
+const result = await shield.euler.reallocate(
+  '0xEulerEarnVault',
+  allocations,
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+)
+```
+
+`reallocate` takes positional arguments: `(vault, allocations, options?)`. Each allocation uses Euler Earn's `{ id, assets }` shape, where `id` is the market address and `assets` is the amount in the vault asset's smallest unit.
+
+## Manage Queues and Caps
+
+Allocator queue updates:
+
+```typescript
+await shield.euler.setSupplyQueue('0xEulerEarnVault', [
+  '0xMarketA',
+  '0xMarketB',
+])
+
+await shield.euler.updateWithdrawQueue('0xEulerEarnVault', [1n, 0n])
+```
+
+Curator cap changes use Euler Earn's timelocked two-step flow:
+
+```typescript
+await shield.euler.submitCap('0xEulerEarnVault', '0xMarketA', 5_000_000n)
+
+// After the Euler Earn timelock matures:
+await shield.euler.acceptCap('0xEulerEarnVault', '0xMarketA')
+```
+
+Pending cap and market-removal changes can be revoked through the matching typed helpers.
+
+## Wrapped Actions
+
+| Category | Helpers |
+| --- | --- |
+| Role setup | `setCurator`, `setIsAllocator` |
+| Allocator operations | `reallocate`, `setSupplyQueue`, `updateWithdrawQueue` |
+| Market caps | `submitCap`, `acceptCap`, `revokePendingCap` |
+| Market removal | `submitMarketRemoval`, `revokePendingMarketRemoval` |
+| Timelock | `submitTimelock`, `acceptTimelock`, `revokePendingTimelock` |
+| Guardian | `submitGuardian`, `acceptGuardian`, `revokePendingGuardian` |
+| Fees and metadata | `setFee`, `setFeeRecipient`, `setName`, `setSymbol` |
+
+VaultKit intentionally does not wrap end-user ERC-4626 `deposit`, `mint`, `withdraw`, or `redeem` actions. Ownership transfer helpers are also omitted; use direct governance operations or the raw `shield.sendCall(...)` escape hatch only when your policy explicitly models that action.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Euler Earn role revert | The Shield clone is not owner, curator, allocator, or guardian for that action. | Grant the clone the correct Euler Earn role, then rerun the action. |
+| `PolicyDeniedError` | Newton evaluated the configured policy and denied the intent. | Inspect the policy result, params, and per-call `prepareQueryOptions`. |
+| Module-set mismatch | The modules passed to `defineComposite(...)` do not match the deployed policy. | Use the module set from the policy's onchain `getPolicyData()`. |
+| Unexpected calldata | The wrong overlay or vault address was used. | Use `shield.euler.*` only for Euler Earn vaults; use `shield.eulerVault.*` for EVault governor actions. |
+
+<Card title="Euler Guide" icon="landmark" href="/developers/vaults/sdk/euler-vault">
+  Gate Euler Vault Kit EVault governor actions with `shield.eulerVault.*`.
 </Card>
 
 <Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
