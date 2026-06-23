@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { DEPLOYMENTS, getDeployment } from './index'
-import { DEPLOYMENT_KEYS, type DeploymentAddressKey, type DeploymentFile, type SupportedChainId } from './types'
+import {
+  DEPLOYMENT_KEYS,
+  type DeploymentAddressKey,
+  type DeploymentFile,
+  type SupportedChainId,
+  asDeploymentAddress,
+} from './types'
 
 const SDK_ADDRESS_KEYS = [
   'newtonProverTaskManager',
@@ -11,6 +17,25 @@ const SDK_ADDRESS_KEYS = [
 ] as const satisfies readonly DeploymentAddressKey[]
 
 describe('deployments', () => {
+  it('rejects missing and malformed deployment addresses', () => {
+    const validAddressHex = 'a'.repeat(40)
+    const validAddress = `0x${validAddressHex}`
+
+    expect(() => asDeploymentAddress(undefined, 1, 'identityRegistry')).toThrow(
+      'Missing deployment address "identityRegistry" for chain 1',
+    )
+    expect(() => asDeploymentAddress('abc', 1, 'identityRegistry')).toThrow(
+      'Invalid deployment address "identityRegistry" for chain 1: "abc"',
+    )
+    expect(() => asDeploymentAddress('0x1234', 1, 'identityRegistry')).toThrow(
+      'Invalid deployment address "identityRegistry" for chain 1: "0x1234"',
+    )
+    expect(() => asDeploymentAddress(` 0x${validAddressHex}`, 1, 'identityRegistry')).toThrow(
+      'Invalid deployment address "identityRegistry" for chain 1',
+    )
+    expect(asDeploymentAddress(validAddress, 1, 'identityRegistry')).toBe(validAddress)
+  })
+
   it('resolves all SDK address keys for every supported chain', () => {
     const missing: string[] = []
 
@@ -20,8 +45,10 @@ describe('deployments', () => {
       const deployment = getDeployment(chainId)
 
       for (const addressKey of SDK_ADDRESS_KEYS) {
-        if (!deployment?.addresses[addressKey]) {
-          missing.push(`${deploymentKey}: missing "${addressKey}"`)
+        try {
+          asDeploymentAddress(deployment?.addresses[addressKey], chainId, addressKey)
+        } catch (error) {
+          missing.push(`${deploymentKey}: ${error instanceof Error ? error.message : String(error)}`)
         }
       }
     }

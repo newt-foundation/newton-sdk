@@ -36,7 +36,7 @@ function buildAddressMap(addressKey: DeploymentAddressKey): Partial<Record<Suppo
     const chainId = Number(chainIdKey) as SupportedChainId
     const address = getDeployment(chainId)?.addresses[addressKey]
     if (address) {
-      map[chainId] = address as Hex
+      map[chainId] = asDeploymentAddress(address, chainId, addressKey)
     }
   }
   return map

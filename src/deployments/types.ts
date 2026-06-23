@@ -36,9 +36,14 @@ export const DEPLOYMENT_KEYS = {
 
 export type SupportedChainId = keyof typeof DEPLOYMENT_KEYS
 
+const DEPLOYMENT_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
+
 export function asDeploymentAddress(address: string | undefined, chainId: number, key: DeploymentAddressKey): Hex {
   if (!address) {
     throw new Error(`Missing deployment address "${key}" for chain ${chainId}`)
+  }
+  if (!DEPLOYMENT_ADDRESS_PATTERN.test(address)) {
+    throw new Error(`Invalid deployment address "${key}" for chain ${chainId}: ${JSON.stringify(address)}`)
   }
   return address as Hex
 }

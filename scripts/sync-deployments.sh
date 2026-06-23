@@ -36,7 +36,15 @@ for dir in "${SYNC_DIRS[@]}"; do
   src="$SRC_DIR/$dir"
   [[ -d "$src" ]] || { echo "missing deployments/$dir in newton-contracts" >&2; exit 1; }
   mkdir -p "$OUT_DIR/$dir"
-  find "$src" -maxdepth 1 -type f -name '*-prod.json' -exec cp {} "$OUT_DIR/$dir/" \;
+  found=0
+  while IFS= read -r file; do
+    cp "$file" "$OUT_DIR/$dir/"
+    found=1
+  done < <(find "$src" -maxdepth 1 -type f -name '*-prod.json')
+  if [[ "$found" -eq 0 ]]; then
+    echo "no *-prod.json files found in deployments/$dir" >&2
+    exit 1
+  fi
 done
 
 OUT_DIR="$OUT_DIR" node <<'NODE'
@@ -48,6 +56,23 @@ if (!outDir) {
   console.error('OUT_DIR is required')
   process.exit(1)
 }
+
+// Keep in sync with DEPLOYMENT_KEYS in src/deployments/types.ts
+const REQUIRED_DEPLOYMENTS = [
+  'newton-prover/11155111-prod',
+  'newton-prover/1-prod',
+  'newton-cross-chain/8453-prod',
+  'newton-cross-chain/84532-prod',
+]
+const SDK_ADDRESS_KEYS = [
+  'newtonProverTaskManager',
+  'attestationValidator',
+  'identityRegistry',
+  'policyClientRegistry',
+  'confidentialDataRegistry',
+]
+const DEPLOYMENT_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
+
 const jsonFiles = []
 
 function walk(dir, prefix = '') {
@@ -66,6 +91,40 @@ function walk(dir, prefix = '') {
 
 walk(outDir)
 jsonFiles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+const missingRequired = REQUIRED_DEPLOYMENTS.filter(
+  (key) => !jsonFiles.includes(`${key}.json`),
+)
+if (missingRequired.length > 0) {
+  console.error('Missing required deployment files after sync:')
+  for (const key of missingRequired) {
+    console.error(`  ${key}.json`)
+  }
+  process.exit(1)
+}
+
+const invalidAddresses = []
+for (const key of REQUIRED_DEPLOYMENTS) {
+  const filePath = path.join(outDir, `${key}.json`)
+  const deployment = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  for (const addressKey of SDK_ADDRESS_KEYS) {
+    const address = deployment.addresses?.[addressKey]
+    if (!address) {
+      invalidAddresses.push(`${key}: missing "${addressKey}"`)
+      continue
+    }
+    if (!DEPLOYMENT_ADDRESS_PATTERN.test(address)) {
+      invalidAddresses.push(`${key}: invalid "${addressKey}" ${JSON.stringify(address)}`)
+    }
+  }
+}
+if (invalidAddresses.length > 0) {
+  console.error('Invalid deployment addresses after sync:')
+  for (const message of invalidAddresses) {
+    console.error(`  ${message}`)
+  }
+  process.exit(1)
+}
 
 const toIdentifier = (relPath) =>
   relPath
