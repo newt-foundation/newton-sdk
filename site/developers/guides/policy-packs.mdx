@@ -46,11 +46,135 @@ The detailed pack catalog lives in the VaultKit docs:
 
 ## How to Use Packs
 
-1. Pick one or more packs from the [VaultKit Policy Packs catalog](/developers/vaults/policy-packs).
-2. Read the production `PolicyData` address from the catalog or the canonical [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
-3. Configure params under each pack's short id.
-4. Upload required secrets for packs that call authenticated APIs.
-5. Simulate and test the policy before deployment.
+There are two ways to use a pack: the [Newton Dashboard](https://dashboard.newton.xyz) (no CLI required) and [`newton-cli`](/developers/reference/command-line-tool). Both reference the same open-source packs in the [`newton-policy-packs`](https://github.com/newt-foundation/newton-policy-packs) repo and the same deployed `PolicyData` addresses in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) — pick whichever fits your workflow.
+
+### Using the Dashboard
+
+The dashboard lets you browse the available data oracles, add one to your policy, configure its secrets and params, simulate, and deploy, all from the browser.
+
+<Note>
+This tutorial focuses on the pack-specific steps. For signing in, generating an API key, and the full project lifecycle, see [Using the Dashboard](/developers/guides/using-the-dashboard).
+</Note>
+
+<Steps>
+  <Step title="Open a project in the policy editor">
+    Sign in at [dashboard.newton.xyz](https://dashboard.newton.xyz) and open a project to reach the policy editor. If you haven't created one yet, follow [Using the Dashboard](/developers/guides/using-the-dashboard) to create a project and set a PolicyClient. A new project starts with an empty **Data Oracles** sidebar — "Data Oracles not found. Explore Data Oracles and add to your smart contract."
+
+    {/* TODO: add screenshot — policy editor with the empty Data Oracles sidebar and the "Add Data Oracles" button */}
+    <Frame>
+      <img src="/images/packs-dashboard-empty-sidebar.png" alt="Policy editor with an empty Data Oracles sidebar and the Add Data Oracles button" />
+    </Frame>
+  </Step>
+
+  <Step title="Open Discover Data Oracles">
+    Click **Add Data Oracles** in the sidebar. The **Discover Data Oracles** modal lists the available packs — **Chainalysis**, **vaults.fyi**, **Webacy**, and **RedStone** — plus a **Custom Data Oracle** option for your own deployed `PolicyData` address. The **Learn more about Policy Packs** link points back to this guide.
+
+    {/* TODO: add screenshot — "Discover Data Oracles" modal listing Chainalysis, vaults.fyi, Webacy, RedStone, and Custom Data Oracle */}
+    <Frame>
+      <img src="/images/packs-dashboard-discover.png" alt="Discover Data Oracles modal listing the available policy packs" />
+    </Frame>
+  </Step>
+
+  <Step title="Pick a pack">
+    Select a pack to open its detail view. The **Overview** describes what the pack checks, and **Resources** links to the provider's **Website** and docs. When you're ready, click **Continue**.
+
+    {/* TODO: add screenshot — a pack detail / Overview view (e.g. vaults.fyi) with the Continue button */}
+    <Frame>
+      <img src="/images/packs-dashboard-detail.png" alt="Policy pack detail view showing the Overview and Continue button" />
+    </Frame>
+  </Step>
+
+  <Step title="Configure secrets and params">
+    Continue opens the setup form. Packs that call authenticated APIs prompt for a **Secret Key** (paste the value from the provider); packs that don't show **No Secret Required**. Selecting a built-in pack also pre-fills a reference Rego template, default parameters, and the list of secrets the pack needs, so you start from a working baseline. Secrets are encrypted client-side and uploaded per `PolicyData` address — see [Secrets in Oracles](/developers/guides/secrets-in-oracles).
+
+    {/* TODO: add screenshot — the Secret Key / Configure setup form with a key/value field */}
+    <Frame>
+      <img src="/images/packs-dashboard-secrets.png" alt="Data oracle setup form for entering a pack's secret key" />
+    </Frame>
+  </Step>
+
+  <Step title="Reference the pack in Rego">
+    The pack now appears in the **Data Oracles** sidebar. The configure panel (previous step) gives you the deny rules to copy into your Rego — read the pack's output under its pack id, for example `data.wasm.vaultsfyi.risk_score`, and the thresholds you configured under `data.params.<pack-id>.*`. Add more packs to compose a multi-oracle policy; see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+  </Step>
+
+  <Step title="Simulate">
+    Click **Test** to run the full pipeline against sample inputs — every oracle executes, outputs merge into `data.wasm`, and your Rego is evaluated. The output panel shows the allow/deny result and the merged data the policy saw. Use it to confirm your references resolve before deploying. See [Testing Policies](/developers/guides/testing-policies).
+
+    {/* TODO: add screenshot — simulation output panel showing the allow/deny result */}
+    <Frame>
+      <img src="/images/packs-dashboard-simulate.png" alt="Simulation output panel showing the policy allow or deny result" />
+    </Frame>
+  </Step>
+
+  <Step title="Deploy">
+    When the policy behaves correctly, click **Publish**. The dashboard uploads your Rego and schemas to IPFS, deploys the `PolicyData` and `NewtonPolicy` contracts, and binds the policy to your PolicyClient. For deployment details and mainnet allowlisting, see [Using the Dashboard](/developers/guides/using-the-dashboard#deploy).
+
+    {/* TODO: add screenshot — the Publish Policy modal */}
+    <Frame>
+      <img src="/images/packs-dashboard-publish.png" alt="Publish Policy modal in the Newton Dashboard" />
+    </Frame>
+  </Step>
+</Steps>
+
+### Using the CLI
+
+Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` address — you never deploy the oracle yourself. Make sure the CLI is installed (`curl -L cli.newton.xyz | sh && newtup`) and your `NEWTON_API_KEY` and chain are set; see [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
+
+<Steps>
+  <Step title="Look up the pack's PolicyData address">
+    Pick a pack from the [VaultKit Policy Packs catalog](/developers/vaults/policy-packs) and copy its production `PolicyData` address for your chain from the catalog or the canonical [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). You reference this address directly — there is no oracle to build or deploy.
+  </Step>
+
+  <Step title="Upload the pack's secrets">
+    For packs that call authenticated APIs, upload the required key(s) encrypted, scoped to the pack's `PolicyData` address. The keys must match the pack's secrets schema (e.g. `VAULTS_FYI_API_KEY`).
+
+    ```bash
+    cat > secrets.json <<'EOF'
+    { "VAULTS_FYI_API_KEY": "sk-prod-xxxxxxxxxxxx" }
+    EOF
+
+    newton-cli --chain-id 11155111 secrets upload \
+      --secrets-file secrets.json \
+      --policy-client 0xYourPolicyClient \
+      --policy-data-address 0xPackPolicyData \
+      --api-key $NEWTON_API_KEY
+    ```
+
+    Packs that need no credentials skip this step. See [Secrets in Oracles](/developers/guides/secrets-in-oracles) for the full lifecycle.
+  </Step>
+
+  <Step title="Write a policy that reads the pack">
+    In your Rego, read the pack's output under its pack id (`data.wasm.<pack-id>.*`) and the thresholds you configure under `data.params.<pack-id>.*`. Compose multiple packs by referencing several pack ids in the same policy — see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+  </Step>
+
+  <Step title="Deploy and bind the policy to the pack">
+    Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` against the pack's `PolicyData` address, then set it on your PolicyClient.
+
+    ```bash
+    # 1. Upload Rego + schemas to IPFS
+    newton-cli policy-files generate-cids \
+      --directory policy-files \
+      --output policy_cids.json \
+      --entrypoint "your_policy.allow"
+
+    # 2. Deploy the policy bound to the pack's PolicyData address
+    newton-cli policy deploy \
+      --policy-cids policy_cids.json \
+      --policy-data-address 0xPackPolicyData
+
+    # 3. Set the deployed policy on your PolicyClient
+    newton-cli policy-client set-policy \
+      --policy-client 0xYourPolicyClient \
+      --policy-address 0xDeployedPolicy
+    ```
+
+    Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
+  </Step>
+
+  <Step title="Simulate">
+    Verify the policy resolves the pack's data before going live with `newt_simulatePolicy` (or `newt_simulatePolicyDataWithClient` to confirm uploaded secrets resolve). See [Testing Policies](/developers/guides/testing-policies).
+  </Step>
+</Steps>
 
 <CardGroup cols={2}>
 <Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
