@@ -1,0 +1,161 @@
+---
+title: "Euler Guide"
+description: "How to gate Euler Vault Kit EVault governor actions with Newton VaultKit."
+keywords:
+  - euler vault kit
+  - euler evault
+  - euler vaultkit
+  - newton shield
+  - vault governor
+---
+
+Euler Vault Kit EVaults can route governor actions through a Newton Shield before the EVault receives the call. VaultKit's EVault overlay encodes the governor calldata, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
+
+This guide covers `shield.eulerVault.*`, which wraps EVault governor functions. For Euler Earn aggregation-vault curator and allocator actions such as `reallocate`, use the [Euler Earn Guide](/developers/vaults/sdk/euler).
+
+## Install Packages
+
+```bash
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/policy-pack-vaultsfyi
+```
+
+Add any other policy-pack modules your Shield enforces, such as RedStone or Chainalysis:
+
+```bash
+pnpm add @newton-xyz/policy-pack-redstone @newton-xyz/policy-pack-chainalysis
+```
+
+## Attach the EVault Overlay
+
+Create or attach to a Shield, then extend the client with `eulerVaultActions`:
+
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { eulerVaultActions } from '@newton-xyz/vaultkit/vendors/euler-vault'
+import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const pack = await defineComposite({
+  modules: [vaultsfyi],
+  chainId: '8453',
+  env: 'prod',
+  publicClient,
+  policyAddress: '0xCompositePolicyAddress',
+})
+
+const shield = (await createShield({
+  apiKey: process.env.NEWTON_API_KEY!,
+  walletClient,
+  rpc: process.env.RPC_URL!,
+  env: 'prod',
+  pack,
+  vault: '0xEVault',
+})).extend(eulerVaultActions)
+```
+
+`shield.eulerVault.*` produces calldata from EVault's governor ABI and routes the call through `shield.sendCall(...)`. The composite policy pack still owns `wasmArgs`; pass per-call policy inputs through `prepareQueryOptions`.
+
+## Grant the Shield EVault Governance
+
+EVault governor actions are manager actions. Borrowers and suppliers continue through normal EVault flows and do not route through the Shield.
+
+Every wrapped action is callable by the EVault governor, also called `governorAdmin`. To use the Shield as the policy gate, the current governor should set the EVault governor to the Shield clone or route the relevant governance authority through the clone:
+
+```typescript
+await walletClient.writeContract({
+  address: '0xEVault',
+  abi: eVaultAbi,
+  functionName: 'setGovernorAdmin',
+  args: [shield.policyClientAddress],
+})
+```
+
+After the Shield clone is the governor, `shield.eulerVault.setGovernorAdmin(...)` can rotate governance again through the same policy-gated path.
+
+Unlike Euler Earn, EVault governor setters are not a two-step onchain timelock flow. A policy approval plus the EVault governor check is the control surface. `setLTV` includes a `rampDuration` argument for lowered liquidation LTVs, but that is a parameter ramp, not a governance timelock.
+
+## Configure LTV
+
+```typescript
+await shield.eulerVault.setLTV(
+  '0xEVault',
+  {
+    collateral: '0xCollateralEVault',
+    borrowLtv: 8000,
+    liquidationLtv: 8500,
+    rampDuration: 0,
+  },
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+)
+```
+
+`borrowLtv` and `liquidationLtv` use 1e4 scale, so `8000` means 80%. `liquidationLtv` must be greater than or equal to `borrowLtv`.
+
+## Configure Caps
+
+Pass caps as asset-denominated amounts in the vault asset's smallest unit, or `"unlimited"`. VaultKit encodes them to EVault's packed `AmountCap` format before building calldata.
+
+```typescript
+await shield.eulerVault.setCaps('0xEVault', {
+  supplyCap: 10_000_000_000n,
+  borrowCap: 5_000_000_000n,
+})
+
+await shield.eulerVault.setCaps('0xEVault', {
+  supplyCap: 'unlimited',
+  borrowCap: 2_500_000_000n,
+})
+```
+
+Do not pre-encode the packed `uint16` cap yourself when using `shield.eulerVault.setCaps(...)`; the helper expects human asset amounts and rounds up to the nearest representable EVault cap.
+
+## Wrapped Actions
+
+| Category | Helpers |
+| --- | --- |
+| Governor administration | `setGovernorAdmin` |
+| Risk parameters | `setLTV`, `setMaxLiquidationDiscount`, `setLiquidationCoolOffTime`, `setInterestRateModel`, `setCaps` |
+| Vault configuration | `setHookConfig`, `setConfigFlags` |
+| Fees | `setInterestFee`, `setFeeReceiver` |
+
+VaultKit intentionally does not wrap end-user `deposit`, `mint`, `withdraw`, `redeem`, `borrow`, or `repay` actions.
+
+## Other Examples
+
+```typescript
+await shield.eulerVault.setInterestRateModel('0xEVault', '0xInterestRateModel')
+
+await shield.eulerVault.setMaxLiquidationDiscount('0xEVault', 1200)
+
+await shield.eulerVault.setHookConfig('0xEVault', {
+  hookTarget: '0xHookContract',
+  hookedOps: 0b101,
+})
+
+await shield.eulerVault.setInterestFee('0xEVault', 1000)
+await shield.eulerVault.setFeeReceiver('0xEVault', '0xFeeReceiver')
+```
+
+Scale fields follow the EVault ABI. LTVs, liquidation discounts, and interest fees use 1e4 scale.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| EVault governor revert | The Shield clone is not the EVault governor for that action. | Grant or route `governorAdmin` to the Shield clone before executing. |
+| Wrong caps onchain | Raw packed caps were passed instead of asset-denominated amounts. | Pass asset amounts or `"unlimited"` to `setCaps`; VaultKit handles packing. |
+| `PolicyDeniedError` | Newton evaluated the configured policy and denied the intent. | Inspect the policy result, params, and per-call `prepareQueryOptions`. |
+| Unexpected calldata | The wrong overlay or vault address was used. | Use `shield.eulerVault.*` only for EVaults; use `shield.euler.*` for Euler Earn vaults. |
+
+<Card title="Euler Earn Guide" icon="landmark" href="/developers/vaults/sdk/euler">
+  Gate Euler Earn curator and allocator actions with `shield.euler.*`.
+</Card>
+
+<Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
+  Review the generic `sendCall` API and expected error types.
+</Card>

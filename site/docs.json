@@ -106,6 +106,48 @@
         ]
       },
       {
+        "tab": "VaultKit",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "developers/vaults/overview",
+              "developers/vaults/policy-packs",
+              "developers/vaults/protocol/concepts",
+              "developers/vaults/protocol/attestation-flow",
+              "developers/vaults/protocol/guarantees"
+            ]
+          },
+          {
+            "group": "Policy Packs",
+            "pages": [
+              "developers/vaults/policies/vaultsfyi",
+              "developers/vaults/policies/chainalysis",
+              "developers/vaults/policies/redstone",
+              "developers/vaults/policies/webacy"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "developers/vaults/sdk/overview",
+              "developers/vaults/sdk/integration-guide",
+              "developers/vaults/sdk/examples",
+              "developers/vaults/sdk/reference",
+              "developers/vaults/sdk/errors",
+              "developers/vaults/sdk/morpho",
+              "developers/vaults/sdk/euler-vault",
+              "developers/vaults/sdk/euler",
+              "developers/vaults/sdk/composite-policy-packs"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": ["developers/vaults/resources/legal-terms"]
+          }
+        ]
+      },
+      {
         "tab": "Whitepaper",
         "groups": [
           {
@@ -222,6 +264,18 @@
     {
       "source": "/developers/advanced/building-policies",
       "destination": "/developers/guides/writing-policies"
+    },
+    {
+      "source": "/developers/vaults/policies",
+      "destination": "/developers/vaults/policy-packs"
+    },
+    {
+      "source": "/developers/vaults/policies/overview",
+      "destination": "/developers/vaults/policy-packs"
+    },
+    {
+      "source": "/developers/vaults/vault-sdk",
+      "destination": "/developers/vaults/sdk/overview"
     },
     {
       "source": "/developers/overview/newton-explorer",

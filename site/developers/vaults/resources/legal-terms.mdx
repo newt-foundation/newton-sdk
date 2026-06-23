@@ -1,0 +1,56 @@
+---
+title: "VaultKit Legal Terms"
+description: "VaultKit supplement to the Magic Developer Terms of Service."
+---
+
+Effective Date: June 23, 2026
+
+This VaultKit Supplement (this "Supplement") supplements the Magic Developer Terms of Service (the "Developer Terms") and, as applicable, the Magic Terms of Service (together, the "Existing Terms"). It governs your access to and use of VaultKit by Magic Labs, Inc. ("Magic"). Capitalized terms not defined here have the meanings given in the Existing Terms. In the event of a conflict between this Supplement and the Existing Terms with respect to VaultKit, this Supplement controls.
+
+## 1. Definitions
+
+* "Data Provider" means a third-party data service whose outputs inform Policy evaluation.
+* "Newton Protocol" means the decentralized policy-based transaction authorization protocol.
+* "Policy / Policy Pack" means the policy rules and parameters you configure through VaultKit.
+* "Secrets" means API credentials or keys uploaded by you via VaultKit for use by operators during Policy evaluation.
+* "Shield Contract" means a smart contract that requires a valid attestation before executing a Vault Action.
+* "Vault Action" means a vault management operation executed through a Shield Contract.
+* "VaultKit" means the software tools and documentation provided by Magic under this Supplement. VaultKit does not include the Gateway.
+
+## 2. Newton Protocol
+
+Newton Protocol is stewarded by the Magic Newton Foundation and its subsidiares. Magic is not responsible for the availability, performance, or accuracy of Newton Protocol, the Gateway (except as stated in Section 6), the operator network, or the production of attestations. Your use of Newton Protocol is governed solely by the Magic Newton Foundation's applicable terms.
+
+## 3. Shield Contracts
+
+Shield Contracts are deployed by you and are owned and controlled by you once deployed. Magic has no ability to access, modify, pause, or interact with a deployed Shield Contract. You are solely responsible for Shield Contract configuration, security, and operation, including selection and configuration of Policy Packs and all associated parameters. Magic does not audit, certify, or guarantee the correctness or security of Shield Contract code or Policy Pack logic.
+
+## 4. Policy Evaluation; No Compliance Guarantee
+
+A policy evaluation is not a legal compliance determination. You retain all independent compliance obligations and may not satisfy those obligations by relying solely on VaultKit policy evaluation. VaultKit does not replace your obligation to maintain appropriate compliance programs. Magic makes no warranty that any Policy or Policy Pack will correctly identify sanctioned addresses, high-risk counterparties, unsafe vault conditions, or any other category of restricted activity. You are responsible for reviewing, testing, and validating all Policy configurations prior to and during production use.
+
+## 5. Third-Party Data Providers
+
+Policy Packs may use outputs from Data Providers to inform policy decisions. Policy evaluation is only as accurate and timely as the Data Provider's API response at the time of evaluation. Magic does not control, verify, or guarantee the accuracy, completeness, timeliness, or availability of any Data Provider output. Magic is not responsible for losses or compliance failures arising from Data Provider unavailability or incorrect outputs. You are solely responsible for obtaining and maintaining any agreements required by applicable Data Providers, complying with their terms, and paying any associated fees.
+
+## 6. Gateway
+
+Magic stores encrypted Secrets in the Gateway, providing limited access to authorized Newton Protocol operators for the purpose of Policy evaluation and to Magic personnel for Gateway maintenance. Magic's obligations do not extend to Secrets after retrieval by Newton Protocol operators. Magic may change or remove the Gateway's functionality at its discretion.
+
+## 7. Vault Management; Curator Responsibility
+
+VaultKit is designed for use by vault curators who manage vault strategies on behalf of depositors. Magic is not a party to any arrangement between you and vault depositors or any third-party, does not owe any duty to vault depositors or any third party, and is not responsible for losses suffered by vault depositors or any third-party as a result of Vault Actions taken or not taken through VaultKit, including losses arising from policy denials, policy approvals, attestation timeouts, or misconfigured Policies.
+
+Nothing in VaultKit or its outputs constitutes investment advice or any recommendation regarding the management or allocation of vault assets. You are solely responsible for all investment and management decisions made in connection with vault operations.
+
+## 8. Bypass Mechanism
+
+When you execute a Vault Action through the bypass mechanism, Policy controls, Data Provider checks, and all associated guardrails do not apply. You assume full responsibility for all consequences of any Vault Action executed through the bypass mechanism, including financial, legal, and regulatory exposure. Magic has no liability for losses arising from your use of the bypass.
+
+## 9. Additional Disclaimers
+
+In addition to the disclaimers in the Existing Terms, and without limiting them, Magic disclaims all representations and warranties with respect to VaultKit, including that: (a) any Policy evaluation will correctly identify sanctioned persons, prohibited transactions, or violations of applicable law; (b) the Gateway will be available on an uninterrupted or error-free basis; (c) Newton Protocol or the operator network will be available at any particular time; (d) any Data Provider output is accurate, current, or complete; (e) any Shield Contract will execute correctly; or (f) use of VaultKit will satisfy any legal, regulatory, fiduciary, or contractual obligation you owe to any person, including vault depositors. VaultKit is provided "as is" to the maximum extent permitted by applicable law.
+
+## 10. General
+
+This Supplement is incorporated into and forms part of the Developer Terms. All provisions of the Existing Terms that are not modified by this Supplement continue to apply to your use of VaultKit, including without limitation the limitation of liability, indemnification, termination, and governing law provisions of the Developer Terms. Magic reserves the right to modify this Supplement in accordance with Section 13.3 of the Developer Terms. Questions regarding this Supplement should be directed to legal@magic.link.

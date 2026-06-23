@@ -1,6 +1,6 @@
 ---
 title: "Policy Packs"
-description: "Newton policy packs are prebuilt, deployed data oracles — vaults.fyi, Webacy, RedStone, and Chainalysis — with published Rego templates, schemas, and on-chain PolicyData addresses. Use one directly or chain several under a single policy."
+description: "Newton policy packs are deployed data oracles with typed schemas, Rego templates, npm bindings, and onchain PolicyData addresses."
 keywords:
   - newton policy pack
   - prebuilt data oracle
@@ -10,218 +10,183 @@ keywords:
   - redstone divergence
 ---
 
-A **policy pack** is a prebuilt, deployed data oracle published by Newton. Instead of writing and deploying your own WASM oracle, you reference a pack's already-deployed PolicyData contract, configure its parameters, and (for packs that call an authenticated API) upload its API key. Packs are designed to compose — chain several under one policy to gate an action on multiple signals at once.
+A **policy pack** is a prebuilt data oracle published for Newton policies. Instead of writing and deploying your own WASM oracle, you can reference a pack's deployed `NewtonPolicyData` contract, configure its params, and upload any API secrets the pack requires.
 
 Each pack ships:
 
-- A **WASM oracle** (`policy.js` compiled to WASM) deployed as a `NewtonPolicyData` contract on each supported chain.
-- A reference **Rego template** (`policy.rego`) you can use as-is or adapt.
-- Three JSON Schemas: `params_schema.json` (thresholds you configure), `secrets_schema.json` (API keys it requires), and `wasm_args_schema.json` (per-call inputs).
-- A typed TypeScript binding published to npm as `@newton-xyz/policy-pack-<name>`.
+- A deployed WASM oracle.
+- A reference Rego template.
+- JSON schemas for params, secrets, and per-call `wasmArgs`.
+- A typed npm package such as `@newton-xyz/policy-pack-vaultsfyi`.
+- Canonical deployment metadata in [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
 
-Every pack namespaces its output under its **pack id** — its WASM returns `{ "<pack-id>": { ...fields } }` — so multiple packs merge into `data.wasm` without key collisions. Your Rego reads `data.wasm.<pack-id>.*` and `data.params.<pack-id>.*`. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the merge model.
+Policy packs can be composed. Each pack namespaces its output under its pack id, so Rego can safely read values such as `data.wasm.vaultsfyi.risk_score` and `data.params.chainalysis.deny_on_sanctioned` in the same policy. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the merge model.
+
+## Pack Catalog
+
+The detailed pack catalog lives in the VaultKit docs:
+
+<CardGroup cols={2}>
+<Card icon="shield-check" href="/developers/vaults/policy-packs" title="VaultKit Policy Packs">
+  Browse all supported packs, production PolicyData addresses, and provider links.
+</Card>
+<Card icon="book-open" href="https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json" title="Canonical deployments.json">
+  Source of truth for every pack, chain, environment, PolicyData address, and WASM CID.
+</Card>
+</CardGroup>
+
+## Available Packs
+
+| Pack | Detail page |
+| --- | --- |
+| Vaults.fyi Vault Risk Rating | [VaultKit: Vaults.fyi](/developers/vaults/policies/vaultsfyi) |
+| Chainalysis Address Screening | [VaultKit: Chainalysis](/developers/vaults/policies/chainalysis) |
+| RedStone Oracle Divergence | [VaultKit: RedStone](/developers/vaults/policies/redstone) |
+| Webacy Depeg Risk | [VaultKit: Webacy](/developers/vaults/policies/webacy) |
+
+## How to Use Packs
+
+There are two ways to use a pack: the [Newton Dashboard](https://dashboard.newton.xyz) (no CLI required) and [`newton-cli`](/developers/reference/command-line-tool). Both reference the same open-source packs in the [`newton-policy-packs`](https://github.com/newt-foundation/newton-policy-packs) repo and the same deployed `PolicyData` addresses in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) — pick whichever fits your workflow.
+
+### Using the Dashboard
+
+The dashboard lets you browse the available data oracles, add one to your policy, configure its secrets and params, simulate, and deploy, all from the browser.
 
 <Note>
-The canonical deployed Policy and PolicyData addresses for every pack, chain, and environment live in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) in the [newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) repo. The [Deployed addresses](#deployed-addresses) table below lists current production addresses, but treat `deployments.json` as the source of truth — addresses change on redeploy.
+This tutorial focuses on the pack-specific steps. For signing in, generating an API key, and the full project lifecycle, see [Using the Dashboard](/developers/guides/using-the-dashboard).
 </Note>
 
-## Deployed addresses
+<Steps>
+  <Step title="Open a project in the policy editor">
+    Sign in at [dashboard.newton.xyz](https://dashboard.newton.xyz) and open a project to reach the policy editor. If you haven't created one yet, follow [Using the Dashboard](/developers/guides/using-the-dashboard) to create a project and set a PolicyClient. A new project starts with an empty **Data Oracles** sidebar — "Data Oracles not found. Explore Data Oracles and add to your smart contract."
 
-Production `PolicyData` addresses for each pack. These are what you reference when adopting a pack or composing several. Staging (`stagef`) addresses are in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
+    {/* TODO: add screenshot — policy editor with the empty Data Oracles sidebar and the "Add Data Oracles" button */}
+    <Frame>
+      <img src="/images/packs-dashboard-empty-sidebar.png" alt="Policy editor with an empty Data Oracles sidebar and the Add Data Oracles button" />
+    </Frame>
+  </Step>
 
+  <Step title="Open Discover Data Oracles">
+    Click **Add Data Oracles** in the sidebar. The **Discover Data Oracles** modal lists the available packs — **Chainalysis**, **vaults.fyi**, **Webacy**, and **RedStone** — plus a **Custom Data Oracle** option for your own deployed `PolicyData` address. The **Learn more about Policy Packs** link points back to this guide.
 
-## Catalog
+    {/* TODO: add screenshot — "Discover Data Oracles" modal listing Chainalysis, vaults.fyi, Webacy, RedStone, and Custom Data Oracle */}
+    <Frame>
+      <img src="/images/packs-dashboard-discover.png" alt="Discover Data Oracles modal listing the available policy packs" />
+    </Frame>
+  </Step>
 
-### vaults.fyi — vault risk rating
+  <Step title="Pick a pack">
+    Select a pack to open its detail view. The **Overview** describes what the pack checks, and **Resources** links to the provider's **Website** and docs. When you're ready, click **Continue**.
 
-**Pack id:** `vaultsfyi` · **Secret:** `VAULTS_FYI_API_KEY`
+    {/* TODO: add screenshot — a pack detail / Overview view (e.g. vaults.fyi) with the Continue button */}
+    <Frame>
+      <img src="/images/packs-dashboard-detail.png" alt="Policy pack detail view showing the Overview and Continue button" />
+    </Frame>
+  </Step>
 
-Gates a vault deposit on [vaults.fyi](https://vaults.fyi) risk signals: APY anomalies, TVL drawdowns, a risk-score floor, allocation-change detection, critical flags, and corruption.
+  <Step title="Configure secrets and params">
+    Continue opens the setup form. Packs that call authenticated APIs prompt for a **Secret Key** (paste the value from the provider); packs that don't show **No Secret Required**. Selecting a built-in pack also pre-fills a reference Rego template, default parameters, and the list of secrets the pack needs, so you start from a working baseline. Secrets are encrypted client-side and uploaded per `PolicyData` address — see [Secrets in Oracles](/developers/guides/secrets-in-oracles).
 
-| Field | Description |
-|-------|-------------|
-| `data.wasm.vaultsfyi.risk_score` | Vault risk score (0–100, or `null`) |
-| `data.wasm.vaultsfyi.apy_z_score` | APY anomaly (current vs 30-day) |
-| `data.wasm.vaultsfyi.tvl_drawdown_24h_pct` / `tvl_drawdown_7d_pct` | TVL drawdown percentages |
-| `data.wasm.vaultsfyi.has_critical_flag` | Critical/high-severity flag present |
-| `data.wasm.vaultsfyi.is_corrupted` | Vault reported corrupted by the data source |
-| `data.wasm.vaultsfyi.allocation_changed_since_last` | Strategy/allocation changed since last evaluation |
+    {/* TODO: add screenshot — the Secret Key / Configure setup form with a key/value field */}
+    <Frame>
+      <img src="/images/packs-dashboard-secrets.png" alt="Data oracle setup form for entering a pack's secret key" />
+    </Frame>
+  </Step>
 
-**Params** (`data.params.vaultsfyi`): `apy_z_max`, `tvl_drawdown_24h_max_pct`, `tvl_drawdown_7d_max_pct`, `risk_score_floor`, `deny_on_allocation_change`, `deny_on_critical_flag`, `deny_on_corrupted`.
+  <Step title="Reference the pack in Rego">
+    The pack now appears in the **Data Oracles** sidebar. The configure panel (previous step) gives you the deny rules to copy into your Rego — read the pack's output under its pack id, for example `data.wasm.vaultsfyi.risk_score`, and the thresholds you configured under `data.params.<pack-id>.*`. Add more packs to compose a multi-oracle policy; see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+  </Step>
 
-**wasm_args:** `network` (e.g. `"mainnet"`, `"base"`), `vaultAddress` (required), `lastKnownAllocationHash` (optional).
+  <Step title="Simulate">
+    Click **Test** to run the full pipeline against sample inputs — every oracle executes, outputs merge into `data.wasm`, and your Rego is evaluated. The output panel shows the allow/deny result and the merged data the policy saw. Use it to confirm your references resolve before deploying. See [Testing Policies](/developers/guides/testing-policies).
 
-### Webacy — depeg & reputation risk
+    {/* TODO: add screenshot — simulation output panel showing the allow/deny result */}
+    <Frame>
+      <img src="/images/packs-dashboard-simulate.png" alt="Simulation output panel showing the policy allow or deny result" />
+    </Frame>
+  </Step>
 
-**Pack id:** `webacy` · **Secret:** `WEBACY_API_KEY`
+  <Step title="Deploy">
+    When the policy behaves correctly, click **Publish**. The dashboard uploads your Rego and schemas to IPFS, deploys the `PolicyData` and `NewtonPolicy` contracts, and binds the policy to your PolicyClient. For deployment details and mainnet allowlisting, see [Using the Dashboard](/developers/guides/using-the-dashboard#deploy).
 
-Gates on [Webacy](https://webacy.com) signals for pegged tokens: collapse events, recent depeg events, days below peg, staleness, and absolute deviation from peg.
+    {/* TODO: add screenshot — the Publish Policy modal */}
+    <Frame>
+      <img src="/images/packs-dashboard-publish.png" alt="Publish Policy modal in the Newton Dashboard" />
+    </Frame>
+  </Step>
+</Steps>
 
-| Field | Description |
-|-------|-------------|
-| `data.wasm.webacy.is_collapsed` | Token structurally collapsed |
-| `data.wasm.webacy.recent_depeg_event_count` | Depeg events in the lookback window |
-| `data.wasm.webacy.consecutive_days_below_peg` | Days the token has stayed below peg |
-| `data.wasm.webacy.within_expected_range` | Currently within expected peg range |
-| `data.wasm.webacy.abs_dev_clean` | Absolute deviation from peg (fraction) |
-| `data.wasm.webacy.stale` | Webacy flagged the response as stale |
+### Using the CLI
 
-**Params** (`data.params.webacy`): `deny_on_collapsed`, `max_recent_depeg_events`, `max_consecutive_days_below_peg`, `deny_on_stale_data`, `max_abs_dev_pct`.
+Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` address — you never deploy the oracle yourself. Make sure the CLI is installed (`curl -L cli.newton.xyz | sh && newtup`) and your `NEWTON_API_KEY` and chain are set; see [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
 
-**wasm_args:** `address` (required), `chain` (optional, e.g. `"eth"`), `lookback_days` (1–30, default 7).
+<Steps>
+  <Step title="Look up the pack's PolicyData address">
+    Pick a pack from the [VaultKit Policy Packs catalog](/developers/vaults/policy-packs) and copy its production `PolicyData` address for your chain from the catalog or the canonical [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). You reference this address directly — there is no oracle to build or deploy.
+  </Step>
 
-### RedStone — oracle divergence
+  <Step title="Upload the pack's secrets">
+    For packs that call authenticated APIs, upload the required key(s) encrypted, scoped to the pack's `PolicyData` address. The keys must match the pack's secrets schema (e.g. `VAULTS_FYI_API_KEY`).
 
-**Pack id:** `redstone` · **Secret:** _none (public RedStone cluster)_
+    ```bash
+    cat > secrets.json <<'EOF'
+    { "VAULTS_FYI_API_KEY": "sk-prod-xxxxxxxxxxxx" }
+    EOF
 
-Compares the [RedStone](https://redstone.finance) median price to the on-chain oracle a vault relies on, and denies when divergence exceeds a hard cap, the feed is stale, or divergence is sustained.
+    newton-cli --chain-id 11155111 secrets upload \
+      --secrets-file secrets.json \
+      --policy-client 0xYourPolicyClient \
+      --policy-data-address 0xPackPolicyData \
+      --api-key $NEWTON_API_KEY
+    ```
 
-| Field | Description |
-|-------|-------------|
-| `data.wasm.redstone.divergence_bp` | Divergence (basis points) between RedStone and the on-chain oracle |
-| `data.wasm.redstone.redstone_feed_age_seconds` | Age of the RedStone feed |
-| `data.wasm.redstone.prev_snapshot_present` | Whether a prior snapshot was supplied |
-| `data.wasm.redstone.prev_divergence_bp` / `sustained_seconds` | Sustained-divergence tracking |
+    Packs that need no credentials skip this step. See [Secrets in Oracles](/developers/guides/secrets-in-oracles) for the full lifecycle.
+  </Step>
 
-**Params** (`data.params.redstone`): `max_feed_age_seconds`, `deny_bp`, `warn_bp`, `enable_sustained_check`, `deny_sustained_seconds`.
+  <Step title="Write a policy that reads the pack">
+    In your Rego, read the pack's output under its pack id (`data.wasm.<pack-id>.*`) and the thresholds you configure under `data.params.<pack-id>.*`. Compose multiple packs by referencing several pack ids in the same policy — see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+  </Step>
 
-**wasm_args:** `symbol` (required), `rpcUrl` (required), `onchainOracle` (required: `address` + `selector`, optional `decimals`), `provider` (optional), `prevSnapshot` (optional).
+  <Step title="Deploy and bind the policy to the pack">
+    Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` against the pack's `PolicyData` address, then set it on your PolicyClient.
 
-### Chainalysis — sanctions & address screening
+    ```bash
+    # 1. Upload Rego + schemas to IPFS
+    newton-cli policy-files generate-cids \
+      --directory policy-files \
+      --output policy_cids.json \
+      --entrypoint "your_policy.allow"
 
-**Pack id:** `chainalysis` · **Secrets:** `CHAINALYSIS_SANCTIONS_KEY` (required), `CHAINALYSIS_SCREENING_KEY` (optional, for full categorization)
+    # 2. Deploy the policy bound to the pack's PolicyData address
+    newton-cli policy deploy \
+      --policy-cids policy_cids.json \
+      --policy-data-address 0xPackPolicyData
 
-Screens an address against [Chainalysis](https://www.chainalysis.com) Sanctions Screening (OFAC) and Address Screening, and denies on sanctions hits, high-risk classification, or blocklisted risk categories.
+    # 3. Set the deployed policy on your PolicyClient
+    newton-cli policy-client set-policy \
+      --policy-client 0xYourPolicyClient \
+      --policy-address 0xDeployedPolicy
+    ```
 
-| Field | Description |
-|-------|-------------|
-| `data.wasm.chainalysis.sanctioned` | Address matched a sanctions list |
-| `data.wasm.chainalysis.is_high_risk` | Address classified high-risk |
-| `data.wasm.chainalysis.risk_categories` | Array of risk category strings |
+    Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
+  </Step>
 
-**Params** (`data.params.chainalysis`): `deny_on_sanctioned`, `deny_on_high_risk_category`, `risk_categories_blocklist`.
-
-**wasm_args:** `address` (required) — the wallet to screen.
-
-## Using a single pack
-
-1. **Get the addresses.** Read your pack's `policy` and `policyData` addresses for your chain and environment from `deployments.json`.
-2. **Bind the policy to your PolicyClient** and **set params** (namespaced under the pack id). See [Smart Contract Integration](/developers/guides/smart-contract-integration) and the CLI [`policy-client`](/developers/reference/command-line-tool#policy-client) commands.
-3. **Upload the pack's secret** to the pack's PolicyData address, if it requires one. See [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles).
-4. **Simulate**, then submit tasks. See [Testing Policies & Oracles](/developers/guides/testing-policies).
-
-The simplest path through all of this — picking packs, setting params, uploading secrets, and deploying — is the [Newton Dashboard](/developers/guides/using-the-dashboard).
-
-## Combining vaults.fyi and Webacy
-
-A worked two-pack example: gate a deposit on **both** vault risk (vaults.fyi) **and** depeg risk (Webacy) in one policy.
-
-### 1. Author the composite Rego
-
-Read each pack from its namespace and contribute deny rules for each. Allow only when nothing denies:
-
-```rego
-package vault_deposit_gate
-
-import rego.v1
-
-default allow := false
-
-allow if count(deny) == 0
-
-# --- vaults.fyi: vault risk ---
-deny contains msg if {
-    score := data.wasm.vaultsfyi.risk_score
-    score != null
-    score < data.params.vaultsfyi.risk_score_floor
-    msg := sprintf("vaultsfyi: risk score %v below floor", [score])
-}
-
-deny contains "vaultsfyi: 24h tvl drawdown" if {
-    data.wasm.vaultsfyi.tvl_drawdown_24h_pct > data.params.vaultsfyi.tvl_drawdown_24h_max_pct
-}
-
-# --- Webacy: depeg risk ---
-deny contains "webacy: token collapsed" if {
-    data.params.webacy.deny_on_collapsed
-    data.wasm.webacy.is_collapsed
-}
-
-deny contains "webacy: outside peg range" if {
-    data.wasm.webacy.within_expected_range == false
-}
-
-# --- fail closed on oracle errors ---
-deny contains "vaultsfyi: oracle error" if { data.wasm.vaultsfyi.error }
-deny contains "webacy: oracle error" if { data.wasm.webacy.error }
-```
-
-### 2. Configure namespaced params
-
-```json
-{
-  "vaultsfyi": {
-    "apy_z_max": 4,
-    "tvl_drawdown_24h_max_pct": 25,
-    "tvl_drawdown_7d_max_pct": 50,
-    "risk_score_floor": 60,
-    "deny_on_allocation_change": true,
-    "deny_on_critical_flag": true,
-    "deny_on_corrupted": true
-  },
-  "webacy": {
-    "deny_on_collapsed": true,
-    "max_recent_depeg_events": 0,
-    "max_consecutive_days_below_peg": 0,
-    "deny_on_stale_data": true,
-    "max_abs_dev_pct": 0.005
-  }
-}
-```
-
-### 3. Upload both secrets
-
-Secrets are scoped **per PolicyData address**, so upload each pack's key to that pack's PolicyData contract:
-
-```bash
-# vaults.fyi key → vaults.fyi PolicyData address
-echo '{ "VAULTS_FYI_API_KEY": "..." }' > vaultsfyi-secrets.json
-newton-cli --chain-id 11155111 secrets upload \
-  --secrets-file vaultsfyi-secrets.json \
-  --policy-client 0xYourPolicyClient \
-  --policy-data-address 0xVAULTSFYI_POLICY_DATA \
-  --api-key $NEWTON_API_KEY
-
-# Webacy key → Webacy PolicyData address
-echo '{ "WEBACY_API_KEY": "..." }' > webacy-secrets.json
-newton-cli --chain-id 11155111 secrets upload \
-  --secrets-file webacy-secrets.json \
-  --policy-client 0xYourPolicyClient \
-  --policy-data-address 0xWEBACY_POLICY_DATA \
-  --api-key $NEWTON_API_KEY
-```
-
-### 4. Simulate the combined policy
-
-Pass both PolicyData addresses to `newt_simulatePolicy` (see [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles#simulating-a-multi-oracle-policy) for the full request). Confirm the merged `data.wasm` contains both `vaultsfyi` and `webacy` keys before deploying.
-
-### 5. Deploy
-
-Deploy the multi-oracle policy through the [Newton Dashboard](/developers/guides/using-the-dashboard), which binds one `NewtonPolicy` to both PolicyData addresses. (CLI multi-PolicyData deploy is coming soon.)
-
-## Next Steps
+  <Step title="Simulate">
+    Verify the policy resolves the pack's data before going live with `newt_simulatePolicy` (or `newt_simulatePolicyDataWithClient` to confirm uploaded secrets resolve). See [Testing Policies](/developers/guides/testing-policies).
+  </Step>
+</Steps>
 
 <CardGroup cols={2}>
 <Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
-  The merge model and Rego patterns behind composites
+  Compose several packs under one Newton policy.
 </Card>
 <Card icon="key" href="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">
-  Upload and access each pack's API key
+  Upload API keys for packs that need provider credentials.
 </Card>
 <Card icon="grid-2" href="/developers/guides/using-the-dashboard" title="Using the Dashboard">
-  Configure and deploy packs without the CLI
+  Browse data oracles and configure policies in the dashboard.
 </Card>
 <Card icon="flask" href="/developers/guides/testing-policies" title="Testing Policies">
-  Unit-test and simulate before going live
+  Test Rego and simulate policy evaluation before going live.
 </Card>
 </CardGroup>

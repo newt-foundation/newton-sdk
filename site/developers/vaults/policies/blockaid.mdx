@@ -1,0 +1,28 @@
+---
+title: "Blockaid Transaction Screening"
+description: "Use Blockaid data in Newton policies to screen transaction and address risk before vault manager actions execute."
+keywords:
+  - blockaid
+  - transaction screening
+  - vault policy packs
+---
+
+The Blockaid policy pack screens transaction or address risk before a manager action executes. Use it when a vault wants an external security signal in the same composite policy as market, compliance, or oracle checks.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `blockaid` |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `BLOCKAID_API_KEY` | Required | [blockaid.io](https://www.blockaid.io) |
+
+## Usage
+
+Install the pack package, include its module in `defineComposite(...)`, upload the API key with `shield.uploadSecrets(...)`, and pass any per-call inputs the pack's `prepareQuery` requires under `prepareQueryOptions.blockaid`.

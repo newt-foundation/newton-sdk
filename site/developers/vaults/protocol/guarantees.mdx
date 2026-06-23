@@ -1,0 +1,45 @@
+---
+title: "Guarantees"
+description: "The enforcement guarantees VaultKit relies on when routing vault actions through a Shield."
+keywords:
+  - vaultkit guarantees
+  - shield security
+  - replay protection
+  - policy enforcement
+---
+
+VaultKit's guarantees come from combining typed calldata, signed intents, operator quorum, onchain Shield validation, and a timelocked owner bypass.
+
+## 1. Typed Calldata Only
+
+Curators should use typed vendor overlays such as `shield.morpho.reallocate(vault, allocations, options?)`. The overlay builds calldata through the vendor's own SDK. `shield.sendCall(...)` remains an escape hatch for unwrapped vendors; when using it, the curator owns calldata integrity.
+
+## 2. Exact-Tx Attestation Binding
+
+The attestation binds to the full `Intent`: signer, target, value, calldata, chain, and function signature. A curator cannot swap calldata after approval, and an attacker cannot reuse an approval for a different vault action.
+
+## 3. Onchain Policy Parameters
+
+Policy params live onchain in `NewtonPolicy.PolicyConfig.policyParams`. For composite packs, those bytes are a manifest envelope with `_manifest`, `modules`, and `params`; depositors can decode it and compare the modules against `getPolicyData()` and each oracle's `getWasmCid()`.
+
+## 4. Manager Actions Only
+
+The Shield holds vendor manager roles, such as a MetaMorpho allocator or curator role. End-user deposits and withdrawals do not route through Shield. Vendor-side role grants determine which forwarded manager actions can succeed.
+
+## 5. Fail Closed; Bypass Via Timelock
+
+If the gateway is unavailable, operators do not reach quorum, policy evaluation denies, delegate validation fails, or onchain attestation validation fails, Shield does not forward the vault call. The only emergency escape is the owner-queued bypass path, which waits at least the configured delay before execution and emits observable events.
+
+## Supporting Checks
+
+| Check | What enforces it |
+| --- | --- |
+| Chain isolation | `Intent.chainId` is checked against `block.chainid`. |
+| Replay protection | The AVS task manager tracks consumed task ids. |
+| Expiration | Attestations are valid only for the configured block window. |
+| Delegate gate | `execute` and `executeDirect` require `onlyApprovedDelegate`. |
+| Policy binding | Shield validates the attestation's `policyId` against the currently bound policy id. |
+
+## Non-Upgradeable Clones
+
+Shield clones are EIP-1167 minimal proxies to a fixed implementation. There is no proxy-admin upgrade path. A new implementation requires a new factory and curator opt-in through a new clone.

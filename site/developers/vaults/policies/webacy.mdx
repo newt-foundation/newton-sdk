@@ -1,0 +1,57 @@
+---
+title: "Webacy Depeg Risk"
+description: "Use Webacy data in Newton policies to monitor pegged-token depeg risk before manager actions execute."
+keywords:
+  - webacy
+  - depeg risk
+  - pegged token risk
+  - vault policy packs
+---
+
+The Webacy vault policy monitors pegged-token depeg risk. It is for manager-action gates, such as curator or allocator operations, not end-user deposit gating.
+
+The policy data oracle calls Webacy's `/rwa/{address}` endpoint and returns depeg-risk signals for the asset or token address the policy checks.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `webacy` |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `WEBACY_API_KEY` | Required | [developers.webacy.co](https://developers.webacy.co/) |
+
+## Data Inputs
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `is_collapsed` | Whether Webacy reports the pegged asset as collapsed. | Denies manager actions when the asset is already in a collapsed state. |
+| `depeg_event_count` | Number of detected depeg events in the relevant lookback. | Lets policies stop actions after repeated peg failures. |
+| `consecutive_days_below_peg` | Number of consecutive days the asset has remained below peg. | Captures sustained, not just momentary, peg stress. |
+| `address` | The checked token or RWA address. | Binds the Webacy result to the asset used by the policy. |
+
+## Example Checks
+
+```rego
+deny contains "webacy_collapsed" if {
+    t.deny_on_collapsed
+    v.is_collapsed
+}
+
+deny contains "webacy_depeg_events" if {
+    v.depeg_event_count > t.max_depeg_event_count
+}
+
+deny contains "webacy_sustained_depeg" if {
+    v.consecutive_days_below_peg > t.max_consecutive_days_below_peg
+}
+```
+
+## Notes
+
+Webacy depeg risk is usually composed with other manager-action packs. For example, a curator can combine Webacy with Vaults.fyi and RedStone so a reallocation stops when the vault is unhealthy, the pegged asset is stressed, or price feeds diverge.

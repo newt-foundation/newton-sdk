@@ -1,0 +1,72 @@
+---
+title: "Policy Packs"
+description: "Use Newton policy packs to enforce risk, compliance, and oracle checks before vault actions execute."
+keywords:
+  - vault policy packs
+  - vault data oracles
+  - newton for vaults
+  - defi risk policies
+---
+
+Newton vault policy packs combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
+
+In the Newton dashboard, use **Explore Data Oracles** to browse available data oracles, inspect the data they provide, and add the relevant oracle to a policy. Vault policy packs can combine multiple oracles, so a single vault action can be checked against risk, compliance, and market data before it is approved.
+
+The open-source policy packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). Data providers can follow the repo's [CONTRIBUTING guide](https://github.com/newt-foundation/newton-policy-packs/blob/main/CONTRIBUTING.md) to add a pack that other developers can reuse in Newton-powered applications.
+
+For more detail on how packs work, how they are implemented, and how to build policies from them, see [Policy Packs](/developers/guides/policy-packs).
+
+<Note>
+The canonical deployment source is [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). The table below is a production-address snapshot for common curator workflows; use `deployments.json` for stage environments, WASM CIDs, deploy dates, and future redeploys.
+</Note>
+
+## Available Packs
+
+| Policy pack | Use it for |
+| --- | --- |
+| [Vaults.fyi Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
+| [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
+| [Webacy Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
+| [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+
+## Deployed PolicyData Addresses
+
+Production `PolicyData` addresses for each pack:
+
+| Pack | Ethereum (`1`) | Base (`8453`) | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
+| --- | --- | --- | --- | --- |
+| Chainalysis | `0xCacbdEDA32C0048bbE0Ae0d3081Ced3490699049` | `0xceB2027a5fA390740971c7cbb2523841C19CC2f9` | `0x226d196d565b92952669701Fb6cb85B586706996` | `0xdC2e9d30B8e415F907e39f0bfe22974B9894740F` |
+| RedStone | `0xc81371B54F5d71E8aA92a3601f30f3520c34A5a9` | `0xa5aDDdcf0d37C50A338B3C7F8067FB175AFAf6Bf` | `0x6621D7F739a3682054ac974D772AEEBb8548b1BF` | `0xDbfE2fea061e71109e65e511CD11D070f49A187d` |
+| Vaults.fyi | `0xd0947ba40e526E7cdD9d2f9C276cED1B2e089c49` | `0x763800149600164edBd19d0eeE9f858d7ac27836` | `0x90ef32c7D103D5Af2A546f94BdA994BC37372017` | `0x443487D506eEc522e5fb5075eBDbD7496DB454dF` |
+| Webacy | `0xc127976860eEF5FF5d610548C456ABFEE66CD620` | `0x031afeF4c77774960Eb33fb446F9Ce3612C56b5c` | `0xBFf38a5A77262ADfC10667004A550337A97EFB36` | `0x01206E5302794Fba1B71b761594a5e8b4111Be60` |
+
+## Composing Policy Packs
+
+Vault policy packs are most useful when combined. For example, a regulated yield vault might require:
+
+- Webacy depeg-risk checks for pegged-token exposure
+- Chainalysis sanctions screening for the depositor address
+- Vaults.fyi risk checks before accepting additional capital
+- RedStone oracle divergence checks before curator reallocations
+
+The result is a vault whose rules are explicit, inspectable, and enforced before execution.
+
+<Card title="Policy Packs Guide" icon="book-open" href="/developers/guides/policy-packs">
+  Learn how policy packs are structured, implemented, and used in Newton policies.
+</Card>
+
+<Card title="Vaults.fyi Vault Risk Rating" icon="chart-line" href="/developers/vaults/policies/vaultsfyi">
+  Check vault APY, TVL drawdown, risk score, allocation changes, flags, and corruption status.
+</Card>
+
+<Card title="Chainalysis Address Screening" icon="shield-alert" href="/developers/vaults/policies/chainalysis">
+  Screen addresses against sanctions and risk categories.
+</Card>
+
+<Card title="Webacy Depeg Risk" icon="user-check" href="/developers/vaults/policies/webacy">
+  Monitor pegged-token depeg risk before manager actions execute.
+</Card>
+
+<Card title="RedStone Oracle Divergence" icon="activity" href="/developers/vaults/policies/redstone">
+  Compare RedStone price data against onchain oracle data before allowing actions.
+</Card>

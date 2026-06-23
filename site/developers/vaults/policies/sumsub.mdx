@@ -1,0 +1,31 @@
+---
+title: "Sumsub Verification Checks"
+description: "Use Sumsub data in Newton policies for KYC or verification-aware vault gates."
+keywords:
+  - sumsub
+  - kyc checks
+  - vault policy packs
+---
+
+The Sumsub policy pack lets a composite policy include Sumsub verification data before a manager action executes.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `sumsub` |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+### Secrets
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `SUMSUB_APP_TOKEN` | Required | [sumsub.com](https://sumsub.com) |
+| `SUMSUB_SECRET_KEY` | Required | [sumsub.com](https://sumsub.com) |
+
+Both values are required because Sumsub requests are HMAC-signed.
+
+## Usage
+
+Install the pack package, include its module in `defineComposite(...)`, upload both secrets with `shield.uploadSecrets(...)`, and pass any per-call verification input the pack's `prepareQuery` requires under `prepareQueryOptions.sumsub`.

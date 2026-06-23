@@ -1,0 +1,28 @@
+---
+title: "Persona Identity Checks"
+description: "Use Persona data in Newton policies for identity or verification-based vault gates."
+keywords:
+  - persona
+  - identity checks
+  - vault policy packs
+---
+
+The Persona policy pack lets a composite policy include identity or verification signals from Persona before a manager action executes.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `persona` |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `PERSONA_API_KEY` | Required | [withpersona.com](https://withpersona.com) |
+
+## Usage
+
+Install the pack package, include its module in `defineComposite(...)`, upload the API key with `shield.uploadSecrets(...)`, and pass any per-call identity input the pack's `prepareQuery` requires under `prepareQueryOptions.persona`.
