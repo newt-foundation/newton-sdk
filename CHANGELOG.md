@@ -1,3 +1,28 @@
+# v1.0.4 (Tue Jun 23 2026)
+
+#### 🐛 Bug Fix
+
+- NEWT-1625: policy packs dashboard tut [#174](https://github.com/newt-foundation/newton-sdk/pull/174) ([@alecsavvy](https://github.com/alecsavvy))
+- docs: clarify Newton task manager address [#172](https://github.com/newt-foundation/newton-sdk/pull/172) ([@vmathur](https://github.com/vmathur))
+- docs: add Ethereum mainnet production addresses [#170](https://github.com/newt-foundation/newton-sdk/pull/170) ([@vmathur](https://github.com/vmathur))
+
+#### ⚠️ Pushed to `main`
+
+- chore: gitignore update ([@denniswon](https://github.com/denniswon))
+
+#### 📝 Documentation
+
+- Docs: add VaultKit and policy-pack documentation [#161](https://github.com/newt-foundation/newton-sdk/pull/161) ([@vmathur](https://github.com/vmathur) [@albertnbrown](https://github.com/albertnbrown))
+
+#### Authors: 4
+
+- [@alecsavvy](https://github.com/alecsavvy)
+- Albert Brown ([@albertnbrown](https://github.com/albertnbrown))
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v1.0.3 (Thu Jun 18 2026)
 
 #### 🐛 Bug Fix
