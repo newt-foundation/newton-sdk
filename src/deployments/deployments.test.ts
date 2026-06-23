@@ -14,7 +14,8 @@ describe('deployments', () => {
   it('resolves all SDK address keys for every supported chain', () => {
     const missing: string[] = []
 
-    for (const chainId of Object.keys(DEPLOYMENT_KEYS) as unknown as SupportedChainId[]) {
+    for (const chainIdKey in DEPLOYMENT_KEYS) {
+      const chainId = Number(chainIdKey) as SupportedChainId
       const deploymentKey = DEPLOYMENT_KEYS[chainId]
       const deployment = getDeployment(chainId)
 

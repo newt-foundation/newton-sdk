@@ -32,7 +32,8 @@ export function getDeploymentAddress(chainId: number, addressKey: DeploymentAddr
 
 function buildAddressMap(addressKey: DeploymentAddressKey): Partial<Record<SupportedChainId, Hex>> {
   const map: Partial<Record<SupportedChainId, Hex>> = {}
-  for (const chainId of Object.keys(DEPLOYMENT_KEYS) as unknown as SupportedChainId[]) {
+  for (const chainIdKey in DEPLOYMENT_KEYS) {
+    const chainId = Number(chainIdKey) as SupportedChainId
     const address = getDeployment(chainId)?.addresses[addressKey]
     if (address) {
       map[chainId] = address as Hex
