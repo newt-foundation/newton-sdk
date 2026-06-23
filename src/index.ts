@@ -121,6 +121,11 @@ const newtonWalletClientActions =
     }
     const taskManagerAddress =
       overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[walletClient?.chain?.id ?? sepolia.id]
+    if (!taskManagerAddress) {
+      throw new Error(
+        `Newton SDK: no NewtonProverTaskManager address for chain ${walletClient?.chain?.id ?? sepolia.id}`,
+      )
+    }
 
     const gatewayApiUrlOverride = overrides?.gatewayApiUrl ?? undefined
 
@@ -365,9 +370,17 @@ const newtonPublicClientActions =
 
     const taskManagerAddress =
       overrides?.taskManagerAddress ?? NEWTON_PROVER_TASK_MANAGER[publicClient?.chain?.id ?? sepolia.id]
+    if (!taskManagerAddress) {
+      throw new Error(
+        `Newton SDK: no NewtonProverTaskManager address for chain ${publicClient?.chain?.id ?? sepolia.id}`,
+      )
+    }
 
     const attestationValidatorAddress =
       overrides?.attestationValidatorAddress ?? ATTESTATION_VALIDATOR[publicClient?.chain?.id ?? sepolia.id]
+    if (!attestationValidatorAddress) {
+      throw new Error(`Newton SDK: no AttestationValidator address for chain ${publicClient?.chain?.id ?? sepolia.id}`)
+    }
 
     return {
       // AVS module functions

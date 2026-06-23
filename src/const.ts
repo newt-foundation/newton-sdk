@@ -34,19 +34,19 @@ export const GATEWAY_METHODS = {
 }
 
 /** NewtonProverTaskManager contracts — synced from newton-contracts deployments. */
-export const NEWTON_PROVER_TASK_MANAGER: Record<number, Hex> = NEWTON_PROVER_TASK_MANAGER_FROM_DEPLOYMENTS
+export const NEWTON_PROVER_TASK_MANAGER: Partial<Record<number, Hex>> = NEWTON_PROVER_TASK_MANAGER_FROM_DEPLOYMENTS
 
 /** AttestationValidator contracts — verify BLS aggregate signatures on-chain. */
-export const ATTESTATION_VALIDATOR: Record<number, Hex> = ATTESTATION_VALIDATOR_FROM_DEPLOYMENTS
+export const ATTESTATION_VALIDATOR: Partial<Record<number, Hex>> = ATTESTATION_VALIDATOR_FROM_DEPLOYMENTS
 
 /** IdentityRegistry contracts — on-chain identity data refs and policy client links. */
-export const IDENTITY_REGISTRY: Record<number, Hex> = IDENTITY_REGISTRY_FROM_DEPLOYMENTS
+export const IDENTITY_REGISTRY: Partial<Record<number, Hex>> = IDENTITY_REGISTRY_FROM_DEPLOYMENTS
 
 /** PolicyClientRegistry contracts — on-chain policy client registration and lifecycle. */
-export const POLICY_CLIENT_REGISTRY: Record<number, Hex> = POLICY_CLIENT_REGISTRY_FROM_DEPLOYMENTS
+export const POLICY_CLIENT_REGISTRY: Partial<Record<number, Hex>> = POLICY_CLIENT_REGISTRY_FROM_DEPLOYMENTS
 
 /** ConfidentialDataRegistry contracts — on-chain provider-managed confidential data refs. */
-export const CONFIDENTIAL_DATA_REGISTRY: Record<number, Hex> = CONFIDENTIAL_DATA_REGISTRY_FROM_DEPLOYMENTS
+export const CONFIDENTIAL_DATA_REGISTRY: Partial<Record<number, Hex>> = CONFIDENTIAL_DATA_REGISTRY_FROM_DEPLOYMENTS
 
 export {
   DEPLOYMENTS,

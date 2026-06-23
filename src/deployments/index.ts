@@ -30,13 +30,15 @@ export function getDeploymentAddress(chainId: number, addressKey: DeploymentAddr
   return asDeploymentAddress(deployment.addresses[addressKey], chainId, addressKey)
 }
 
-function buildAddressMap(addressKey: DeploymentAddressKey): Record<number, Hex> {
-  return Object.fromEntries(
-    (Object.keys(DEPLOYMENT_KEYS) as unknown as SupportedChainId[]).map(chainId => [
-      chainId,
-      getDeploymentAddress(chainId, addressKey),
-    ]),
-  ) as Record<number, Hex>
+function buildAddressMap(addressKey: DeploymentAddressKey): Partial<Record<SupportedChainId, Hex>> {
+  const map: Partial<Record<SupportedChainId, Hex>> = {}
+  for (const chainId of Object.keys(DEPLOYMENT_KEYS) as unknown as SupportedChainId[]) {
+    const address = getDeployment(chainId)?.addresses[addressKey]
+    if (address) {
+      map[chainId] = address as Hex
+    }
+  }
+  return map
 }
 
 export const NEWTON_PROVER_TASK_MANAGER = buildAddressMap('newtonProverTaskManager')
