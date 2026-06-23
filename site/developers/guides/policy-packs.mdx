@@ -46,7 +46,11 @@ The detailed pack catalog lives in the VaultKit docs:
 
 ## How to Use Packs
 
-The fastest way to use a pack is the [Newton Dashboard](https://dashboard.newton.xyz) — no CLI required. You browse the available data oracles, add one to your policy, configure its secrets and params, simulate, and deploy, all from the browser. Every pack you see in the dashboard maps to an open-source pack in the [`newton-policy-packs`](https://github.com/newt-foundation/newton-policy-packs) repo and a deployed `PolicyData` address in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
+There are two ways to use a pack: the [Newton Dashboard](https://dashboard.newton.xyz) (no CLI required) and [`newton-cli`](/developers/reference/command-line-tool). Both reference the same open-source packs in the [`newton-policy-packs`](https://github.com/newt-foundation/newton-policy-packs) repo and the same deployed `PolicyData` addresses in [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) — pick whichever fits your workflow.
+
+### Using the Dashboard
+
+The dashboard lets you browse the available data oracles, add one to your policy, configure its secrets and params, simulate, and deploy, all from the browser.
 
 <Note>
 This tutorial focuses on the pack-specific steps. For signing in, generating an API key, and the full project lifecycle, see [Using the Dashboard](/developers/guides/using-the-dashboard).
@@ -109,6 +113,66 @@ This tutorial focuses on the pack-specific steps. For signing in, generating an 
     <Frame>
       <img src="/images/packs-dashboard-publish.png" alt="Publish Policy modal in the Newton Dashboard" />
     </Frame>
+  </Step>
+</Steps>
+
+### Using the CLI
+
+Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` address — you never deploy the oracle yourself. Make sure the CLI is installed (`curl -L cli.newton.xyz | sh && newtup`) and your `NEWTON_API_KEY` and chain are set; see [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
+
+<Steps>
+  <Step title="Look up the pack's PolicyData address">
+    Pick a pack from the [VaultKit Policy Packs catalog](/developers/vaults/policy-packs) and copy its production `PolicyData` address for your chain from the catalog or the canonical [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). You reference this address directly — there is no oracle to build or deploy.
+  </Step>
+
+  <Step title="Upload the pack's secrets">
+    For packs that call authenticated APIs, upload the required key(s) encrypted, scoped to the pack's `PolicyData` address. The keys must match the pack's secrets schema (e.g. `VAULTS_FYI_API_KEY`).
+
+    ```bash
+    cat > secrets.json <<'EOF'
+    { "VAULTS_FYI_API_KEY": "sk-prod-xxxxxxxxxxxx" }
+    EOF
+
+    newton-cli --chain-id 11155111 secrets upload \
+      --secrets-file secrets.json \
+      --policy-client 0xYourPolicyClient \
+      --policy-data-address 0xPackPolicyData \
+      --api-key $NEWTON_API_KEY
+    ```
+
+    Packs that need no credentials skip this step. See [Secrets in Oracles](/developers/guides/secrets-in-oracles) for the full lifecycle.
+  </Step>
+
+  <Step title="Write a policy that reads the pack">
+    In your Rego, read the pack's output under its pack id (`data.wasm.<pack-id>.*`) and the thresholds you configure under `data.params.<pack-id>.*`. Compose multiple packs by referencing several pack ids in the same policy — see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+  </Step>
+
+  <Step title="Deploy and bind the policy to the pack">
+    Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` against the pack's `PolicyData` address, then set it on your PolicyClient.
+
+    ```bash
+    # 1. Upload Rego + schemas to IPFS
+    newton-cli policy-files generate-cids \
+      --directory policy-files \
+      --output policy_cids.json \
+      --entrypoint "your_policy.allow"
+
+    # 2. Deploy the policy bound to the pack's PolicyData address
+    newton-cli policy deploy \
+      --policy-cids policy_cids.json \
+      --policy-data-address 0xPackPolicyData
+
+    # 3. Set the deployed policy on your PolicyClient
+    newton-cli policy-client set-policy \
+      --policy-client 0xYourPolicyClient \
+      --policy-address 0xDeployedPolicy
+    ```
+
+    Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
+  </Step>
+
+  <Step title="Simulate">
+    Verify the policy resolves the pack's data before going live with `newt_simulatePolicy` (or `newt_simulatePolicyDataWithClient` to confirm uploaded secrets resolve). See [Testing Policies](/developers/guides/testing-policies).
   </Step>
 </Steps>
 
