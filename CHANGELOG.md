@@ -1,3 +1,15 @@
+# v1.0.5 (Thu Jun 25 2026)
+
+#### 🐛 Bug Fix
+
+- feat(sdk) - Sync contract addresses from newton-contracts deployments [#168](https://github.com/newt-foundation/newton-sdk/pull/168) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v1.0.4 (Tue Jun 23 2026)
 
 #### 🐛 Bug Fix
