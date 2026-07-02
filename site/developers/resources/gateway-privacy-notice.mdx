@@ -1,0 +1,31 @@
+---
+title: "Gateway Privacy Notice"
+---
+
+**1. Scope**
+
+This notice is addressed to Developers who register for and use API keys to access the Newton Gateway API ("Developers").  Developers are responsible for providing their own end users with appropriate notice regarding how the Developer's application uses Newton Protocol.  Magic Labs, Inc. operates the Gateway API infrastructure, related tooling, and API key issuance. Magic Newton Foundation is the steward of the Newton Protocol. Magic Labs and the Foundation are separate, unaffiliated entities.  Your access to and use of the gateway is governed by the [<u>Developer Terms of Service</u>](https://magic.link/legal/developer-license-agreement), which are incorporated by reference. 
+
+**2. What data we collect from Developers**
+
+Developer account data: name, email, API keys, and related project configuration information.
+
+**3. What happens to transaction data submitted through your application**
+
+When your application submits a transaction Intent for policy evaluation, the Intent includes the sending and receiving wallet addresses, transaction value, calldata, chain identifier, and other related transaction data. This data is encrypted on your application's client side (HPKE) before it reaches the Gateway.  The Gateway routes the encrypted Intent to the Operator network for policy evaluation. The Gateway does not decrypt this data.  During evaluation, Operators execute policy valuation of Intent data in decrypted form within a Trusted Execution Environment (TEE) such that they are unable to access the decrypted data. Where your application's policy requires external data (for example, sanctions screening or KYC status), Operators independently query data oracle providers as part of evaluation.
+
+**4. Legal basis for processing**
+
+Magic Labs processes Developer account data on the basis of performance of the contract between Magic Labs and the Developer under the relevant Developer Terms of Use.  Processing of transaction Intent data submitted through your application is a structural requirement of operating the Newton product you have chosen to integrate; it is necessary for the Gateway to route encrypted Intent data and for Operators to perform policy evaluation in order for your application to function as designed.
+
+**5. Who else may receive transaction data**
+
+Operators, as described in Section 3. Operators are geographically distributed, which may include locations outside the European Economic Area. Data oracle providers, where your application's policy requires external verification (for example, KYC or sanctions screening providers).
+
+**6. Retention**
+
+Ephemeral data used only during a single evaluation is not persisted. Identity and confidential data categories are stored in encrypted form, with retention and deletion timing set by you as the Developer. 
+
+**7. Developer rights**
+
+You may exercise access, correction, deletion, and portability rights with respect to your own Developer account data by contacting [<u>privacy@magic.link</u>](mailto:privacy@magic.link).  This notice does not address rights for your end users. You are responsible for handling any rights requests from your end users with respect to their data.
