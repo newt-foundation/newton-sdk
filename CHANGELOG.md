@@ -1,3 +1,15 @@
+# v1.0.6 (Mon Jul 06 2026)
+
+#### 🐛 Bug Fix
+
+- additional addresses [#175](https://github.com/newt-foundation/newton-sdk/pull/175) ([@alecsavvy](https://github.com/alecsavvy))
+
+#### Authors: 1
+
+- [@alecsavvy](https://github.com/alecsavvy)
+
+---
+
 # v1.0.5 (Thu Jun 25 2026)
 
 #### 🐛 Bug Fix
