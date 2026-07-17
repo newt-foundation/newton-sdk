@@ -1,3 +1,15 @@
+# v1.0.7 (Fri Jul 17 2026)
+
+#### 🐛 Bug Fix
+
+- docs: point docs at newton.xyz and drop legacy protocol pages [#176](https://github.com/newt-foundation/newton-sdk/pull/176) ([@Dizigen](https://github.com/Dizigen))
+
+#### Authors: 1
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+
+---
+
 # v1.0.6 (Mon Jul 06 2026)
 
 #### 🐛 Bug Fix
