@@ -13,7 +13,7 @@ Go to [dashboard.newton.xyz](https://dashboard.newton.xyz/), sign in, and click 
 
 ---
 
-The Newton Dashboard API at `dashboard.api.newt.foundation` also provides self-service API key management via API. You can authenticate with Sign-In with Ethereum (SIWE) or email OTP, then create API keys that are immediately usable with the Newton Gateway.
+The Newton Dashboard API at `dashboard.api.newton.xyz` also provides self-service API key management via API. You can authenticate with Sign-In with Ethereum (SIWE) or email OTP, then create API keys that are immediately usable with the Newton Gateway.
 
 ## Authentication
 
@@ -26,7 +26,7 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
     <Steps>
       <Step title="Request a challenge">
         ```bash
-        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/siwe/challenge \
+        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/siwe/challenge \
           -H "Content-Type: application/json" \
           -d '{"address": "0xYourWalletAddress"}'
         ```
@@ -37,7 +37,7 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
       </Step>
       <Step title="Verify and get session">
         ```bash
-        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/verify \
+        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
           -H "Content-Type: application/json" \
           -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "<signed_siwe_message>"}'
         ```
@@ -51,7 +51,7 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
     <Steps>
       <Step title="Request OTP">
         ```bash
-        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/email/challenge \
+        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/email/challenge \
           -H "Content-Type: application/json" \
           -d '{"value": "you@example.com", "challenge": "<recaptcha_token>"}'
         ```
@@ -59,7 +59,7 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
       </Step>
       <Step title="Verify OTP">
         ```bash
-        curl -X POST https://dashboard.api.newt.foundation/v1/auth/user_factor/verify \
+        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
           -H "Content-Type: application/json" \
           -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "123456"}'
         ```
@@ -79,7 +79,7 @@ Once authenticated, create an API key for use with the Newton Gateway.
   </Step>
   <Step title="Create an API key">
     ```bash
-    curl -X POST https://dashboard.api.newt.foundation/v1/api_key \
+    curl -X POST https://dashboard.api.newton.xyz/v1/api_key \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <access_token>" \
       -d '{"name": "my-app-key", "permissions": ["rpc_read", "rpc_write"]}'
@@ -88,7 +88,7 @@ Once authenticated, create an API key for use with the Newton Gateway.
   <Step title="Use the API key">
     Include the key in the `Authorization` header when calling the Newton Gateway:
     ```bash
-    curl -X POST https://gateway-avs.sepolia.newt.foundation/rpc \
+    curl -X POST https://gateway-avs.sepolia.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
@@ -142,7 +142,7 @@ Access tokens expire after a short period. Use the refresh token to obtain a new
 
 ## Alternative: Email Request
 
-If you prefer not to use the Dashboard API, you can request an API key by emailing [product@magicnewton.com](mailto:product@magicnewton.com).
+If you prefer not to use the Dashboard API, you can request an API key by emailing [support@newton.xyz](mailto:support@newton.xyz).
 
 ## Next Steps
 

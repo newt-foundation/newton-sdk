@@ -206,7 +206,7 @@
       "anchors": [
         {
           "anchor": "Blog",
-          "href": "https://blog.newt.foundation",
+          "href": "https://blog.newton.xyz",
           "icon": "newspaper"
         }
       ]
@@ -215,11 +215,11 @@
   "redirects": [
     {
       "source": "/how-to-guides/newt-token-staking",
-      "destination": "https://blog.newt.foundation/how-to-stake-newt/"
+      "destination": "https://blog.newton.xyz/how-to-stake-newt/"
     },
     {
       "source": "/references/newt-token-airdrop",
-      "destination": "https://blog.newt.foundation/newt-airdrop-claiming-staking/"
+      "destination": "https://blog.newton.xyz/newt-airdrop-claiming-staking/"
     },
     {
       "source": "/newton-protocol/overview",
