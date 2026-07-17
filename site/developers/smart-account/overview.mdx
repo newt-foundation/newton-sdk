@@ -1,0 +1,85 @@
+---
+title: "Overview"
+description: "Programmable, chain-abstracted smart accounts that move tokens and call contracts under Newton policies."
+---
+
+The Newton Smart Account SDK (`@newton-xyz/warp`) lets developers spin up ERC-7579 smart accounts that combine two capabilities into a single account:
+
+1. **Newton-verified actions** — Every intent the account submits is evaluated against your Newton policy client. The account cannot act unless the policy attestation passes.
+2. **Chain abstraction** — The account holds stablecoins (USDC, USDT) and native ETH, and can act on any supported chain regardless of where its liquidity sits. You don't have to bridge, swap, or pre-fund the destination chain.
+
+The account exposes two actions, and both inherit the capabilities above:
+
+- **`transfer`** — move USDC, USDT, or ETH to any address on any supported chain.
+- **`execute`** — run arbitrary contract calls on any supported chain (swap, deposit, mint, approve — anything), with Warp bridging in the tokens those calls need.
+
+Moving tokens is just the common case. `execute` is the general one: any contract interaction, on any chain, gated by your Newton policy and funded from a single balance. `transfer` is a convenience wrapper for the plain send. Either way, one call routes liquidity across chains *and* gates the action behind your policy.
+
+## Use Cases
+
+**Cross-chain DeFi from one balance** — Fund the account once in USDC on Base, then have it `execute` a supply into a lending market on one chain or a swap on another. Warp bridges the tokens to wherever the call runs — no per-chain balances, no manual bridging — and your policy bounds which protocols and amounts are allowed.
+
+**Compliance-gated payouts** — Issue a smart account to each user or counterparty. Write a Rego policy (using [Newton Verifiable Credentials](/developers/verified-credential/overview) or your own data oracles) that enforces who can be paid, how much, and under what conditions. Every intent is checked before it settles.
+
+**AI agent accounts** — Give an agent a smart account whose policy constrains it (allow-listed counterparties and contracts, per-period spend caps, KYC checks on recipients). The agent gets one account it can spend from or transact with across every supported chain; you keep deterministic guardrails. This is all built into the SDK.
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A[App calls transfer<br/>or execute] --> B[Warp orchestrator<br/>routes liquidity]
+    B --> C[Newton policy<br/>evaluates intent]
+    C --> D{Attestation<br/>passes?}
+    D -- yes --> E[Execute on<br/>destination chain]
+    D -- no --> F[Reject]
+```
+
+1. **Account creation** — `sdk.createAccount({ owner })` deploys (or addresses) an ERC-7579 smart account bound to your policy client contract. The `owner` is a developer-controlled signer (`viem` `Account`) that authorizes intents on the account's behalf.
+2. **Intent** — Calling `account.transfer({ to, amount, token, chain })` — or `account.execute(...)` for arbitrary contract calls — builds an intent, asks the Warp orchestrator to route liquidity from wherever the account holds balances to the destination chain, and submits the bundle to Newton for policy evaluation. Both calls return an `intentOperationId`.
+3. **Policy check** — Newton evaluates your Rego policy against the intent. If the policy passes, Newton issues an attestation that authorizes the smart account to execute.
+4. **Settlement** — The account executes on the destination chain. Poll `account.getStatus(intentOperationId)` to follow the intent through its lifecycle to a terminal state; once it reaches `FILLED` the status carries the destination-chain `fillTransactionHash`.
+
+## Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
+| **Policy client contract** | An on-chain contract that inherits `NewtonPolicyClient` and is registered with `PolicyClientRegistry`. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
+| **Owner signer** | A `viem` `Account` your app controls — typically backed by a server-side KMS, Turnkey, or similar. Treat this as a hot signer with policy-bounded blast radius. |
+| **Node 20+** | The SDK targets modern Node and modern browsers. |
+
+<Note>
+The owner key is the signer — not the spending authority. What the account can do is bounded by your Newton policy, not by what the owner key could sign in isolation. That's the security model: the owner key signs intents, the policy decides which intents are valid.
+</Note>
+
+## Supported Networks
+
+Testnet (set `isTestnet: true`):
+
+| Chain | ID |
+|-------|----|
+| Sepolia | `11155111` |
+| Base Sepolia | `84532` |
+
+Mainnet support and the full mainnet chain list ship with the SDK — see [`mainnetChains`](/developers/smart-account/reference#exported-chains) in the reference.
+
+## Supported Tokens
+
+`USDC`, `USDT`, and native `ETH` on every supported chain. Amounts are passed as `bigint` in the token's smallest unit (use `viem`'s `parseUnits`).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card icon="list-check" href="/developers/smart-account/integration-guide" title="Integration Guide">
+    Build it end-to-end: install, create an account, submit a policy-gated intent
+  </Card>
+  <Card icon="code" href="/developers/smart-account/reference" title="SDK Reference">
+    Full `NewtonAccountSDK` and `NewtonAccountInstance` API
+  </Card>
+  <Card icon="shield-check" href="/developers/verified-credential/overview" title="Verifiable Credentials">
+    Pair Smart Accounts with KYC-aware policies
+  </Card>
+  <Card icon="brackets-curly" href="/developers/guides/writing-policies" title="Writing Policies">
+    Author the Rego policy that gates account spending
+  </Card>
+</CardGroup>
