@@ -11,9 +11,8 @@ const routes = JSON.parse(readFileSync(join(here, 'expected-routes.json'), 'utf8
 const redirects = JSON.parse(readFileSync(join(here, 'expected-redirects.json'), 'utf8'))
 const failures = []
 
-// Map a current Mintlify route to its Vocs URL. Pages move verbatim, so the
-// path is identical EXCEPT the leading segment: site/<x>.mdx -> src/pages/<x>.mdx -> /<x>.
-// No transform needed — URLs are preserved by design.
+// Map a source route to its Vocs URL. Pages moved verbatim, so the path is
+// identical. No transform needed — URLs preserved by design.
 const toUrl = (p) => p
 
 // 1. Per-route: 2xx, has <title>/<h1>, local assets resolve.

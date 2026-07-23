@@ -1,6 +1,6 @@
 # Newton Protocol Docs — Design System
 
-This document captures the visual design tokens, principles, and component styling intent for the Newton Protocol documentation site (Vocs-based). The goal is **brand parity** with the former Mintlify maple theme, not pixel-identical reproduction.
+This document captures the visual design tokens, principles, and component styling intent for the Newton Protocol documentation site (Vocs-based). The goal is **brand parity** with the previous documentation theme, not pixel-identical reproduction.
 
 ## Visual Theme & Atmosphere
 
@@ -10,7 +10,7 @@ This document captures the visual design tokens, principles, and component styli
 
 **Mood:** Clean, neutral, approachable. Light-first experience with robust dark mode.
 
-**Ceiling:** Close visual match to the former Mintlify maple theme. Vocs and Mintlify are different renderers with distinct layout engines — structural differences are expected and acceptable where they serve readability.
+**Ceiling:** Close visual match to the previous documentation theme. Different renderers have distinct layout engines — structural differences are expected and acceptable where they serve readability.
 
 ## Color Palette & Roles
 
@@ -52,27 +52,27 @@ No custom font declarations — system fonts ensure instant loading and native O
 
 ### Callouts
 
-**Intent:** Match maple callout density and spacing.
+**Intent:** Maintain familiar callout density and spacing.
 
-**Current state:** Vocs callouts are visually close to maple by default. No overrides applied yet.
+**Current state:** Vocs callouts are visually close by default. No overrides applied yet.
 
 **Escalation path (ponytail):** If user feedback indicates visible misalignment, tune padding/margin via CSS custom properties in `_root.css`.
 
 ### Cards
 
-**Intent:** Maintain card component visual weight and spacing from maple theme.
+**Intent:** Maintain card component visual weight and spacing.
 
-**Current state:** Cards converted from Mintlify `<Card>` to Vocs markup (Task 9). Styling defers to Vocs defaults.
+**Current state:** Cards converted to Vocs markup (Task 9). Styling defers to Vocs defaults.
 
-**Escalation path:** Tune card border-radius, padding, or shadow if the visual weight reads too heavy/light compared to maple screenshots.
+**Escalation path:** Tune card border-radius, padding, or shadow if the visual weight reads too heavy/light.
 
 ### Steps Component
 
 **Intent:** Preserve numbered-step visual rhythm.
 
-**Current state:** Steps converted from Mintlify `<Steps>` to Vocs markup. Vocs provides native step styling.
+**Current state:** Steps converted to Vocs markup. Vocs provides native step styling.
 
-**Escalation path:** Adjust step number circle size, spacing, or connector lines if the rhythm feels compressed/stretched vs maple.
+**Escalation path:** Adjust step number circle size, spacing, or connector lines if the rhythm feels compressed/stretched.
 
 ### Code Blocks
 
@@ -112,7 +112,7 @@ Vocs handles responsive layout internally. No custom breakpoint overrides.
 
 No custom shadow overrides applied — Vocs provides subtle elevation for navigation, search, and popovers.
 
-**Rationale:** Maple used minimal shadows; Vocs defaults align with this restrained approach.
+**Rationale:** A restrained approach to shadows; Vocs defaults align with this philosophy.
 
 ### Surface Hierarchy
 
@@ -130,7 +130,7 @@ Configured via `logoUrl: { light, dark }` in `vocs.config.ts`.
 
 ## Color Scheme Default
 
-**Default:** Light mode (matches Mintlify `docs.json` `appearance.default = "light"`).
+**Default:** Light mode.
 
 Configured via `colorScheme: 'light dark'` in `vocs.config.ts` — user can toggle, but light is the initial state.
 
@@ -197,6 +197,6 @@ When generating new documentation pages or components:
 grep -r "newton-ink" dist/
 ```
 
-**Escalation threshold (ponytail):** Start minimal. Add overrides only when an element reads visibly off compared to maple screenshots. Document each override in this file with rationale.
+**Escalation threshold (ponytail):** Start minimal. Add overrides only when an element reads visibly off. Document each override in this file with rationale.
 
 **Vocs version:** 2.6.2 (as of 2026-07-23)
