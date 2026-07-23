@@ -783,19 +783,19 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
 
 :::details[newton-cli: command not found]
     Restart your shell or run `source ~/.zshrc`. Verify `~/.newton/bin` is on your `PATH`.
-  :::
-  :::details[chain id is required]
-    Pass `--chain-id` to the command or set the `CHAIN_ID` environment variable.
-  :::
-  :::details[Failed to load configuration]
-    For commands that interact with contracts, ensure deployment files exist for your chain. Run with `--quiet` to suppress verbose config loading logs.
-  :::
-  :::details[HPKE private key not configured]
-    The `secrets upload` command encrypts client-side. The gateway's HPKE public key is fetched automatically via `newt_getSecretsPublicKey` — no local key configuration is needed.
-  :::
-  :::details[IncompatiblePolicyVersion]
-    Your policy was deployed with an older factory. Deploy a new policy via the latest factory, then call `newton-cli policy-client set-policy` to update. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility).
-  :::
+:::
+:::details[chain id is required]
+  Pass `--chain-id` to the command or set the `CHAIN_ID` environment variable.
+:::
+:::details[Failed to load configuration]
+  For commands that interact with contracts, ensure deployment files exist for your chain. Run with `--quiet` to suppress verbose config loading logs.
+:::
+:::details[HPKE private key not configured]
+  The `secrets upload` command encrypts client-side. The gateway's HPKE public key is fetched automatically via `newt_getSecretsPublicKey` — no local key configuration is needed.
+:::
+:::details[IncompatiblePolicyVersion]
+  Your policy was deployed with an older factory. Deploy a new policy via the latest factory, then call `newton-cli policy-client set-policy` to update. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility).
+:::
 ## Next Steps
 
 <Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploy with CLI">

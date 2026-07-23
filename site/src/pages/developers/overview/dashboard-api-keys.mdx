@@ -23,48 +23,48 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
   <Tab title="SIWE (Preferred)">
     Sign-In with Ethereum (SIWE) links your wallet address to your Dashboard account.
 
-    ::::steps
+::::steps
 ### Request a challenge
-        ```bash
-        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/siwe/challenge \
-          -H "Content-Type: application/json" \
-          -d '{"address": "0xYourWalletAddress"}'
-        ```
-        Returns a `verify_flow_id` and `nonce`.
-      
+    ```bash
+    curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/siwe/challenge \
+      -H "Content-Type: application/json" \
+      -d '{"address": "0xYourWalletAddress"}'
+    ```
+    Returns a `verify_flow_id` and `nonce`.
+  
 ### Sign the SIWE message
-        Construct a SIWE message with the returned `nonce` and sign it with your wallet (e.g., via MetaMask or viem).
-      
+    Construct a SIWE message with the returned `nonce` and sign it with your wallet (e.g., via MetaMask or viem).
+  
 ### Verify and get session
-        ```bash
-        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
-          -H "Content-Type: application/json" \
-          -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "<signed_siwe_message>"}'
-        ```
-        Returns an `access_token` and `refresh_token`.
-      
+    ```bash
+    curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
+      -H "Content-Type: application/json" \
+      -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "<signed_siwe_message>"}'
+    ```
+    Returns an `access_token` and `refresh_token`.
+  
 ::::
   </Tab>
   <Tab title="Email OTP">
     Email-based authentication sends a one-time password to your email.
 
-    ::::steps
+::::steps
 ### Request OTP
-        ```bash
-        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/email/challenge \
-          -H "Content-Type: application/json" \
-          -d '{"value": "you@example.com", "challenge": "<recaptcha_token>"}'
-        ```
-        Returns a `verify_flow_id`.
-      
+    ```bash
+    curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/email/challenge \
+      -H "Content-Type: application/json" \
+      -d '{"value": "you@example.com", "challenge": "<recaptcha_token>"}'
+    ```
+    Returns a `verify_flow_id`.
+  
 ### Verify OTP
-        ```bash
-        curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
-          -H "Content-Type: application/json" \
-          -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "123456"}'
-        ```
-        Returns an `access_token` and `refresh_token`.
-      
+    ```bash
+    curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
+      -H "Content-Type: application/json" \
+      -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "123456"}'
+    ```
+    Returns an `access_token` and `refresh_token`.
+  
 ::::
   </Tab>
 </Tabs>

@@ -134,7 +134,7 @@ Your contract needs to know:
     ```
   
 ### Extend your contract
-    :::note
+:::note
 Calling `_initNewtonPolicyClient` in the constructor is **optional**. You can initialize the policy client later via an `initialize` function or admin setter. The policy address is set separately via `_setPolicyAddress()` (internal, for constructors) or `setPolicyAddress()` (public, for deferred setup by the owner). This flexibility supports both new contracts and existing upgradeable contracts.
 :::
 
@@ -319,12 +319,12 @@ If deploying a new policy, work with the Newton team or use the `NewtonPolicyFac
     }
     ```
 
-    :::warning
+:::warning
 When adding `NewtonPolicyClient` to an existing upgradeable contract:
-      1. Be careful with storage layout — add new storage variables at the end
-      2. The `_newtonPolicyClientInitialized` flag prevents re-initialization
-      3. Test thoroughly on a fork before mainnet deployment
-      4. Consider using a timelock or multisig for the initialization call
+  1. Be careful with storage layout — add new storage variables at the end
+  2. The `_newtonPolicyClientInitialized` flag prevents re-initialization
+  3. Test thoroughly on a fork before mainnet deployment
+  4. Consider using a timelock or multisig for the initialization call
 :::
   </Tab>
 </Tabs>
@@ -590,114 +590,114 @@ contract UrgentVault is NewtonPolicyClient {
         }
     }
     ```
-  :::
-  :::details[Vault with Multiple Operations]
-    ERC4626 vault router with protected deposit/withdraw:
+:::
+:::details[Vault with Multiple Operations]
+  ERC4626 vault router with protected deposit/withdraw:
 
-    ```solidity
-    contract VaultRouter is NewtonPolicyClient {
-        IERC4626 public vault;
-        error InvalidAttestation();
-        error MismatchedSelector();
+  ```solidity
+  contract VaultRouter is NewtonPolicyClient {
+      IERC4626 public vault;
+      error InvalidAttestation();
+      error MismatchedSelector();
 
-        constructor(
-            address _vault,
-            address _policyTaskManager,
-            address _policy,
-            INewtonPolicy.PolicyConfig memory _config,
-            address _owner
-        ) {
-            vault = IERC4626(_vault);
-            _initNewtonPolicyClient(_policyTaskManager, _owner);
-            _setPolicyAddress(_policy);
-            _setPolicy(_config);
-        }
+      constructor(
+          address _vault,
+          address _policyTaskManager,
+          address _policy,
+          INewtonPolicy.PolicyConfig memory _config,
+          address _owner
+      ) {
+          vault = IERC4626(_vault);
+          _initNewtonPolicyClient(_policyTaskManager, _owner);
+          _setPolicyAddress(_policy);
+          _setPolicy(_config);
+      }
 
-        function protectedDeposit(
-            NewtonMessage.Attestation calldata attestation
-        ) external returns (uint256 shares) {
-            require(_validateAttestation(attestation), InvalidAttestation());
+      function protectedDeposit(
+          NewtonMessage.Attestation calldata attestation
+      ) external returns (uint256 shares) {
+          require(_validateAttestation(attestation), InvalidAttestation());
 
-            (bytes4 selector, uint256 assets, address receiver) =
-                abi.decode(attestation.intent.data, (bytes4, uint256, address));
+          (bytes4 selector, uint256 assets, address receiver) =
+              abi.decode(attestation.intent.data, (bytes4, uint256, address));
 
-            require(selector == IERC4626.deposit.selector, MismatchedSelector());
+          require(selector == IERC4626.deposit.selector, MismatchedSelector());
 
-            IERC20(vault.asset()).transferFrom(
-                attestation.intent.from,
-                address(this),
-                assets
-            );
-            IERC20(vault.asset()).approve(address(vault), assets);
-            shares = vault.deposit(assets, receiver);
-        }
-    }
-    ```
-  :::
-  :::details[Modular Vault System]
-    Base module for composable vault architecture:
+          IERC20(vault.asset()).transferFrom(
+              attestation.intent.from,
+              address(this),
+              assets
+          );
+          IERC20(vault.asset()).approve(address(vault), assets);
+          shares = vault.deposit(assets, receiver);
+      }
+  }
+  ```
+:::
+:::details[Modular Vault System]
+  Base module for composable vault architecture:
 
-    ```solidity
-    abstract contract VaultModule is NewtonPolicyClient {
-        constructor(
-            address _policyTaskManager,
-            address _policy,
-            address owner
-        ) {
-            _initNewtonPolicyClient(_policyTaskManager, owner);
-            _setPolicyAddress(_policy);
-        }
+  ```solidity
+  abstract contract VaultModule is NewtonPolicyClient {
+      constructor(
+          address _policyTaskManager,
+          address _policy,
+          address owner
+      ) {
+          _initNewtonPolicyClient(_policyTaskManager, owner);
+          _setPolicyAddress(_policy);
+      }
 
-        /// @notice Validate attestation — can be overridden for custom logic
-        function validate(
-            NewtonMessage.Attestation memory attestation
-        ) external virtual returns (bool) {
-            return _validateAttestation(attestation);
-        }
+      /// @notice Validate attestation — can be overridden for custom logic
+      function validate(
+          NewtonMessage.Attestation memory attestation
+      ) external virtual returns (bool) {
+          return _validateAttestation(attestation);
+      }
 
-        /// @notice Execute module-specific logic
-        function execute(
-            NewtonMessage.Attestation calldata attestation
-        ) external virtual returns (bytes memory);
-    }
-    ```
-  :::
-  :::details[Upgradeable Contract]
-    Using the OpenZeppelin upgradeable pattern:
+      /// @notice Execute module-specific logic
+      function execute(
+          NewtonMessage.Attestation calldata attestation
+      ) external virtual returns (bytes memory);
+  }
+  ```
+:::
+:::details[Upgradeable Contract]
+  Using the OpenZeppelin upgradeable pattern:
 
-    ```solidity
-    contract UpgradeableVault is
-        Initializable,
-        OwnableUpgradeable,
-        NewtonPolicyClient
-    {
-        error InvalidAttestation();
+  ```solidity
+  contract UpgradeableVault is
+      Initializable,
+      OwnableUpgradeable,
+      NewtonPolicyClient
+  {
+      error InvalidAttestation();
 
-        /// @custom:oz-upgrades-unsafe-allow constructor
-        constructor() {
-            _disableInitializers();
-        }
+      /// @custom:oz-upgrades-unsafe-allow constructor
+      constructor() {
+          _disableInitializers();
+      }
 
-        function initialize(
-            address policyTaskManager,
-            address policy,
-            address owner
-        ) public initializer {
-            __Ownable_init();
-            _transferOwnership(owner);
-            _initNewtonPolicyClient(policyTaskManager, owner);
-            _setPolicyAddress(policy);
-        }
+      function initialize(
+          address policyTaskManager,
+          address policy,
+          address owner
+      ) public initializer {
+          __Ownable_init();
+          _transferOwnership(owner);
+          _initNewtonPolicyClient(policyTaskManager, owner);
+          _setPolicyAddress(policy);
+      }
 
-        function protectedAction(
-            NewtonMessage.Attestation calldata attestation
-        ) external returns (bool) {
-            require(_validateAttestation(attestation), InvalidAttestation());
-            return true;
-        }
-    }
-    ```
-  :::
+      function protectedAction(
+          NewtonMessage.Attestation calldata attestation
+      ) external returns (bool) {
+          require(_validateAttestation(attestation), InvalidAttestation());
+          return true;
+      }
+  }
+  ```
+:::
 ---
 
 ## Common patterns
@@ -716,89 +716,89 @@ contract UrgentVault is NewtonPolicyClient {
         );
     }
     ```
-  :::
-  :::details[Verify Function Selector]
-    Ensure the attestation is for the expected function:
+:::
+:::details[Verify Function Selector]
+  Ensure the attestation is for the expected function:
 
-    ```solidity
-    function verifySelector(
-        NewtonMessage.Attestation calldata attestation,
-        bytes4 expectedSelector
-    ) internal pure {
-        bytes4 actualSelector = bytes4(attestation.intent.data[:4]);
-        require(actualSelector == expectedSelector, "Wrong function");
-    }
-    ```
-  :::
-  :::details[Execute Raw Intent]
-    Execute the intent exactly as specified:
+  ```solidity
+  function verifySelector(
+      NewtonMessage.Attestation calldata attestation,
+      bytes4 expectedSelector
+  ) internal pure {
+      bytes4 actualSelector = bytes4(attestation.intent.data[:4]);
+      require(actualSelector == expectedSelector, "Wrong function");
+  }
+  ```
+:::
+:::details[Execute Raw Intent]
+  Execute the intent exactly as specified:
 
-    ```solidity
-    function executeIntent(
-        NewtonMessage.Attestation calldata attestation
-    ) internal returns (bytes memory) {
-        require(_validateAttestation(attestation), "Invalid attestation");
+  ```solidity
+  function executeIntent(
+      NewtonMessage.Attestation calldata attestation
+  ) internal returns (bytes memory) {
+      require(_validateAttestation(attestation), "Invalid attestation");
 
-        (bool success, bytes memory returnData) = attestation.intent.to.call{
-            value: attestation.intent.value
-        }(attestation.intent.data);
+      (bool success, bytes memory returnData) = attestation.intent.to.call{
+          value: attestation.intent.value
+      }(attestation.intent.data);
 
-        if (!success) {
-            if (returnData.length > 0) {
-                assembly {
-                    revert(add(32, returnData), mload(returnData))
-                }
-            }
-            revert("Execution failed");
-        }
+      if (!success) {
+          if (returnData.length > 0) {
+              assembly {
+                  revert(add(32, returnData), mload(returnData))
+              }
+          }
+          revert("Execution failed");
+      }
 
-        return returnData;
-    }
-    ```
-  :::
-  :::details[Multi-Attestation Batching]
-    Process multiple attestations in one transaction:
+      return returnData;
+  }
+  ```
+:::
+:::details[Multi-Attestation Batching]
+  Process multiple attestations in one transaction:
 
-    ```solidity
-    function batchExecute(
-        NewtonMessage.Attestation[] calldata attestations
-    ) external returns (bool[] memory results) {
-        results = new bool[](attestations.length);
+  ```solidity
+  function batchExecute(
+      NewtonMessage.Attestation[] calldata attestations
+  ) external returns (bool[] memory results) {
+      results = new bool[](attestations.length);
 
-        for (uint256 i = 0; i < attestations.length; i++) {
-            require(_validateAttestation(attestations[i]), "Invalid attestation");
-            results[i] = _executeAction(attestations[i]);
-        }
-    }
-    ```
-  :::
-  :::details[Conditional Validation]
-    Apply different validation based on operation type:
+      for (uint256 i = 0; i < attestations.length; i++) {
+          require(_validateAttestation(attestations[i]), "Invalid attestation");
+          results[i] = _executeAction(attestations[i]);
+      }
+  }
+  ```
+:::
+:::details[Conditional Validation]
+  Apply different validation based on operation type:
 
-    ```solidity
-    function conditionalExecute(
-        NewtonMessage.Attestation calldata attestation,
-        bool requireDirectValidation,
-        INewtonProverTaskManager.Task calldata task,
-        INewtonProverTaskManager.TaskResponse calldata response,
-        bytes calldata signatureData
-    ) external {
-        if (requireDirectValidation) {
-            require(
-                _validateAttestationDirect(task, response, signatureData),
-                "Direct validation failed"
-            );
-        } else {
-            require(
-                _validateAttestation(attestation),
-                "Validation failed"
-            );
-        }
+  ```solidity
+  function conditionalExecute(
+      NewtonMessage.Attestation calldata attestation,
+      bool requireDirectValidation,
+      INewtonProverTaskManager.Task calldata task,
+      INewtonProverTaskManager.TaskResponse calldata response,
+      bytes calldata signatureData
+  ) external {
+      if (requireDirectValidation) {
+          require(
+              _validateAttestationDirect(task, response, signatureData),
+              "Direct validation failed"
+          );
+      } else {
+          require(
+              _validateAttestation(attestation),
+              "Validation failed"
+          );
+      }
 
-        // Execute logic...
-    }
-    ```
-  :::
+      // Execute logic...
+  }
+  ```
+:::
 ---
 
 ## Security considerations
@@ -1038,68 +1038,68 @@ If your `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePoli
     2. Deploy a new policy through the latest `NewtonPolicyFactory`
     3. Call `setPolicyAddress(newPolicy)` on your client
     4. Reconfigure the policy via `setPolicy(policyConfig)`
-  :::
-  :::details[Error: "PolicyClientNotRegistered"]
-    **Cause**: The policy client is not registered in the PolicyClientRegistry, or has been deactivated.
+:::
+:::details[Error: "PolicyClientNotRegistered"]
+  **Cause**: The policy client is not registered in the PolicyClientRegistry, or has been deactivated.
 
-    **Solutions**:
-    1. Register the client: `policyClientRegistry.registerClient(address(myClient))`
-    2. If deactivated, reactivate: `policyClientRegistry.activateClient(address(myClient))`
-    3. Verify the IdentityRegistry is pointing to the correct registry
-  :::
-  :::details[Error: "Policy ID does not match"]
-    **Cause**: The attestation's policy ID doesn't match your contract's configured policy.
+  **Solutions**:
+  1. Register the client: `policyClientRegistry.registerClient(address(myClient))`
+  2. If deactivated, reactivate: `policyClientRegistry.activateClient(address(myClient))`
+  3. Verify the IdentityRegistry is pointing to the correct registry
+:::
+:::details[Error: "Policy ID does not match"]
+  **Cause**: The attestation's policy ID doesn't match your contract's configured policy.
 
-    **Solutions**:
-    1. Verify your contract has called `_setPolicy()` with the correct configuration
-    2. Check that the task was created against the correct policy
-    3. Debug with: `bytes32 currentPolicyId = _getPolicyId();`
-  :::
-  :::details[Error: "Not authorized intent sender"]
-    **Cause**: The transaction sender doesn't match `attestation.intent.from`.
+  **Solutions**:
+  1. Verify your contract has called `_setPolicy()` with the correct configuration
+  2. Check that the task was created against the correct policy
+  3. Debug with: `bytes32 currentPolicyId = _getPolicyId();`
+:::
+:::details[Error: "Not authorized intent sender"]
+  **Cause**: The transaction sender doesn't match `attestation.intent.from`.
 
-    **Solutions**:
-    1. Ensure the user who signed the intent is calling the function
-    2. If using a relayer, implement meta-transaction support
-  :::
-  :::details[Error: "Chain ID does not match"]
-    **Cause**: The attestation was created for a different chain.
+  **Solutions**:
+  1. Ensure the user who signed the intent is calling the function
+  2. If using a relayer, implement meta-transaction support
+:::
+:::details[Error: "Chain ID does not match"]
+  **Cause**: The attestation was created for a different chain.
 
-    **Solutions**:
-    1. Ensure the intent specifies the correct chain ID
-    2. Don't reuse attestations across chains
-  :::
-  :::details[Error: "Attestation expired"]
-    **Cause**: `block.number >= attestation.expiration`.
+  **Solutions**:
+  1. Ensure the intent specifies the correct chain ID
+  2. Don't reuse attestations across chains
+:::
+:::details[Error: "Attestation expired"]
+  **Cause**: `block.number >= attestation.expiration`.
 
-    **Solutions**:
-    1. Request a new attestation
-    2. Consider increasing `expireAfter` in policy config
-  :::
-  :::details[Error: "Attestation already spent"]
-    **Cause**: This attestation has already been used.
+  **Solutions**:
+  1. Request a new attestation
+  2. Consider increasing `expireAfter` in policy config
+:::
+:::details[Error: "Attestation already spent"]
+  **Cause**: This attestation has already been used.
 
-    **Solutions**:
-    1. Each attestation can only be used once
-    2. Request a new attestation for the same intent
-  :::
-  :::details[Error: "InterfaceNotSupported"]
-    **Cause**: Your contract doesn't properly implement `IERC165`.
+  **Solutions**:
+  1. Each attestation can only be used once
+  2. Request a new attestation for the same intent
+:::
+:::details[Error: "InterfaceNotSupported"]
+  **Cause**: Your contract doesn't properly implement `IERC165`.
 
-    **Solution**: Override `supportsInterface` correctly:
-    ```solidity
-    function supportsInterface(bytes4 interfaceId)
-        public view override returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
-    }
-    ```
-  :::
-  :::details[Gas Estimation Failures]
-    BLS signature verification in direct validation is gas-intensive. Ensure sufficient gas limit.
+  **Solution**: Override `supportsInterface` correctly:
+  ```solidity
+  function supportsInterface(bytes4 interfaceId)
+      public view override returns (bool)
+  {
+      return super.supportsInterface(interfaceId);
+  }
+  ```
+:::
+:::details[Gas Estimation Failures]
+  BLS signature verification in direct validation is gas-intensive. Ensure sufficient gas limit.
 
-    | Operation | Approximate Gas |
-    |---|---|
-    | `_validateAttestation` | ~50,000 – 100,000 |
-    | `_validateAttestationDirect` | ~200,000 – 500,000 |
-  :::
+  | Operation | Approximate Gas |
+  |---|---|
+  | `_validateAttestation` | ~50,000 – 100,000 |
+  | `_validateAttestationDirect` | ~200,000 – 500,000 |
+:::

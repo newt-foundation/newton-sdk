@@ -68,7 +68,7 @@ Install only what you need for the steps you plan to follow:
   npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
   ```
 
-  :::warning
+:::warning
 After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
 :::
 :::
@@ -138,41 +138,41 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
     ```bash
     source ~/.zshrc  # or source ~/.bashrc
     ```
-  :::
-  :::details[jco componentize fails]
-    Ensure both packages are installed:
+:::
+:::details[jco componentize fails]
+  Ensure both packages are installed:
 
-    ```bash
-    npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
-    ```
+  ```bash
+  npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
+  ```
 
-    If installed locally, use `npx jco componentize ...`.
-  :::
-  :::details[InvalidAttestation error (0xbd8ba84d)]
-    Most common cause: wrong Task Manager address. The wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address.
+  If installed locally, use `npx jco componentize ...`.
+:::
+:::details[InvalidAttestation error (0xbd8ba84d)]
+  Most common cause: wrong Task Manager address. The wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address.
 
-    Other causes: intent parameter mismatch, policy ID mismatch, incorrect struct passthrough from `evaluateIntentDirect`.
-  :::
-  :::details[ExecutionFailed error (0xacfdb444)]
-    The attestation passed but the inner call reverted. Common causes:
+  Other causes: intent parameter mismatch, policy ID mismatch, incorrect struct passthrough from `evaluateIntentDirect`.
+:::
+:::details[ExecutionFailed error (0xacfdb444)]
+  The attestation passed but the inner call reverted. Common causes:
 
-    - Wallet contract has no ETH (fund it directly)
-    - Target contract reverted
-    - Malformed calldata
-  :::
-  :::details[WebSocket connection fails]
-    Use `wss://` protocol, not `https://`:
+  - Wallet contract has no ETH (fund it directly)
+  - Target contract reverted
+  - Malformed calldata
+:::
+:::details[WebSocket connection fails]
+  Use `wss://` protocol, not `https://`:
 
-    ```bash
-    NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-    ```
-  :::
-  :::details[Policy evaluation times out]
-    - Test WASM locally with `newton-cli policy-data simulate`
-    - Verify `wasmArgs` format matches your WASM expectations
-    - Increase the `timeout` value in the evaluation request
-    - Check external APIs your WASM calls are responding
-  :::
+  ```bash
+  NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+  ```
+:::
+:::details[Policy evaluation times out]
+  - Test WASM locally with `newton-cli policy-data simulate`
+  - Verify `wasmArgs` format matches your WASM expectations
+  - Increase the `timeout` value in the evaluation request
+  - Check external APIs your WASM calls are responding
+:::
 ## Factory Pattern
 
 :::details[Advanced: Factory pattern for deploying multiple PolicyClients]
