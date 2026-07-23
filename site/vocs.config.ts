@@ -1,4 +1,7 @@
 import { defineConfig } from 'vocs/config'
+// Rego (Open Policy Agent) has no Shiki-bundled grammar. Register the official OPA
+// TextMate grammar (Apache-2.0, vendored under syntaxes/) so ```rego blocks highlight.
+import regoGrammar from './syntaxes/rego.tmLanguage.json' with { type: 'json' }
 
 export default defineConfig({
   title: 'Newton Protocol Docs',
@@ -9,7 +12,7 @@ export default defineConfig({
   iconUrl: '/favicon.svg',
   accentColor: '#19191a',
   colorScheme: 'light dark', // light default (preserves the previous docs appearance)
-  codeHighlight: { langAlias: { rego: 'text' } },
+  codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' }] },
   checkDeadlinks: true, // fail the build on broken internal links (durable docs gate)
   socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
   head: {
@@ -40,6 +43,9 @@ export default defineConfig({
     { text: 'Blog', link: 'https://blog.newton.xyz' },
   ],
   redirects: [
+    // Note: the home redirect (/ -> /developers/overview/about) lives in vercel.json,
+    // not here. Vocs generates a root route that shadows a config `/` redirect in
+    // dev/preview, so the root redirect only fires reliably at the Vercel edge.
     { source: '/newton-protocol/overview', destination: '/protocol/overview/project-and-protocol' },
     { source: '/newton-protocol/:path*', destination: '/protocol/overview/:path*' },
     { source: '/foundation/foundation-structure-and-key-contributors', destination: '/protocol/foundation/structure-and-key-contributors' },

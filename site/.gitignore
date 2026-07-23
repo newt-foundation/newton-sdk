@@ -3,3 +3,6 @@ dist/
 .vocs/
 cache/
 *.log
+
+# Vocs-generated route manifest (emitted on build)
+src/pages.gen.ts
