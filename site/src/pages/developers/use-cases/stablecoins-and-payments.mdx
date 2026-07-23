@@ -39,7 +39,7 @@ Newton evaluates every transaction against a [Rego policy](/developers/guides/wr
 
 A policy can call an external sanctions API via a [WASM data oracle](/developers/guides/writing-data-oracles) and block transfers involving sanctioned addresses:
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -54,7 +54,7 @@ allow if {
 
 Enforce per-transaction or rolling-window spend limits without modifying your token contract:
 
-```text
+```rego
 package newton
 
 default allow = false

@@ -19,7 +19,7 @@ Rego rules are pure functions of `input`, `data.params`, and `data.wasm`, which 
 
 Given a policy like this:
 
-```text
+```rego
 package vault_risk_rating
 
 import future.keywords
@@ -43,7 +43,7 @@ allow if count(deny) == 0
 
 Write `policy_test.rego` alongside it. Mock `data.params` and `data.wasm` with `with`, and assert on both `allow` and membership in the `deny` set:
 
-```text
+```rego
 package vault_risk_rating_test
 
 import data.vault_risk_rating

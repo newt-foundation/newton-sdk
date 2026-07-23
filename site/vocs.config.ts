@@ -9,6 +9,7 @@ export default defineConfig({
   iconUrl: '/favicon.svg',
   accentColor: '#19191a',
   colorScheme: 'light dark', // light default matches docs.json appearance.default = "light"
+  codeHighlight: { langAlias: { rego: 'text' } },
   socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
   head: {
     meta: {

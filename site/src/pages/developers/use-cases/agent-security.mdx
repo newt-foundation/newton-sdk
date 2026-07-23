@@ -37,7 +37,7 @@ Newton evaluates every agent-initiated transaction against a policy before execu
 
 ### Per-Transaction Spending Limits
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -55,7 +55,7 @@ cap := data.params.max_agent_spend if {
 
 Restrict the agent to interacting with approved contracts only:
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -69,7 +69,7 @@ allow if {
 
 Limit which contract functions the agent can call:
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -84,7 +84,7 @@ allow if {
 
 Use a [WASM data oracle](/developers/guides/writing-data-oracles) to track recent agent activity and enforce rate limits:
 
-```text
+```rego
 package newton
 
 default allow = false

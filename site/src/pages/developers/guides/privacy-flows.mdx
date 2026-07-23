@@ -52,7 +52,7 @@ sequenceDiagram
 
 4. **Write a Rego policy** that uses `newton.identity.*` builtins:
 
-```text
+```rego
 package kyc_gate
 
 default allow := false
@@ -145,7 +145,7 @@ const result = await uploadConfidentialData(
 
 5. **Write a Rego policy** using `newton.privacy.*` builtins. The policy's `policyParams` must include a `confidential_domain` field matching the domain hash:
 
-```text
+```rego
 package sanctions_check
 
 default allow := false

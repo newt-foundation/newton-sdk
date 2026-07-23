@@ -37,7 +37,7 @@ The policy data oracle calls Webacy's `/rwa/{address}` endpoint and returns depe
 
 ## Example Checks
 
-```text
+```rego
 deny contains "webacy_collapsed" if {
     t.deny_on_collapsed
     v.is_collapsed

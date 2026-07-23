@@ -11,7 +11,7 @@ description: "Supported Rego syntax, builtins, and Newton extensions (crypto, id
 - Optional imports
 - Then one or more **rules**
 
-```text
+```rego
 package app.auth
 
 import data.roles
@@ -26,7 +26,7 @@ default allow = false
 
 ## Value Rules (with if/else bodies)
 
-```text
+```rego
 allow if {
   input.user == "admin"
 } else if {
@@ -39,7 +39,7 @@ allow if {
 
 ## Default Rules
 
-```text
+```rego
 default allow = false
 ```
 
@@ -47,7 +47,7 @@ default allow = false
 
 ## Function Rules
 
-```text
+```rego
 allow(u, a) := true if {
   u == "admin"
 } else if {
@@ -59,7 +59,7 @@ allow(u, a) := true if {
 
 ## Set & Object Rules
 
-```text
+```rego
 # Set membership
 my_ids[id] if {
   id := input.items[_].id
@@ -74,7 +74,7 @@ user_roles[uid] := role if {
 
 ## Comprehension Rules
 
-```text
+```rego
 allowed_names := [n | u := input.users[_]; u.allowed; n := u.name]
 project_ids   := {p | p := input.projects[_].id}
 role_by_user  := { u.id: u.role | u := input.users[_] }
@@ -89,7 +89,7 @@ role_by_user  := { u.id: u.role | u := input.users[_] }
 - Expressions, not exprs
 - `some` existential, `every` universal
 
-```text
+```rego
 some i
 not blocked[i]
 
@@ -98,7 +98,7 @@ every u in input.users { u.active }
 
 ## Assignments & Comparisons
 
-```text
+```rego
 x := input.value
 x in [1,2,3]
 count(input.items) >= 5
@@ -106,14 +106,14 @@ count(input.items) >= 5
 
 ## Arithmetic & Boolean
 
-```text
+```rego
 total := price * quantity + tax
 ok if input.age >= 18 and not input.banned
 ```
 
 ## References & Calls
 
-```text
+```rego
 v1 := input.user.name
 v2 := data.groups["admins"].members
 r  := helper.add(2,3)
@@ -121,7 +121,7 @@ r  := helper.add(2,3)
 
 ## With Modifiers
 
-```text
+```rego
 allow with data.now as "2025-06-01T00:00:00Z"
 ```
 
@@ -131,7 +131,7 @@ allow with data.now as "2025-06-01T00:00:00Z"
 
 ## Arrays, Objects, Sets
 
-```text
+```rego
 a := [1,2,3]
 o := {"x":1, "y":2}
 s := {1,2,3}
@@ -139,7 +139,7 @@ s := {1,2,3}
 
 ## Scalars & Variables
 
-```text
+```rego
 n := 42
 s := "hello"
 t := true
@@ -152,7 +152,7 @@ z := null
 
 - `some` / `every`
 
-```text
+```rego
 some i in input.items
 input.items[i].active
 
@@ -167,7 +167,7 @@ every u in input.users {
 
 - `not`
 
-```text
+```rego
 deny if {
   not input.authenticated
 }
@@ -179,7 +179,7 @@ deny if {
 
 - `in`
 
-```text
+```rego
 "admin" in input.user.roles
 ```
 
@@ -189,7 +189,7 @@ deny if {
 
 ## Aggregates
 
-```text
+```rego
 n := count(input.items)
 sum_ok := sum([1,2,3]) == 6
 min_val := min([4,9,1])
@@ -197,55 +197,55 @@ min_val := min([4,9,1])
 
 ## Arrays
 
-```text
+```rego
 array.slice([1,2,3,4], 1, 3)  # [2,3]
 ```
 
 ## Sets
 
-```text
+```rego
 u := union({{1,2},{2,3}})
 ```
 
 ## Objects
 
-```text
+```rego
 ks := object.keys({"a":1,"b":2})
 ```
 
 ## Strings
 
-```text
+```rego
 ok := contains("hello world", "world")
 ```
 
 ## Numbers
 
-```text
+```rego
 cl := ceil(3.2)  # 4
 ```
 
 ## Time
 
-```text
+```rego
 ts := time.parse_rfc3339_ns("2024-01-01T00:00:00Z")
 ```
 
 ## Conversions & Encoding
 
-```text
+```rego
 j := json.marshal({"x":1})
 ```
 
 ## Regex
 
-```text
+```rego
 regex.match(`^\\d+$`, "12345")
 ```
 
 ## Semver
 
-```text
+```rego
 semver.is_valid("1.2.3")
 ```
 
@@ -259,7 +259,7 @@ Newton extends the standard Rego runtime with custom cryptographic builtins for 
 
 Recovers the signer address from a raw message hash and ECDSA signature.
 
-```text
+```rego
 signer := newton.crypto.ecdsa_recover_signer(signature, message_hash)
 ```
 
@@ -274,7 +274,7 @@ signer := newton.crypto.ecdsa_recover_signer(signature, message_hash)
 
 Recovers the signer address from a personal message and ECDSA signature. Applies the EIP-191 `\x19Ethereum Signed Message:\n` prefix before recovery.
 
-```text
+```rego
 signer := newton.crypto.ecdsa_recover_signer_personal(signature, message)
 ```
 
@@ -287,7 +287,7 @@ signer := newton.crypto.ecdsa_recover_signer_personal(signature, message)
 
 ### Example
 
-```text
+```rego
 package auth
 
 default allow = false
@@ -335,7 +335,7 @@ The KYC domain provides 8 built-ins for verifying Know Your Customer identity da
 
 Returns `true` if the identity status is `"approved"`.
 
-```text
+```rego
 result := newton.identity.kyc.check_approved()
 ```
 
@@ -345,7 +345,7 @@ No parameters. Returns `bool`.
 
 Checks if the document's address country code is in the provided list.
 
-```text
+```rego
 result := newton.identity.kyc.address_in_countries(["US", "CA", "DE"])
 ```
 
@@ -359,7 +359,7 @@ Returns `bool`. Errors if the array is empty or the stored country code is empty
 
 Checks if the document's address subdivision is in the provided list.
 
-```text
+```rego
 result := newton.identity.kyc.address_in_subdivision(["US-CA", "US-OR", "US-WA"])
 ```
 
@@ -373,7 +373,7 @@ Returns `bool`. The check concatenates `address_country_code` + `-` + `address_s
 
 Inverse of `address_in_subdivision`. Returns `true` if the address is NOT in the list.
 
-```text
+```rego
 result := newton.identity.kyc.address_not_in_subdivision(["US-NY", "US-NC"])
 ```
 
@@ -387,7 +387,7 @@ Returns `bool`. Useful when combined with `address_in_countries` to include a co
 
 Checks if the person's age (calculated from `birthdate` to `reference_date`) is at least the specified years.
 
-```text
+```rego
 result := newton.identity.kyc.age_gte(21)
 ```
 
@@ -401,7 +401,7 @@ Returns `bool`. Errors if `min_age` is not positive or dates cannot be parsed.
 
 Returns `true` if the document expiration date has not passed relative to `reference_date`.
 
-```text
+```rego
 result := newton.identity.kyc.not_expired()
 ```
 
@@ -411,7 +411,7 @@ No parameters. Returns `bool`.
 
 Checks if the document will remain valid for at least the specified number of days.
 
-```text
+```rego
 result := newton.identity.kyc.valid_for(365)
 ```
 
@@ -425,7 +425,7 @@ Returns `bool`. Compares `(expiration_date - reference_date)` against the provid
 
 Checks if the document was issued at least the specified number of days ago.
 
-```text
+```rego
 result := newton.identity.kyc.issued_since(90)
 ```
 
@@ -439,7 +439,7 @@ Returns `bool`. Compares `(reference_date - issue_date)` against the provided da
 
 Works across any identity domain. Returns the raw field value by name from the current domain's data. Returns `undefined` if the field does not exist, allowing Rego `default` patterns.
 
-```text
+```rego
 result := newton.identity.get("field_name")
 ```
 
@@ -453,7 +453,7 @@ When multiple identity domains are registered, all domains' fields are accessibl
 
 ### KYC Policy Example
 
-```text
+```rego
 package kyc_compliance
 
 default allow = false
@@ -472,7 +472,7 @@ allow if {
 
 ### Mixed Domain and Generic Accessor Example
 
-```text
+```rego
 package mixed_check
 
 default allow = false
@@ -505,7 +505,7 @@ Two access patterns:
 
 #### `newton.privacy.blacklist.contains`
 
-```text
+```rego
 result := newton.privacy.blacklist.contains(address)
 ```
 
@@ -513,7 +513,7 @@ Returns `true` if `address` is in the provider's blacklist. Addresses are normal
 
 #### `newton.privacy.blacklist.count`
 
-```text
+```rego
 result := newton.privacy.blacklist.count()
 ```
 
@@ -523,7 +523,7 @@ Returns the number of addresses in the blacklist.
 
 #### `newton.privacy.allowlist.contains`
 
-```text
+```rego
 result := newton.privacy.allowlist.contains(address)
 ```
 
@@ -531,7 +531,7 @@ Returns `true` if `address` is in the provider's allowlist.
 
 #### `newton.privacy.allowlist.count`
 
-```text
+```rego
 result := newton.privacy.allowlist.count()
 ```
 
@@ -539,7 +539,7 @@ Returns the number of addresses in the allowlist.
 
 ### Generic Field Accessor (`newton.privacy.get`)
 
-```text
+```rego
 value := newton.privacy.get("field_name")
 ```
 
@@ -549,7 +549,7 @@ Returns `undefined` if the field does not exist, which allows `default` rules to
 
 #### Blacklist check (deny blacklisted senders)
 
-```text
+```rego
 package sanctions_check
 
 default allow := false
@@ -561,7 +561,7 @@ allow if {
 
 #### Allowlist check (only allow approved addresses)
 
-```text
+```rego
 package allowlist_only
 
 default allow := false
@@ -573,7 +573,7 @@ allow if {
 
 #### Combined identity + privacy check
 
-```text
+```rego
 package compliant_transfer
 
 default allow := false
@@ -597,7 +597,7 @@ Date arithmetic builtins for time-based policy checks. All dates use `YYYY-MM-DD
 
 ### `newton.time.days_between`
 
-```text
+```rego
 result := newton.time.days_between(date_a, date_b)
 ```
 
@@ -605,7 +605,7 @@ Returns the absolute number of days between two dates.
 
 ### `newton.time.days_since`
 
-```text
+```rego
 result := newton.time.days_since(past_date, reference_date)
 ```
 
@@ -613,7 +613,7 @@ Returns positive days if `past_date` is before `reference_date`.
 
 ### `newton.time.is_within_days`
 
-```text
+```rego
 result := newton.time.is_within_days(date, reference_date, max_days)
 ```
 
@@ -621,14 +621,14 @@ Returns `true` if the absolute difference between `date` and `reference_date` is
 
 ### `newton.time.is_before` / `newton.time.is_after`
 
-```text
+```rego
 result := newton.time.is_before(date_a, date_b)
 result := newton.time.is_after(date_a, date_b)
 ```
 
 ### `newton.time.age_years`
 
-```text
+```rego
 result := newton.time.age_years(birthdate, reference_date)
 ```
 
@@ -636,7 +636,7 @@ Returns the number of complete years between `birthdate` and `reference_date`. U
 
 ### Time Policy Example
 
-```text
+```rego
 package time_check
 
 default allow := false

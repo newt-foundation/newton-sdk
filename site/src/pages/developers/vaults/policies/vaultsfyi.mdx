@@ -52,7 +52,7 @@ Use these exact Rego checks to enforce each guardrail.
 
 This check compares `apy_z_score` to the configured `apy_z_max`. Use it to stop actions when short-window APY moves too far from the 30 day baseline, which can indicate abnormal rewards, stale data, manipulation, or a strategy regime change.
 
-```text
+```rego
 deny contains "apy_spike" if v.apy_z_score > t.apy_z_max
 ```
 
@@ -60,7 +60,7 @@ deny contains "apy_spike" if v.apy_z_score > t.apy_z_max
 
 This check blocks actions when current TVL has fallen by more than `tvl_drawdown_24h_max_pct` compared with the recent 24 hour historical point. It is useful for catching sudden withdrawals, migrations, or confidence shocks.
 
-```text
+```rego
 deny contains "tvl_drawdown_24h" if v.tvl_drawdown_24h_pct > t.tvl_drawdown_24h_max_pct
 ```
 
@@ -68,7 +68,7 @@ deny contains "tvl_drawdown_24h" if v.tvl_drawdown_24h_pct > t.tvl_drawdown_24h_
 
 This check blocks actions when current TVL has fallen by more than `tvl_drawdown_7d_max_pct` compared with the 7 day historical point. The 7 day window is less noisy than a daily check and helps catch sustained capital flight.
 
-```text
+```rego
 deny contains "tvl_drawdown_7d" if v.tvl_drawdown_7d_pct > t.tvl_drawdown_7d_max_pct
 ```
 
@@ -76,7 +76,7 @@ deny contains "tvl_drawdown_7d" if v.tvl_drawdown_7d_pct > t.tvl_drawdown_7d_max
 
 This check blocks actions when Vaults.fyi returns a non-null reputation score below the configured `risk_score_floor`. Because the score includes multiple components and can include flag penalties, this gives the policy a compact vault-health threshold.
 
-```text
+```rego
 deny contains "risk_score_below_floor" if {
     v.risk_score != null
     v.risk_score < t.risk_score_floor
@@ -87,7 +87,7 @@ deny contains "risk_score_below_floor" if {
 
 This check blocks actions when the oracle detects a change from the last known allocation hash and the policy is configured to deny on allocation change. Use it when a vault should pause until an allocator or risk team reviews changed vault metadata.
 
-```text
+```rego
 deny contains "allocation_changed" if {
     v.allocation_changed_since_last
     t.deny_on_allocation_change
@@ -98,7 +98,7 @@ deny contains "allocation_changed" if {
 
 This check blocks actions when Vaults.fyi reports a high or critical flag and the policy is configured to deny on critical flags. Use it to pause actions during severe active warnings.
 
-```text
+```rego
 deny contains "critical_flag" if {
     v.has_critical_flag
     t.deny_on_critical_flag
@@ -109,7 +109,7 @@ deny contains "critical_flag" if {
 
 This check blocks actions when Vaults.fyi marks the vault's indexed data as corrupted and the policy is configured to deny corrupted vaults. Use it when policy decisions should not proceed on unreliable vault data.
 
-```text
+```rego
 deny contains "vault_corrupted" if {
     v.is_corrupted
     t.deny_on_corrupted
@@ -118,13 +118,13 @@ deny contains "vault_corrupted" if {
 
 ### Final Allow Rule
 
-```text
+```rego
 allow if count(deny) == 0
 ```
 
 ## Complete Policy
 
-```text
+```rego
 package vault_risk_rating
 
 import future.keywords

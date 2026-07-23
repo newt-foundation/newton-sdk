@@ -39,7 +39,7 @@ Newton inserts a policy evaluation step into every transaction. The policy is de
 
 ### Exposure Limits
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -53,7 +53,7 @@ allow if {
 
 Restrict interactions to audited, approved DeFi protocols:
 
-```text
+```rego
 package newton
 
 default allow = false
@@ -67,7 +67,7 @@ allow if {
 
 Combine sanctions screening, jurisdiction checks, and risk limits in a single policy:
 
-```text
+```rego
 package newton
 
 default allow = false

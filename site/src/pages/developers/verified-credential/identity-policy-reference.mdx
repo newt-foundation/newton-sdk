@@ -49,7 +49,7 @@ Requires `identity_data.status` to equal `"approved"`.
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.check_approved()
 ```
 
@@ -61,7 +61,7 @@ result := newton.identity.kyc.check_approved()
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -80,7 +80,7 @@ Requires `identity_data.address_country_code` to be found within the provided li
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.address_in_countries(country_code_array)
 ```
 
@@ -98,7 +98,7 @@ result := newton.identity.kyc.address_in_countries(country_code_array)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -117,7 +117,7 @@ Requires the ISO subdivision location code (combining `address_country_code` and
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.address_in_subdivision(iso_code_array)
 ```
 
@@ -135,7 +135,7 @@ result := newton.identity.kyc.address_in_subdivision(iso_code_array)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -154,7 +154,7 @@ Requires the ISO subdivision location code to **not** be found within the provid
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.address_not_in_subdivision(iso_code_array)
 ```
 
@@ -172,7 +172,7 @@ result := newton.identity.kyc.address_not_in_subdivision(iso_code_array)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -192,7 +192,7 @@ Requires `identity_data.birthdate` to be at least the required number of years a
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.age_gte(min_age)
 ```
 
@@ -210,7 +210,7 @@ result := newton.identity.kyc.age_gte(min_age)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -229,7 +229,7 @@ Requires `identity_data.expiration_date` to be after the current date (`referenc
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.not_expired()
 ```
 
@@ -241,7 +241,7 @@ result := newton.identity.kyc.not_expired()
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -260,7 +260,7 @@ Requires `identity_data.expiration_date` to be at least the required number of d
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.valid_for(min_days)
 ```
 
@@ -278,7 +278,7 @@ result := newton.identity.kyc.valid_for(min_days)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -297,7 +297,7 @@ Requires `identity_data.issue_date` to be at least the required number of days i
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.kyc.issued_since(min_days)
 ```
 
@@ -315,7 +315,7 @@ result := newton.identity.kyc.issued_since(min_days)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if
@@ -336,7 +336,7 @@ Works across any identity domain. Returns the raw field value by name. Returns `
 
 **Signature:**
 
-```text
+```rego
 result := newton.identity.get(field_name)
 ```
 
@@ -354,7 +354,7 @@ result := newton.identity.get(field_name)
 
 **Example:**
 
-```text
+```rego
 package example
 
 import future.keywords.if

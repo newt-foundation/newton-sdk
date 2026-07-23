@@ -49,14 +49,14 @@ return JSON.stringify({ webacy: { is_collapsed: false, abs_dev_clean: 0.001, /* 
 
 After the network merges both outputs, your Rego sees:
 
-```text
+```rego
 data.wasm.vaultsfyi.risk_score          # number, from oracle A
 data.wasm.webacy.is_collapsed           # bool, from oracle B
 ```
 
 Parameters follow the same convention — namespace each oracle's thresholds under the same key so a single `params` object can configure every oracle:
 
-```text
+```rego
 data.params.vaultsfyi.risk_score_floor  # configured threshold for oracle A
 data.params.webacy.deny_on_collapsed    # configured threshold for oracle B
 ```
@@ -69,7 +69,7 @@ Wrapping every return path (including error returns) under a single pack-id key 
 
 The recommended pattern is a **deny set**: each rule adds a reason string to `deny` when a condition fails, and the policy allows only when no deny rule fires. This composes naturally across oracles — every oracle contributes its own deny rules over its own namespace, and the final `allow` is simply "nothing denied."
 
-```text
+```rego
 package vault_gate
 
 import rego.v1
