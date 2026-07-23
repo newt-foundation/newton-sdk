@@ -1,6 +1,6 @@
 // Automated parity gate. Serve the built site first:
-//   pnpm build && npx serve -l 4173 dist   (or `pnpm preview`)
-// then: node scripts/verify-parity.mjs http://localhost:4173
+//   cd site && pnpm build && pnpm preview --port 4173
+// then: node site/scripts/verify-parity.mjs http://localhost:4173
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'

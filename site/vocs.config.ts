@@ -8,7 +8,7 @@ export default defineConfig({
   logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
   iconUrl: '/favicon.svg',
   accentColor: '#19191a',
-  colorScheme: 'light dark', // light default matches docs.json appearance.default = "light"
+  colorScheme: 'light dark', // light default (preserves the previous docs appearance)
   codeHighlight: { langAlias: { rego: 'text' } },
   socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
   head: {

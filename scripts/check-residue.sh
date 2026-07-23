@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails (exit 1) if any live Mintlify residue remains in tracked files.
-# Excludes immutable history (CHANGELOG.md), the migration/design docs, historical
-# migration scripts/DESIGN.md, and the lockfile.
+# Excludes immutable history (CHANGELOG.md), the migration/design docs, this script
+# itself (its comments name "Mintlify"), and the lockfile.
 set -euo pipefail
 
 git grep -niE "mintlify|mint\.json|\.mintignore" -- \
