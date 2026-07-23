@@ -88,23 +88,23 @@ flowchart TD
     D --> E[Attestation Returned]
 ```
 
-<Steps>
-  <Step title="Developer deploys a Policy">
+::::steps
+### Developer deploys a Policy
     Publish a reusable policy to the Newton registry with Rego logic, schema, and optional PolicyData dependencies. The policy is stored on IPFS and referenced by CID. See [Deploying with CLI](/developers/guides/deploying-with-cli).
-  </Step>
-  <Step title="User configures a PolicyClient">
+  
+### User configures a PolicyClient
     Deploy a PolicyClient smart contract with a chosen policy, configuration parameters (thresholds, allowlists), and expiration settings. See [Smart Contract Integration](/developers/guides/smart-contract-integration).
-  </Step>
-  <Step title="Caller submits a Task">
+  
+### Caller submits a Task
     An Intent is paired with the PolicyClient and sent to the Newton Gateway via the [SDK](/developers/reference/sdk-reference) or [RPC API](/developers/reference/rpc-api).
-  </Step>
-  <Step title="Operators evaluate">
+  
+### Operators evaluate
     AVS operators independently fetch PolicyData, evaluate the Rego policy, and produce individual BLS signatures. The Aggregator collects signatures into a single consensus proof once quorum is reached. See [Consensus & Security](/developers/concepts/consensus-security).
-  </Step>
-  <Step title="Attestation returned">
+  
+### Attestation returned
     The aggregated attestation is returned to the caller, who submits it on-chain. The contract validates the proof and executes or blocks the transaction. See the [Frontend SDK Integration](/developers/guides/frontend-sdk-integration) for how to handle this in your app.
-  </Step>
-</Steps>
+  
+::::
 
 ## Architecture Layers
 

@@ -13,31 +13,29 @@ keywords:
 
 Official TypeScript SDK for the Newton Protocol. This page provides a complete reference for all exported methods, types, interfaces, and utilities in the `@newton-xyz/sdk` package.
 
-<Info>
-  The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and `WalletClient` instances with Newton-specific actions. Make sure you are familiar with viem basics before proceeding.
-</Info>
+:::info
+The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and `WalletClient` instances with Newton-specific actions. Make sure you are familiar with viem basics before proceeding.
+:::
 
 ---
 
 ## Installation
 
-<CodeGroup>
-
-```bash npm
+:::code-group
+```bash [npm]
 npm install @newton-xyz/sdk
 ```
 
 
-```bash pnpm (recommended)
+```bash [pnpm (recommended)]
 pnpm add @newton-xyz/sdk
 ```
 
 
-```bash yarn
+```bash [yarn]
 yarn add @newton-xyz/sdk
 ```
-
-</CodeGroup>
+:::
 
 **Requirements:**
 
@@ -69,9 +67,9 @@ For a step-by-step walkthrough of integrating these into your application, see t
 
 ## Setup & Initialization
 
-<Info>
-  Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
-</Info>
+:::info
+Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+:::
 
 ### newtonPublicClientActions
 
@@ -152,9 +150,9 @@ function newtonWalletClientActions(
 | `config.policyContractAddress` | `Address`      | No       | Default policy contract address for write operations |
 | `overrides`                    | `SdkOverrides` | No       | Override default SDK configuration                   |
 
-<Note>
-  Your API key authenticates requests to the Newton Gateway. Keep it secret and never expose it in client-side code.
-</Note>
+:::note
+Your API key authenticates requests to the Newton Gateway. Keep it secret and never expose it in client-side code.
+:::
 
 ---
 
@@ -235,9 +233,9 @@ submitEvaluationRequest(
 - `result.txHash` (`Hex`) -- The transaction hash
 - `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
 
-<Note>
-  The `validate_calldata` and `operator_errors` fields are available on the raw `GatewayCreateTaskResult` returned by the `newt_createTask` RPC method (see the [RPC API Reference](/developers/reference/rpc-api)). These fields are not surfaced by the SDK's `submitEvaluationRequest` or `evaluateIntentDirect` wrappers — call the gateway RPC directly when you need them.
-</Note>
+:::note
+The `validate_calldata` and `operator_errors` fields are available on the raw `GatewayCreateTaskResult` returned by the `newt_createTask` RPC method (see the [RPC API Reference](/developers/reference/rpc-api)). These fields are not surfaced by the SDK's `submitEvaluationRequest` or `evaluateIntentDirect` wrappers — call the gateway RPC directly when you need them.
+:::
 
 ---
 
@@ -327,9 +325,9 @@ evaluateIntentDirect(
 - `result.taskResponse` -- The raw task response from the operator
 - `result.blsSignature` -- The BLS aggregate signature
 
-<Warning>
+:::warning
 Some policy clients and identity-backed flows require `intentSignature` even though it is optional in the base request type. If you omit it or pass `"0x"`, the gateway can fail before policy evaluation with `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
-</Warning>
+:::
 
 Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
 
@@ -448,9 +446,9 @@ interface SubmitIntentResult {
 }
 ```
 
-<Note>
+:::note
 Use `submitIntentAndSubscribe` when you need on-chain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via `PolicyClient.validateAttestationDirect`.
-</Note>
+:::
 
 ---
 
@@ -646,9 +644,9 @@ initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 
 Renounces ownership of the policy contract. After calling this, no one will be able to perform owner-restricted actions.
 
-<Note>
-  This action is irreversible. Once ownership is renounced, administrative operations on the policy contract can never be performed again.
-</Note>
+:::note
+This action is irreversible. Once ownership is renounced, administrative operations on the policy contract can never be performed again.
+:::
 
 ```ts
 const txHash = await walletClient.renounceOwnership();
@@ -946,9 +944,9 @@ const { privateKey, publicKey } = walletClient.generateSigningKeyPair();
 generateSigningKeyPair(): Ed25519KeyPair
 ```
 
-<Note>
-  This is a **synchronous** method. Keys are generated locally and never sent to any server.
-</Note>
+:::note
+This is a **synchronous** method. Keys are generated locally and never sent to any server.
+:::
 
 ---
 
@@ -998,9 +996,9 @@ signPrivacyAuthorization(
 ): PrivacyAuthorizationResult
 ```
 
-<Note>
-  This is a **synchronous** method. Signatures are computed locally.
-</Note>
+:::note
+This is a **synchronous** method. Signatures are computed locally.
+:::
 
 ---
 
@@ -1513,9 +1511,9 @@ precomputePolicyId(args: {
 }): `0x${string}`
 ```
 
-<Note>
-  This is a **synchronous** method. It does not make any network or contract calls.
-</Note>
+:::note
+This is a **synchronous** method. It does not make any network or contract calls.
+:::
 
 ---
 
@@ -1541,9 +1539,9 @@ The following methods read individual fields from the policy contract. They all 
 
 Client-side HPKE encryption for privacy-preserving policy evaluation. These methods are available as wallet client actions and as standalone exports.
 
-<Info>
-  The privacy module uses X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, Base mode) and is compatible with the Rust gateway implementation.
-</Info>
+:::info
+The privacy module uses X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, Base mode) and is compatible with the Rust gateway implementation.
+:::
 
 ### `createSecureEnvelope`
 
@@ -1576,9 +1574,9 @@ client.createSecureEnvelope(params: CreateSecureEnvelopeParams, signingKey: Uint
 
 **Returns:** `SecureEnvelopeResult` containing the encrypted envelope, Ed25519 signature, and sender public key.
 
-<Warning>
-  The caller is responsible for zeroing the `signingKey` buffer when done. The function copies the key internally and zeroes the copy after signing, but the original buffer remains in the caller's control.
-</Warning>
+:::warning
+The caller is responsible for zeroing the `signingKey` buffer when done. The function copies the key internally and zeroes the copy after signing, but the original buffer remains in the caller's control.
+:::
 
 ---
 
@@ -1802,9 +1800,9 @@ client.getConfidentialData(args: { dataRefId: string }): Promise<GetConfidential
 
 EIP-712 signed identity data submission to the on-chain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
 
-<Info>
-  The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
-</Info>
+:::info
+The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
+:::
 
 ### `identityDomainHash`
 
@@ -1980,7 +1978,7 @@ unlinkIdentityAsUser(
 
 ### Intent Types
 
-<Expandable title="IntentFromParams">
+:::details[IntentFromParams]
   The intent shape accepted by SDK methods before normalization.
 
   ```ts
@@ -1993,9 +1991,9 @@ unlinkIdentityAsUser(
     functionSignature: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="NormalizedIntent">
+:::details[NormalizedIntent]
   The intent after internal normalization, with all fields as consistent types.
 
   ```ts
@@ -2008,9 +2006,9 @@ unlinkIdentityAsUser(
     functionSignature: Hex;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="HexlifiedIntent">
+:::details[HexlifiedIntent]
   The intent with all fields encoded as hex strings for on-chain use.
 
   ```ts
@@ -2023,21 +2021,21 @@ unlinkIdentityAsUser(
     functionSignature: Hex;
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### Task Types
 
-<Expandable title="TaskId">
+:::details[TaskId]
   ```ts
   type TaskId = Hex;
   ```
 
   A hex-encoded unique identifier for a task.
-</Expandable>
+:::
 
-<Expandable title="TaskStatus">
+:::details[TaskStatus]
   ```ts
   type TaskStatus =
     | 'Created'
@@ -2048,9 +2046,9 @@ unlinkIdentityAsUser(
   ```
 
   Represents the lifecycle state of a task on-chain.
-</Expandable>
+:::
 
-<Expandable title="Task">
+:::details[Task]
   ```ts
   interface Task {
     taskId: TaskId;
@@ -2062,9 +2060,9 @@ unlinkIdentityAsUser(
   ```
 
   The full task object returned by evaluation methods.
-</Expandable>
+:::
 
-<Expandable title="TaskResponse">
+:::details[TaskResponse]
   ```ts
   interface TaskResponse {
     evaluationResult: boolean;
@@ -2074,9 +2072,9 @@ unlinkIdentityAsUser(
   ```
 
   The operator's response to a task evaluation.
-</Expandable>
+:::
 
-<Expandable title="TaskResponseResult">
+:::details[TaskResponseResult]
   ```ts
   interface TaskResponseResult {
     taskResponse: TaskResponse;
@@ -2088,9 +2086,9 @@ unlinkIdentityAsUser(
   ```
 
   The combined result returned by `waitForTaskResponded`.
-</Expandable>
+:::
 
-<Expandable title="SubmitEvaluationRequestParams">
+:::details[SubmitEvaluationRequestParams]
   ```ts
   interface SubmitEvaluationRequestParams {
     policyClient: Address;
@@ -2118,13 +2116,13 @@ unlinkIdentityAsUser(
   | `appSignature`             | `string`           | No       | Application Ed25519 signature for privacy authorization (hex-encoded)    |
   | `userPublicKey`            | `string`           | No       | User Ed25519 public key (hex-encoded, 32 bytes)                          |
   | `appPublicKey`             | `string`           | No       | Application Ed25519 public key (hex-encoded, 32 bytes)                   |
-</Expandable>
+:::
 
 ---
 
 ### Simulation Types
 
-<Expandable title="SimulateTaskParams & SimulateTaskResult">
+:::details[SimulateTaskParams & SimulateTaskResult]
   ```ts
   interface SimulateTaskParams {
     intent: IntentFromParams;
@@ -2155,9 +2153,9 @@ unlinkIdentityAsUser(
     error?: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="SimulatePolicyParams & SimulatePolicyResult">
+:::details[SimulatePolicyParams & SimulatePolicyResult]
   ```ts
   interface SimulatePolicyParams {
     policyClient: Address;
@@ -2179,9 +2177,9 @@ unlinkIdentityAsUser(
     reason?: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="SimulatePolicyDataParams & SimulatePolicyDataResult">
+:::details[SimulatePolicyDataParams & SimulatePolicyDataResult]
   ```ts
   interface SimulatePolicyDataParams {
     policyDataAddress: Address;
@@ -2200,9 +2198,9 @@ unlinkIdentityAsUser(
     error: string | null;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="SimulatePolicyDataWithClientParams & SimulatePolicyDataWithClientResult">
+:::details[SimulatePolicyDataWithClientParams & SimulatePolicyDataWithClientResult]
   ```ts
   interface SimulatePolicyDataWithClientParams {
     policyDataAddress: Address;
@@ -2220,13 +2218,13 @@ unlinkIdentityAsUser(
     error: string | null;
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### Policy Types
 
-<Expandable title="PolicyId, PolicyInfo, PolicyCodeInfo, PolicyDataInfo">
+:::details[PolicyId, PolicyInfo, PolicyCodeInfo, PolicyDataInfo]
   ```ts
   type PolicyId = `0x${string}`;
   
@@ -2248,9 +2246,9 @@ unlinkIdentityAsUser(
     addresses: Address[];
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="PolicyParamsJson, SetPolicyInput, SetPolicyResult, PolicyDataInput">
+:::details[PolicyParamsJson, SetPolicyInput, SetPolicyResult, PolicyDataInput]
   ```ts
   type PolicyParamsJson = Record<string, any>;
   
@@ -2273,13 +2271,13 @@ unlinkIdentityAsUser(
     policyDataAddress: Address;
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### Gateway Types
 
-<Expandable title="GatewayCreateTaskResult & AggregationResponse">
+:::details[GatewayCreateTaskResult & AggregationResponse]
   ```ts
   interface GatewayCreateTaskResult {
     task_id: Hex;
@@ -2319,13 +2317,13 @@ unlinkIdentityAsUser(
     retryable: boolean;
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### JSON-RPC Types
 
-<Expandable title="JsonRpcRequestPayload, JsonRpcResponsePayload, JsonRpcError, NewtonWalletPayloadMethod">
+:::details[JsonRpcRequestPayload, JsonRpcResponsePayload, JsonRpcError, NewtonWalletPayloadMethod]
   ```ts
   interface JsonRpcRequestPayload {
     jsonrpc: '2.0';
@@ -2358,13 +2356,13 @@ unlinkIdentityAsUser(
     GetConnectedProfile = 'newton_wallet_user_get_connected_profile',
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### Builder Types
 
-<Expandable title="PendingTaskBuilder">
+:::details[PendingTaskBuilder]
   ```ts
   interface PendingTaskBuilder {
     readonly taskId?: TaskId;
@@ -2375,13 +2373,13 @@ unlinkIdentityAsUser(
   ```
 
   Returned by `submitEvaluationRequest`. Call `waitForTaskResponded()` to poll for the on-chain attestation.
-</Expandable>
+:::
 
 ---
 
 ### Privacy Types
 
-<Expandable title="SecureEnvelope & CreateSecureEnvelopeParams">
+:::details[SecureEnvelope & CreateSecureEnvelopeParams]
   ```ts
   interface SecureEnvelope {
     enc: string;
@@ -2404,18 +2402,18 @@ unlinkIdentityAsUser(
     senderPublicKey: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="Ed25519KeyPair">
+:::details[Ed25519KeyPair]
   ```ts
   interface Ed25519KeyPair {
     privateKey: string;  // 32-byte hex, no 0x prefix
     publicKey: string;   // 32-byte hex, no 0x prefix
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="UploadIdentityEncryptedParams & Response">
+:::details[UploadIdentityEncryptedParams & Response]
   ```ts
   interface UploadIdentityEncryptedParams {
     identityOwner: Address;
@@ -2431,9 +2429,9 @@ unlinkIdentityAsUser(
     deadline: number;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="GetIdentityEncryptedResult">
+:::details[GetIdentityEncryptedResult]
   ```ts
   interface GetIdentityEncryptedResult {
     envelope: string;
@@ -2441,9 +2439,9 @@ unlinkIdentityAsUser(
     identity_owner: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="SecretsPublicKeyResponse">
+:::details[SecretsPublicKeyResponse]
   ```ts
   interface SecretsPublicKeyResponse {
     public_key: string;
@@ -2451,9 +2449,9 @@ unlinkIdentityAsUser(
     encryption_suite: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="StoreEncryptedSecretsParams & Response">
+:::details[StoreEncryptedSecretsParams & Response]
   ```ts
   interface StoreEncryptedSecretsParams {
     policyClient: Address;
@@ -2471,9 +2469,9 @@ unlinkIdentityAsUser(
     error: string | null;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="SignPrivacyAuthorizationParams & PrivacyAuthorizationResult">
+:::details[SignPrivacyAuthorizationParams & PrivacyAuthorizationResult]
   ```ts
   interface SignPrivacyAuthorizationParams {
     policyClient: Address;
@@ -2490,9 +2488,9 @@ unlinkIdentityAsUser(
     appPublicKey: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="PrivacyPublicKeyResponse">
+:::details[PrivacyPublicKeyResponse]
   ```ts
   interface PrivacyPublicKeyResponse {
     public_key: string;
@@ -2500,13 +2498,13 @@ unlinkIdentityAsUser(
     encryption_suite: string;
   }
   ```
-</Expandable>
+:::
 
 ---
 
 ### Webhook Types
 
-<Expandable title="RegisterWebhookParams & RegisterWebhookResult">
+:::details[RegisterWebhookParams & RegisterWebhookResult]
   ```ts
   interface RegisterWebhookParams {
     url: string;
@@ -2521,18 +2519,18 @@ unlinkIdentityAsUser(
     message: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="UnregisterWebhookResult">
+:::details[UnregisterWebhookResult]
   ```ts
   interface UnregisterWebhookResult {
     success: boolean;
     message: string;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="TaskFailureType">
+:::details[TaskFailureType]
   ```ts
   type TaskFailureType =
     | 'channel_error'
@@ -2543,20 +2541,20 @@ unlinkIdentityAsUser(
     | 'signature_verification_failed'
     | 'internal_error';
   ```
-</Expandable>
+:::
 
 ### Identity Types
 
-<Expandable title="LinkIdentityAsSignerAndUserParams">
+:::details[LinkIdentityAsSignerAndUserParams]
   ```ts
   interface LinkIdentityAsSignerAndUserParams {
     policyClient: Address;
     identityDomains: Hex[];
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="LinkIdentityAsSignerParams">
+:::details[LinkIdentityAsSignerParams]
   ```ts
   interface LinkIdentityAsSignerParams {
     policyClient: Address;
@@ -2567,9 +2565,9 @@ unlinkIdentityAsUser(
     clientUserDeadline: bigint;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="LinkIdentityAsUserParams">
+:::details[LinkIdentityAsUserParams]
   ```ts
   interface LinkIdentityAsUserParams {
     identityOwner: Address;
@@ -2580,9 +2578,9 @@ unlinkIdentityAsUser(
     identityOwnerDeadline: bigint;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="LinkIdentityParams">
+:::details[LinkIdentityParams]
   ```ts
   interface LinkIdentityParams {
     identityOwner: Address;
@@ -2597,9 +2595,9 @@ unlinkIdentityAsUser(
     clientUserDeadline: bigint;
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="UnlinkIdentityAsSignerParams">
+:::details[UnlinkIdentityAsSignerParams]
   ```ts
   interface UnlinkIdentityAsSignerParams {
     clientUser: Address;
@@ -2607,18 +2605,18 @@ unlinkIdentityAsUser(
     identityDomains: Hex[];
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="UnlinkIdentityAsUserParams">
+:::details[UnlinkIdentityAsUserParams]
   ```ts
   interface UnlinkIdentityAsUserParams {
     policyClient: Address;
     identityDomains: Hex[];
   }
   ```
-</Expandable>
+:::
 
-<Expandable title="RegisterIdentityDataParams">
+:::details[RegisterIdentityDataParams]
   ```ts
   interface RegisterIdentityDataParams {
     identityDomain: Hex;
@@ -2627,7 +2625,7 @@ unlinkIdentityAsUser(
     deadline: bigint;
   }
   ```
-</Expandable>
+:::
 
 ---
 
@@ -2664,7 +2662,7 @@ class MagicRPCError extends Error {
 
 ### SDKErrorCode
 
-<Expandable title="SDKErrorCode enum values">
+:::details[SDKErrorCode enum values]
   ```ts
   enum SDKErrorCode {
     MissingApiKey = 'MISSING_API_KEY',
@@ -2680,11 +2678,11 @@ class MagicRPCError extends Error {
     InvalidAddress = 'INVALID_ADDRESS',
   }
   ```
-</Expandable>
+:::
 
 ### RPCErrorCode
 
-<Expandable title="RPCErrorCode enum values">
+:::details[RPCErrorCode enum values]
   ```ts
   enum RPCErrorCode {
     // Standard JSON-RPC 2.0 error codes
@@ -2705,11 +2703,11 @@ class MagicRPCError extends Error {
     PopupRequestOverriden = -10017,
   }
   ```
-</Expandable>
+:::
 
 ### SDKWarningCode
 
-<Expandable title="SDKWarningCode enum values">
+:::details[SDKWarningCode enum values]
   ```ts
   enum SDKWarningCode {
     SyncWeb3Method = 'SYNC_WEB3_METHOD',
@@ -2718,11 +2716,11 @@ class MagicRPCError extends Error {
     ProductAnnouncement = 'ANNOUNCEMENT',
   }
   ```
-</Expandable>
+:::
 
-<Note>
-  `SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
-</Note>
+:::note
+`SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
+:::
 
 ---
 
@@ -2735,9 +2733,9 @@ The SDK provides multiple entry points for tree-shaking and targeted imports.
 | `@newton-xyz/sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
 | `@newton-xyz/sdk/types`    | Type definitions and interfaces only                                              |
 
-<Info>
-  Use subpath exports to minimize bundle size when you only need a subset of SDK functionality.
-</Info>
+:::info
+Use subpath exports to minimize bundle size when you only need a subset of SDK functionality.
+:::
 
 ---
 

@@ -160,9 +160,9 @@ The `NEWTON_TASK_MANAGER` constant should use the `NewtonProverTaskManager` addr
 
 ### Configure foundry.toml
 
-<Warning>
+:::warning
 You **must** set `via_ir = true`. The newton-contracts library requires IR-based compilation. Without it, compilation fails.
-</Warning>
+:::
 
 ```toml
 [profile.default]
@@ -234,13 +234,13 @@ contract MyExistingVaultV2 is OwnableUpgradeable, NewtonPolicyClient {
 }
 ```
 
-<Warning>
+:::warning
 When adding `NewtonPolicyClient` to an existing upgradeable contract:
 - Add new storage variables at the end to avoid layout conflicts
 - The `_newtonPolicyClientInitialized` flag prevents re-initialization
 - Test thoroughly on a fork before mainnet deployment
 - Consider using a timelock or multisig for the initialization call
-</Warning>
+:::
 
 Install the dependency:
 
@@ -360,9 +360,9 @@ contract DeployScript is Script {
 }
 ```
 
-<Warning>
+:::warning
 The Task Manager address **must** be `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address — using any other causes `InvalidAttestation`.
-</Warning>
+:::
 
 ### Initialization Gotchas
 

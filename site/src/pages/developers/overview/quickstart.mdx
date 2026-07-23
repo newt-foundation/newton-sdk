@@ -13,35 +13,33 @@ Simulate a policy evaluation in under 5 minutes. The example policy performs **O
 | **Node.js \>= 20** | [nodejs.org](https://nodejs.org/)                                                                                       |
 | **Newton API key** | [Dashboard](/developers/overview/dashboard-api-keys) or email [support@newton.xyz](mailto:support@newton.xyz) |
 
-<Note>
-  This quickstart uses `simulateTask` — a dry run that does not submit anything on-chain. No Sepolia ETH or wallet needed.
-</Note>
+:::note
+This quickstart uses `simulateTask` — a dry run that does not submit anything on-chain. No Sepolia ETH or wallet needed.
+:::
 
 ## Step 1 — Install
 
-<CodeGroup>
-
-```bash pnpm (recommended)
+:::code-group
+```bash [pnpm (recommended)]
 mkdir newton-quickstart && cd newton-quickstart
 pnpm init
 pnpm add @newton-xyz/sdk viem
 ```
 
 
-```bash npm
+```bash [npm]
 mkdir newton-quickstart && cd newton-quickstart
 npm init -y
 npm install @newton-xyz/sdk viem
 ```
 
 
-```bash yarn
+```bash [yarn]
 mkdir newton-quickstart && cd newton-quickstart
 yarn init -y
 yarn add @newton-xyz/sdk viem
 ```
-
-</CodeGroup>
+:::
 
 ## Step 2 — Run a simulation
 
@@ -183,7 +181,7 @@ In production, the same flow produces a [**BLS attestation**](/developers/overvi
   See a live sanctions-checked transfer app built with the Newton SDK
 </Card>
 
-<Accordion title="Alternative: AI-assisted build">
+:::details[Alternative: AI-assisted build]
   The fastest way to build a complete Newton application is to use Claude (or a similar AI coding assistant) with the Newton LLM context files. This approach scaffolds a full-stack app including data oracle, Rego policy, Solidity contract, and Next.js frontend.
 
   ### Get the LLM context files
@@ -242,4 +240,4 @@ In production, the same flow produces a [**BLS attestation**](/developers/overvi
   # Run the Next.js app
   cd newton-sdk-app && npm install && npm run dev
   ```
-</Accordion>
+:::

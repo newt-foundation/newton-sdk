@@ -138,13 +138,13 @@ export function run(wasm_args) {
 }
 ```
 
-<Note>
+:::note
 Import `httpFetch` from `newton:provider/http@0.2.0` at the top level of your module. The function returns a tagged result: when `result.tag === "err"`, `result.val` contains the error string; otherwise `result.val` is the HTTP response with `status`, `headers`, and `body`.
-</Note>
+:::
 
-<Warning>
+:::warning
 **WASM sandbox network restrictions**: Newton operators execute WASM in sandboxed Wasmtime. Private IPs (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`), and link-local (`169.254.0.0/16`) are blocked. Any HTTP endpoint your WASM calls must be on a public URL.
-</Warning>
+:::
 
 ## Declare the input schema
 
@@ -193,9 +193,9 @@ jco componentize -w newton-provider.wit -o policy.wasm policy.js \
 
 This produces `policy.wasm` in the current directory.
 
-<Note>
+:::note
 If you installed `jco` locally (without `-g`), run it via `npx jco componentize ...` instead.
-</Note>
+:::
 
 ## Test Locally
 

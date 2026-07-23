@@ -42,13 +42,13 @@ NEXT_PUBLIC_POLICY_WALLET_ADDRESS=0xYourDeployedWallet
 SIGNER_PRIVATE_KEY=your_private_key_here
 ```
 
-<Warning>
+:::warning
 Never use the `NEXT_PUBLIC_` prefix for private keys. Variables prefixed with `NEXT_PUBLIC_` are bundled into client-side JavaScript and visible to anyone inspecting your app. The `SIGNER_PRIVATE_KEY` above is intentionally server-side only — access it via an API route or server action, not directly in client components.
-</Warning>
+:::
 
-<Info>
+:::info
 `NEXT_PUBLIC_POLICY_CONTRACT_ADDRESS` is the Newton Policy contract (fixed on Sepolia). `NEXT_PUBLIC_POLICY_WALLET_ADDRESS` is YOUR deployed PolicyClient. These are different contracts.
-</Info>
+:::
 
 ## Step 3: Create Configuration
 
@@ -341,13 +341,13 @@ function decodePolicyAllowed(taskResponse: Record<string, unknown>): boolean {
 }
 ```
 
-<Note>
+:::note
 `status: "success"` in the gateway response means BLS aggregation completed, **not** that the policy approved the intent. Operators sign the evaluation result regardless of allow/deny. The actual policy decision is in `evaluationResult`.
-</Note>
+:::
 
 ### Function Signature Encoding
 
-<Warning>
+:::warning
 The `functionSignature` field in the intent is the **hex-encoded human-readable ABI**, not the 4-byte selector. Use `"0x"` when `data` is `"0x"`. For contract calls, the gateway needs the full signature to decode calldata into `decoded_function_arguments` for Rego. Using the 4-byte selector (`0xa9059cbb`) instead causes decoding to fail silently.
 
 ```typescript
@@ -361,7 +361,7 @@ const noCalldataFunctionSig = "0x";
 // Wrong: using the 4-byte selector
 const wrong = "0xa9059cbb";
 ```
-</Warning>
+:::
 
 ## Step 7: Run the Application
 

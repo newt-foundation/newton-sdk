@@ -309,9 +309,9 @@ Two APIs are available:
 - **Domain-namespaced built-ins** (primary): `newton.identity.kyc.age_gte(21)`. Type-safe with input validation and specific error messages.
 - **Generic field accessor** (escape hatch): `newton.identity.get("field_name")`. Returns the raw field value from the current domain's data. Useful for rapid prototyping with new domains before dedicated built-ins exist.
 
-<Info>
-  Identity data is injected by Newton operators at evaluation time from the on-chain IdentityRegistry. Policy authors do not have direct access to personally identifying information — only the built-in check results (booleans) are exposed to the policy.
-</Info>
+:::info
+Identity data is injected by Newton operators at evaluation time from the on-chain IdentityRegistry. Policy authors do not have direct access to personally identifying information — only the built-in check results (booleans) are exposed to the policy.
+:::
 
 ### KYC Domain (`newton.identity.kyc.*`)
 

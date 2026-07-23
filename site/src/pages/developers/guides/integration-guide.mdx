@@ -30,9 +30,9 @@ flowchart LR
     style E stroke-dasharray: 5 5
 ```
 
-<Note>
-  Steps 4 and 5 (dashed) can be done independently if you already have a deployed policy. You do not need the full toolchain to integrate via the SDK.
-</Note>
+:::note
+Steps 4 and 5 (dashed) can be done independently if you already have a deployed policy. You do not need the full toolchain to integrate via the SDK.
+:::
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ Install only what you need for the steps you plan to follow:
 | **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 | **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
-<Accordion title="Install all tooling (Steps 1–5)">
+:::details[Install all tooling (Steps 1–5)]
   ```bash
   # Rust (includes cargo)
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -68,10 +68,10 @@ Install only what you need for the steps you plan to follow:
   npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
   ```
 
-  <Warning>
-    After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
-  </Warning>
-</Accordion>
+  :::warning
+After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
+:::
+:::
 
 ## Step 1: Write a Data Oracle (~30 min)
 
@@ -93,9 +93,9 @@ Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates
 
 Upload your policy files to IPFS and register [PolicyData](/developers/overview/core-concepts#policydata) and [Policy](/developers/overview/core-concepts#policy) contracts on-chain.
 
-<Note>
+:::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
-</Note>
+:::
 
 <Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
   Generate CIDs, deploy PolicyData, deploy Policy, register PolicyClient
@@ -132,15 +132,14 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 
 ## Troubleshooting
 
-<AccordionGroup>
-  <Accordion title="'command not found' after installing tools">
+:::details['command not found' after installing tools]
     Restart your shell after installing Rust, Node via Homebrew, or Foundry:
 
     ```bash
     source ~/.zshrc  # or source ~/.bashrc
     ```
-  </Accordion>
-  <Accordion title="jco componentize fails">
+  :::
+  :::details[jco componentize fails]
     Ensure both packages are installed:
 
     ```bash
@@ -148,37 +147,35 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
     ```
 
     If installed locally, use `npx jco componentize ...`.
-  </Accordion>
-  <Accordion title="InvalidAttestation error (0xbd8ba84d)">
+  :::
+  :::details[InvalidAttestation error (0xbd8ba84d)]
     Most common cause: wrong Task Manager address. The wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address.
 
     Other causes: intent parameter mismatch, policy ID mismatch, incorrect struct passthrough from `evaluateIntentDirect`.
-  </Accordion>
-  <Accordion title="ExecutionFailed error (0xacfdb444)">
+  :::
+  :::details[ExecutionFailed error (0xacfdb444)]
     The attestation passed but the inner call reverted. Common causes:
 
     - Wallet contract has no ETH (fund it directly)
     - Target contract reverted
     - Malformed calldata
-  </Accordion>
-  <Accordion title="WebSocket connection fails">
+  :::
+  :::details[WebSocket connection fails]
     Use `wss://` protocol, not `https://`:
 
     ```bash
     NEXT_PUBLIC_SEPOLIA_ALCHEMY_WS_URL=wss://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
     ```
-  </Accordion>
-  <Accordion title="Policy evaluation times out">
+  :::
+  :::details[Policy evaluation times out]
     - Test WASM locally with `newton-cli policy-data simulate`
     - Verify `wasmArgs` format matches your WASM expectations
     - Increase the `timeout` value in the evaluation request
     - Check external APIs your WASM calls are responding
-  </Accordion>
-</AccordionGroup>
-
+  :::
 ## Factory Pattern
 
-<Accordion title="Advanced: Factory pattern for deploying multiple PolicyClients">
+:::details[Advanced: Factory pattern for deploying multiple PolicyClients]
   If you need to deploy multiple PolicyClient instances (e.g., one per user), use a factory contract:
 
   ```solidity
@@ -208,7 +205,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```
 
   This deploys pre-configured wallet instances bound to your policy. Each user gets their own wallet with the same policy enforcement.
-</Accordion>
+:::
 
 <Card icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
   Get in touch with someone from the Newton team to discuss your integration

@@ -102,9 +102,9 @@ allow if {
 }
 ```
 
-<Note>
+:::note
 A single oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). When a policy reads multiple oracles, each oracle namespaces its output under a pack id (`data.wasm.<pack-id>.price`) — see [Consuming Multiple Oracles](#consuming-multiple-oracles).
-</Note>
+:::
 
 ## Consuming Multiple Oracles
 
@@ -218,9 +218,9 @@ newton-cli policy simulate \
   --policy-params-data policy_params.json
 ```
 
-<Note>
+:::note
 The `--entrypoint` value must match your Rego package name + rule name. For `package sanctions_check` with rule `allow`, use `sanctions_check.allow`.
-</Note>
+:::
 
 For a full reference on supported Rego syntax, see the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide).
 

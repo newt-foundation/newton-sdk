@@ -23,49 +23,49 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
   <Tab title="SIWE (Preferred)">
     Sign-In with Ethereum (SIWE) links your wallet address to your Dashboard account.
 
-    <Steps>
-      <Step title="Request a challenge">
+    ::::steps
+### Request a challenge
         ```bash
         curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/siwe/challenge \
           -H "Content-Type: application/json" \
           -d '{"address": "0xYourWalletAddress"}'
         ```
         Returns a `verify_flow_id` and `nonce`.
-      </Step>
-      <Step title="Sign the SIWE message">
+      
+### Sign the SIWE message
         Construct a SIWE message with the returned `nonce` and sign it with your wallet (e.g., via MetaMask or viem).
-      </Step>
-      <Step title="Verify and get session">
+      
+### Verify and get session
         ```bash
         curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
           -H "Content-Type: application/json" \
           -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "<signed_siwe_message>"}'
         ```
         Returns an `access_token` and `refresh_token`.
-      </Step>
-    </Steps>
+      
+::::
   </Tab>
   <Tab title="Email OTP">
     Email-based authentication sends a one-time password to your email.
 
-    <Steps>
-      <Step title="Request OTP">
+    ::::steps
+### Request OTP
         ```bash
         curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/email/challenge \
           -H "Content-Type: application/json" \
           -d '{"value": "you@example.com", "challenge": "<recaptcha_token>"}'
         ```
         Returns a `verify_flow_id`.
-      </Step>
-      <Step title="Verify OTP">
+      
+### Verify OTP
         ```bash
         curl -X POST https://dashboard.api.newton.xyz/v1/auth/user_factor/verify \
           -H "Content-Type: application/json" \
           -d '{"verify_flow_id": "<verify_flow_id>", "challenge_response": "123456"}'
         ```
         Returns an `access_token` and `refresh_token`.
-      </Step>
-    </Steps>
+      
+::::
   </Tab>
 </Tabs>
 
@@ -73,19 +73,19 @@ The Dashboard API uses a factor-based authentication flow: you first request a c
 
 Once authenticated, create an API key for use with the Newton Gateway.
 
-<Steps>
-  <Step title="Authenticate">
+::::steps
+### Authenticate
     Use SIWE or email OTP as described above to obtain an access token.
-  </Step>
-  <Step title="Create an API key">
+  
+### Create an API key
     ```bash
     curl -X POST https://dashboard.api.newton.xyz/v1/api_key \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <access_token>" \
       -d '{"name": "my-app-key", "permissions": ["rpc_read", "rpc_write"]}'
     ```
-  </Step>
-  <Step title="Use the API key">
+  
+### Use the API key
     Include the key in the `Authorization` header when calling the Newton Gateway:
     ```bash
     curl -X POST https://gateway-avs.sepolia.newton.xyz/rpc \
@@ -93,8 +93,8 @@ Once authenticated, create an API key for use with the Newton Gateway.
       -H "Authorization: Bearer <your_api_key>" \
       -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
     ```
-  </Step>
-</Steps>
+  
+::::
 
 ## API Key Management
 
@@ -118,9 +118,9 @@ All management endpoints require an authenticated session (access token in `Auth
 | `rpc_read` | Read operations — task submission and simulation |
 | `rpc` | Combined `rpc_read` + `rpc_write` |
 
-<Note>
+:::note
 Most integrations need `rpc` permission (combined read + write). Use `rpc_read` for frontend-only applications that submit tasks but do not manage secrets.
-</Note>
+:::
 
 ## Policy Client Ownership
 

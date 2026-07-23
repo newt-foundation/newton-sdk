@@ -74,9 +74,9 @@ Define the schema for your policy params, including the `identity_domain`:
 }
 ```
 
-<Note>
+:::note
 Verifiable Credential policies do not use a `secrets_schema.json` or `policy_data_metadata.json`. You only need `policy_metadata.json` and `params_schema.json`.
-</Note>
+:::
 
 ### 1d. Deploy your policy using newton-cli
 
@@ -143,9 +143,9 @@ await walletClient.registerUserData({
 })
 ```
 
-<Note>
+:::note
 When the Newton identity popup opens, Newton creates a new wallet for the user to manage their identity. The user will need to fund this wallet with ETH to continue.
-</Note>
+:::
 
 ### 4b. User Confirms KYC Data
 

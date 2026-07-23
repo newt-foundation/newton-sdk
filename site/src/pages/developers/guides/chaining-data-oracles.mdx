@@ -59,9 +59,9 @@ data.params.vaultsfyi.risk_score_floor  # configured threshold for oracle A
 data.params.webacy.deny_on_collapsed    # configured threshold for oracle B
 ```
 
-<Note>
+:::note
 Wrapping every return path (including error returns) under a single pack-id key is the convention used by all [Newton policy packs](/developers/guides/policy-packs). If you write your own oracle that you intend to chain, adopt the same wrapper so it composes cleanly with others.
-</Note>
+:::
 
 ## Writing Rego that consumes two oracles
 
@@ -127,8 +127,8 @@ For Rego language details — `if`, `contains`, `sprintf`, comprehensions — se
 
 Before deploying, simulate the full policy against both oracles with the Gateway's `newt_simulatePolicy` method (or the SDK's `simulatePolicy`). Pass **multiple entries** in `policy_data` — one per oracle — and a `policy_params` object namespaced to match your Rego.
 
-<CodeGroup>
-```bash Gateway RPC
+:::code-group
+```bash [Gateway RPC]
 curl -X POST https://gateway.testnet.newton.xyz/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWTON_API_KEY" \
@@ -160,7 +160,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
   }'
 ```
 
-```typescript SDK
+```typescript [SDK]
 import { createWalletClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
@@ -192,13 +192,13 @@ const result = await client.simulatePolicy({
 
 console.log(result)
 ```
-</CodeGroup>
+:::
 
 The simulator runs the full pipeline — fetches each oracle's WASM, decrypts any stored secrets, executes every oracle, merges the outputs into `data.wasm`, and evaluates your Rego. Inspect `evaluation_result.policy_params_and_data` in the response to confirm the merged `data.wasm` shape matches what your Rego expects.
 
-<Note>
+:::note
 If any oracle requires secrets, upload them per PolicyData address first (see [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles)). `newt_simulatePolicy` requires ownership of the PolicyClient when at least one referenced oracle has a secrets schema. To iterate on a single oracle in isolation, use `newt_simulatePolicyData` with inline secrets.
-</Note>
+:::
 
 ## Deploying a multi-oracle policy
 
@@ -207,9 +207,9 @@ The two ways to put a multi-oracle policy on-chain:
 - **Newton Dashboard** — the policy editor lets you add multiple oracle modules to one policy and deploys the `NewtonPolicy` contract bound to all of their PolicyData addresses. This is the recommended path today. See [Using the Dashboard](/developers/guides/using-the-dashboard).
 - **CLI** — `newton-cli policy deploy` currently binds a **single** `--policy-data-address` per policy. Multi-PolicyData deploys via the CLI are coming soon; until then, use the dashboard to deploy policies that reference more than one oracle.
 
-<Warning>
+:::warning
 Oracle order matters on-chain. The merged `data.wasm` is order-independent because each oracle is namespaced, but the policy's on-chain `policyData[]` array is positionally validated against what was registered. Deploy through the dashboard (or the forthcoming multi-address CLI flow) rather than hand-assembling the array.
-</Warning>
+:::
 
 ## Next Steps
 

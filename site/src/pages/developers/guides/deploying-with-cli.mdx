@@ -12,9 +12,9 @@ This guide walks through deploying your policy files to IPFS and registering the
 - **Sepolia ETH** in your deployer wallet
 - Completed [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies)
 
-<Warning>
+:::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
-</Warning>
+:::
 
 ## Environment Variables
 
@@ -45,9 +45,9 @@ newton-cli policy-files generate-cids \
 
 This uploads your policy files to IPFS via Pinata and generates `policy_cids.json` containing the content identifiers.
 
-<Note>
+:::note
 The `--entrypoint` value must match your Rego package name + rule name. For `package your_policy` with rule `allow`, use `your_policy.allow`.
-</Note>
+:::
 
 ## Step 2: Deploy PolicyData
 
@@ -108,9 +108,9 @@ newton-cli policy-client set-policy-params \
   --expire-after 1000
 ```
 
-<Warning>
+:::warning
 **`set-policy-params` changes the `policyId`.** Every call internally calls `setPolicy(PolicyConfig)` which re-registers with the Policy contract and returns a new `policyId`. Any previously recorded `policyId` becomes stale. Always verify the new `policyId` on-chain after updating params.
-</Warning>
+:::
 
 ### Policy Params Format
 

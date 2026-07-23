@@ -67,9 +67,9 @@ The operator set from the source chain must be synced to each destination chain:
 3. It calls `confirmGlobalTableRoot()` and `updateOperatorTable()` on the destination chain's `ECDSAOperatorTableUpdater`
 4. The `BN254CertificateVerifier` uses this cached state for certificate verification
 
-<Warning>
+:::warning
 All operators must be synced in a single atomic update. Sequential calls to `updateOperatorTable()` overwrite `numOperators`, `aggregatePubkey`, and `operatorInfoTreeRoot` on each call, causing intermediate states where non-signer Merkle proofs fail validation (`InvalidOperatorIndex` errors). Always batch all operator updates into one transaction.
-</Warning>
+:::
 
 ## BN254 Certificates
 

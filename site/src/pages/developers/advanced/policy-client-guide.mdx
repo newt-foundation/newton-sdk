@@ -121,22 +121,22 @@ Your contract needs to know:
 
 ## Quick start
 
-<Steps>
-  <Step title="Install dependencies">
+::::steps
+### Install dependencies
     ```bash
     forge install newt-foundation/newton-prover-avs
     ```
-  </Step>
-  <Step title="Import the mixin">
+  
+### Import the mixin
     ```solidity
     import {NewtonPolicyClient} from "newton-prover-avs/contracts/src/mixins/NewtonPolicyClient.sol";
     import {NewtonMessage} from "newton-prover-avs/contracts/src/core/NewtonMessage.sol";
     ```
-  </Step>
-  <Step title="Extend your contract">
-    <Note>
-      Calling `_initNewtonPolicyClient` in the constructor is **optional**. You can initialize the policy client later via an `initialize` function or admin setter. The policy address is set separately via `_setPolicyAddress()` (internal, for constructors) or `setPolicyAddress()` (public, for deferred setup by the owner). This flexibility supports both new contracts and existing upgradeable contracts.
-    </Note>
+  
+### Extend your contract
+    :::note
+Calling `_initNewtonPolicyClient` in the constructor is **optional**. You can initialize the policy client later via an `initialize` function or admin setter. The policy address is set separately via `_setPolicyAddress()` (internal, for constructors) or `setPolicyAddress()` (public, for deferred setup by the owner). This flexibility supports both new contracts and existing upgradeable contracts.
+:::
 
     <Tabs>
       <Tab title="New Contract">
@@ -193,8 +193,8 @@ Your contract needs to know:
         ```
       </Tab>
     </Tabs>
-  </Step>
-</Steps>
+  
+::::
 
 ---
 
@@ -319,13 +319,13 @@ If deploying a new policy, work with the Newton team or use the `NewtonPolicyFac
     }
     ```
 
-    <Warning>
-      When adding `NewtonPolicyClient` to an existing upgradeable contract:
+    :::warning
+When adding `NewtonPolicyClient` to an existing upgradeable contract:
       1. Be careful with storage layout — add new storage variables at the end
       2. The `_newtonPolicyClientInitialized` flag prevents re-initialization
       3. Test thoroughly on a fork before mainnet deployment
       4. Consider using a timelock or multisig for the initialization call
-    </Warning>
+:::
   </Tab>
 </Tabs>
 
@@ -558,8 +558,7 @@ contract UrgentVault is NewtonPolicyClient {
 
 ## Example implementations
 
-<AccordionGroup>
-  <Accordion title="Simple Token Transfer Protection">
+:::details[Simple Token Transfer Protection]
     Protect ERC20 transfers with policy-based authorization:
 
     ```solidity
@@ -591,8 +590,8 @@ contract UrgentVault is NewtonPolicyClient {
         }
     }
     ```
-  </Accordion>
-  <Accordion title="Vault with Multiple Operations">
+  :::
+  :::details[Vault with Multiple Operations]
     ERC4626 vault router with protected deposit/withdraw:
 
     ```solidity
@@ -634,8 +633,8 @@ contract UrgentVault is NewtonPolicyClient {
         }
     }
     ```
-  </Accordion>
-  <Accordion title="Modular Vault System">
+  :::
+  :::details[Modular Vault System]
     Base module for composable vault architecture:
 
     ```solidity
@@ -662,8 +661,8 @@ contract UrgentVault is NewtonPolicyClient {
         ) external virtual returns (bytes memory);
     }
     ```
-  </Accordion>
-  <Accordion title="Upgradeable Contract">
+  :::
+  :::details[Upgradeable Contract]
     Using the OpenZeppelin upgradeable pattern:
 
     ```solidity
@@ -698,15 +697,12 @@ contract UrgentVault is NewtonPolicyClient {
         }
     }
     ```
-  </Accordion>
-</AccordionGroup>
-
+  :::
 ---
 
 ## Common patterns
 
-<AccordionGroup>
-  <Accordion title="Decode Intent Data">
+:::details[Decode Intent Data]
     Extract function arguments from the attestation:
 
     ```solidity
@@ -720,8 +716,8 @@ contract UrgentVault is NewtonPolicyClient {
         );
     }
     ```
-  </Accordion>
-  <Accordion title="Verify Function Selector">
+  :::
+  :::details[Verify Function Selector]
     Ensure the attestation is for the expected function:
 
     ```solidity
@@ -733,8 +729,8 @@ contract UrgentVault is NewtonPolicyClient {
         require(actualSelector == expectedSelector, "Wrong function");
     }
     ```
-  </Accordion>
-  <Accordion title="Execute Raw Intent">
+  :::
+  :::details[Execute Raw Intent]
     Execute the intent exactly as specified:
 
     ```solidity
@@ -759,8 +755,8 @@ contract UrgentVault is NewtonPolicyClient {
         return returnData;
     }
     ```
-  </Accordion>
-  <Accordion title="Multi-Attestation Batching">
+  :::
+  :::details[Multi-Attestation Batching]
     Process multiple attestations in one transaction:
 
     ```solidity
@@ -775,8 +771,8 @@ contract UrgentVault is NewtonPolicyClient {
         }
     }
     ```
-  </Accordion>
-  <Accordion title="Conditional Validation">
+  :::
+  :::details[Conditional Validation]
     Apply different validation based on operation type:
 
     ```solidity
@@ -802,16 +798,14 @@ contract UrgentVault is NewtonPolicyClient {
         // Execute logic...
     }
     ```
-  </Accordion>
-</AccordionGroup>
-
+  :::
 ---
 
 ## Security considerations
 
-<Warning>
-  Always validate before executing any business logic. Never execute state-changing operations before validation completes.
-</Warning>
+:::warning
+Always validate before executing any business logic. Never execute state-changing operations before validation completes.
+:::
 
 ```solidity
 // CORRECT
@@ -885,9 +879,9 @@ flowchart LR
     PC -->|ERC-165 check| TM[TaskManager]
 ```
 
-<Note>
-  **PolicyClientRegistry vs TaskManager**: These enforce different things. TaskManager checks protocol version compatibility (are the factories new enough?). PolicyClientRegistry checks client authorization (is this client approved?).
-</Note>
+:::note
+**PolicyClientRegistry vs TaskManager**: These enforce different things. TaskManager checks protocol version compatibility (are the factories new enough?). PolicyClientRegistry checks client authorization (is this client approved?).
+:::
 
 ### Managing client status
 
@@ -964,9 +958,9 @@ When you call `setPolicyAddress()`, the policy's factory version is validated ag
 
 The check uses `VersionLib.isCompatible()` which enforces SemVer compatibility (same major version, minor >= minimum).
 
-<Note>
-  There is no compile-time gate — policy clients **never need to be redeployed** for version upgrades. Owners call `setPolicyAddress(newPolicy)` to point their client to a policy from a newer factory. Since the policy client address never changes, identity links and user consent remain intact.
-</Note>
+:::note
+There is no compile-time gate — policy clients **never need to be redeployed** for version upgrades. Owners call `setPolicyAddress(newPolicy)` to point their client to a policy from a newer factory. Since the policy client address never changes, identity links and user consent remain intact.
+:::
 
 ### Version check flow
 
@@ -1003,41 +997,40 @@ newton-cli version migrate \
 
 If your `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePolicyVersion`:
 
-<Steps>
-  <Step title="Check the TaskManager's current minimum">
+::::steps
+### Check the TaskManager's current minimum
     ```solidity
     string memory minVersion = taskManager.minCompatiblePolicyVersion();
     ```
-  </Step>
-  <Step title="Check your policy's factory version">
+  
+### Check your policy's factory version
     ```solidity
     address factory = INewtonPolicy(policy).factory();
     string memory factoryVersion = ISemVerMixin(factory).version();
     ```
-  </Step>
-  <Step title="Deploy a new policy via the latest factory">
+  
+### Deploy a new policy via the latest factory
     ```solidity
     address newPolicy = policyFactory.deployPolicy(
         entrypoint, policyCid, schemaCid, policyDataAddresses, metadataCid, owner
     );
     ```
-  </Step>
-  <Step title="Update your client and reconfigure">
+  
+### Update your client and reconfigure
     ```solidity
     // Point to new policy
     myClient.setPolicyAddress(newPolicy);
     // Reconfigure with same parameters
     myClient.setPolicy(policyConfig);
     ```
-  </Step>
-</Steps>
+  
+::::
 
 ---
 
 ## Troubleshooting
 
-<AccordionGroup>
-  <Accordion title='Error: "IncompatiblePolicyVersion"'>
+:::details[Error: "IncompatiblePolicyVersion"]
     **Cause**: The policy's factory version does not meet the minimum required by the TaskManager.
 
     **Solutions**:
@@ -1045,52 +1038,52 @@ If your `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePoli
     2. Deploy a new policy through the latest `NewtonPolicyFactory`
     3. Call `setPolicyAddress(newPolicy)` on your client
     4. Reconfigure the policy via `setPolicy(policyConfig)`
-  </Accordion>
-  <Accordion title='Error: "PolicyClientNotRegistered"'>
+  :::
+  :::details[Error: "PolicyClientNotRegistered"]
     **Cause**: The policy client is not registered in the PolicyClientRegistry, or has been deactivated.
 
     **Solutions**:
     1. Register the client: `policyClientRegistry.registerClient(address(myClient))`
     2. If deactivated, reactivate: `policyClientRegistry.activateClient(address(myClient))`
     3. Verify the IdentityRegistry is pointing to the correct registry
-  </Accordion>
-  <Accordion title='Error: "Policy ID does not match"'>
+  :::
+  :::details[Error: "Policy ID does not match"]
     **Cause**: The attestation's policy ID doesn't match your contract's configured policy.
 
     **Solutions**:
     1. Verify your contract has called `_setPolicy()` with the correct configuration
     2. Check that the task was created against the correct policy
     3. Debug with: `bytes32 currentPolicyId = _getPolicyId();`
-  </Accordion>
-  <Accordion title='Error: "Not authorized intent sender"'>
+  :::
+  :::details[Error: "Not authorized intent sender"]
     **Cause**: The transaction sender doesn't match `attestation.intent.from`.
 
     **Solutions**:
     1. Ensure the user who signed the intent is calling the function
     2. If using a relayer, implement meta-transaction support
-  </Accordion>
-  <Accordion title='Error: "Chain ID does not match"'>
+  :::
+  :::details[Error: "Chain ID does not match"]
     **Cause**: The attestation was created for a different chain.
 
     **Solutions**:
     1. Ensure the intent specifies the correct chain ID
     2. Don't reuse attestations across chains
-  </Accordion>
-  <Accordion title='Error: "Attestation expired"'>
+  :::
+  :::details[Error: "Attestation expired"]
     **Cause**: `block.number >= attestation.expiration`.
 
     **Solutions**:
     1. Request a new attestation
     2. Consider increasing `expireAfter` in policy config
-  </Accordion>
-  <Accordion title='Error: "Attestation already spent"'>
+  :::
+  :::details[Error: "Attestation already spent"]
     **Cause**: This attestation has already been used.
 
     **Solutions**:
     1. Each attestation can only be used once
     2. Request a new attestation for the same intent
-  </Accordion>
-  <Accordion title='Error: "InterfaceNotSupported"'>
+  :::
+  :::details[Error: "InterfaceNotSupported"]
     **Cause**: Your contract doesn't properly implement `IERC165`.
 
     **Solution**: Override `supportsInterface` correctly:
@@ -1101,13 +1094,12 @@ If your `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePoli
         return super.supportsInterface(interfaceId);
     }
     ```
-  </Accordion>
-  <Accordion title="Gas Estimation Failures">
+  :::
+  :::details[Gas Estimation Failures]
     BLS signature verification in direct validation is gas-intensive. Ensure sufficient gas limit.
 
     | Operation | Approximate Gas |
     |---|---|
     | `_validateAttestation` | ~50,000 – 100,000 |
     | `_validateAttestationDirect` | ~200,000 – 500,000 |
-  </Accordion>
-</AccordionGroup>
+  :::

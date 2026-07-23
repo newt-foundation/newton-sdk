@@ -7,8 +7,8 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 
 ## Policy Development
 
-<Steps>
-  <Step title="Rego policy passes local evaluation">
+::::steps
+### Rego policy passes local evaluation
     ```bash
     newton-cli regorus eval \
       --policy policy.rego \
@@ -16,119 +16,119 @@ Use this checklist to verify your Newton Protocol integration before going to pr
       --data '{"params":{...},"data":{...}}'
     ```
     Verify `allow`, `deny`, and `cap` paths all produce expected results.
-  </Step>
-  <Step title="Data oracle returns valid JSON">
+  
+### Data oracle returns valid JSON
     ```bash
     newton-cli --chain-id 11155111 policy-data simulate \
       --wasm-file policy.wasm \
       --input-json '{...}'
     ```
     Confirm the output matches your policy's `data.wasm` expectations.
-  </Step>
-  <Step title="Gateway simulation succeeds">
+  
+### Gateway simulation succeeds
     Run `newt_simulateTask` with realistic intent parameters and verify the response includes a valid attestation.
-  </Step>
-  <Step title="Edge cases tested">
+  
+### Edge cases tested
     - Zero-value transactions
     - Maximum-value transactions
     - Addresses not on allowlists
     - Expired or missing data
     - Invalid function signatures
-  </Step>
-</Steps>
+  
+::::
 
 ## On-Chain Deployment
 
-<Steps>
-  <Step title="Mainnet policy allowlisting confirmed">
+::::steps
+### Mainnet policy allowlisting confirmed
     Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
-  </Step>
-  <Step title="PolicyData contract deployed">
+  
+### PolicyData contract deployed
     ```bash
     newton-cli --chain-id 11155111 policy-data deploy \
       --wasm-cid bafyrei... \
       --secrets-schema-cid bafyrei...
     ```
     Record the deployed `PolicyData` address.
-  </Step>
-  <Step title="Policy contract deployed">
+  
+### Policy contract deployed
     ```bash
     newton-cli --chain-id 11155111 policy deploy \
       --rego-cid bafyrei... \
       --policy-data-address 0x...
     ```
     Record the deployed `Policy` address.
-  </Step>
-  <Step title="PolicyClient contract deployed">
+  
+### PolicyClient contract deployed
     Deploy your contract that inherits `NewtonPolicyClient`. Verify it compiles with Solidity ^0.8.x and the correct foundry remappings.
-  </Step>
-  <Step title="PolicyClient registered">
+  
+### PolicyClient registered
     ```bash
     newton-cli --chain-id 11155111 policy-client register \
       --policy-client-address 0x...
     ```
-  </Step>
-  <Step title="Policy set on PolicyClient">
+  
+### Policy set on PolicyClient
     ```bash
     newton-cli --chain-id 11155111 policy-client set-policy \
       --policy-client-address 0x... \
       --policy-address 0x...
     ```
-  </Step>
-  <Step title="Policy parameters configured">
+  
+### Policy parameters configured
     ```bash
     newton-cli --chain-id 11155111 policy-client set-policy-params \
       --policy-client-address 0x... \
       --params '{"max_amount":"10000","allowed_tokens":["0x..."]}'
     ```
-  </Step>
-  <Step title="Verify registration status">
+  
+### Verify registration status
     ```bash
     newton-cli --chain-id 11155111 policy-client status \
       --policy-client-address 0x...
     ```
     Confirm `active: true` and policy reference is correct.
-  </Step>
-</Steps>
+  
+::::
 
 ## API & Secrets
 
-<Steps>
-  <Step title="API key created with correct permissions">
+::::steps
+### API key created with correct permissions
     Verify your key has `rpc_read` for task submission and simulation, `rpc_write` if you need to manage secrets. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
-  </Step>
-  <Step title="Encrypted secrets stored (if applicable)">
+  
+### Encrypted secrets stored (if applicable)
     If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/encrypting-secrets).
-  </Step>
-  <Step title="Secrets match schema">
+  
+### Secrets match schema
     Confirm your uploaded secrets match the `secretsSchemaCid` defined on your PolicyData contract. Schema mismatches produce validation errors.
-  </Step>
-</Steps>
+  
+::::
 
 ## Frontend Integration
 
-<Steps>
-  <Step title="SDK installed and configured">
+::::steps
+### SDK installed and configured
     ```bash
     pnpm add @newton-xyz/sdk viem
     ```
     Verify `newtonPublicClientActions` and `newtonWalletClientActions` are properly extended on your viem clients.
-  </Step>
-  <Step title="Environment variables set">
+  
+### Environment variables set
     - `NEWTON_API_KEY` — your Gateway API key
     - `NEWTON_GATEWAY_URL` — the correct Gateway URL for your environment
     - PolicyClient address for your target chain
-  </Step>
-  <Step title="End-to-end flow verified">
+  
+### End-to-end flow verified
     1. Submit an evaluation via `evaluateIntentDirect` or `submitEvaluationRequest`
     2. Receive attestation
     3. Execute the attested transaction on-chain
     4. Verify the transaction succeeds
-  </Step>
-  <Step title="Error handling implemented">
+  
+### Error handling implemented
     Handle all SDK error codes: `TASK_TIMEOUT`, `POLICY_NOT_FOUND`, `ATTESTATION_EXPIRED`, `UNAUTHORIZED`. See [Error Reference](/developers/reference/error-reference).
-  </Step>
-</Steps>
+  
+::::
 
 ## Security
 

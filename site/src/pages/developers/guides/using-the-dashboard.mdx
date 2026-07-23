@@ -23,9 +23,9 @@ Open **API Keys** in the left navigation. Your key is generated and ready to use
 
 Creating a project walks through naming it, choosing a chain (Sepolia or Base Sepolia), setting a PolicyClient, and selecting data oracles. Pick oracles from the built-in [policy packs](/developers/guides/policy-packs) (Chainalysis, vaults.fyi, Webacy, RedStone) or add a custom one by its deployed PolicyData address. Selecting a built-in oracle pre-fills a Rego template, default parameters, and the list of secrets it requires, so you start from a working baseline.
 
-<Note>
+:::note
 A PolicyClient is required to get into the editor. Either enter the address of an existing one (a contract that inherits `NewtonPolicyClient` — see [Smart Contract Integration](/developers/guides/smart-contract-integration)), or click **Deploy a sample one** to have the dashboard deploy a template `NewtonPolicyWallet` for you.
-</Note>
+:::
 
 ## Edit the policy
 
@@ -51,9 +51,9 @@ The dashboard runs the full pipeline — executes every oracle, merges outputs i
 
 When the policy behaves correctly, deploy it. The dashboard:
 
-<Warning>
+:::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
-</Warning>
+:::
 
 1. Generates CIDs for your Rego and schemas and uploads them to IPFS.
 2. Deploys the PolicyData contract(s) and the `NewtonPolicy` contract — bound to **all** selected oracle addresses, so multi-oracle policies deploy in one step.

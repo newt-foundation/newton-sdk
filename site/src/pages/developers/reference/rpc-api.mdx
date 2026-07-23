@@ -18,14 +18,14 @@ For client-side helpers that wrap these RPC calls, see the [SDK Reference](/deve
 
 **Protocol:** JSON-RPC 2.0 over HTTPS
 
-<Note>
+:::note
 Gateway JSON-RPC requests must be sent to the `/rpc` endpoint. Requests to the host root, such as `https://gateway.testnet.newton.xyz`, return a 404 response instead of a JSON-RPC response.
-</Note>
+:::
 
 Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON-RPC 2.0 specification, but the Newton Gateway expects request IDs as strings.
 
-<CodeGroup>
-```json Request Format
+:::code-group
+```json [Request Format]
 {
   "jsonrpc": "2.0",
   "method": "<method_name>",
@@ -34,7 +34,7 @@ Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON
 }
 ```
 
-```json Success Response
+```json [Success Response]
 {
   "jsonrpc": "2.0",
   "result": { ... },
@@ -42,7 +42,7 @@ Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON
 }
 ```
 
-```json Error Response
+```json [Error Response]
 {
   "jsonrpc": "2.0",
   "error": {
@@ -52,13 +52,13 @@ Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON
   "id": "<request_id>"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
 ## Authentication
 
-<Info>
+:::info
 All API requests require authentication via API key. Include the key in the `Authorization` header:
 
 ```
@@ -66,7 +66,7 @@ Authorization: Bearer <your_api_key>
 ```
 
 API keys are issued with specific permissions. See [Getting an API Key](/developers/overview/dashboard-api-keys) to get yours.
-</Info>
+:::
 
 ### Permission Levels
 
@@ -88,9 +88,9 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 
 Some endpoints require **ownership verification** of a `policy_client` address. This mechanism protects access to stored secrets and ensures only authorized users can manage secrets for a given PolicyClient.
 
-<Note>
+:::note
 As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.getOwner()` method on the PolicyClient contract. Ownership is transferable using `setOwner()` or `transferOwnership()` on the contract. The Gateway reads on-chain state for every ownership check.
-</Note>
+:::
 
 **How Ownership Works:**
 
@@ -107,10 +107,10 @@ As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.
 | `newt_simulatePolicy` | Conditional (only if PolicyData requires secrets) |
 | `newt_storeEncryptedSecrets` | Yes (verifies on-chain owner) |
 
-<Warning>
+:::warning
 **Conditional Ownership for `newt_simulatePolicy`:**
 The `newt_simulatePolicy` endpoint only requires ownership verification when at least one PolicyData contract has a `secretsSchemaCid` (indicating stored secrets are required). If all PolicyData contracts in your request have empty `secretsSchemaCid` values (no secrets needed), ownership verification is skipped. This allows testing simple policies without requiring secrets to be uploaded first.
-</Warning>
+:::
 
 **Error Responses:**
 
@@ -197,7 +197,7 @@ Represents a transaction intent to be evaluated against a policy.
 | `chain_id` | `Quantity` | Yes | Target chain ID (hex encoded) |
 | `function_signature` | `Data` | Yes | Hex-encoded human-readable ABI signature used for calldata decoding, or `"0x"` when the intent has no calldata |
 
-<Expandable title="TaskIntent Example">
+:::details[TaskIntent Example]
 ```json
 {
   "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -208,7 +208,7 @@ Represents a transaction intent to be evaluated against a policy.
   "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
 }
 ```
-</Expandable>
+:::
 
 #### Function signature examples
 
@@ -228,14 +228,14 @@ Specifies a PolicyData contract and optional WASM arguments for policy simulatio
 | `policy_data_address` | `Address` | Yes | Deployed PolicyData contract address |
 | `wasm_args` | `Data` | No | Hex-encoded WASM arguments for this data source |
 
-<Expandable title="PolicyDataInput Example">
+:::details[PolicyDataInput Example]
 ```json
 {
   "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
 }
 ```
-</Expandable>
+:::
 
 ### TaskStatus
 
@@ -273,9 +273,9 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 | `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 | `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
 
-<Warning>
+:::warning
 Some policy clients and identity-backed flows require `intent_signature` even though the RPC schema marks it optional. Passing an empty signature such as `"0x"` can fail before policy evaluation with an error like `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
-</Warning>
+:::
 
 Sign the exact intent with EIP-712 before calling `newt_createTask`. For PolicyClients that expose EIP-5267, read the signing domain from the contract's `eip712Domain()` method so the signature is bound to the deployed client:
 
@@ -372,14 +372,14 @@ For manual fallback, the typed-data domain must match the policy client's Solidi
 | `error` | `String` | Error message (if failed) |
 | `timestamp` | `Number` | Unix timestamp |
 
-<Note>
+:::note
 The `task`, `task_response`, `reference_block`, and `expiration` fields enable clients to call `validateAttestationDirect` optimistically without waiting for on-chain task submission. The `signature_data` field contains pre-built, chain-aware encoded bytes ready to pass directly to the contract.
-</Note>
+:::
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_createTask",
@@ -400,7 +400,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
 }
 ```
 
-```json Response (Success)
+```json [Response (Success)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -443,7 +443,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
 }
 ```
 
-```json Response (Failure)
+```json [Response (Failure)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -456,7 +456,7 @@ The `task`, `task_response`, `reference_block`, and `expiration` fields enable c
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -489,8 +489,8 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_sendTask",
@@ -510,7 +510,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -522,7 +522,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 #### WebSocket Updates
 
@@ -602,7 +602,7 @@ Forwards a policy simulation request to an available operator and returns the re
 
 #### Example
 
-<Expandable title="Request">
+:::details[Request]
 ```json
 {
   "jsonrpc": "2.0",
@@ -634,10 +634,10 @@ Forwards a policy simulation request to an available operator and returns the re
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</Expandable>
+:::
 
-<CodeGroup>
-```json Response (Success)
+:::code-group
+```json [Response (Success)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -653,7 +653,7 @@ Forwards a policy simulation request to an available operator and returns the re
 }
 ```
 
-```json Response (Error - No Operators)
+```json [Response (Error - No Operators)]
 {
   "jsonrpc": "2.0",
   "result": null,
@@ -663,7 +663,7 @@ Forwards a policy simulation request to an available operator and returns the re
   "id": null
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -704,14 +704,14 @@ Secrets are encrypted client-side using HPKE before upload. Use `storeEncryptedS
 
 #### Ownership Model
 
-<Note>
+:::note
 Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()`) can upload or update secrets. Ownership is transferable on-chain via `setOwner()` or `transferOwnership()`.
-</Note>
+:::
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_storeEncryptedSecrets",
@@ -724,7 +724,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
 }
 ```
 
-```json Response (Success)
+```json [Response (Success)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -743,7 +743,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
 }
 ```
 
-```json Response (Error - Ownership Violation)
+```json [Response (Error - Ownership Violation)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -755,7 +755,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
 }
 ```
 
-```json Response (Error - Schema Validation)
+```json [Response (Error - Schema Validation)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -766,7 +766,7 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -818,8 +818,8 @@ The `policy_data` object contains:
 
 #### Example
 
-<CodeGroup>
-```json Request (with secrets)
+:::code-group
+```json [Request (with secrets)]
 {
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyData",
@@ -832,7 +832,7 @@ The `policy_data` object contains:
 }
 ```
 
-```json Request (without secrets)
+```json [Request (without secrets)]
 {
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyData",
@@ -844,7 +844,7 @@ The `policy_data` object contains:
 }
 ```
 
-```json Response (Success)
+```json [Response (Success)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -864,7 +864,7 @@ The `policy_data` object contains:
 }
 ```
 
-```json Response (Error)
+```json [Response (Error)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -875,7 +875,7 @@ The `policy_data` object contains:
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -917,8 +917,8 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyDataWithClient",
@@ -931,7 +931,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 }
 ```
 
-```json Response (Success)
+```json [Response (Success)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -951,7 +951,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 }
 ```
 
-```json Response (Error - Unauthorized)
+```json [Response (Error - Unauthorized)]
 {
   "jsonrpc": "2.0",
   "error": {
@@ -962,7 +962,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 }
 ```
 
-```json Response (Error - Missing Secrets)
+```json [Response (Error - Missing Secrets)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -973,7 +973,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -1048,7 +1048,7 @@ Each entry in `missing_secrets`:
 
 #### Example
 
-<Expandable title="Request">
+:::details[Request]
 ```json
 {
   "jsonrpc": "2.0",
@@ -1078,10 +1078,10 @@ Each entry in `missing_secrets`:
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</Expandable>
+:::
 
-<CodeGroup>
-```json Response (Success - Policy Allows)
+:::code-group
+```json [Response (Success - Policy Allows)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1112,7 +1112,7 @@ Each entry in `missing_secrets`:
 }
 ```
 
-```json Response (Success - Policy Denies)
+```json [Response (Success - Policy Denies)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1131,7 +1131,7 @@ Each entry in `missing_secrets`:
 }
 ```
 
-```json Response (Error - Rego Evaluation Failed)
+```json [Response (Error - Rego Evaluation Failed)]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1144,7 +1144,7 @@ Each entry in `missing_secrets`:
 }
 ```
 
-```json Response (Error - Unauthorized)
+```json [Response (Error - Unauthorized)]
 {
   "jsonrpc": "2.0",
   "error": {
@@ -1154,9 +1154,9 @@ Each entry in `missing_secrets`:
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
-<Expandable title="Response (Error - Missing Secrets)">
+:::details[Response (Error - Missing Secrets)]
 ```json
 {
   "jsonrpc": "2.0",
@@ -1184,7 +1184,7 @@ Each entry in `missing_secrets`:
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</Expandable>
+:::
 
 ---
 
@@ -1214,8 +1214,8 @@ Registers a webhook URL to receive failure notifications for tasks created with 
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_registerWebhook",
@@ -1228,7 +1228,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1238,7 +1238,7 @@ Registers a webhook URL to receive failure notifications for tasks created with 
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -1250,8 +1250,8 @@ Removes the webhook configuration for this API key.
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_unregisterWebhook",
@@ -1260,7 +1260,7 @@ Removes the webhook configuration for this API key.
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1270,7 +1270,7 @@ Removes the webhook configuration for this API key.
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -1301,7 +1301,7 @@ Webhook callbacks are best for:
 
 The gateway sends POST requests to your registered URL with the following structure:
 
-<Expandable title="Webhook Payload">
+:::details[Webhook Payload]
 ```json
 {
   "notification_id": "uuid-v4-unique-id",
@@ -1318,7 +1318,7 @@ The gateway sends POST requests to your registered URL with the following struct
   "retry_after_seconds": null
 }
 ```
-</Expandable>
+:::
 
 **Security Headers:**
 
@@ -1469,7 +1469,9 @@ In single-node deployments, both keys may be identical. In production threshold 
 
 ### newt_getPrivacyPublicKey
 
-<Note>This method is under active development and not yet available in production. The API surface may change.</Note>
+:::note
+This method is under active development and not yet available in production. The API surface may change.
+:::
 
 Retrieves the system's threshold HPKE public key for encrypting data. Use this key to create a `SecureEnvelope` for sensitive data that operators threshold-decrypt during task evaluation.
 
@@ -1489,8 +1491,8 @@ None.
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_getPrivacyPublicKey",
@@ -1499,7 +1501,7 @@ None.
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1510,7 +1512,7 @@ None.
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 See [Privacy Layer](/developers/concepts/privacy-layer) for details on HPKE encryption.
 
@@ -1536,8 +1538,8 @@ None.
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_getSecretsPublicKey",
@@ -1546,7 +1548,7 @@ None.
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1557,11 +1559,11 @@ None.
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
-<Note>
+:::note
 Use `newt_getSecretsPublicKey` when encrypting WASM secrets via `storeEncryptedSecrets`. Use `newt_getPrivacyPublicKey` for identity and confidential data encryption.
-</Note>
+:::
 
 ---
 
@@ -1591,8 +1593,8 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_uploadIdentityEncrypted",
@@ -1607,7 +1609,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1618,7 +1620,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 After receiving the response, call `registerIdentityData` on the IdentityRegistry contract with the `data_ref_id`, `gateway_signature`, and `deadline`.
 
@@ -1646,8 +1648,8 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
 
 #### Example
 
-<CodeGroup>
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_getIdentityEncrypted",
@@ -1658,7 +1660,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1669,7 +1671,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-</CodeGroup>
+:::
 
 ---
 
@@ -1688,9 +1690,8 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
 | `envelope` | `string` | Yes | Serialized HPKE `SecureEnvelope` JSON |
 | `chain_id` | `number` | Yes | Chain ID the data is scoped to |
 
-<CodeGroup>
-
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_uploadConfidentialData",
@@ -1704,7 +1705,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1715,8 +1716,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-
-</CodeGroup>
+:::
 
 The SDK's `uploadConfidentialData` function handles HPKE encryption and envelope construction automatically.
 
@@ -1734,9 +1734,8 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
 |-------|------|----------|-------------|
 | `data_ref_id` | `string` | Yes | Content-hash data reference ID from `uploadConfidentialData` |
 
-<CodeGroup>
-
-```json Request
+:::code-group
+```json [Request]
 {
   "jsonrpc": "2.0",
   "method": "newt_getConfidentialData",
@@ -1747,7 +1746,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
 }
 ```
 
-```json Response
+```json [Response]
 {
   "jsonrpc": "2.0",
   "result": {
@@ -1757,8 +1756,7 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
-
-</CodeGroup>
+:::
 
 ---
 
