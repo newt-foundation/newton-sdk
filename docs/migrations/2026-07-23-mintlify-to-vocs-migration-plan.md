@@ -6,7 +6,7 @@
 
 **Architecture:** `site/` becomes a standalone Vocs package (own `pnpm-lock.yaml`; Vercel Root Directory = `site`). Pages move to `src/pages/` (URLs unchanged); assets to `public/`. `docs.json` navigation/theme/redirects port to `vocs.config.ts`. ~300 Mintlify component instances convert to native Vocs directives + Vocs React exports. An automated parity harness (frozen route/redirect baselines) is the acceptance gate. Cutover is staged with rollback.
 
-**Tech Stack:** Vocs `^2.0.12`, React `^19.2.4`, react-dom `^19.2.4`, react-server-dom-webpack `~19.2.3`, Vite `^8.0.14`, Tailwind CSS `^4.1.16`, Waku `1.0.0-beta.1`, `@types/react`/`@types/react-dom` `^19`. Node ≥ 20. pnpm.
+**Tech Stack:** Vocs `^2.0.12`, React `^19.2.4`, react-dom `^19.2.4`, react-server-dom-webpack `~19.2.3`, Vite `^8.0.14`, Tailwind CSS `^4.1.16`, Waku `1.0.0-beta.1`, `@types/react`/`@types/react-dom` `^19`. Node ≥ 22 (docs build). pnpm.
 
 **Spec:** `docs/migrations/2026-07-23-mintlify-to-vocs-migration-design.md` (commit `d031801`).
 
@@ -14,7 +14,7 @@
 
 - **Package manager:** pnpm. Vercel install: `npx pnpm@10 install --frozen-lockfile`.
 - **Versions (pin exactly, from neobank's proven set):** `vocs@^2.0.12`, `react@^19.2.4`, `react-dom@^19.2.4`, `react-server-dom-webpack@~19.2.3`, `vite@^8.0.14`, `tailwindcss@^4.1.16`, `waku@1.0.0-beta.1`, `@types/react@^19.2.14`, `@types/react-dom@^19.2.3`.
-- **Node:** ≥ 20.12 for the docs build (Vocs' rolldown toolchain uses `util.styleText`, added in Node 20.12 / 21.7). The repo root pins 20.10 for the SDK; the docs site pins its own `site/.nvmrc` = `22` (Vercel-supported, current). Vercel rounds `.nvmrc` to its latest supported major, so 22 (or any ≥20.12) builds cleanly.
+- **Node:** **≥ 22** for the docs build. Vocs 2.6.2's toolchain uses `util.styleText` (Node 20.12+) AND `fs/promises.glob` (Node **22.0+**) — the latter is the binding floor; Node 20.x crashes `vocs build` with `SyntaxError: … does not provide an export named 'glob'`. The docs site pins `site/.nvmrc` = `22` and declares `engines.node >= 22` in `site/package.json`; CI (`.github/workflows/test.yml`) pins Node 22 for the same reason. The repo root still pins 20.10 for the SDK (which doesn't need the docs toolchain); Vercel rounds `.nvmrc` to its latest supported major (≥22).
 - **No new content / no redesign:** faithful port only. Preserve every URL, all 18 redirects, brand (colors `#19191a`/`#ffffff`/`#303030`, light-default, logos, favicon, OG, GA4 `G-JFG7Z812VK`).
 - **No AI attribution in commits** (`.claude/rules/git-hygiene.md`): no `Co-Authored-By`, no "Claude/Anthropic/AI-generated". Conventional commits, subject ≤ 72 chars (enforced by a commit hook).
 - **Scrub depth:** operational only. `CHANGELOG.md` history + git commit history left factual.
