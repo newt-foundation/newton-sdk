@@ -11,6 +11,8 @@ keywords:
 
 Test at every layer before you deploy: unit-test your Rego rules with `opa test`, run your WASM oracle in isolation, then simulate the full policy end-to-end against the Newton network. This guide covers all three. For diagnosing failures after deployment, see [Testing & Debugging](/developers/resources/testing-debugging).
 
+`opa test` is for **local unit tests only**. Production operators and Gateway simulation evaluate Rego with **Regorus** — see the [Newton Mental Model](/developers/overview/mental-model).
+
 ## Unit-test your Rego with `opa test`
 
 Rego rules are pure functions of `input`, `data.params`, and `data.wasm`, which makes them easy to unit-test without the network. Write a companion `policy_test.rego` and mock the data with `with`.

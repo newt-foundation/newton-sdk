@@ -8,6 +8,7 @@ Docs: https://docs.newton.xyz
 
 - [What is Newton?](https://docs.newton.xyz/developers/overview/about): Overview of Newton Protocol -- a policy engine for encoding, verifying, and enforcing rules in smart contracts.
 - [Core Concepts](https://docs.newton.xyz/developers/overview/core-concepts): Policies, Intents, Tasks, Attestations, and the evaluation lifecycle.
+- [Newton Mental Model](https://docs.newton.xyz/developers/overview/mental-model): How Newton policies work — JS oracles compile to WASM via jco; Rego is stored on IPFS and evaluated by Regorus (OPA is for local tests only).
 - [Quickstart](https://docs.newton.xyz/developers/overview/quickstart): Get up and running with Newton in minutes.
 - [Dashboard & API Keys](https://docs.newton.xyz/developers/overview/dashboard-api-keys): Create an account and obtain API keys.
 
