@@ -17,7 +17,7 @@ Before starting, verify:
 - [ ] `site/vercel.json` exists with the 2 external + 1 home redirect (see Stage 1.3 verification)
 - [ ] `site/` is a standalone package: `site/package.json` and `site/pnpm-lock.yaml` exist
 - [ ] `site/vocs.config.ts` present and builds cleanly: `cd site && pnpm install && pnpm build` exits 0
-- [ ] Parity harness ready: `site/scripts/verify-parity.mjs` and `site/scripts/expected-routes.json` + `site/scripts/expected-redirects.json` exist
+- [ ] Parity harness present locally: `site/scripts/verify-parity.mjs` + `site/scripts/expected-routes.json` + `site/scripts/expected-redirects.json`. These are one-off migration tooling (git-ignored, not committed) — run cutover from the migration working tree that still has them on disk, not a fresh clone. They are only needed for this cutover and can be discarded afterward.
 - [ ] Vercel account access (can create/manage projects and domains)
 - [ ] DNS admin access for docs.newton.xyz (can change CNAME/A record and TTL)
 - [ ] GitHub repo admin access (can disconnect GitHub Apps)

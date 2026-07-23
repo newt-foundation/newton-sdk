@@ -50,3 +50,9 @@ dist
 .omx/
 .agents/
 .codex/
+
+# One-off docs migration parity tooling: local/dev use only, not committed
+scripts/docs-parity.sh
+site/scripts/verify-parity.mjs
+site/scripts/expected-routes.json
+site/scripts/expected-redirects.json

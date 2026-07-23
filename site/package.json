@@ -7,8 +7,7 @@
   "scripts": {
     "dev": "vocs dev",
     "build": "vocs build",
-    "preview": "vocs preview",
-    "verify": "node scripts/verify-parity.mjs"
+    "preview": "vocs preview"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
