@@ -1,0 +1,116 @@
+[
+  {
+    "source": "/how-to-guides/newt-token-staking",
+    "destination": "https://blog.newton.xyz/how-to-stake-newt/",
+    "external": true,
+    "status": 308
+  },
+  {
+    "source": "/references/newt-token-airdrop",
+    "destination": "https://blog.newton.xyz/newt-airdrop-claiming-staking/",
+    "external": true,
+    "status": 308
+  },
+  {
+    "source": "/newton-protocol/overview",
+    "destination": "/protocol/overview/project-and-protocol",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/newton-protocol/:path*",
+    "destination": "/protocol/overview/:path*",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/foundation/foundation-structure-and-key-contributors",
+    "destination": "/protocol/foundation/structure-and-key-contributors",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/foundation/conflict-of-interest-and-code-of-conduct",
+    "destination": "/protocol/foundation/conflict-of-interest-and-code-of-conduct",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/token/token-characteristics-and-utility",
+    "destination": "/protocol/token/characteristics-and-utility",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/token/token-distribution-and-vesting",
+    "destination": "/protocol/token/distribution-and-vesting",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/transparency-reports/transparency-reports",
+    "destination": "/protocol/transparency-reports/reports",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/governance/governance-model",
+    "destination": "/protocol/governance/governance-model",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/overview/integration-guide",
+    "destination": "/developers/guides/integration-guide",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/advanced/policy-client-guide",
+    "destination": "/developers/guides/smart-contract-integration",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/advanced/building-policies",
+    "destination": "/developers/guides/writing-policies",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/vaults/policies",
+    "destination": "/developers/vaults/policy-packs",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/vaults/policies/overview",
+    "destination": "/developers/vaults/policy-packs",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/vaults/vault-sdk",
+    "destination": "/developers/vaults/sdk/overview",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/overview/newton-explorer",
+    "destination": "/developers/resources/newton-explorer",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/developers/advanced/kms-encryption",
+    "destination": "/developers/advanced/encrypting-secrets",
+    "external": false,
+    "status": 307
+  },
+  {
+    "source": "/",
+    "destination": "/developers/overview/about",
+    "external": true,
+    "status": 307
+  }
+]
