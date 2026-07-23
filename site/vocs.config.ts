@@ -10,6 +10,7 @@ export default defineConfig({
   accentColor: '#19191a',
   colorScheme: 'light dark', // light default (preserves the previous docs appearance)
   codeHighlight: { langAlias: { rego: 'text' } },
+  checkDeadlinks: true, // fail the build on broken internal links (durable docs gate)
   socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
   head: {
     meta: {
