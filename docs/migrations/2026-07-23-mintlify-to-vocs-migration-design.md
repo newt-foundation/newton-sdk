@@ -31,8 +31,10 @@ checkable goals:
   the check that `site/docs.json` is gone is covered by the delete list in §10 and the
   build itself. Searching for the literal string `docs.json` would false-positive on
   this design doc and any Vocs config comments.)
-- **No Mintlify components remain:**
-  `grep -rE "<(Card|CardGroup|Note|Tip|Info|Warning|Steps|Step|Tabs|Tab|Accordion|AccordionGroup|CodeGroup|Frame|Expandable)[ />]" site/src`
+- **No Mintlify-only components remain:** the gate lists only components that must be
+  GONE. `Card`/`Cards`/`Tabs`/`Tab` are excluded — they remain as native Vocs React
+  exports after conversion (only `CardGroup`→`Cards` and `<Frame>` are removed).
+  `grep -rE "<(CardGroup|Note|Tip|Info|Warning|Steps|Step|Accordion|AccordionGroup|CodeGroup|Frame|Expandable)[ />]" site/src`
   returns empty.
 - **Redirects preserved:** all 18 current redirects resolve to the same destinations.
 - **Deadlinks:** Vocs deadlink check passes (replaces `mintlify broken-links`).

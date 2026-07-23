@@ -24,9 +24,13 @@
   git grep -niE "mintlify|mint\.json|\.mintignore" -- \
     ':(exclude)CHANGELOG.md' ':(exclude)docs/migrations/' ':(exclude)pnpm-lock.yaml'
   ```
-- **Component-residue gate (must return empty post-migration):**
+- **Component-residue gate (must return empty post-migration):** lists only the
+  Mintlify components that must be GONE. `Card`/`Cards`/`Tabs`/`Tab` are NOT listed —
+  they are legitimate Vocs React exports that remain after Task 9 (only `CardGroup`→`Cards`
+  and `<Frame>` are removed). The word-boundary `[ />]` means `<Cards>` never matches the
+  `CardGroup` arm.
   ```bash
-  grep -rE "<(Card|CardGroup|Note|Tip|Info|Warning|Steps|Step|Tabs|Tab|Accordion|AccordionGroup|CodeGroup|Frame|Expandable)[ />]" site/src
+  grep -rE "<(CardGroup|Note|Tip|Info|Warning|Steps|Step|Accordion|AccordionGroup|CodeGroup|Frame|Expandable)[ />]" site/src
   ```
 
 ---
