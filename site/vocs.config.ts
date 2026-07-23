@@ -10,6 +10,26 @@ export default defineConfig({
   accentColor: '#19191a',
   colorScheme: 'light dark', // light default matches docs.json appearance.default = "light"
   socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
+  head: {
+    meta: {
+      googleSiteVerification: 'z93uJU02uM0Z9bdqWDxN2dV1HHAlsaqDy-LwCHYSuGA',
+      author: 'Newton',
+      ogType: 'website',
+      ogSiteName: 'Newton Protocol Docs',
+      ogLocale: 'en_US',
+      ogImage: 'https://docs.newton.xyz/og/opengraph-image.jpg',
+      twitterSite: '@newtfoundation',
+      twitterCreator: '@newtfoundation',
+      twitterImage: 'https://docs.newton.xyz/og/twitter-image.jpg',
+    },
+    script: [
+      { src: 'https://www.googletagmanager.com/gtag/js?id=G-JFG7Z812VK', async: true },
+      {
+        textContent:
+          "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JFG7Z812VK');",
+      },
+    ],
+  },
   topNav: [
     { text: 'Developers', link: '/developers/overview/about', match: '/developers' },
     { text: 'VaultKit', link: '/developers/vaults/overview', match: '/developers/vaults' },
