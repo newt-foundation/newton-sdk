@@ -1,0 +1,25 @@
+{
+  "name": "@newton-xyz/sdk-docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vocs documentation site for the Newton SDK",
+  "scripts": {
+    "dev": "vocs dev",
+    "build": "vocs build",
+    "preview": "vocs preview",
+    "gen-baseline": "node scripts/gen-baseline.mjs",
+    "verify": "node scripts/verify-parity.mjs"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-server-dom-webpack": "~19.2.3",
+    "tailwindcss": "^4.1.16",
+    "vite": "^8.0.14",
+    "vocs": "^2.0.12",
+    "waku": "1.0.0-beta.1"
+  }
+}
