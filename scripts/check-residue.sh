@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Fails (exit 1) if any live Mintlify residue remains in tracked files.
-# Excludes immutable history (CHANGELOG.md), the migration/design docs, and the lockfile.
+# Excludes immutable history (CHANGELOG.md), the migration/design docs, historical
+# migration scripts/DESIGN.md, and the lockfile.
 set -euo pipefail
 
 git grep -niE "mintlify|mint\.json|\.mintignore" -- \
   ':(exclude)CHANGELOG.md' \
   ':(exclude)docs/migrations/' \
   ':(exclude)pnpm-lock.yaml' \
+  ':(exclude)site/DESIGN.md' \
+  ':(exclude)site/convert-components.sh' \
+  ':(exclude)site/scripts/*.mjs' \
+  ':(exclude)site/src/pages/_root.css' \
+  ':(exclude)site/docs.json' \
+  ':(exclude)scripts/check-residue.sh' \
   && matched=1 || rc=$?
 
 # git grep: 0 = matches found (FAIL), 1 = no matches (PASS), >1 = error.
