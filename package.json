@@ -65,9 +65,10 @@
     "check:unused": "knip",
     "check:types-resolution": "attw --pack . --entrypoints . --ignore-rules=unexpected-module-syntax",
     "check:all": "pnpm check:exports && pnpm check:size && pnpm check:types-resolution",
-    "docs:dev": "cd site && mintlify dev",
-    "docs:check": "./scripts/check-docs-twoslash.sh",
-    "docs:broken-links": "cd site && mintlify broken-links"
+    "docs:dev": "cd site && pnpm dev",
+    "docs:build": "cd site && pnpm build",
+    "docs:verify": "cd site && pnpm build && (npx serve -l 4173 dist & SVPID=$!; sleep 2; node scripts/verify-parity.mjs http://localhost:4173; R=$?; kill $SVPID; exit $R)",
+    "docs:check": "pnpm run docs:build && ./scripts/check-residue.sh"
   },
   "auto": {
     "plugins": [
