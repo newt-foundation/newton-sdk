@@ -51,8 +51,12 @@ dist
 .agents/
 .codex/
 
-# One-off docs migration parity tooling: local/dev use only, not committed
+# One-off docs migration tooling + docs: local/dev use only, not committed.
+# The Vocs site under site/ is the product and stays committed; these are the
+# migration's execution/verification scaffolding, discardable after cutover.
 scripts/docs-parity.sh
+scripts/check-residue.sh
 site/scripts/verify-parity.mjs
 site/scripts/expected-routes.json
 site/scripts/expected-redirects.json
+docs/migrations/

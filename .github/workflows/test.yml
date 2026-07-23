@@ -70,8 +70,8 @@ jobs:
       - name: Install docs site dependencies
         run: cd site && pnpm install --frozen-lockfile
 
-      - name: Verify docs code samples
-        run: pnpm docs:check
+      - name: Build docs site
+        run: pnpm docs:build
 
       - name: Audit Prod Dependencies
         run: pnpm audit --prod || exit 0

@@ -66,9 +66,7 @@
     "check:types-resolution": "attw --pack . --entrypoints . --ignore-rules=unexpected-module-syntax",
     "check:all": "pnpm check:exports && pnpm check:size && pnpm check:types-resolution",
     "docs:dev": "cd site && pnpm dev",
-    "docs:build": "cd site && pnpm build",
-    "docs:verify": "pnpm run docs:build && ([ -f scripts/docs-parity.sh ] && ./scripts/docs-parity.sh || echo \"docs:verify: parity tooling not present (one-off migration; skipping)\")",
-    "docs:check": "pnpm run docs:build && ./scripts/check-residue.sh"
+    "docs:build": "cd site && pnpm build"
   },
   "auto": {
     "plugins": [
