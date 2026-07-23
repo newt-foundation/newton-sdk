@@ -1,5 +1,197 @@
 import { defineConfig } from 'vocs/config'
 
 export default defineConfig({
-  title: 'Newton SDK Docs',
+  title: 'Newton Protocol Docs',
+  description:
+    'Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.',
+  baseUrl: 'https://docs.newton.xyz',
+  logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
+  iconUrl: '/favicon.svg',
+  accentColor: '#19191a',
+  colorScheme: 'light dark', // light default matches docs.json appearance.default = "light"
+  socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
+  topNav: [
+    { text: 'Developers', link: '/developers/overview/about', match: '/developers' },
+    { text: 'VaultKit', link: '/developers/vaults/overview', match: '/developers/vaults' },
+    { text: 'Whitepaper', link: '/whitepaper/introduction', match: '/whitepaper' },
+    { text: 'Protocol', link: '/protocol/overview/project-and-protocol', match: '/protocol' },
+    { text: 'Blog', link: 'https://blog.newton.xyz' },
+  ],
+  sidebar: {
+    '/developers/vaults': [
+      {
+        text: 'Overview',
+        items: [
+          { text: 'Overview', link: '/developers/vaults/overview' },
+          { text: 'Policy Packs', link: '/developers/vaults/policy-packs' },
+          { text: 'Concepts', link: '/developers/vaults/protocol/concepts' },
+          { text: 'Attestation Flow', link: '/developers/vaults/protocol/attestation-flow' },
+          { text: 'Guarantees', link: '/developers/vaults/protocol/guarantees' },
+        ],
+      },
+      {
+        text: 'Policy Packs',
+        items: [
+          { text: 'vaults.fyi', link: '/developers/vaults/policies/vaultsfyi' },
+          { text: 'Chainalysis', link: '/developers/vaults/policies/chainalysis' },
+          { text: 'RedStone', link: '/developers/vaults/policies/redstone' },
+          { text: 'Webacy', link: '/developers/vaults/policies/webacy' },
+        ],
+      },
+      {
+        text: 'SDK',
+        items: [
+          { text: 'Overview', link: '/developers/vaults/sdk/overview' },
+          { text: 'Integration Guide', link: '/developers/vaults/sdk/integration-guide' },
+          { text: 'Examples', link: '/developers/vaults/sdk/examples' },
+          { text: 'Reference', link: '/developers/vaults/sdk/reference' },
+          { text: 'Errors', link: '/developers/vaults/sdk/errors' },
+          { text: 'Morpho', link: '/developers/vaults/sdk/morpho' },
+          { text: 'Euler Vault', link: '/developers/vaults/sdk/euler-vault' },
+          { text: 'Euler', link: '/developers/vaults/sdk/euler' },
+          { text: 'Composite Policy Packs', link: '/developers/vaults/sdk/composite-policy-packs' },
+        ],
+      },
+      {
+        text: 'Resources',
+        items: [{ text: 'Legal Terms', link: '/developers/vaults/resources/legal-terms' }],
+      },
+    ],
+    '/developers': [
+      {
+        text: 'Getting Started',
+        items: [
+          { text: 'What is Newton?', link: '/developers/overview/about' },
+          { text: 'Core Concepts', link: '/developers/overview/core-concepts' },
+          { text: 'Quickstart', link: '/developers/overview/quickstart' },
+          { text: 'Dashboard & API Keys', link: '/developers/overview/dashboard-api-keys' },
+        ],
+      },
+      {
+        text: 'Verifiable Credential',
+        items: [
+          { text: 'Overview', link: '/developers/verified-credential/overview' },
+          { text: 'Integration Guide', link: '/developers/verified-credential/integration-guide' },
+          { text: 'Reference', link: '/developers/verified-credential/reference' },
+          { text: 'Identity Policy Reference', link: '/developers/verified-credential/identity-policy-reference' },
+        ],
+      },
+      {
+        text: 'Guides',
+        items: [
+          { text: 'Integration Guide', link: '/developers/guides/integration-guide' },
+          { text: 'Writing Data Oracles', link: '/developers/guides/writing-data-oracles' },
+          { text: 'Writing Policies', link: '/developers/guides/writing-policies' },
+          { text: 'Secrets in Oracles', link: '/developers/guides/secrets-in-oracles' },
+          { text: 'Chaining Data Oracles', link: '/developers/guides/chaining-data-oracles' },
+          { text: 'Policy Packs', link: '/developers/guides/policy-packs' },
+          { text: 'Deploying with CLI', link: '/developers/guides/deploying-with-cli' },
+          { text: 'Smart Contract Integration', link: '/developers/guides/smart-contract-integration' },
+          { text: 'Frontend SDK Integration', link: '/developers/guides/frontend-sdk-integration' },
+          { text: 'Using the Dashboard', link: '/developers/guides/using-the-dashboard' },
+          { text: 'Testing Policies', link: '/developers/guides/testing-policies' },
+          { text: 'Privacy Flows', link: '/developers/guides/privacy-flows' },
+          { text: 'zkTLS Twitter', link: '/developers/guides/zktls-twitter' },
+        ],
+      },
+      {
+        text: 'Use Cases',
+        items: [
+          { text: 'Stablecoins & Payments', link: '/developers/use-cases/stablecoins-and-payments' },
+          { text: 'Agent Security', link: '/developers/use-cases/agent-security' },
+          { text: 'Institutional DeFi', link: '/developers/use-cases/institutional-defi' },
+        ],
+      },
+      {
+        text: 'Deep Dives',
+        items: [
+          { text: 'Architecture', link: '/developers/concepts/architecture' },
+          { text: 'Privacy Layer', link: '/developers/concepts/privacy-layer' },
+          { text: 'Consensus Security', link: '/developers/concepts/consensus-security' },
+          { text: 'Multichain', link: '/developers/concepts/multichain' },
+        ],
+      },
+      {
+        text: 'Reference',
+        items: [
+          { text: 'SDK Reference', link: '/developers/reference/sdk-reference' },
+          { text: 'RPC API', link: '/developers/reference/rpc-api' },
+          { text: 'Command Line Tool', link: '/developers/reference/command-line-tool' },
+          { text: 'Contract Addresses', link: '/developers/reference/contract-addresses' },
+          { text: 'Error Reference', link: '/developers/reference/error-reference' },
+          { text: 'Glossary', link: '/developers/reference/glossary' },
+        ],
+      },
+      {
+        text: 'Advanced',
+        items: [
+          { text: 'Rego Syntax Guide', link: '/developers/advanced/rego-syntax-guide' },
+          { text: 'Encrypting Secrets', link: '/developers/advanced/encrypting-secrets' },
+          { text: 'Policy Data Oracles', link: '/developers/advanced/policy-data-oracles' },
+          { text: 'Python WASM Guide', link: '/developers/advanced/python-wasm-guide' },
+          { text: 'JavaScript WASM Guide', link: '/developers/advanced/javascript-wasm-guide' },
+          { text: 'Rust WASM Guide', link: '/developers/advanced/rust-wasm-guide' },
+        ],
+      },
+      {
+        text: 'Resources',
+        items: [
+          { text: 'FAQ', link: '/developers/resources/faq' },
+          { text: 'Testing & Debugging', link: '/developers/resources/testing-debugging' },
+          { text: 'Deployment Checklist', link: '/developers/resources/deployment-checklist' },
+          { text: 'Newton Explorer', link: '/developers/resources/newton-explorer' },
+          { text: 'Developer Terms of Service', link: '/developers/resources/developer-terms-of-service' },
+          { text: 'Context File', link: '/developers/reference/context-file' },
+        ],
+      },
+    ],
+    '/whitepaper': [
+      {
+        text: 'Technical Whitepaper',
+        items: [
+          { text: 'Introduction', link: '/whitepaper/introduction' },
+          { text: 'Privacy Architecture', link: '/whitepaper/privacy-architecture' },
+          { text: 'BLS Attestation', link: '/whitepaper/bls-attestation' },
+          { text: 'Streaming Consensus', link: '/whitepaper/streaming-consensus' },
+          { text: 'Cross-Chain', link: '/whitepaper/cross-chain' },
+          { text: 'Slashing & Challenge', link: '/whitepaper/slashing-challenge' },
+          { text: 'Policy Engine', link: '/whitepaper/policy-engine' },
+          { text: 'Decentralization', link: '/whitepaper/decentralization' },
+          { text: 'Security Properties', link: '/whitepaper/security-properties' },
+          { text: 'References', link: '/whitepaper/references' },
+        ],
+      },
+    ],
+    '/protocol': [
+      {
+        text: 'Overview',
+        items: [
+          { text: 'Project & Protocol', link: '/protocol/overview/project-and-protocol' },
+          { text: 'Bug Bounty', link: '/protocol/overview/bug-bounty' },
+        ],
+      },
+      {
+        text: 'Foundation',
+        items: [
+          { text: 'Structure & Key Contributors', link: '/protocol/foundation/structure-and-key-contributors' },
+          { text: 'Conflict of Interest & Code of Conduct', link: '/protocol/foundation/conflict-of-interest-and-code-of-conduct' },
+        ],
+      },
+      {
+        text: 'Token',
+        items: [
+          { text: 'Characteristics & Utility', link: '/protocol/token/characteristics-and-utility' },
+          { text: 'Distribution & Vesting', link: '/protocol/token/distribution-and-vesting' },
+        ],
+      },
+      {
+        text: 'Transparency Reports',
+        items: [{ text: 'Reports', link: '/protocol/transparency-reports/reports' }],
+      },
+      {
+        text: 'Governance',
+        items: [{ text: 'Governance Model', link: '/protocol/governance/governance-model' }],
+      },
+    ],
+  },
 })
