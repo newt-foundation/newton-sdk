@@ -9,10 +9,12 @@ const siteRoot = join(here, '..') // site/
 
 // 1. Routes: every .mdx under site/ (excluding node_modules/dist/src) -> URL path.
 const routes = []
+const excludedDirs = ['node_modules', 'dist', '.vocs', 'src', 'scripts', 'public']
 function walk(dir) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name)
-    if (['node_modules', 'dist', '.vocs', 'src', 'scripts', 'public'].includes(name)) continue
+    const rel = relative(siteRoot, full)
+    if (rel.split('/').some((seg) => excludedDirs.includes(seg))) continue
     const s = statSync(full)
     if (s.isDirectory()) walk(full)
     else if (name.endsWith('.mdx')) {
