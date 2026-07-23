@@ -8,11 +8,6 @@ git grep -niE "mintlify|mint\.json|\.mintignore" -- \
   ':(exclude)CHANGELOG.md' \
   ':(exclude)docs/migrations/' \
   ':(exclude)pnpm-lock.yaml' \
-  ':(exclude)site/DESIGN.md' \
-  ':(exclude)site/convert-components.sh' \
-  ':(exclude)site/scripts/*.mjs' \
-  ':(exclude)site/src/pages/_root.css' \
-  ':(exclude)site/docs.json' \
   ':(exclude)scripts/check-residue.sh' \
   && matched=1 || rc=$?
 
