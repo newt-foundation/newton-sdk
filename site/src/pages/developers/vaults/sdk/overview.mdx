@@ -11,6 +11,10 @@ keywords:
 import { Card } from 'vocs'
 
 
+# Overview
+
+Newton VaultKit is a TypeScript SDK and Shield contract system for routing vault-manager actions through Newton policy attestations.
+
 Newton VaultKit is a TypeScript SDK and companion Solidity contract system for vault curators. It routes manager actions through a Newton Policy Protocol attestation gate before the underlying vault receives the call.
 
 Curators continue using the vault SDKs and contracts they already know. VaultKit adds a Shield clone between the curator and the vault, packages each action as an exact `Intent`, asks Newton operators to evaluate that intent against the configured policy, and forwards the action only when a valid attestation is available.

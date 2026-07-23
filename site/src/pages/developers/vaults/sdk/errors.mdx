@@ -8,6 +8,10 @@ keywords:
   - shield execution
 ---
 
+# Errors
+
+Newton VaultKit SDK errors and retry guidance.
+
 VaultKit errors share a common base class and stable error code. Catch the base class for unified logging, or a subclass when retry behavior matters. `NewtonShieldError` remains as a compatibility alias, but new code should import `ShieldError`.
 
 ```typescript

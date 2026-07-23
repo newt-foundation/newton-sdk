@@ -8,6 +8,10 @@ keywords:
   - vault policy params
 ---
 
+# Composite Policy Packs
+
+How VaultKit composes one or more policy-pack modules into the onchain manifest a Shield enforces.
+
 VaultKit treats every Shield policy as a composite, even when it has one module. `defineComposite(...)` reads the deployed `NewtonPolicy.getPolicyData()` list, aligns your modules to that onchain oracle set, and returns the `pack` passed to `createShield(...)`.
 
 ```typescript

@@ -11,6 +11,10 @@ keywords:
 import { Card } from 'vocs'
 
 
+# Euler Guide
+
+How to gate Euler Vault Kit EVault governor actions with Newton VaultKit.
+
 Euler Vault Kit EVaults can route governor actions through a Newton Shield before the EVault receives the call. VaultKit's EVault overlay encodes the governor calldata, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
 This guide covers `shield.eulerVault.*`, which wraps EVault governor functions. For Euler Earn aggregation-vault curator and allocator actions such as `reallocate`, use the [Euler Earn Guide](/developers/vaults/sdk/euler).

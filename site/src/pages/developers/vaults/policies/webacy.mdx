@@ -8,6 +8,10 @@ keywords:
   - vault policy packs
 ---
 
+# Webacy Depeg Risk
+
+Use Webacy data in Newton policies to monitor pegged-token depeg risk before manager actions execute.
+
 The Webacy vault policy monitors pegged-token depeg risk. It is for manager-action gates, such as curator or allocator operations, not end-user deposit gating.
 
 The policy data oracle calls Webacy's `/rwa/{address}` endpoint and returns depeg-risk signals for the asset or token address the policy checks.

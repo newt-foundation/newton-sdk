@@ -11,6 +11,10 @@ keywords:
 import { Card } from 'vocs'
 
 
+# Euler Earn Guide
+
+How to gate Euler Earn manager and allocator actions with Newton VaultKit.
+
 Euler Earn vaults can route curator and allocator actions through a Newton Shield before the Euler Earn vault receives the call. VaultKit's Euler Earn overlay encodes the Euler calldata, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
 This guide covers `shield.euler.*`, which wraps Euler Earn. For Euler Vault Kit base lending vault governor actions such as `setLTV`, `setCaps`, and `setInterestRateModel`, use the [Euler Guide](/developers/vaults/sdk/euler-vault).

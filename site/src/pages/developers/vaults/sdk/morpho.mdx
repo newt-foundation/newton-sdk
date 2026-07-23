@@ -11,6 +11,10 @@ keywords:
 import { Card } from 'vocs'
 
 
+# Morpho Guide
+
+How to gate MetaMorpho curator actions with Newton VaultKit and composite policy packs.
+
 Morpho vault curators can route MetaMorpho manager actions through a Newton Shield before the vault receives the call. VaultKit's Morpho overlay builds the MetaMorpho calldata with Morpho's SDK, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
 This guide focuses on `reallocate`, a curator-only MetaMorpho action. End-user deposits and withdrawals continue through the normal Morpho vault flow.

@@ -3,6 +3,10 @@ title: "Privacy Architecture"
 description: "Newton Protocol's layered privacy architecture: HPKE encryption, threshold decryption, MPC evaluation, and the Newton Privacy Envelope."
 ---
 
+# Privacy Architecture
+
+Newton Protocol's layered privacy architecture: HPKE encryption, threshold decryption, MPC evaluation, and the Newton Privacy Envelope.
+
 ## Privacy Architecture
 
 Newton Protocol provides a layered privacy architecture that protects sensitive policy inputs (identity data, financial records, compliance credentials) from exposure at every stage — transport, storage, and evaluation. The architecture is designed around three progressive layers: threshold HPKE decryption where operators collectively decrypt data without any single entity holding the complete key (standard mode), multi-party computation (MPC) for privacy-preserving policy evaluation where operators evaluate policies over secret-shared data without any individual operator learning the inputs (advanced mode), and a future path to fully homomorphic encryption (FHE) where operators evaluate policies directly over encrypted data without decryption at any stage. Individual operator keys for peer-to-peer communication are derived deterministically from existing ECDSA keys, while the system's threshold decryption key is produced by an interactive Distributed Key Generation (DKG) protocol that runs during operator set changes.

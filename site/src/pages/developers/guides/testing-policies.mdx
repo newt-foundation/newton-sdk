@@ -11,6 +11,10 @@ keywords:
 import { Card,Cards } from 'vocs'
 
 
+# Testing Policies & Oracles
+
+Unit-test Newton Rego policies with opa test, test WASM data oracles locally and via the Gateway, and run end-to-end policy simulations before deploying.
+
 Test at every layer before you deploy: unit-test your Rego rules with `opa test`, run your WASM oracle in isolation, then simulate the full policy end-to-end against the Newton network. This guide covers all three. For diagnosing failures after deployment, see [Testing & Debugging](/developers/resources/testing-debugging).
 
 ## Unit-test your Rego with `opa test`
