@@ -212,16 +212,28 @@ function walk(dir) {
 walk(siteRoot)
 routes.sort()
 
-// 2. Redirects: from docs.json, split internal vs external, tag expected status.
+// 2. Redirects: from docs.json, split internal vs external, tag the EXPECTED status
+//    that the harness will actually observe (not docs.json's implied permanence).
+//    - Internal redirects are served by Vocs, which emits 307 by default.
+//    - External redirects are served by Vercel (vercel.json permanent:true => 308).
+//    - The home redirect is Vercel permanent:false => 307.
+//    These are the codes the harness asserts EXACTLY. If a value here proves wrong on the
+//    real build (Task 2 Step 2 will reveal it), correct the constant to the observed code
+//    ONCE and re-freeze — the baseline must match reality, not the other way around.
+const INTERNAL_REDIRECT_STATUS = 307 // Vocs default; confirm in Task 2 against the real build
+const EXTERNAL_REDIRECT_STATUS = 308 // Vercel permanent:true
 const docs = JSON.parse(readFileSync(join(siteRoot, 'docs.json'), 'utf8'))
-const redirects = (docs.redirects ?? []).map((r) => ({
-  source: r.source,
-  destination: r.destination,
-  external: /^https?:\/\//.test(r.destination),
-  status: 301, // docs.json redirects are permanent; asserted exactly in the harness
-}))
-// The home redirect Vocs will add:
-redirects.push({ source: '/', destination: '/developers/overview/about', external: false, status: 307 })
+const redirects = (docs.redirects ?? []).map((r) => {
+  const external = /^https?:\/\//.test(r.destination)
+  return {
+    source: r.source,
+    destination: r.destination,
+    external,
+    status: external ? EXTERNAL_REDIRECT_STATUS : INTERNAL_REDIRECT_STATUS,
+  }
+})
+// The home redirect (Vercel permanent:false => 307):
+redirects.push({ source: '/', destination: '/developers/overview/about', external: true, status: 307 })
 
 writeFileSync(join(here, 'expected-routes.json'), JSON.stringify(routes, null, 2) + '\n')
 writeFileSync(join(here, 'expected-redirects.json'), JSON.stringify(redirects, null, 2) + '\n')
@@ -294,13 +306,14 @@ for (const route of routes) {
   }
 }
 
-// 2. Per-redirect: exact destination + status (no auto-follow).
+// 2. Per-redirect: EXACT destination AND EXACT status (no auto-follow).
 for (const r of redirects) {
   if (r.external) continue // external redirects live in vercel.json; asserted on Vercel preview in cutover Stage 1
   const res = await fetch(base + r.source, { redirect: 'manual' })
   const loc = res.headers.get('location')
-  if (res.status < 300 || res.status >= 400) failures.push(`REDIR ${r.source}: expected 3xx, got ${res.status}`)
-  else if (loc !== r.destination && loc !== base + r.destination)
+  if (res.status !== r.status)
+    failures.push(`REDIR ${r.source}: status ${res.status}, expected ${r.status}`)
+  if (loc !== r.destination && loc !== base + r.destination)
     failures.push(`REDIR ${r.source}: -> ${loc}, expected ${r.destination}`)
 }
 
@@ -692,34 +705,32 @@ git commit -m "feat(docs): port 18 redirects (internal to Vocs, external+home to
 - Consumes: GA4 id `G-JFG7Z812VK`; google-site-verification `z93uJU02uM0Z9bdqWDxN2dV1HHAlsaqDy-LwCHYSuGA`; OG images `/og/opengraph-image.jpg`, `/og/twitter-image.jpg`.
 - Produces: `<head>` meta + GA4 script in every built page.
 
-- [ ] **Step 1: Add a `head` function to `vocs.config.ts`** (append field). It injects site verification, author, OG/Twitter meta, and the GA4 gtag pair:
+- [ ] **Step 1: Add a `head` object to `vocs.config.ts`** (append field). Use the **non-JSX object form** — the config file is `vocs.config.ts`, and JSX syntax is invalid in a `.ts` file regardless of the `jsx` compiler option (that option controls *transformation*, not whether the parser *accepts* JSX; JSX requires a `.tsx` file). The object form keeps the config a plain `.ts` file and injects the same site verification, author, OG/Twitter meta, and GA4 gtag pair:
 
 ```ts
-  head() {
-    return (
-      <>
-        <meta name="google-site-verification" content="z93uJU02uM0Z9bdqWDxN2dV1HHAlsaqDy-LwCHYSuGA" />
-        <meta name="author" content="Newton" />
-        <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Newton Protocol Docs" />
-        <meta property="og:locale" content="en_US" />
-        <meta property="og:image" content="https://docs.newton.xyz/og/opengraph-image.jpg" />
-        <meta name="twitter:site" content="@newtfoundation" />
-        <meta name="twitter:creator" content="@newtfoundation" />
-        <meta name="twitter:image" content="https://docs.newton.xyz/og/twitter-image.jpg" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-JFG7Z812VK" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JFG7Z812VK');",
-          }}
-        />
-      </>
-    )
+  head: {
+    meta: [
+      { name: 'google-site-verification', content: 'z93uJU02uM0Z9bdqWDxN2dV1HHAlsaqDy-LwCHYSuGA' },
+      { name: 'author', content: 'Newton' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: 'Newton Protocol Docs' },
+      { property: 'og:locale', content: 'en_US' },
+      { property: 'og:image', content: 'https://docs.newton.xyz/og/opengraph-image.jpg' },
+      { name: 'twitter:site', content: '@newtfoundation' },
+      { name: 'twitter:creator', content: '@newtfoundation' },
+      { name: 'twitter:image', content: 'https://docs.newton.xyz/og/twitter-image.jpg' },
+    ],
+    script: [
+      { src: 'https://www.googletagmanager.com/gtag/js?id=G-JFG7Z812VK', async: true },
+      {
+        children:
+          "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JFG7Z812VK');",
+      },
+    ],
   },
 ```
 
-Note: `head` returning JSX requires the config file to allow JSX — `tsconfig.json` already sets `"jsx": "react-jsx"`. If the installed Vocs version types `head` as a data object rather than JSX (verify against `node_modules/vocs` `HeadOptions`/`Frontmatter` types), use the object form: `head: { meta: [...], script: [...] }` with the same values. Pick whichever the installed types accept; do not guess.
+Note: `head` shape can vary slightly by Vocs minor version. Before editing, confirm the exact field names against the installed types — `grep -rE "head|HeadOptions|HeadMeta|Script" site/node_modules/vocs/**/*.d.ts | head -30`. The object above uses the documented unhead-style `meta[]`/`script[]` arrays (`{ name|property, content }` for meta; `{ src, async }` and `{ children }` for scripts). If a field name differs (e.g. inline-script key is `innerHTML` rather than `children`), use whatever the installed `.d.ts` declares. Do NOT switch to JSX or rename the file to `.tsx` — the object form is the single supported path here. If Vocs' installed `head` type is strictly a function, use `head() { return { meta: [...], script: [...] } }` returning the SAME object (still no JSX).
 
 Security note (SRI intentionally omitted on gtag): the GA4 `gtag/js` tag deliberately has NO `integrity="sha384-…"`/`crossorigin` attributes. `gtag.js` is a bootstrap loader that fetches further Google code at runtime, the file rotates, and Google publishes no stable hash — an SRI hash would break analytics on Google's next update. The current Mintlify site already loads GA4 without SRI (via its `ga4` config), so omitting it preserves parity and is the correct choice. Do not add SRI here to satisfy a generic linter; if you must, gate it behind a verified, Google-published hash (none exists today).
 
@@ -983,13 +994,46 @@ Open one page per component type (callout, steps, code-group, details, card, tab
 ## Task 12: Update root tooling scripts
 
 **Files:**
+- Create: `scripts/check-residue.sh` (explicit-control-flow residue gate)
 - Modify: root `package.json` (`docs:*` scripts)
 - Delete: `scripts/check-docs-twoslash.sh`
 
 **Interfaces:**
-- Produces: `docs:dev`/`docs:check`/`docs:verify` that drive the Vocs package + gates.
+- Produces: `docs:dev`/`docs:build`/`docs:verify`/`docs:check` driving the Vocs package + gates. `docs:check` returns nonzero on build failure OR on any Mintlify residue (no failure masking).
 
-- [ ] **Step 1: Replace the `docs:*` scripts in root `package.json`.** Current (verified):
+- [ ] **Step 1: Create `scripts/check-residue.sh`** with explicit control flow. `git grep` exits 1 when there are NO matches (that is the pass case) and 0 when there ARE matches (fail); any other exit code is a real error. This inverts cleanly WITHOUT a trailing `|| true` that would swallow failures:
+
+```bash
+#!/usr/bin/env bash
+# Fails (exit 1) if any live Mintlify residue remains in tracked files.
+# Excludes immutable history (CHANGELOG.md), the migration/design docs, and the lockfile.
+set -euo pipefail
+
+git grep -niE "mintlify|mint\.json|\.mintignore" -- \
+  ':(exclude)CHANGELOG.md' \
+  ':(exclude)docs/migrations/' \
+  ':(exclude)pnpm-lock.yaml' \
+  && matched=1 || rc=$?
+
+# git grep: 0 = matches found (FAIL), 1 = no matches (PASS), >1 = error.
+if [ "${matched:-0}" = "1" ]; then
+  echo "residue check: FAIL — Mintlify references found above." >&2
+  exit 1
+fi
+if [ "${rc:-1}" != "1" ]; then
+  echo "residue check: ERROR — git grep exited ${rc}." >&2
+  exit "${rc}"
+fi
+echo "residue check: PASS — no live Mintlify residue."
+```
+
+- [ ] **Step 2: Make it executable**
+
+```bash
+chmod +x scripts/check-residue.sh
+```
+
+- [ ] **Step 3: Replace the `docs:*` scripts in root `package.json`.** Current (verified):
 
 ```json
     "docs:dev": "cd site && mintlify dev",
@@ -997,33 +1041,41 @@ Open one page per component type (callout, steps, code-group, details, card, tab
     "docs:broken-links": "cd site && mintlify broken-links",
 ```
 
-Replace with:
+Replace with (note: `docs:check` chains build AND residue with `&&`, so ANY failure propagates — no `|| true`):
 
 ```json
     "docs:dev": "cd site && pnpm dev",
     "docs:build": "cd site && pnpm build",
     "docs:verify": "cd site && pnpm build && (npx serve -l 4173 dist & SVPID=$!; sleep 2; node scripts/verify-parity.mjs http://localhost:4173; R=$?; kill $SVPID; exit $R)",
-    "docs:check": "pnpm run docs:build && git grep -niE \"mintlify|mint\\.json|\\.mintignore\" -- ':(exclude)CHANGELOG.md' ':(exclude)docs/migrations/' ':(exclude)pnpm-lock.yaml' && exit 1 || true",
+    "docs:check": "pnpm run docs:build && ./scripts/check-residue.sh",
 ```
 
-Note: the residue portion of `docs:check` must FAIL the command if any match is found. Implement as: build, then run the scoped `git grep`; if it prints anything, exit nonzero. Verify the exact shell semantics on this machine (zsh) during Step 2 — adjust to a small `scripts/check-residue.sh` if the inline form is fragile.
-
-- [ ] **Step 2: Delete the twoslash script**
+- [ ] **Step 4: Delete the twoslash script**
 
 ```bash
 git rm scripts/check-docs-twoslash.sh
 ```
 
-- [ ] **Step 3: Verify `docs:build` works from repo root**
+- [ ] **Step 5: NEGATIVE TEST — prove the residue gate actually fails.** Before the scrub (Task 13) removes residue, run the gate against the current repo, which still HAS live Mintlify references:
+
+Run: `./scripts/check-residue.sh; echo "exit=$?"`
+Expected: prints the residue lines + `residue check: FAIL`, then `exit=1`. This proves the gate is not masking failures (directly refutes the reviewed bug). If it prints `PASS` / `exit=0` here, the control flow is wrong — fix before proceeding.
+
+- [ ] **Step 6: NEGATIVE TEST — prove build failure propagates through `docs:check`.** Temporarily break the build (append `import 'this-does-not-exist'` to `site/vocs.config.ts`), then:
+
+Run: `pnpm run docs:check; echo "exit=$?"`
+Expected: build fails, `docs:check` exits nonzero (`exit` ≠ 0), and the residue check never runs. Revert the temporary break immediately: `git checkout site/vocs.config.ts`.
+
+- [ ] **Step 7: Verify `docs:build` works from repo root** (positive path)
 
 Run: `pnpm run docs:build`
 Expected: Vocs build exits 0.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add package.json
-git commit -m "chore(docs): point docs scripts at Vocs, drop twoslash check"
+git add package.json scripts/check-residue.sh
+git commit -m "chore(docs): point docs scripts at Vocs, add residue gate"
 ```
 
 ---
@@ -1067,13 +1119,10 @@ Then rewrite each `SKILL.md`: name/description → Vocs; replace Mintlify compon
 
 - [ ] **Step 6: Scrub the remaining docs/memory files.** `docs/zktls-twitter/README.md` (remove the "Mintlify docs-site follow-up" section or reword to Vocs); `RAL.md` (Mintlify roadmap/xref lines); both `.omc/project-memory.json` files (docs script + `Assistant.md` path references → Vocs paths or remove).
 
-- [ ] **Step 7: Run the residue gate — must be empty**
+- [ ] **Step 7: Run the residue gate — must PASS**
 
-Run:
-```bash
-git grep -niE "mintlify|mint\.json|\.mintignore" -- ':(exclude)CHANGELOG.md' ':(exclude)docs/migrations/' ':(exclude)pnpm-lock.yaml'
-```
-Expected: NO output (exit 1 from git grep = no matches = pass). Any printed line is remaining residue — fix and re-run.
+Run: `./scripts/check-residue.sh; echo "exit=$?"`
+Expected: `residue check: PASS — no live Mintlify residue.` and `exit=0`. Any printed residue line + `FAIL`/`exit=1` means references remain — fix and re-run. (This is the same script whose failure path was proven in Task 12 Step 5, now proving the pass path after the scrub.)
 
 - [ ] **Step 8: Delete `site/docs.json` (cutover-gated).** Per Global Constraints, do this on the migration branch but keep it as the LAST content commit; it merges to `main` only after cutover Stage 3. If executing pre-cutover on a branch, proceed; if on `main` pre-cutover, defer this single deletion.
 
