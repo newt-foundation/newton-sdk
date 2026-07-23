@@ -88,7 +88,7 @@ const morphoShield = shield.extend(morphoActions)
 await morphoShield.morpho.reallocate(vaultAddress, allocations)
 ```
 
-Use typed vendor modules when they exist. Today Morpho exposes manager and allocator actions under `shield.morpho.*`.
+Use typed vendor modules when they exist. VaultKit ships modules for Morpho, Morpho Blue, EulerEarn, EVault, and Superform. Each attaches its own namespace, such as `shield.morpho.*`, `shield.euler.*`, or `shield.superform.*`. See [Vendor Modules](/developers/vaults/sdk/vendor-modules) for the complete map and important role boundaries.
 
 ## Generic Calls
 

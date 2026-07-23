@@ -1,0 +1,99 @@
+---
+title: "Curator Lifecycle Guide"
+description: "Create, operate, secure, and retire a VaultKit Shield for a managed vault."
+---
+
+This guide covers the lifecycle of a curator-owned Shield clone: creating or attaching to it, binding a policy, granting vault roles, executing manager actions, and operating its security controls. Shared Shield infrastructure is deployed per chain by the protocol team; a curator creates only a per-vault clone.
+
+## Operating Model
+
+- A Shield clone is scoped to a curator and vault and holds the vault's manager, allocator, or governor role.
+- Manager actions fail closed unless Newton returns a valid policy attestation.
+- End-user deposits and withdrawals do not pass through Shield.
+- The clone owner controls policies, delegates, and the bypass path. Use a multisig for production ownership.
+- Approved delegates are the hot keys allowed to submit attested executions.
+
+## 1. Create or Attach
+
+`createShield` predicts a deterministic address and attaches if a compatible clone already exists; otherwise it deploys one. Re-running the same configuration is safe.
+
+```typescript
+import { createShield, definePolicy } from '@newton-xyz/vaultkit'
+
+const policy = definePolicy({ chainId, env }).with(pack1).with(pack2)
+
+const base = await createShield({
+  walletClient,
+  rpc,
+  apiKey,
+  policy,
+  policyAddress,
+  // curator, vault, version, and bypassDelaySeconds
+})
+```
+
+The clone identity is derived from the curator, vault, and version. Bump the version when you need a different clone for the same curator and vault. The bypass delay is fixed during initialization, so choose it deliberately.
+
+## 2. Bind and Configure the Policy
+
+Supply the policy when creating the Shield or update it later with the owner-only policy methods. Policy parameters are committed onchain so depositors and auditors can inspect the enforced configuration.
+
+- `setPolicy(config)` updates parameters and attestation expiration settings.
+- `setPolicyAddress(address)` moves the Shield to another compatible Newton policy contract.
+- Composite policies created with `definePolicy()` require the deployed policy address they bind to.
+
+See [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs) for manifests, parameters, and secrets.
+
+## 3. Grant the Vault Role
+
+Use the vault protocol's normal administration flow to grant the Shield clone its manager, allocator, or governor role. Once granted, submit the gated manager actions through Shield rather than calling the vault directly.
+
+## 4. Execute Through a Typed Module
+
+```typescript
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
+
+const shield = base.extend(morphoActions)
+const result = await shield.morpho.reallocate(vault, allocations)
+```
+
+The SDK builds calldata, requests an attestation, and submits the onchain execution. Both a valid attestation and an approved submitting delegate are required. See [Vendor Modules](/developers/vaults/sdk/vendor-modules) for supported protocols.
+
+## Delegate Security
+
+Delegate approval is the hot-path authorization layer. The owner should revoke a compromised submitter immediately with `setApprovedDelegate(delegate, false)`. Ownership does not implicitly make an address a delegate: after transferring ownership, explicitly approve the new operational delegate and revoke obsolete keys.
+
+## Bypass Path
+
+The bypass is the fail-closed escape hatch for prolonged Newton unavailability. It is owner-only and time-delayed:
+
+1. `queueBypass(to, value, data)` records the action and its earliest execution time.
+2. Wait until the immutable bypass delay has elapsed.
+3. Call `executeBypass(id)` once, or `cancelBypass(id)` to discard it.
+
+Queued bypasses are public, giving depositors time to review the proposed action. Do not use bypass to route around a policy denial.
+
+## Production Ownership
+
+Transfer Shield ownership to a Safe or equivalent multisig. The owner can change the policy, manage delegates, and operate the bypass path, so it is the security-critical role. Verify the new owner onchain, approve the intended delegate set, and revoke the deployer if it should no longer operate the Shield.
+
+## Upgrades and Exit Levers
+
+Shield clones follow the shared implementation configured for their chain and environment. Curators do not perform implementation upgrades. Before onboarding, review the governance and delay protecting that shared upgrade path.
+
+Your curator-controlled levers remain:
+
+- revoke delegates to stop the hot execution path;
+- update or replace the attached Newton policy;
+- queue a timelocked bypass during sustained protocol unavailability;
+- revoke the Shield's vault role or migrate to a new versioned clone.
+
+## Operational Checklist
+
+- Confirm the target chain has a live Shield deployment.
+- Verify the predicted clone address and immutable bypass delay.
+- Bind the intended policy and inspect its onchain parameters.
+- Grant only the required vendor role to the Shield.
+- Move ownership to a multisig and configure delegates separately.
+- Test an allowed action, a denied action, and delegate revocation.
+- Monitor policy changes, delegate updates, bypass queues, executions, and implementation upgrades.

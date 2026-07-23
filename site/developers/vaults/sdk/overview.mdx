@@ -36,20 +36,22 @@ sequenceDiagram
 
 - **Shield clones:** One audited implementation per chain, with deterministic per-curator clones deployed through `ShieldFactory`.
 - **Policy packs:** Typed wrappers around Newton policy templates. Packs validate params, prepare `wasmArgs`, and expose per-pack helpers.
-- **Vendor modules:** Typed wrappers for vault-manager actions, starting with Morpho. Vendor modules produce the calldata that the Shield forwards after policy approval.
+- **Vendor modules:** Typed wrappers for manager actions on Morpho, Morpho Blue, EulerEarn, EVault, and Superform. Vendor modules produce the calldata that the Shield forwards after policy approval.
 - **Generic calls:** `shield.sendCall(...)` supports protocols and manager actions without a first-class vendor module.
 - **Typed errors:** SDK failures map to stable error classes such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.
 - **Browser-safe core:** The main package avoids `node:*` imports. Vendor modules may inherit constraints from the vendor SDKs they wrap.
 
 ## Manager Actions Only
 
-VaultKit is for privileged vault operations such as reallocations, cap changes, and other curator or manager calls. End-user deposits and withdrawals still flow through the vault protocol's normal UX unless the vault deliberately routes those actions through a Shield.
+VaultKit is for privileged vault operations such as reallocations, cap changes, and other curator or manager calls. End-user deposits and withdrawals continue through the vault protocol's normal UX; they do not route through Shield.
 
 ## How to Read This Section
 
 - Start with [Getting Started](/developers/vaults/sdk/integration-guide) to install packages, create clients, configure a Shield, and run a policy-gated action.
 - Use [Morpho](/developers/vaults/sdk/morpho) for MetaMorpho curator setup, composite policy choices, and `reallocate` role requirements.
 - Read [Concepts](/developers/vaults/sdk/concepts) if you want the mental model for `createShield`, packs, vendor modules, and `sendCall`.
+- Review [Vendor Modules](/developers/vaults/sdk/vendor-modules) to choose a typed integration or the generic-call escape hatch.
+- Use the [Curator Guide](/developers/vaults/operations/curator-guide) for the full deploy, policy, role, delegate, bypass, ownership, and upgrade lifecycle.
 - Use [Examples](/developers/vaults/sdk/examples) for copyable integration patterns.
 - Keep [Reference](/developers/vaults/sdk/reference) nearby for parameters, return values, supported chains, and exported errors.
 

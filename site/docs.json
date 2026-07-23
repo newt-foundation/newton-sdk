@@ -138,12 +138,30 @@
               "developers/vaults/sdk/morpho",
               "developers/vaults/sdk/euler-vault",
               "developers/vaults/sdk/euler",
+              "developers/vaults/sdk/vendor-modules",
               "developers/vaults/sdk/composite-policy-packs"
             ]
           },
           {
+            "group": "Shield Contracts",
+            "pages": [
+              "developers/vaults/shield/architecture",
+              "developers/vaults/shield/flows",
+              "developers/vaults/shield/reference",
+              "developers/vaults/shield/storage-layout",
+              "developers/vaults/shield/deployment"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": ["developers/vaults/operations/curator-guide"]
+          },
+          {
             "group": "Resources",
-            "pages": ["developers/vaults/resources/legal-terms"]
+            "pages": [
+              "developers/vaults/resources/glossary",
+              "developers/vaults/resources/legal-terms"
+            ]
           }
         ]
       },

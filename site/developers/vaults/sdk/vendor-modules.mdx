@@ -1,0 +1,54 @@
+---
+title: "Vendor Modules"
+description: "Typed VaultKit integrations for Morpho, Euler, and Superform vault manager actions."
+---
+
+A vendor module is a typed wrapper around a vault protocol's SDK or ABI. It builds the exact calldata for a manager action and routes it through a Shield. Modules attach to a Shield client in the same style as Viem extensions:
+
+```typescript
+import { createShield } from '@newton-xyz/vaultkit'
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
+
+const base = await createShield({ /* ... */ })
+const shield = base.extend(morphoActions)
+
+await shield.morpho.reallocate(vault, allocations)
+```
+
+## Shipped Modules
+
+| Import path | Namespace | Manager surface |
+| --- | --- | --- |
+| `@newton-xyz/vaultkit/vendors/morpho` | `shield.morpho.*` | MetaMorpho curator and allocator actions |
+| `@newton-xyz/vaultkit/vendors/morpho-blue` | `shield.morphoBlue.*` | Morpho Blue isolated-market position actions for aggregator-vault architectures |
+| `@newton-xyz/vaultkit/vendors/euler` | `shield.euler.*` | EulerEarn curator and allocator actions |
+| `@newton-xyz/vaultkit/vendors/euler-vault` | `shield.eulerVault.*` | EVault governor actions |
+| `@newton-xyz/vaultkit/vendors/superform` | `shield.superform.*` | SuperVault strategy manager actions and typed hook bundles |
+
+EulerEarn and EVault are different surfaces. EulerEarn manages an aggregation vault, including reallocations, queues, and strategy caps. EVault exposes base lending-vault governance such as LTV, cap, interest-rate-model, and hook configuration.
+
+## Superform Role Boundary
+
+The Superform module supports the `SuperVaultStrategy` manager surface. Its primary operation, `executeHooks`, bundles economic actions such as deploying reserves, unwinding, rebalancing, and harvesting. VaultKit includes typed hook builders and decoders, plus `executeHooksRaw` for hooks outside the typed union.
+
+A Shield clone can hold only the strategy's secondary manager role. Actions restricted to Superform's primary manager—including `manageYieldSource` and `executeVaultFeeConfigUpdate`—cannot be delegated to a curator's Shield clone.
+
+## Calldata and Policy Inputs
+
+Vendor modules produce calldata; they do not own policy inputs. A policy pack prepares and validates `wasmArgs`. Pass call-specific policy inputs through `prepareQueryOptions`, keyed by the policy pack's short id.
+
+Every typed action also records its canonical function signature. Newton policies use the signature to decode and gate the action, and Shield includes it in the emitted intent for the audit trail.
+
+## Generic Calls
+
+For an unsupported protocol or action, use the generic `sendCall` escape hatch. Your integration must then encode the calldata and supply the exact canonical function signature itself. Prefer a typed vendor module when available because it keeps calldata and signature generation together.
+
+VaultKit only wraps privileged curator, allocator, manager, or governor actions. End-user ERC-4626 deposits and withdrawals remain on the vendor's normal user path.
+
+## Related Guides
+
+- [Morpho integration](/developers/vaults/sdk/morpho)
+- [EulerEarn integration](/developers/vaults/sdk/euler)
+- [EVault integration](/developers/vaults/sdk/euler-vault)
+- [SDK concepts](/developers/vaults/sdk/concepts)
+- [API reference](/developers/vaults/sdk/reference)

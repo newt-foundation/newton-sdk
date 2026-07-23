@@ -1,0 +1,42 @@
+---
+title: "VaultKit Glossary"
+description: "Definitions and naming boundaries for Newton Policy Protocol, VaultKit, and Shield."
+---
+
+VaultKit builds on Newton Policy Protocol, so precise names matter across SDK code, contracts, dashboards, and audit trails.
+
+## Product and Mechanism
+
+| Term | Meaning |
+| --- | --- |
+| **VaultKit** | The product: the `@newton-xyz/vaultkit` SDK, integrations, contracts, and documentation. |
+| **Shield** | The onchain policy-gated executor inside VaultKit. |
+| **Shield clone** | A per-curator, per-vault proxy that holds a vault manager role and forwards approved calls. |
+| **ShieldFactory** | The per-chain factory that deterministically creates Shield clones. |
+| **Curator** | The operator responsible for privileged actions on a managed vault. |
+| **Vendor module** | A typed SDK extension that builds calldata for a protocol's manager actions. |
+| **Policy pack** | A typed SDK wrapper that validates policy parameters and prepares runtime policy inputs. |
+| **Bypass** | The owner-only, timelocked execution path used during sustained Newton unavailability. |
+
+Use “VaultKit” for the overall product and “Shield” for the contract and execution mechanism. A vendor vault is never itself a Shield.
+
+## Newton Protocol Terms
+
+| Term | Meaning |
+| --- | --- |
+| **Intent** | The exact call being authorized: sender, target, value, calldata, chain, and function signature. |
+| **Attestation** | Newton operators' approval bound to an intent, policy, Shield, task, and expiration. |
+| **Newton policy** | The onchain policy definition and its Rego, schema, and PolicyData references. |
+| **Policy parameters** | Onchain configuration describing what the policy enforces for a Shield. |
+| **`wasmArgs`** | Per-call runtime input prepared by policy packs for policy-data WASM modules. |
+| **Task** | A pending Newton operator evaluation created through the Gateway. |
+| **Gateway** | The API and orchestration layer that creates tasks and aggregates operator responses. |
+
+## Naming Rules
+
+- Qualify “policy” when context could be ambiguous: use “Newton policy,” “policy pack,” or “the policy attached to the Shield.”
+- Use “Shield” or “Shield clone” in user-facing copy instead of the protocol-level term “policy client.”
+- Reserve “vault” for the actual vendor vault that receives forwarded calls.
+- Do not describe end-user deposits or withdrawals as Shield actions. Shield gates privileged manager operations.
+- Keep EulerEarn (`shield.euler.*`) distinct from EVault (`shield.eulerVault.*`).
+- Treat `Intent` as the Newton protocol type, not as a generic draft or staging object.

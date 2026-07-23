@@ -14,6 +14,8 @@ keywords:
 
 A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.wasm`).
 
+Newton policies use **Rego v1** and are evaluated by the Newton Regorus engine. The engine supports an OPA v1.2.0-compatible subset of Rego, along with Newton-specific extensions.
+
 ## What Makes Up a Policy
 
 Every policy deployment requires these files:
