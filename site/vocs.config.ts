@@ -17,6 +17,24 @@ export default defineConfig({
     { text: 'Protocol', link: '/protocol/overview/project-and-protocol', match: '/protocol' },
     { text: 'Blog', link: 'https://blog.newton.xyz' },
   ],
+  redirects: [
+    { source: '/newton-protocol/overview', destination: '/protocol/overview/project-and-protocol' },
+    { source: '/newton-protocol/:path*', destination: '/protocol/overview/:path*' },
+    { source: '/foundation/foundation-structure-and-key-contributors', destination: '/protocol/foundation/structure-and-key-contributors' },
+    { source: '/foundation/conflict-of-interest-and-code-of-conduct', destination: '/protocol/foundation/conflict-of-interest-and-code-of-conduct' },
+    { source: '/token/token-characteristics-and-utility', destination: '/protocol/token/characteristics-and-utility' },
+    { source: '/token/token-distribution-and-vesting', destination: '/protocol/token/distribution-and-vesting' },
+    { source: '/transparency-reports/transparency-reports', destination: '/protocol/transparency-reports/reports' },
+    { source: '/governance/governance-model', destination: '/protocol/governance/governance-model' },
+    { source: '/developers/overview/integration-guide', destination: '/developers/guides/integration-guide' },
+    { source: '/developers/advanced/policy-client-guide', destination: '/developers/guides/smart-contract-integration' },
+    { source: '/developers/advanced/building-policies', destination: '/developers/guides/writing-policies' },
+    { source: '/developers/vaults/policies', destination: '/developers/vaults/policy-packs' },
+    { source: '/developers/vaults/policies/overview', destination: '/developers/vaults/policy-packs' },
+    { source: '/developers/vaults/vault-sdk', destination: '/developers/vaults/sdk/overview' },
+    { source: '/developers/overview/newton-explorer', destination: '/developers/resources/newton-explorer' },
+    { source: '/developers/advanced/kms-encryption', destination: '/developers/advanced/encrypting-secrets' },
+  ],
   sidebar: {
     '/developers/vaults': [
       {

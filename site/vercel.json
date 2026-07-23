@@ -1,3 +1,8 @@
 {
-  "installCommand": "npx pnpm@10 install --frozen-lockfile"
+  "installCommand": "npx pnpm@10 install --frozen-lockfile",
+  "redirects": [
+    { "source": "/", "destination": "/developers/overview/about", "permanent": false },
+    { "source": "/how-to-guides/newt-token-staking", "destination": "https://blog.newton.xyz/how-to-stake-newt/", "permanent": true },
+    { "source": "/references/newt-token-airdrop", "destination": "https://blog.newton.xyz/newt-airdrop-claiming-staking/", "permanent": true }
+  ]
 }
