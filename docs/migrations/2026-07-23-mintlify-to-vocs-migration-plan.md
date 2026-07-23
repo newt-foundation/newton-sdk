@@ -14,7 +14,7 @@
 
 - **Package manager:** pnpm. Vercel install: `npx pnpm@10 install --frozen-lockfile`.
 - **Versions (pin exactly, from neobank's proven set):** `vocs@^2.0.12`, `react@^19.2.4`, `react-dom@^19.2.4`, `react-server-dom-webpack@~19.2.3`, `vite@^8.0.14`, `tailwindcss@^4.1.16`, `waku@1.0.0-beta.1`, `@types/react@^19.2.14`, `@types/react-dom@^19.2.3`.
-- **Node:** ≥ 20 (repo `.nvmrc`).
+- **Node:** ≥ 20.12 for the docs build (Vocs' rolldown toolchain uses `util.styleText`, added in Node 20.12 / 21.7). The repo root pins 20.10 for the SDK; the docs site pins its own `site/.nvmrc` = `22` (Vercel-supported, current). Vercel rounds `.nvmrc` to its latest supported major, so 22 (or any ≥20.12) builds cleanly.
 - **No new content / no redesign:** faithful port only. Preserve every URL, all 18 redirects, brand (colors `#19191a`/`#ffffff`/`#303030`, light-default, logos, favicon, OG, GA4 `G-JFG7Z812VK`).
 - **No AI attribution in commits** (`.claude/rules/git-hygiene.md`): no `Co-Authored-By`, no "Claude/Anthropic/AI-generated". Conventional commits, subject ≤ 72 chars (enforced by a commit hook).
 - **Scrub depth:** operational only. `CHANGELOG.md` history + git commit history left factual.
