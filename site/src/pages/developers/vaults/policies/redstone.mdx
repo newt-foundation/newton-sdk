@@ -41,19 +41,19 @@ Use these exact Rego checks to enforce each guardrail.
 
 ### Stale Feed
 
-```rego
+```text
 deny contains "redstone_feed_stale" if v.redstone_feed_age_seconds > t.max_feed_age_seconds
 ```
 
 ### Hard Divergence Cap
 
-```rego
+```text
 deny contains "divergence_above_hard_cap" if v.divergence_bp >= t.deny_bp
 ```
 
 ### Sustained Divergence
 
-```rego
+```text
 deny contains "divergence_sustained" if {
     t.enable_sustained_check
     v.prev_snapshot_present
@@ -65,13 +65,13 @@ deny contains "divergence_sustained" if {
 
 ### Final Allow Rule
 
-```rego
+```text
 allow if count(deny) == 0
 ```
 
 ## Complete Policy
 
-```rego
+```text
 package redstone_oracle_divergence
 
 import future.keywords

@@ -8,6 +8,8 @@ keywords:
   - data.wasm rego
   - composite policy
 ---
+import { Card,Cards } from 'vocs'
+
 
 A single Newton policy can read from **more than one PolicyData oracle**. This lets one policy gate an action on several independent signals at once — for example, vault risk *and* sanctions screening *and* oracle health — while still resolving to a single allow/deny decision and a single attestation.
 
@@ -47,14 +49,14 @@ return JSON.stringify({ webacy: { is_collapsed: false, abs_dev_clean: 0.001, /* 
 
 After the network merges both outputs, your Rego sees:
 
-```rego
+```text
 data.wasm.vaultsfyi.risk_score          # number, from oracle A
 data.wasm.webacy.is_collapsed           # bool, from oracle B
 ```
 
 Parameters follow the same convention — namespace each oracle's thresholds under the same key so a single `params` object can configure every oracle:
 
-```rego
+```text
 data.params.vaultsfyi.risk_score_floor  # configured threshold for oracle A
 data.params.webacy.deny_on_collapsed    # configured threshold for oracle B
 ```
@@ -67,7 +69,7 @@ Wrapping every return path (including error returns) under a single pack-id key 
 
 The recommended pattern is a **deny set**: each rule adds a reason string to `deny` when a condition fails, and the policy allows only when no deny rule fires. This composes naturally across oracles — every oracle contributes its own deny rules over its own namespace, and the final `allow` is simply "nothing denied."
 
-```rego
+```text
 package vault_gate
 
 import rego.v1
@@ -213,17 +215,17 @@ Oracle order matters on-chain. The merged `data.wasm` is order-independent becau
 
 ## Next Steps
 
-<CardGroup cols={2}>
-<Card icon="cubes" href="/developers/guides/policy-packs" title="Policy Packs">
+<Cards>
+<Card icon="cubes" to="/developers/guides/policy-packs" title="Policy Packs">
   Prebuilt, deployed oracles you can chain together today
 </Card>
-<Card icon="key" href="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">
+<Card icon="key" to="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">
   Upload and access API keys for oracles that need them
 </Card>
-<Card icon="flask" href="/developers/guides/testing-policies" title="Testing Policies">
+<Card icon="flask" to="/developers/guides/testing-policies" title="Testing Policies">
   Unit-test your Rego and simulate before deploying
 </Card>
-<Card icon="file-code" href="/developers/guides/writing-policies" title="Writing Policies">
+<Card icon="file-code" to="/developers/guides/writing-policies" title="Writing Policies">
   Rego fundamentals for a single policy
 </Card>
-</CardGroup>
+</Cards>

@@ -3,6 +3,8 @@ title: "Integration Guide"
 description: "End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations on-chain."
 keywords: ["newton protocol integration", "add transaction policies to smart contracts", "eigenlayer avs tutorial", "onchain compliance integration", "rego policy deployment", "blockchain compliance setup", "transaction monitoring integration", "smart contract risk management"]
 ---
+import { Card,Tabs,Tab } from 'vocs'
+
 
 This guide walks through the full Newton Protocol integration: a [WASM data oracle](/developers/guides/writing-data-oracles), a [Rego policy](/developers/guides/writing-policies), a [PolicyClient smart contract](/developers/guides/smart-contract-integration), and a [frontend](/developers/guides/frontend-sdk-integration) that submits intents and executes attested transactions. Choose your starting point based on what you need:
 
@@ -77,7 +79,7 @@ After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** 
 
 Build a WebAssembly component that fetches external data (e.g., price feeds, sanctions screening, KYC status) for [policy evaluation](/developers/overview/core-concepts#policydata).
 
-<Card icon="database" href="/developers/guides/writing-data-oracles" title="Writing Data Oracles">
+<Card icon="database" to="/developers/guides/writing-data-oracles" title="Writing Data Oracles">
   Define the WIT interface, implement in JavaScript, build WASM, test locally
 </Card>
 
@@ -85,7 +87,7 @@ Build a WebAssembly component that fetches external data (e.g., price feeds, san
 
 Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates transaction intents using data from your oracle and configuration parameters.
 
-<Card icon="file-code" href="/developers/guides/writing-policies" title="Writing Policies">
+<Card icon="file-code" to="/developers/guides/writing-policies" title="Writing Policies">
   Write Rego rules, define parameter schemas, organize policy files
 </Card>
 
@@ -97,7 +99,7 @@ Upload your policy files to IPFS and register [PolicyData](/developers/overview/
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
 
-<Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
+<Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
   Generate CIDs, deploy PolicyData, deploy Policy, register PolicyClient
 </Card>
 
@@ -105,7 +107,7 @@ Mainnet policy usage requires allowlisting by the Newton team. Before deploying 
 
 Deploy a [PolicyClient](/developers/overview/core-concepts#policyclient) smart contract that validates Newton [attestations](/developers/overview/core-concepts#attestation) before executing transactions.
 
-<Card icon="shield" href="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
+<Card icon="shield" to="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
   Inherit NewtonPolicyClient, configure validation, deploy with Foundry
 </Card>
 
@@ -113,7 +115,7 @@ Deploy a [PolicyClient](/developers/overview/core-concepts#policyclient) smart c
 
 Build a Next.js application that submits evaluation requests via the [SDK](/developers/reference/sdk-reference) and executes attested transactions.
 
-<Card icon="window" href="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
+<Card icon="window" to="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
   Create Newton client, submit evaluations, execute with attestations
 </Card>
 
@@ -207,6 +209,6 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   This deploys pre-configured wallet instances bound to your policy. Each user gets their own wallet with the same policy enforcement.
 :::
 
-<Card icon="comment-question" href="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
+<Card icon="comment-question" to="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">
   Get in touch with someone from the Newton team to discuss your integration
 </Card>

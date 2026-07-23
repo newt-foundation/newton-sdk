@@ -2,6 +2,8 @@
 title: "Privacy Flows"
 description: "Three modes of privacy-preserving data in Newton Protocol — identity, confidential, and ephemeral — with end-to-end integration examples"
 ---
+import { Card } from 'vocs'
+
 
 Newton supports three distinct privacy data flows, each designed for a different use case. All three use HPKE encryption (X25519 + ChaCha20-Poly1305) and share the same `encrypted_data_refs` storage table, but they differ in who uploads data, how it's referenced, and which Rego namespace it appears in.
 
@@ -50,7 +52,7 @@ sequenceDiagram
 
 4. **Write a Rego policy** that uses `newton.identity.*` builtins:
 
-```rego
+```text
 package kyc_gate
 
 default allow := false
@@ -143,7 +145,7 @@ const result = await uploadConfidentialData(
 
 5. **Write a Rego policy** using `newton.privacy.*` builtins. The policy's `policyParams` must include a `confidential_domain` field matching the domain hash:
 
-```rego
+```text
 package sanctions_check
 
 default allow := false
@@ -254,12 +256,12 @@ See the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide) for the full
 
 ## Next Steps
 
-<Card icon="shield" href="/developers/concepts/privacy-layer" title="Privacy Layer Architecture">
+<Card icon="shield" to="/developers/concepts/privacy-layer" title="Privacy Layer Architecture">
   HPKE encryption, threshold decryption, and the security model
 </Card>
-<Card icon="user" href="/developers/verified-credential/overview" title="Verified Credentials">
+<Card icon="user" to="/developers/verified-credential/overview" title="Verified Credentials">
   Full identity data integration with the newton-identity popup
 </Card>
-<Card icon="code" href="/developers/advanced/rego-syntax-guide" title="Rego Syntax Guide">
+<Card icon="code" to="/developers/advanced/rego-syntax-guide" title="Rego Syntax Guide">
   All Newton Rego extensions including privacy and time builtins
 </Card>

@@ -10,6 +10,8 @@ keywords:
   - policy engine
   - newton vaults
 ---
+import { Card } from 'vocs'
+
 
 Vaults are DeFi primitives that let depositors place capital under a strategy managed by a curator, allocator, or automated system. They are increasingly used by institutions, exchanges, and DeFi applications to give users access to differentiated yield products without requiring every user to manage the strategy directly.
 
@@ -80,14 +82,14 @@ For vaults, that layer can be used in two ways:
 - **Policy packs** provide ready-made data inputs and Rego guardrails for vault risk, address screening, price divergence, and depeg risk. See [Policy Packs](/developers/vaults/policy-packs).
 - **Newton VaultKit** provides the SDK and Shield contracts for curator-facing vault integrations, starting with Morpho and generic call support for other protocols. See [Vault SDK](/developers/vaults/sdk/overview).
 
-<Card title="Policy Packs" icon="shield-check" href="/developers/vaults/policy-packs">
+<Card title="Policy Packs" icon="shield-check" to="/developers/vaults/policy-packs">
   Review the policy packs Newton makes available for vault risk, compliance, and oracle checks.
 </Card>
 
-<Card title="Vault SDK" icon="package" href="/developers/vaults/sdk/overview">
+<Card title="Vault SDK" icon="package" to="/developers/vaults/sdk/overview">
   Integrate Newton VaultKit into curator workflows.
 </Card>
 
-<Card title="Protocol Concepts" icon="network" href="/developers/vaults/protocol/concepts">
+<Card title="Protocol Concepts" icon="network" to="/developers/vaults/protocol/concepts">
   Understand intents, attestations, tasks, and operator evaluation.
 </Card>

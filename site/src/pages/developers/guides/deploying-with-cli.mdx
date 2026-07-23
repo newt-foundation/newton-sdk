@@ -2,6 +2,8 @@
 title: "Deploying with CLI"
 description: "Deploy Newton Protocol policies and data oracles to IPFS and on-chain using newton-cli"
 ---
+import { Card } from 'vocs'
+
 
 This guide walks through deploying your policy files to IPFS and registering them on-chain using `newton-cli`. By the end, you will have a deployed PolicyData contract, a deployed Policy contract, and a registered PolicyClient.
 
@@ -163,6 +165,6 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 
 ## Next Steps
 
-<Card icon="window" href="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
+<Card icon="window" to="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
   Build a frontend that submits tasks via the SDK
 </Card>

@@ -8,6 +8,8 @@ keywords:
   - componentize js wasm
   - newton policy data
 ---
+import { Card } from 'vocs'
+
 
 Data oracles are WebAssembly (WASM) components that fetch or compute external data at evaluation time. The Newton network executes your WASM, and the output is fed into your Rego policy as `data.wasm`.
 
@@ -239,9 +241,9 @@ All languages compile to the same WIT interface and produce interchangeable WASM
 
 ## Next Steps
 
-<Card icon="file-code" href="/developers/guides/writing-policies" title="Writing Policies">
+<Card icon="file-code" to="/developers/guides/writing-policies" title="Writing Policies">
   Write a Rego policy that uses your oracle's output
 </Card>
-<Card icon="rocket" href="/developers/guides/deploying-with-cli" title="Deploying with CLI">
+<Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
   Deploy your oracle and policy to IPFS and on-chain
 </Card>

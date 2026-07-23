@@ -8,6 +8,8 @@ keywords:
   - newton shield
   - configure data oracles
 ---
+import { Card,Cards } from 'vocs'
+
 
 The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for building on Newton. It lets you generate an API key, author a Rego policy in the browser, attach one or more data oracles, configure their parameters and secrets, simulate against sample intents, and deploy the policy on-chain — all from a web UI. Everything in this guide can also be done with [`newton-cli`](/developers/reference/command-line-tool) and the [SDK](/developers/reference/sdk-reference); the dashboard packages the same operations into a guided flow.
 
@@ -67,17 +69,17 @@ For projects using the Newton Shield template, the dashboard generates a ready-t
 
 ## Next Steps
 
-<CardGroup cols={2}>
-<Card icon="key" href="/developers/overview/dashboard-api-keys" title="Dashboard & API Keys">
+<Cards>
+<Card icon="key" to="/developers/overview/dashboard-api-keys" title="Dashboard & API Keys">
   Permissions, rotation, and programmatic key management
 </Card>
-<Card icon="cubes" href="/developers/guides/policy-packs" title="Policy Packs">
+<Card icon="cubes" to="/developers/guides/policy-packs" title="Policy Packs">
   The oracles available in the editor
 </Card>
-<Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
   How multiple oracles compose under one policy
 </Card>
-<Card icon="terminal" href="/developers/reference/command-line-tool" title="CLI Reference">
+<Card icon="terminal" to="/developers/reference/command-line-tool" title="CLI Reference">
   The same operations from the command line
 </Card>
-</CardGroup>
+</Cards>

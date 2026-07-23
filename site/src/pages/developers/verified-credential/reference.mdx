@@ -2,6 +2,8 @@
 title: "SDK & Contract Reference"
 description: "SDK methods and contract functions for Newton Verifiable Credentials."
 ---
+import { Card,Cards } from 'vocs'
+
 
 This page covers the SDK methods and contract functions used to register, link, and manage user identity data with Newton.
 
@@ -203,11 +205,11 @@ After deploying, register this contract with the `PolicyClientRegistry`. See [Sm
 
 ## Next Steps
 
-<CardGroup cols={2}>
-  <Card icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
+<Cards>
+  <Card icon="brackets-curly" to="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
     Rego built-in functions for writing identity-aware policies
   </Card>
-  <Card icon="map" href="/developers/reference/contract-addresses" title="Contract Addresses">
+  <Card icon="map" to="/developers/reference/contract-addresses" title="Contract Addresses">
     IdentityRegistry and other deployed contract addresses
   </Card>
-</CardGroup>
+</Cards>

@@ -7,6 +7,8 @@ keywords:
   - newton for vaults
   - defi risk policies
 ---
+import { Card } from 'vocs'
+
 
 Newton vault policy packs combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
 
@@ -51,22 +53,22 @@ Vault policy packs are most useful when combined. For example, a regulated yield
 
 The result is a vault whose rules are explicit, inspectable, and enforced before execution.
 
-<Card title="Policy Packs Guide" icon="book-open" href="/developers/guides/policy-packs">
+<Card title="Policy Packs Guide" icon="book-open" to="/developers/guides/policy-packs">
   Learn how policy packs are structured, implemented, and used in Newton policies.
 </Card>
 
-<Card title="Vaults.fyi Vault Risk Rating" icon="chart-line" href="/developers/vaults/policies/vaultsfyi">
+<Card title="Vaults.fyi Vault Risk Rating" icon="chart-line" to="/developers/vaults/policies/vaultsfyi">
   Check vault APY, TVL drawdown, risk score, allocation changes, flags, and corruption status.
 </Card>
 
-<Card title="Chainalysis Address Screening" icon="shield-alert" href="/developers/vaults/policies/chainalysis">
+<Card title="Chainalysis Address Screening" icon="shield-alert" to="/developers/vaults/policies/chainalysis">
   Screen addresses against sanctions and risk categories.
 </Card>
 
-<Card title="Webacy Depeg Risk" icon="user-check" href="/developers/vaults/policies/webacy">
+<Card title="Webacy Depeg Risk" icon="user-check" to="/developers/vaults/policies/webacy">
   Monitor pegged-token depeg risk before manager actions execute.
 </Card>
 
-<Card title="RedStone Oracle Divergence" icon="activity" href="/developers/vaults/policies/redstone">
+<Card title="RedStone Oracle Divergence" icon="activity" to="/developers/vaults/policies/redstone">
   Compare RedStone price data against onchain oracle data before allowing actions.
 </Card>

@@ -16,6 +16,8 @@ keywords:
   - zero trust architecture
   - privacy enhancing technology
 ---
+import { Card } from 'vocs'
+
 
 If you manage assets for an institution — fund, custodian, DAO, or regulated entity — you need compliance guardrails before deploying capital into DeFi. Newton Protocol provides programmable, verifiable policy enforcement at the transaction layer. You participate in DeFi while maintaining compliance and risk controls.
 
@@ -37,7 +39,7 @@ Newton inserts a policy evaluation step into every transaction. The policy is de
 
 ### Exposure Limits
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -51,7 +53,7 @@ allow if {
 
 Restrict interactions to audited, approved DeFi protocols:
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -65,7 +67,7 @@ allow if {
 
 Combine sanctions screening, jurisdiction checks, and risk limits in a single policy:
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -134,12 +136,12 @@ Every Newton policy evaluation produces an on-chain attestation — a BLS signat
 
 ## Get Started
 
-<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+<Card icon="rocket" to="/developers/overview/quickstart" title="Quickstart">
   Simulate a compliance policy evaluation in 5 minutes
 </Card>
-<Card icon="file-code" href="/developers/guides/writing-policies" title="Write Compliance Policies">
+<Card icon="file-code" to="/developers/guides/writing-policies" title="Write Compliance Policies">
   Author Rego rules for sanctions screening, exposure limits, and approved lists
 </Card>
-<Card icon="lock" href="/developers/concepts/privacy-layer" title="Privacy Layer">
+<Card icon="lock" to="/developers/concepts/privacy-layer" title="Privacy Layer">
   Evaluate policies on encrypted data for confidential transactions
 </Card>

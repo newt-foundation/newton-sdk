@@ -8,6 +8,8 @@ keywords:
   - newton shield
   - vault governor
 ---
+import { Card } from 'vocs'
+
 
 Euler Vault Kit EVaults can route governor actions through a Newton Shield before the EVault receives the call. VaultKit's EVault overlay encodes the governor calldata, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
@@ -152,10 +154,10 @@ Scale fields follow the EVault ABI. LTVs, liquidation discounts, and interest fe
 | `PolicyDeniedError` | Newton evaluated the configured policy and denied the intent. | Inspect the policy result, params, and per-call `prepareQueryOptions`. |
 | Unexpected calldata | The wrong overlay or vault address was used. | Use `shield.eulerVault.*` only for EVaults; use `shield.euler.*` for Euler Earn vaults. |
 
-<Card title="Euler Earn Guide" icon="landmark" href="/developers/vaults/sdk/euler">
+<Card title="Euler Earn Guide" icon="landmark" to="/developers/vaults/sdk/euler">
   Gate Euler Earn curator and allocator actions with `shield.euler.*`.
 </Card>
 
-<Card title="Reference" icon="book-open" href="/developers/vaults/sdk/reference">
+<Card title="Reference" icon="book-open" to="/developers/vaults/sdk/reference">
   Review the generic `sendCall` API and expected error types.
 </Card>

@@ -2,6 +2,8 @@
 title: "Overview"
 description: "Integrate user identity and KYC data into Newton policies using Newton Verifiable Credentials."
 ---
+import { Card,Cards } from 'vocs'
+
 
 Newton Verifiable Credential (Newton VC) lets developers bring user identity data into Newton policies. Instead of managing identity checks separately, you can write Rego policies that enforce KYC requirements—like age, country, or approval status—as part of the same policy evaluation that governs your transactions.
 
@@ -43,17 +45,17 @@ The `identity_domain` is the output of `keccak256("kyc")`.
 
 ## Next Steps
 
-<CardGroup cols={2}>
-  <Card icon="list-check" href="/developers/verified-credential/integration-guide" title="Integration Guide">
+<Cards>
+  <Card icon="list-check" to="/developers/verified-credential/integration-guide" title="Integration Guide">
     Step-by-step walkthrough for integrating Newton VC into your app
   </Card>
-  <Card icon="code" href="/developers/verified-credential/reference" title="SDK & Contract Reference">
+  <Card icon="code" to="/developers/verified-credential/reference" title="SDK & Contract Reference">
     SDK methods and contract function signatures
   </Card>
-  <Card icon="brackets-curly" href="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
+  <Card icon="brackets-curly" to="/developers/verified-credential/identity-policy-reference" title="Identity Policy Reference">
     Built-in Rego functions for writing identity-aware policies
   </Card>
-  <Card icon="map" href="/developers/reference/contract-addresses" title="Contract Addresses">
+  <Card icon="map" to="/developers/reference/contract-addresses" title="Contract Addresses">
     IdentityRegistry and other deployed contract addresses
   </Card>
-</CardGroup>
+</Cards>

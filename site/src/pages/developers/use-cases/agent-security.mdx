@@ -15,6 +15,8 @@ keywords:
   - zero trust architecture
   - trusted execution environment
 ---
+import { Card } from 'vocs'
+
 
 Autonomous AI agents that transact on-chain need guardrails. Without policy enforcement, a compromised or hallucinating agent can drain a wallet, interact with malicious contracts, or exceed its intended scope. Newton Protocol provides programmable, verifiable transaction authorization that runs before any agent-initiated transaction executes.
 
@@ -35,7 +37,7 @@ Newton evaluates every agent-initiated transaction against a policy before execu
 
 ### Per-Transaction Spending Limits
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -53,7 +55,7 @@ cap := data.params.max_agent_spend if {
 
 Restrict the agent to interacting with approved contracts only:
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -67,7 +69,7 @@ allow if {
 
 Limit which contract functions the agent can call:
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -82,7 +84,7 @@ allow if {
 
 Use a [WASM data oracle](/developers/guides/writing-data-oracles) to track recent agent activity and enforce rate limits:
 
-```rego
+```text
 package newton
 
 default allow = false
@@ -137,12 +139,12 @@ The agent wallet inherits from [NewtonPolicyClient](/developers/guides/smart-con
 
 ## Get Started
 
-<Card icon="rocket" href="/developers/overview/quickstart" title="Quickstart">
+<Card icon="rocket" to="/developers/overview/quickstart" title="Quickstart">
   Simulate your first policy evaluation in 5 minutes
 </Card>
-<Card icon="file-code" href="/developers/guides/writing-policies" title="Write Agent Policies">
+<Card icon="file-code" to="/developers/guides/writing-policies" title="Write Agent Policies">
   Author Rego rules for spending limits, allowlists, and rate limiting
 </Card>
-<Card icon="shield" href="/developers/guides/smart-contract-integration" title="Secure Your Agent Wallet">
+<Card icon="shield" to="/developers/guides/smart-contract-integration" title="Secure Your Agent Wallet">
   Add NewtonPolicyClient to your agent's smart contract wallet
 </Card>

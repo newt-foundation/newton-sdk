@@ -8,6 +8,8 @@ keywords:
   - vault curator
   - reallocate
 ---
+import { Card } from 'vocs'
+
 
 Morpho vault curators can route MetaMorpho manager actions through a Newton Shield before the vault receives the call. VaultKit's Morpho overlay builds the MetaMorpho calldata with Morpho's SDK, packages that exact call as an intent, asks Newton operators to evaluate the configured policy, and forwards the call only when the policy returns an approval attestation.
 
@@ -214,10 +216,10 @@ For demos, point the Vaults.fyi lookup at a real mainnet vault through the polic
 | Vaults.fyi oracle errors or unexpected denials | Missing Vaults.fyi secret or no data for the lookup target. | Upload the API key and use a production-network data-source override for testnet demos. |
 | `AttestationTimeoutError` or `GatewayError` | Gateway was slow or unavailable. | Retry with backoff and a fresh task. |
 
-<Card title="Getting Started" icon="code" href="/developers/vaults/sdk/integration-guide">
+<Card title="Getting Started" icon="code" to="/developers/vaults/sdk/integration-guide">
   Install VaultKit, configure a Shield, and execute a policy-gated vault action.
 </Card>
 
-<Card title="Errors" icon="triangle-alert" href="/developers/vaults/sdk/errors">
+<Card title="Errors" icon="triangle-alert" to="/developers/vaults/sdk/errors">
   Review typed errors and retry guidance.
 </Card>

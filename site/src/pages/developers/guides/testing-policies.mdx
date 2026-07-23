@@ -8,6 +8,8 @@ keywords:
   - test wasm oracle
   - rego unit test
 ---
+import { Card,Cards } from 'vocs'
+
 
 Test at every layer before you deploy: unit-test your Rego rules with `opa test`, run your WASM oracle in isolation, then simulate the full policy end-to-end against the Newton network. This guide covers all three. For diagnosing failures after deployment, see [Testing & Debugging](/developers/resources/testing-debugging).
 
@@ -17,7 +19,7 @@ Rego rules are pure functions of `input`, `data.params`, and `data.wasm`, which 
 
 Given a policy like this:
 
-```rego
+```text
 package vault_risk_rating
 
 import future.keywords
@@ -41,7 +43,7 @@ allow if count(deny) == 0
 
 Write `policy_test.rego` alongside it. Mock `data.params` and `data.wasm` with `with`, and assert on both `allow` and membership in the `deny` set:
 
-```rego
+```text
 package vault_risk_rating_test
 
 import data.vault_risk_rating
@@ -208,17 +210,17 @@ Inspect `evaluation_result.policy_params_and_data` in the response to confirm th
 
 ## Next Steps
 
-<CardGroup cols={2}>
-<Card icon="bug" href="/developers/resources/testing-debugging" title="Testing & Debugging">
+<Cards>
+<Card icon="bug" to="/developers/resources/testing-debugging" title="Testing & Debugging">
   Diagnose failures after deployment
 </Card>
-<Card icon="link" href="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
   Simulate and test multi-oracle policies
 </Card>
-<Card icon="list-check" href="/developers/resources/deployment-checklist" title="Deployment Checklist">
+<Card icon="list-check" to="/developers/resources/deployment-checklist" title="Deployment Checklist">
   Pre-launch verification steps
 </Card>
-<Card icon="book" href="/developers/advanced/rego-syntax-guide" title="Rego Syntax Guide">
+<Card icon="book" to="/developers/advanced/rego-syntax-guide" title="Rego Syntax Guide">
   Rego language reference
 </Card>
-</CardGroup>
+</Cards>

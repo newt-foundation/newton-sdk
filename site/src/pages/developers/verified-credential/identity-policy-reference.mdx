@@ -2,6 +2,8 @@
 title: "Identity Policy Reference"
 description: "Newton identity Rego built-in functions for writing policies that check user identity data."
 ---
+import { Card,Cards } from 'vocs'
+
 
 Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements — like age, country, and document status — directly in your Rego policies.
 
@@ -47,7 +49,7 @@ Requires `identity_data.status` to equal `"approved"`.
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.check_approved()
 ```
 
@@ -59,7 +61,7 @@ result := newton.identity.kyc.check_approved()
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -78,7 +80,7 @@ Requires `identity_data.address_country_code` to be found within the provided li
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.address_in_countries(country_code_array)
 ```
 
@@ -96,7 +98,7 @@ result := newton.identity.kyc.address_in_countries(country_code_array)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -115,7 +117,7 @@ Requires the ISO subdivision location code (combining `address_country_code` and
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.address_in_subdivision(iso_code_array)
 ```
 
@@ -133,7 +135,7 @@ result := newton.identity.kyc.address_in_subdivision(iso_code_array)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -152,7 +154,7 @@ Requires the ISO subdivision location code to **not** be found within the provid
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.address_not_in_subdivision(iso_code_array)
 ```
 
@@ -170,7 +172,7 @@ result := newton.identity.kyc.address_not_in_subdivision(iso_code_array)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -190,7 +192,7 @@ Requires `identity_data.birthdate` to be at least the required number of years a
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.age_gte(min_age)
 ```
 
@@ -208,7 +210,7 @@ result := newton.identity.kyc.age_gte(min_age)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -227,7 +229,7 @@ Requires `identity_data.expiration_date` to be after the current date (`referenc
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.not_expired()
 ```
 
@@ -239,7 +241,7 @@ result := newton.identity.kyc.not_expired()
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -258,7 +260,7 @@ Requires `identity_data.expiration_date` to be at least the required number of d
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.valid_for(min_days)
 ```
 
@@ -276,7 +278,7 @@ result := newton.identity.kyc.valid_for(min_days)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -295,7 +297,7 @@ Requires `identity_data.issue_date` to be at least the required number of days i
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.kyc.issued_since(min_days)
 ```
 
@@ -313,7 +315,7 @@ result := newton.identity.kyc.issued_since(min_days)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -334,7 +336,7 @@ Works across any identity domain. Returns the raw field value by name. Returns `
 
 **Signature:**
 
-```rego
+```text
 result := newton.identity.get(field_name)
 ```
 
@@ -352,7 +354,7 @@ result := newton.identity.get(field_name)
 
 **Example:**
 
-```rego
+```text
 package example
 
 import future.keywords.if
@@ -378,11 +380,11 @@ When a built-in function errors, the policy rule containing it evaluates to `und
 
 ## Next Steps
 
-<CardGroup cols={2}>
-  <Card icon="list-check" href="/developers/verified-credential/integration-guide" title="Integration Guide">
+<Cards>
+  <Card icon="list-check" to="/developers/verified-credential/integration-guide" title="Integration Guide">
     Step-by-step walkthrough for integrating Newton VC
   </Card>
-  <Card icon="code" href="/developers/verified-credential/reference" title="SDK & Contract Reference">
+  <Card icon="code" to="/developers/verified-credential/reference" title="SDK & Contract Reference">
     SDK methods and contract function signatures
   </Card>
-</CardGroup>
+</Cards>
