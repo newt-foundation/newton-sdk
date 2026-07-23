@@ -123,7 +123,7 @@ When your smart contract receives an attestation, you validate it using one of t
 | Method | Function | Trade-off |
 |--------|----------|-----------|
 | **Standard** | `_validateAttestation(attestation, proof)` | Uses PolicyClientRegistry lookup — more gas but automatically resolves contract configuration. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
-| **Direct** | `_validateAttestationDirect(attestation, proof)` | Bypasses registry — less gas but requires the contract to manage its own policy reference. See [Policy Client Guide](/developers/advanced/policy-client-guide). |
+| **Direct** | `_validateAttestationDirect(attestation, proof)` | Bypasses registry — less gas but requires the contract to manage its own policy reference. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
 
 ## Supported Chains
 
