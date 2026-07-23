@@ -16,8 +16,21 @@ checkable goals:
 - **Builds:** `cd site && pnpm build` exits 0 and emits a static site (`site/dist/`).
 - **Route parity:** all **96** current routes render at their **existing URLs**
   (e.g. `/developers/overview/about`, `/whitepaper/introduction`).
-- **No live Mintlify residue:** `grep -rniE "mintlify|docs\.json|mint\.json|\.mintignore" .`
-  (excluding `node_modules/`, `dist/`, `.git/`) returns **only** `CHANGELOG.md` history lines.
+- **No live Mintlify residue:** the scoped, executable gate below returns **empty**. It
+  searches only tracked files, and excludes the two immutable/allowed records
+  (`CHANGELOG.md` history) and this design/migration doc set (`docs/migrations/`), so a
+  clean repo yields zero hits and the gate is reproducible in CI:
+  ```bash
+  git grep -niE "mintlify|mint\.json|\.mintignore" -- \
+    ':(exclude)CHANGELOG.md' \
+    ':(exclude)docs/migrations/' \
+    ':(exclude)pnpm-lock.yaml'
+  # exits nonzero (no matches) = pass; any printed line = residue to clean
+  ```
+  (`docs.json` is intentionally omitted from the pattern — it is a generic filename;
+  the check that `site/docs.json` is gone is covered by the delete list in §10 and the
+  build itself. Searching for the literal string `docs.json` would false-positive on
+  this design doc and any Vocs config comments.)
 - **No Mintlify components remain:**
   `grep -rE "<(Card|CardGroup|Note|Tip|Info|Warning|Steps|Step|Tabs|Tab|Accordion|AccordionGroup|CodeGroup|Frame|Expandable)[ />]" site/src`
   returns empty.
@@ -246,6 +259,10 @@ Enumerated targets (all live/operational; history left factual per decision):
 **Delete:**
 - `site/docs.json`, `site/.mintlify/`, `site/.mintignore`, `site/agent.md`,
   `site/README.md` (empty), `scripts/check-docs-twoslash.sh`.
+- **Cutover-safety ordering:** the migration lands on a branch/PR; the `docs.json` delete
+  merges to `main` only after cutover Stage 3 (§12) confirms the Vocs site healthy, so
+  `main` can always redeploy Mintlify during the rollback window. All other scrub edits
+  can merge earlier — only the `site/docs.json` removal is gated on cutover.
 
 **Rewrite for Vocs:**
 - Root `CLAUDE.md` + `.claude/CLAUDE.md` — Documentation Site sections, Key Commands
@@ -286,23 +303,84 @@ matching neobank's proven set (§2.1).
 - **In-repo (this migration):** `site/vercel.json` =
   `{ "installCommand": "npx pnpm@10 install --frozen-lockfile" }`; `site/pnpm-lock.yaml`
   generated; `.gitignore` excludes `dist/`, `.vocs/`.
-- **Dashboard steps (user-only; provided as an exact checklist):**
-  1. Create a Vercel project from the repo; set **Root Directory = `site`**.
+
+**Staged cutover (user-only dashboard/DNS actions; provided as an exact runbook). The
+order is deliberate: the new site is proven healthy on Vercel-owned hosts BEFORE any DNS
+change, and Mintlify is disconnected LAST, only after a monitoring window passes.**
+
+- **Stage 0 — record current state (rollback baseline):** before touching anything,
+  capture the existing `docs.newton.xyz` DNS record(s) — type, value, and TTL —
+  (`dig +noall +answer docs.newton.xyz CNAME A`) and the current Mintlify configuration.
+  Note the record verbatim in the cutover ticket; this is the rollback target.
+- **Stage 1 — build & host preflight (no DNS change):**
+  1. Create the Vercel project from the repo; set **Root Directory = `site`**.
   2. Confirm framework auto-detects Vocs; build `vocs build`, output `dist`.
-  3. Point `docs.newton.xyz` DNS/domain at the Vercel project.
-  4. Disconnect the Mintlify GitHub App from the repo.
+  3. Validate against the **Vercel deployment URL** (`*.vercel.app`), not the production
+     domain: run the automated route/redirect parity harness (§13) against it. All 96
+     routes 2xx, all 18 redirects hit their exact destination, no broken assets.
+- **Stage 2 — mapped-domain preflight (low-TTL, reversible):**
+  4. Lower the `docs.newton.xyz` DNS TTL to 300s and wait out the old TTL, so a rollback
+     propagates fast.
+  5. Add `docs.newton.xyz` as a domain in the Vercel project and point DNS at Vercel.
+     Re-run the parity harness against `https://docs.newton.xyz` itself. Confirm TLS,
+     canonical `baseUrl`, GA4 firing, and OG tags.
+- **Stage 3 — monitor, then decommission:**
+  6. **Monitoring window (≥24h):** watch for 4xx/5xx and broken-link reports.
+     **Abort thresholds:** any 5xx on a top-level route, >2% of routes non-2xx, or a
+     broken primary-nav path → execute rollback.
+  7. Only after the window passes clean: **disconnect the Mintlify GitHub App** from the
+     repo and restore the production TTL.
+- **Rollback (any stage):** repoint `docs.newton.xyz` DNS to the Stage-0 recorded target
+  (Mintlify). Because the Mintlify GitHub App stays connected until Stage 3, the old site
+  remains live and DNS reversion is the only action needed. Do **not** delete `docs.json`
+  from `main` (§10) until Stage 3 completes — keep the scrub commit on a branch/PR that
+  merges only after cutover is confirmed, so `main` can always redeploy Mintlify if
+  rollback is needed after the source is otherwise migrated.
 
 ---
 
 ## 13. Verification Plan
 
-- `cd site && pnpm build` exits 0; static output present.
-- Route count = 96; spot-check representative URLs.
-- Deadlink check clean.
-- Component-residue grep (§1) empty; Mintlify-residue grep (§1) empty sans CHANGELOG.
-- `cd site && pnpm dev` — visual spot-check one page per component type
-  (callout, steps, code-group, details, card, tabs, frame/image) vs current docs.
-- Redirect table matches all 18 destinations.
+Verification is **automated and exhaustive**, not spot-check. A small script
+(`site/scripts/verify-parity.mjs`, run against a served production build) is the gate.
+
+**13.1 Expected-route manifest (source of truth = current site).** Before conversion,
+generate the canonical list of routes from today's Mintlify content:
+`find site -name '*.mdx'` → strip `.mdx`, map to URL paths (e.g.
+`developers/overview/about`). Also extract the **18 redirects** (source → destination →
+expected status) from `docs.json`. Commit both as `site/scripts/expected-routes.json`
+and `site/scripts/expected-redirects.json` — the frozen baseline the harness asserts
+against, so parity can't silently drift.
+
+**13.2 Build gate.** `cd site && pnpm build` exits 0; static output present in `dist/`.
+Vocs deadlink check passes. Twoslash (if any block uses it) passes.
+
+**13.3 Per-route parity (all 96, not a sample).** Serve the production build
+(`pnpm preview` or `npx serve dist`) and request **every** route in the manifest. For
+each, assert:
+- HTTP **2xx** (fail on any non-2xx or Vocs/Waku error page),
+- the rendered HTML contains a non-empty `<title>` / `<h1>` (catches broken-MDX pages
+  that "exist" but render an error),
+- every **local** asset the page references (`/images/…`, `/logo/…`, `src=/…`) resolves
+  2xx (catches assets missed in the `public/` move).
+Any failure fails the gate and prints the offending route + reason.
+
+**13.4 Per-redirect parity (all 18).** For each entry in `expected-redirects.json`,
+request the source and assert the response is a redirect to the **exact** destination
+with the expected status (internal via Vocs; the 2 external `blog.newton.xyz` ones via
+`vercel.json` — the external two are asserted against the Vercel preview URL in cutover
+Stage 1, since `pnpm preview` doesn't apply `vercel.json`). Include the `/` →
+`/developers/overview/about` home redirect and the `:path*` wildcard cases.
+
+**13.5 Residue & component gates.**
+- Mintlify-residue: the scoped `git grep` from §1 returns empty.
+- Component-residue: the `site/src` component grep from §1 returns empty.
+- Both wired into `docs:check` so they're reproducible in CI, not manual.
+
+**13.6 Visual spot-check (human, supplementary).** `cd site && pnpm dev` — eyeball one
+page per component type (callout, steps, code-group, details, card, tabs, frame/image)
+against current docs for the close-visual-match goal (§9). This is a design check on top
+of the automated correctness gates above, not a substitute for them.
 
 ---
 
