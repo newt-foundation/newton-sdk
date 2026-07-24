@@ -99,7 +99,8 @@ jobs:
       - name: Install docs site dependencies
         run: cd site && pnpm install --frozen-lockfile
 
-      # `vocs build` also runs the dead-link check (checkDeadlinks: true in vocs.config.ts),
-      # failing the build on any broken internal link.
+      # `vocs build` also runs the dead-link check. It is currently set to
+      # checkDeadlinks: 'warn' in vocs.config.ts (broken internal links are logged,
+      # not fatal); restoring the hard gate is tracked in NEWT-2065.
       - name: Build docs site
         run: pnpm docs:build
