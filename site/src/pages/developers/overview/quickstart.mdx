@@ -51,8 +51,7 @@ yarn add @newton-xyz/sdk viem
 Create `quickstart.ts` and paste:
 
 ```ts twoslash
-// @errors: 2345
-import { createWalletClient, http } from 'viem';
+import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia } from 'viem/chains';
 import {
@@ -64,8 +63,7 @@ const API_KEY = 'test-api-key';
 const RPC_URL = 'https://eth-sepolia.g.alchemy.com/v2/demo';
 
 // Public client — read-only operations (poll for task responses, read policy state)
-// @ts-ignore - Using createWalletClient as createPublicClient to avoid dead link
-const publicClient = createWalletClient({
+const publicClient = createPublicClient({
   chain: sepolia,
   transport: http(RPC_URL),
 }).extend(newtonPublicClientActions());

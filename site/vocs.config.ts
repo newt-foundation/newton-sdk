@@ -17,11 +17,13 @@ export default defineConfig({
   // the imported JSON, and @shikijs/types isn't a direct dep to import the type. Shiki validates
   // the grammar at runtime (rego highlights correctly), so an `as any` cast here is the pragmatic fit.
   codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' } as any] },
-  // Twoslash hover tooltips surface viem JSDoc links (valid on viem.sh, not ours). These are
-  // handled at the block level via `---cut---` to hide setup lines whose hover would otherwise
-  // produce false-positive dead links.
-  // Broad twoslash rollout for all TS examples tracked: https://linear.app/newton-xyz/issue/NEWT-2063
-  checkDeadlinks: true,
+  // Twoslash hover tooltips surface viem JSDoc links (valid on viem.sh, not ours). Viem's
+  // `createPublicClient` and `.extend()` JSDoc carry viem-site `/docs/*` links; Vocs 2.6.2 has no
+  // per-link exclude API, and even cutting the import above `---cut---` does not remove the
+  // return-type hover. We accept 'warn' mode to allow honest `createPublicClient` twoslash examples
+  // without breaking the build on viem's JSDoc dead links.
+  // TODO: restore hard internal-link gate when Vocs adds per-link exclude (track via Linear)
+  checkDeadlinks: 'warn',
   editLink: {
     link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
     text: 'Suggest changes to this page',

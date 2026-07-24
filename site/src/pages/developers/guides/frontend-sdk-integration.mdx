@@ -77,9 +77,8 @@ export const POLICY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POLICY_CONTRACT_A
 Create `src/lib/use-newton-client.ts`:
 
 ```tsx twoslash
-// @errors: 2345
 import { useMemo } from "react";
-import { createWalletClient, http, webSocket, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, webSocket, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { newtonWalletClientActions, newtonPublicClientActions } from "@newton-xyz/sdk";
@@ -97,8 +96,7 @@ export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
       transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
     }).extend(newtonWalletClientActions({ apiKey }));
 
-    // @ts-ignore - Using createWalletClient as createPublicClient to avoid dead link
-    const publicClient = createWalletClient({
+    const publicClient = createPublicClient({
       chain: sepolia,
       transport: http(SEPOLIA_ALCHEMY_URL),
     }).extend(newtonPublicClientActions());
