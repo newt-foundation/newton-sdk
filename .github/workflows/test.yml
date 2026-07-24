@@ -12,13 +12,14 @@ env:
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 jobs:
-  test:
+  sdk:
     runs-on: ubuntu-latest
-    name: Run style/security checks & tests
+    name: SDK style/security checks & tests
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # The published SDK supports Node >= 20 (package.json engines); validate on that floor.
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,7 +40,7 @@ jobs:
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
@@ -67,8 +68,39 @@ jobs:
       - name: Unit Tests
         run: pnpm test
 
-      - name: Verify docs code samples
-        run: pnpm docs:check
-
       - name: Audit Prod Dependencies
         run: pnpm audit --prod || exit 0
+
+  docs:
+    runs-on: ubuntu-latest
+    name: Docs site build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # The Vocs docs toolchain requires Node >= 22 (site/.nvmrc, site/package.json engines).
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install root dependencies
+        run: pnpm install
+
+      - name: Build SDK types (for docs twoslash)
+        run: pnpm build
+
+      - name: Install docs site dependencies
+        run: cd site && pnpm install --frozen-lockfile
+
+      # `vocs build` also runs the dead-link check. It is currently set to
+      # checkDeadlinks: 'warn' in vocs.config.ts (broken internal links are logged,
+      # not fatal); restoring the hard gate is tracked in NEWT-2065.
+      - name: Build docs site
+        run: pnpm docs:build

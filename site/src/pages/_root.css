@@ -1,0 +1,47 @@
+/*
+ * Newton Protocol Docs — Brand Parity Styles
+ * Extends Vocs defaults with Newton brand tokens.
+ *
+ * Design tokens:
+ *   Primary (ink):   #19191a
+ *   Light (paper):   #ffffff
+ *   Dark (charcoal): #303030
+ *
+ * Loaded automatically by Vocs from src/pages/_root.css.
+ */
+
+:root {
+  /* Newton brand tokens */
+  --newton-ink: #19191a;
+  --newton-paper: #ffffff;
+  --newton-charcoal: #303030;
+
+  /* Apply primary color to light mode */
+  --vocs-color-text: var(--newton-ink);
+}
+
+/* Dark mode: use color-scheme attribute selector (Vocs convention) */
+:root[style*='color-scheme:dark'],
+:root[style*='color-scheme: dark'] {
+  --vocs-color-text: var(--newton-paper);
+  --vocs-color-background: var(--newton-charcoal);
+}
+
+/*
+ * Responsive images (carried over from site/style.css).
+ * Ensures images in paragraphs fill available width.
+ */
+p img {
+  width: 100%;
+  height: auto;
+}
+
+/*
+ * Callout spacing tuning — minimal adjustment toward maple density.
+ * ponytail: Vocs callouts are close to maple by default; only tune if visibly off.
+ */
+
+/*
+ * Card/Steps component spacing — calibrated to match former theme density.
+ * ponytail: left minimal; escalate only where elements read visibly misaligned.
+ */

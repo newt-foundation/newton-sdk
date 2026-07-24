@@ -58,12 +58,12 @@ Follow-up work to track in Linear:
 Until those tickets are linked, treat this section as the source checklist for
 the protocol, SDK, and UX tracking items.
 
-## Mintlify docs-site follow-up
+## Docs site follow-up
 
 - Keep the canonical tutorial pack in `docs/zktls-twitter/` for repo-local development and troubleshooting.
-- Mirror the external-developer happy path in the Mintlify guide at `site/developers/guides/zktls-twitter.mdx`.
+- Mirror the external-developer happy path in the docs site guide at `site/src/pages/developers/guides/zktls-twitter.mdx`.
 - Add the guide to the Developers → Guides navigation so reviewers can preview it from the docs sidebar.
-- After the storage backend migrates from IPFS to gateway-owned Postgres, update both the repo tutorial and Mintlify guide together so CID/proof retrieval behavior stays consistent.
+- After the storage backend migrates from IPFS to gateway-owned Postgres, update both the repo tutorial and docs guide together so CID/proof retrieval behavior stays consistent.
 
 ## Repository map
 
