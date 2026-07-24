@@ -62,8 +62,8 @@
   {
     "file": "src/pages/developers/reference/error-reference.mdx",
     "openLine": 102,
-    "lang": "typescript",
-    "status": "exception: SDK bug - SDKError and SDKErrorCode not exported from @newton-xyz/sdk index (tracked: NEWT-2064)"
+    "lang": "ts twoslash",
+    "status": "tagged"
   },
   {
     "file": "src/pages/developers/reference/sdk-reference.mdx",

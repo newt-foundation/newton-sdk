@@ -99,9 +99,35 @@ Use `cast sig "ErrorName()"` to compute selectors for new errors.
 | `FAILED_TO_OPEN_POPUP` | Browser blocked or failed to open the Newton popup |
 | `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE` | Could not read native token balance from the chain |
 
-```typescript
-import { SDKError, SDKErrorCode } from '@newton-xyz/sdk';
+```ts twoslash
+import { createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { sepolia } from 'viem/chains';
+import {
+  newtonWalletClientActions,
+  SDKError,
+  SDKErrorCode,
+} from '@newton-xyz/sdk';
 
+const walletClient = createWalletClient({
+  account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
+  chain: sepolia,
+  transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
+}).extend(newtonWalletClientActions({ apiKey: 'test-api-key' }));
+
+const request = {
+  policyClient: '0x1234567890123456789012345678901234567890',
+  intent: {
+    from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',
+    value: '0x0',
+    data: '0x',
+    chainId: 11155111,
+    functionSignature: '0x62757900',
+  },
+  timeout: 30,
+} as const;
+// ---cut---
 try {
   await walletClient.evaluateIntentDirect(request);
 } catch (error) {

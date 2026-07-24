@@ -593,3 +593,5 @@ export {
   uploadIdentityEncrypted,
 }
 export { registerWebhook, unregisterWebhook }
+export { SDKError, MagicRPCError } from './sdk-exceptions'
+export { SDKErrorCode, RPCErrorCode } from './types/core/exception-types'

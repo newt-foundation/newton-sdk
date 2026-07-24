@@ -2722,7 +2722,7 @@ class MagicRPCError extends Error {
 :::
 
 :::note
-`SDKError`, `MagicRPCError`, and the error code enums are currently internal types. They are not exported from the package's public API. You can catch errors generically using `instanceof Error` and inspect the `message` property.
+`SDKError`, `MagicRPCError`, `SDKErrorCode`, and `RPCErrorCode` are exported from the package's public API, so you can narrow with `instanceof SDKError` / `instanceof MagicRPCError` and switch on the typed `code`. `SDKWarningCode` is not exported.
 :::
 
 ---
