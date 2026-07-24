@@ -1,3 +1,4 @@
+import type { LanguageRegistration } from '@shikijs/types'
 import { defineConfig } from 'vocs/config'
 // Rego (Open Policy Agent) has no Shiki-bundled grammar. Register the official OPA
 // TextMate grammar (Apache-2.0, vendored under syntaxes/) so ```rego blocks highlight.
@@ -13,8 +14,8 @@ export default defineConfig({
   titleTemplate: '%s · Newton',
   accentColor: 'light-dark(#19191a, #ffffff)',
   colorScheme: 'light dark', // light default (preserves the previous docs appearance)
-  // Vendored TextMate grammar is a valid LanguageRegistration but TS can't infer it structurally
-  codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' } as any] },
+  // Vendored TextMate grammar is a valid LanguageRegistration but TS can't infer it structurally from JSON
+  codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' } as unknown as LanguageRegistration] },
   checkDeadlinks: true, // fail the build on broken internal links (durable docs gate)
   editLink: {
     link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
