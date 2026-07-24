@@ -1,3 +1,15 @@
+# v1.1.0 (Fri Jul 24 2026)
+
+#### 🚀 Enhancement
+
+- docs: migrate documentation site from Mintlify to Vocs + Vercel [#179](https://github.com/newt-foundation/newton-sdk/pull/179) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v1.0.7 (Fri Jul 17 2026)
 
 #### 🐛 Bug Fix
