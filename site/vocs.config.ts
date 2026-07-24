@@ -10,11 +10,24 @@ export default defineConfig({
   baseUrl: 'https://docs.newton.xyz',
   logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
   iconUrl: '/favicon.svg',
-  accentColor: '#19191a',
+  titleTemplate: '%s · Newton',
+  accentColor: 'light-dark(#19191a, #ffffff)',
   colorScheme: 'light dark', // light default (preserves the previous docs appearance)
   codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' }] },
   checkDeadlinks: true, // fail the build on broken internal links (durable docs gate)
-  socials: [{ icon: 'x', link: 'https://x.com/newtfoundation' }],
+  editLink: {
+    link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
+    text: 'Suggest changes to this page',
+  },
+  search: {
+    boostDocument(documentId: string) {
+      return documentId.startsWith('/developers') ? 3 : 1
+    },
+  },
+  socials: [
+    { icon: 'github', link: 'https://github.com/newt-foundation/newton-sdk' },
+    { icon: 'x', link: 'https://x.com/newtfoundation' },
+  ],
   head: {
     meta: {
       googleSiteVerification: 'z93uJU02uM0Z9bdqWDxN2dV1HHAlsaqDy-LwCHYSuGA',
