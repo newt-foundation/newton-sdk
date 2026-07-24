@@ -90,6 +90,12 @@ jobs:
           version: 9
           run_install: false
 
+      - name: Install root dependencies
+        run: pnpm install
+
+      - name: Build SDK types (for docs twoslash)
+        run: pnpm build
+
       - name: Install docs site dependencies
         run: cd site && pnpm install --frozen-lockfile
 
