@@ -69,23 +69,37 @@ allow if {
 
 ### SDK Usage
 
-```typescript
-import { registerIdentityData, identityDomainHash, linkIdentityAsSignerAndUser } from '@newton-xyz/sdk'
+```ts twoslash
+import { createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { sepolia } from 'viem/chains'
+import { newtonWalletClientActions, registerIdentityData, identityDomainHash, linkIdentityAsSignerAndUser } from '@newton-xyz/sdk'
+// ---cut---
+async function registerAndLink() {
+  const client = createWalletClient({
+    account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
+    chain: sepolia,
+    transport: http(),
+  }).extend(newtonWalletClientActions({
+    apiKey: 'test-api-key',
+    policyContractAddress: '0x1234567890123456789012345678901234567890',
+  }))
 
-// Step 1: Upload is handled by the newton-identity popup (not the SDK)
-// Step 2: Register on-chain
-await client.registerIdentityData({
-  identityDomain: identityDomainHash('kyc'),
-  dataRefId: 'content-hash-from-upload',
-  gatewaySignature: '0x...',
-  deadline: BigInt(Math.floor(Date.now() / 1000) + 3600),
-})
+  // Step 1: Upload is handled by the newton-identity popup (not the SDK)
+  // Step 2: Register on-chain
+  await registerIdentityData(client, {
+    identityDomain: identityDomainHash('kyc'),
+    dataRefId: 'content-hash-from-upload',
+    gatewaySignature: '0x' + '0'.repeat(130) as `0x${string}`,
+    deadline: 1735689600n, // Unix timestamp as bigint
+  })
 
-// Step 3: Link to policy client
-await client.linkIdentityAsSignerAndUser({
-  policyClient: '0xYourPolicyClient',
-  identityDomains: [identityDomainHash('kyc')],
-})
+  // Step 3: Link to policy client
+  await linkIdentityAsSignerAndUser(client, {
+    policyClient: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+    identityDomains: [identityDomainHash('kyc')],
+  })
+}
 ```
 
 See [Verified Credentials](/developers/verified-credential/overview) for the full identity integration guide.
@@ -124,22 +138,24 @@ sequenceDiagram
 
 2. **Encrypt and upload** via the SDK:
 
-```typescript
+```ts twoslash
 import { uploadConfidentialData } from '@newton-xyz/sdk'
-
-const result = await uploadConfidentialData(
-  11155111, // chainId
-  'your-api-key',
-  {
-    provider: '0xYourProviderAddress',
-    domain: '0x6f389bcc...', // keccak256("newton.privacy.blacklist")
-    plaintext: {
-      addresses: ['0xBadActor1...', '0xBadActor2...'],
+// ---cut---
+async function upload() {
+  const result = await uploadConfidentialData(
+    11155111, // chainId
+    'your-api-key',
+    {
+      provider: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+      domain: '0x6f389bcc6254c2c2ecf54a9060af8b4c2ab49cd62cc796cc0e1000c43635b53a' as `0x${string}`, // keccak256("newton.privacy.blacklist")
+      plaintext: {
+        addresses: ['0x1111111111111111111111111111111111111111', '0x2222222222222222222222222222222222222222'],
+      },
+      chainId: 11155111,
     },
-    chainId: 11155111,
-  },
-)
-// result.data_ref_id → use this for publishData
+  )
+  // result.data_ref_id → use this for publishData
+}
 ```
 
 3. **Publish on-chain** by calling `ConfidentialDataRegistry.publishData(domain, dataRefId)`. Each call increments the version.
@@ -234,10 +250,12 @@ All three flows use the same HPKE encryption scheme:
 
 The gateway's HPKE public key is available via `newt_getPrivacyPublicKey` or through the SDK:
 
-```typescript
+```ts twoslash
 import { getPrivacyPublicKey } from '@newton-xyz/sdk'
-
-const { public_key } = await getPrivacyPublicKey(11155111, 'your-api-key')
+// ---cut---
+async function getKey() {
+  const { public_key } = await getPrivacyPublicKey(11155111, 'your-api-key')
+}
 ```
 
 Encryption is always client-side. The `SecureEnvelope` binds ciphertext to a specific `policy_client` and `chain_id` via AAD (additional authenticated data), preventing replay across different policy contexts.

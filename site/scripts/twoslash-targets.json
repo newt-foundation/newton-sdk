@@ -1,0 +1,86 @@
+[
+  {
+    "file": "src/pages/developers/advanced/encrypting-secrets.mdx",
+    "openLine": 38,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/resources/testing-debugging.mdx",
+    "openLine": 200,
+    "lang": "typescript",
+    "status": "exception: illustrative fragment with placeholder addresses and incomplete intent object; simulateTask not on PublicClient"
+  },
+  {
+    "file": "src/pages/developers/guides/chaining-data-oracles.mdx",
+    "openLine": 168,
+    "lang": "typescript [SDK]",
+    "status": "exception: illustrative example with placeholder addresses, process.env refs, and undefined regoSource variable"
+  },
+  {
+    "file": "src/pages/developers/guides/privacy-flows.mdx",
+    "openLine": 72,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/guides/privacy-flows.mdx",
+    "openLine": 141,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/guides/privacy-flows.mdx",
+    "openLine": 253,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/guides/secrets-in-oracles.mdx",
+    "openLine": 74,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/guides/frontend-sdk-integration.mdx",
+    "openLine": 79,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/overview/about.mdx",
+    "openLine": 46,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/overview/quickstart.mdx",
+    "openLine": 53,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/reference/error-reference.mdx",
+    "openLine": 102,
+    "lang": "typescript",
+    "status": "exception: SDK bug - SDKError and SDKErrorCode not exported from @newton-xyz/sdk index"
+  },
+  {
+    "file": "src/pages/developers/reference/sdk-reference.mdx",
+    "openLine": 79,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/reference/sdk-reference.mdx",
+    "openLine": 118,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  },
+  {
+    "file": "src/pages/developers/reference/sdk-reference.mdx",
+    "openLine": 1822,
+    "lang": "ts twoslash",
+    "status": "tagged"
+  }
+]

@@ -177,7 +177,6 @@ const client = createWalletClient({
   transport: http(),
 }).extend(newtonWalletClientActions({
   apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
 }))
 
 const result = await client.simulatePolicy({

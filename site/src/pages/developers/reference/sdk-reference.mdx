@@ -76,17 +76,17 @@ Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), *
 
 Extends a viem `PublicClient` with Newton Protocol read methods.
 
-```ts
+```ts twoslash
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonPublicClientActions } from '@newton-xyz/sdk';
 
 const publicClient = createPublicClient({
   chain: sepolia,        // or baseSepolia, base, mainnet
-  transport: http('<RPC_URL>'),
+  transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
 }).extend(
   newtonPublicClientActions({
-    policyContractAddress: '0x...', // optional
+    policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
   })
 );
 ```
@@ -115,18 +115,20 @@ function newtonPublicClientActions(
 
 Extends a viem `WalletClient` with Newton Protocol write methods.
 
-```ts
+```ts twoslash
 import { createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonWalletClientActions } from '@newton-xyz/sdk';
-
+// ---cut---
 const walletClient = createWalletClient({
+  account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
   chain: sepolia,        // or baseSepolia, base, mainnet
-  transport: http('<RPC_URL>'),
+  transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
 }).extend(
   newtonWalletClientActions({
-    apiKey: '<YOUR_API_KEY>',
-    policyContractAddress: '0x...', // optional
+    apiKey: 'test-api-key',
+    policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
   })
 );
 ```
@@ -1817,7 +1819,7 @@ identityDomainHash(domainName: string): Hex
 
 **Example:**
 
-```ts
+```ts twoslash
 import { identityDomainHash } from '@newton-xyz/sdk';
 
 const kycDomain = identityDomainHash('kyc');

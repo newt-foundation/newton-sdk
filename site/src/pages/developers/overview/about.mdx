@@ -43,23 +43,33 @@ Newton integrates with [most EVM-compatible networks](/developers/concepts/multi
 
 ## What it looks like
 
-```typescript
+```ts twoslash
 import { createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
 import { newtonWalletClientActions } from '@newton-xyz/sdk'
+// ---cut---
+async function simulate() {
+  const client = createWalletClient({
+    account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
+    chain: sepolia,
+    transport: http(),
+  }).extend(newtonWalletClientActions({ apiKey: 'test-api-key' }))
 
-const client = createWalletClient({
-  chain: sepolia,
-  transport: http(),
-}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }))
+  const sender = '0x0000000000000000000000000000000000000000' as `0x${string}`
+  const recipient = '0x0000000000000000000000000000000000000001' as `0x${string}`
+  const calldata = '0x' as `0x${string}`
+  const policyId = '0x' + '0'.repeat(64) as `0x${string}`
+  const policyAddress = '0x1234567890123456789012345678901234567890' as `0x${string}`
 
-// Simulate a policy evaluation against a transaction intent
-const result = await client.simulateTask({
-  intent: { from: sender, to: recipient, value: '0x0', data: calldata, chainId: 11155111, functionSignature: '0x' },
-  policyTaskData: { policyId, policyAddress, policy: '0x', policyData: [] },
-})
+  // Simulate a policy evaluation against a transaction intent
+  const result = await client.simulateTask({
+    intent: { from: sender, to: recipient, value: '0x0', data: calldata, chainId: 11155111, functionSignature: '0xa9059cbb' },
+    policyTaskData: { policyId, policyAddress, policy: '0x', policyData: [] },
+  })
 
-console.log(result.result?.allow) // true or false
+  console.log(result.result?.allow) // true or false
+}
 ```
 
 <Card title="Quickstart" icon="rocket" to="/developers/overview/quickstart">

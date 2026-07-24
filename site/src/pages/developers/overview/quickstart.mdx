@@ -50,16 +50,17 @@ yarn add @newton-xyz/sdk viem
 
 Create `quickstart.ts` and paste:
 
-```typescript
+```ts twoslash
 import { createPublicClient, createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia } from 'viem/chains';
 import {
   newtonPublicClientActions,
   newtonWalletClientActions,
 } from '@newton-xyz/sdk';
 
-const API_KEY = process.env.NEWTON_API_KEY!;
-const RPC_URL = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY';
+const API_KEY = 'test-api-key';
+const RPC_URL = 'https://eth-sepolia.g.alchemy.com/v2/demo';
 
 // Public client — read-only operations (poll for task responses, read policy state)
 const publicClient = createPublicClient({
@@ -69,6 +70,7 @@ const publicClient = createPublicClient({
 
 // Wallet client — write operations (submit tasks, run simulations)
 const walletClient = createWalletClient({
+  account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
   chain: sepolia,
   transport: http(RPC_URL),
 }).extend(
@@ -85,20 +87,19 @@ async function main() {
       from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',   // sender to check against sanctions list
       to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',     // PolicyClient contract on Sepolia
       value: '0x0',                                           // no ETH value
-      data: '0x28dca9f7...e42e3458...',                       // ABI-encoded function call (buy/transfer)
+      data: '0x28dca9f700000000000000000000000000000000000000000000000000000000e42e3458' as `0x${string}`,  // ABI-encoded function call (buy/transfer)
       chainId: 11155111,                                      // Sepolia
-      functionSignature: '0x627579...',                        // buy(address,uint256,uint32) encoded
+      functionSignature: '0x62757900' as `0x${string}`,       // buy(address,uint256,uint32) encoded
     },
     policyTaskData: {
       // Pre-deployed OFAC sanctions policy — you can use this for testing
-      policyId: '0x27b7c88f...eecd1626',
+      policyId: '0x27b7c88f00000000000000000000000000000000000000000000000000000000eecd1626' as `0x${string}`,
       policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',
       policy: '0x',
       policyData: [
         {
-          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d', // {"base_symbol":"BTC"}
+          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d' as `0x${string}`, // {"base_symbol":"BTC"}
           data: '0x',
-          attestation: '0x',
           policyDataAddress: '0x30E545603d6205B6887BAb0C1a630aa383d71e07', // sanctions list oracle
           expireBlock: 0,
         },

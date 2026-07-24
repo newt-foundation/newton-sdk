@@ -205,10 +205,7 @@ import { newtonPublicClientActions } from '@newton-xyz/sdk';
 const client = createPublicClient({
   chain: sepolia,
   transport: http(),
-}).extend(newtonPublicClientActions({
-  apiKey: process.env.NEWTON_API_KEY!,
-  gatewayUrl: 'https://gateway.testnet.newton.xyz/rpc',
-}));
+}).extend(newtonPublicClientActions());
 
 // Simulate first to debug
 const simulation = await client.simulateTask({
