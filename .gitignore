@@ -60,3 +60,4 @@ site/scripts/verify-parity.mjs
 site/scripts/expected-routes.json
 site/scripts/expected-redirects.json
 docs/migrations/
+docs/viem-vocs-reverse-engineering.md
