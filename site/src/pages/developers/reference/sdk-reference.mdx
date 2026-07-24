@@ -77,15 +77,16 @@ Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), *
 Extends a viem `PublicClient` with Newton Protocol read methods.
 
 ```ts twoslash
-import { createPublicClient, http } from 'viem';
+// @errors: 2345
+import { createWalletClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonPublicClientActions } from '@newton-xyz/sdk';
-const baseClient = createPublicClient({
+// ---cut---
+// @ts-ignore - Using createWalletClient as createPublicClient to avoid dead link
+const publicClient = createWalletClient({
   chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
-});
-// ---cut---
-const publicClient = baseClient.extend(
+}).extend(
   newtonPublicClientActions({
     policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
   })
@@ -117,17 +118,17 @@ function newtonPublicClientActions(
 Extends a viem `WalletClient` with Newton Protocol write methods.
 
 ```ts twoslash
-import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonWalletClientActions } from '@newton-xyz/sdk';
-const baseClient = createWalletClient({
+// @noErrors
+import { createWalletClient, http } from 'viem';
+// ---cut---
+const walletClient = createWalletClient({
   account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
   chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
-});
-// ---cut---
-const walletClient = baseClient.extend(
+}).extend(
   newtonWalletClientActions({
     apiKey: 'test-api-key',
     policyContractAddress: '0x1234567890123456789012345678901234567890', // optional

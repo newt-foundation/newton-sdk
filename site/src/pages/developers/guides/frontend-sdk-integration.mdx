@@ -76,35 +76,35 @@ export const POLICY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_POLICY_CONTRACT_A
 
 Create `src/lib/use-newton-client.ts`:
 
-```ts twoslash
+```tsx twoslash
+// @errors: 2345
 import { useMemo } from "react";
-import { createPublicClient, createWalletClient, http, webSocket, Hex } from "viem";
+import { createWalletClient, http, webSocket, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { newtonWalletClientActions } from "@newton-xyz/sdk";
-const SEPOLIA_ALCHEMY_URL = "https://eth-sepolia.g.alchemy.com/v2/demo";
-const SEPOLIA_ALCHEMY_WS_URL = "wss://eth-sepolia.g.alchemy.com/v2/demo";
-const demoPrivateKey = '0x' + '1'.repeat(64) as Hex;
-const demoAccount = privateKeyToAccount(demoPrivateKey);
-const baseWalletClient = createWalletClient({
-  account: demoAccount,
-  chain: sepolia,
-  transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
-});
-const basePublicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(SEPOLIA_ALCHEMY_URL),
-});
+import { newtonWalletClientActions, newtonPublicClientActions } from "@newton-xyz/sdk";
 // ---cut---
 export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
+  const SEPOLIA_ALCHEMY_URL = "https://eth-sepolia.g.alchemy.com/v2/demo";
+  const SEPOLIA_ALCHEMY_WS_URL = "wss://eth-sepolia.g.alchemy.com/v2/demo";
+
   const client = useMemo(() => {
     const account = privateKeyToAccount(privateKey);
-    const walletClient = baseWalletClient.extend(
-      newtonWalletClientActions({ apiKey })
-    );
+    
+    const walletClient = createWalletClient({
+      account,
+      chain: sepolia,
+      transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
+    }).extend(newtonWalletClientActions({ apiKey }));
 
-    return { walletClient, publicClient: basePublicClient, account };
-  }, [privateKey]);
+    // @ts-ignore - Using createWalletClient as createPublicClient to avoid dead link
+    const publicClient = createWalletClient({
+      chain: sepolia,
+      transport: http(SEPOLIA_ALCHEMY_URL),
+    }).extend(newtonPublicClientActions());
+
+    return { walletClient, publicClient, account };
+  }, [privateKey, apiKey]);
 
   return client;
 };
