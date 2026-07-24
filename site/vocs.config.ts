@@ -22,7 +22,7 @@ export default defineConfig({
   // per-link exclude API, and even cutting the import above `---cut---` does not remove the
   // return-type hover. We accept 'warn' mode to allow honest `createPublicClient` twoslash examples
   // without breaking the build on viem's JSDoc dead links.
-  // TODO: restore hard internal-link gate when Vocs adds per-link exclude (track via Linear)
+  // Restore hard internal-link gate tracked: https://linear.app/newton-xyz/issue/NEWT-2065
   checkDeadlinks: 'warn',
   editLink: {
     link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
