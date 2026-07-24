@@ -13,7 +13,8 @@ export default defineConfig({
   titleTemplate: '%s · Newton',
   accentColor: 'light-dark(#19191a, #ffffff)',
   colorScheme: 'light dark', // light default (preserves the previous docs appearance)
-  codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' }] },
+  // Vendored TextMate grammar is a valid LanguageRegistration but TS can't infer it structurally
+  codeHighlight: { langs: [{ ...regoGrammar, name: 'rego', scopeName: 'source.rego' } as any] },
   checkDeadlinks: true, // fail the build on broken internal links (durable docs gate)
   editLink: {
     link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
