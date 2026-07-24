@@ -84,22 +84,26 @@ import { sepolia } from "viem/chains";
 import { newtonWalletClientActions } from "@newton-xyz/sdk";
 const SEPOLIA_ALCHEMY_URL = "https://eth-sepolia.g.alchemy.com/v2/demo";
 const SEPOLIA_ALCHEMY_WS_URL = "wss://eth-sepolia.g.alchemy.com/v2/demo";
+const demoPrivateKey = '0x' + '1'.repeat(64) as Hex;
+const demoAccount = privateKeyToAccount(demoPrivateKey);
+const baseWalletClient = createWalletClient({
+  account: demoAccount,
+  chain: sepolia,
+  transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
+});
+const basePublicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(SEPOLIA_ALCHEMY_URL),
+});
 // ---cut---
 export const useNewtonClient = (privateKey: Hex, apiKey: string) => {
   const client = useMemo(() => {
     const account = privateKeyToAccount(privateKey);
-    const walletClient = createWalletClient({
-      account,
-      chain: sepolia,
-      transport: webSocket(SEPOLIA_ALCHEMY_WS_URL),
-    }).extend(newtonWalletClientActions({ apiKey }));
+    const walletClient = baseWalletClient.extend(
+      newtonWalletClientActions({ apiKey })
+    );
 
-    const publicClient = createPublicClient({
-      chain: sepolia,
-      transport: http(SEPOLIA_ALCHEMY_URL),
-    });
-
-    return { walletClient, publicClient, account };
+    return { walletClient, publicClient: basePublicClient, account };
   }, [privateKey]);
 
   return client;

@@ -80,11 +80,12 @@ Extends a viem `PublicClient` with Newton Protocol read methods.
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonPublicClientActions } from '@newton-xyz/sdk';
-
-const publicClient = createPublicClient({
+const baseClient = createPublicClient({
   chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
-}).extend(
+});
+// ---cut---
+const publicClient = baseClient.extend(
   newtonPublicClientActions({
     policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
   })
@@ -120,12 +121,13 @@ import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { newtonWalletClientActions } from '@newton-xyz/sdk';
-// ---cut---
-const walletClient = createWalletClient({
+const baseClient = createWalletClient({
   account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
   chain: sepolia,        // or baseSepolia, base, mainnet
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
-}).extend(
+});
+// ---cut---
+const walletClient = baseClient.extend(
   newtonWalletClientActions({
     apiKey: 'test-api-key',
     policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
