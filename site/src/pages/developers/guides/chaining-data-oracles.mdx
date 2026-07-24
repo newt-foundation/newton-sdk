@@ -12,9 +12,7 @@ showAskAi: false
 import { Card,Cards } from 'vocs'
 
 
-# Chaining Multiple Data Oracles
-
-Compose more than one PolicyData oracle under a single Newton policy. How outputs are namespaced and merged, how to write Rego that reads two oracles, and how to simulate a multi-oracle policy end-to-end.
+# Chaining Multiple Data Oracles [Compose more than one PolicyData oracle under a single Newton policy. How outputs are namespaced and merged, how to write Rego that reads two oracles, and how to simulate a multi-oracle policy end-to-end.]
 
 A single Newton policy can read from **more than one PolicyData oracle**. This lets one policy gate an action on several independent signals at once — for example, vault risk *and* sanctions screening *and* oracle health — while still resolving to a single allow/deny decision and a single attestation.
 
