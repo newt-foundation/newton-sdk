@@ -20,6 +20,7 @@ export default defineConfig({
   // Twoslash hover tooltips surface viem JSDoc links (valid on viem.sh, not ours). These are
   // handled at the block level via `---cut---` to hide setup lines whose hover would otherwise
   // produce false-positive dead links.
+  // Broad twoslash rollout for all TS examples tracked: https://linear.app/newton-xyz/issue/NEWT-2063
   checkDeadlinks: true,
   editLink: {
     link: 'https://github.com/newt-foundation/newton-sdk/edit/main/site/src/pages/:path',
