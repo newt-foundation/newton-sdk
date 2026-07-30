@@ -1,123 +1,90 @@
 ---
 title: "SDK Concepts"
-description: "How Newton VaultKit models Shield clients, policy packs, vendor modules, intents, and generic calls."
+description: "How VaultKit 2.1 models policies, resolved modules, vendor extensions, intents, and verification."
 keywords:
   - vaultkit concepts
-  - shield client
-  - policy packs
+  - policy draft
+  - resolved policy
   - vendor modules
-  - intent
 showAskAi: false
 ---
 
-# SDK Concepts [How Newton VaultKit models Shield clients, policy packs, vendor modules, intents, and generic calls.]
+# SDK Concepts [How VaultKit 2.1 models policies, resolved modules, vendor extensions, intents, and verification.]
 
-This page defines the SDK pieces that appear across VaultKit integrations.
+## Policy Inputs and Resolved Policies
 
-## Shield Client
+`createShield(...)` accepts either a `PolicyDraft` created with `definePolicy({ chainId, env }).with(...)` or a `BarePolicy` created with `policyFromAddress(...)`.
 
-`createShield(...)` returns a Shield client for one curator, one vault, one chain, and one policy pack. The client either attaches to a compatible existing Shield clone or deploys a new deterministic clone through `ShieldFactory`.
+After onchain resolution, both become a `ResolvedPolicy` exposed as `client.policy`. It contains the deployed address, chain, environment, optional params codec, and `modules`.
 
-The Shield client exposes:
+## Policy Packs and Oracles
 
-- `policyClientAddress`, the Shield clone address.
-- `pack`, the policy pack or composite pack used for evaluation.
-- `setParams(...)`, for writing policy params onchain.
-- `uploadSecrets(...)`, for encrypting policy secrets and storing them with Newton Gateway.
-- `sendCall(...)`, for generic policy-gated calls.
-- `extend(...)`, for attaching typed vendor overlays such as `shield.morpho.*`.
+A policy pack is a typed TypeScript wrapper for one policy-data oracle. It provides schemas, deployment records, `prepareQuery(...)`, and metadata. Published `@newton-xyz/policy-pack-*` packages and locally authored `defineOracle(...)` values share this interface.
 
-## Intent
+The SDK packages do not contain the oracle's Rego or WASM. Those artifacts are built and deployed separately.
 
-An `Intent` is the exact call the curator wants to execute:
+## Params, Secrets, and `wasmArgs`
 
-```solidity
-struct Intent {
-    address from;
-    address to;
-    uint256 value;
-    bytes data;
-    uint256 chainId;
-    bytes functionSignature;
-}
-```
+- Params are curator-controlled configuration encoded into the onchain policy manifest.
+- Secrets are encrypted locally and uploaded per oracle.
+- `wasmArgs` are per-call evaluation inputs produced by each oracle's `prepareQuery(...)`.
 
-Every field is bound into the attestation. Operators do not partially approve a call, rewrite calldata, or approve a selector independently from its arguments.
+Callers pass typed overrides under `prepareQueryOptions.<shortId>`. The policy pack, not the vendor module, owns the resulting `wasmArgs`.
 
-## `wasmArgs`
-
-`wasmArgs` are pack-specific inputs passed to the policy WASM during evaluation. They can include vault addresses, asset symbols, market identifiers, freshness snapshots, or external-data query options.
-
-The SDK gets these values from policy packs. For composite packs, each module can receive its own `prepareQueryOptions` keyed by the pack id:
-
-```typescript
-await shield.sendCall({
-  to: vaultAddress,
-  data,
-  functionSignature: 'someManagerAction(uint256)',
-  prepareQueryOptions: {
-    redstone: {
-      symbol: 'USDC',
-      rpcUrl: 'https://base.example',
-      onchainOracle: {
-        address: '0xOracleAddress',
-        selector: 'latestAnswer()',
-      },
-    },
-  },
-})
-```
-
-## Policy Packs
-
-A policy pack is a typed wrapper around a Newton policy template. A pack usually provides:
-
-- A `zod` schema for params and secrets.
-- An encoder that maps params to `PolicyConfig.policyParams`.
-- A `prepareQuery(...)` helper for producing `wasmArgs`.
-- Helper functions for reading or verifying onchain policy data.
-
-Open-source packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). VaultKit supports composite policies so a single Shield can enforce several modules in one attestation. See [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs) for the onchain manifest envelope.
-
-## Vendor Modules
-
-Typed vendor modules attach to the `createShield(...)` client with `.extend(...)`. They produce calldata through the vendor's own SDK, then route through the same attestation and Shield execution path as `sendCall(...)`.
+## Vendor Modules and `.extend(...)`
 
 ```typescript
 import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const morphoShield = shield.extend(morphoActions)
-
-await morphoShield.morpho.reallocate(vaultAddress, allocations)
+const client = (await createShield(config)).extend(morphoActions)
+await client.morpho.reallocate(vault, allocations)
 ```
 
-Use typed vendor modules when they exist. Today Morpho exposes manager and allocator actions under `shield.morpho.*`.
+| Import | Namespace | Scope |
+| --- | --- | --- |
+| `vendors/morpho` | `client.morpho.*` | MetaMorpho curator and allocator actions |
+| `vendors/morpho-blue` | `client.morphoBlue.*` | Morpho Blue position operations for managed sleeves |
+| `vendors/euler` | `client.euler.*` | Euler Earn manager and allocator actions |
+| `vendors/euler-vault` | `client.eulerVault.*` | EVault governor actions |
+| `vendors/superform` | `client.superform.*` | SuperVault strategy-manager actions and typed hooks |
+
+`euler` and `eulerVault` are distinct APIs. Likewise, `morpho` targets MetaMorpho aggregation vaults while `morphoBlue` targets the Morpho Blue singleton.
 
 ## Generic Calls
 
-Use `sendCall(...)` when a typed vendor module does not exist yet.
+`sendCall(...)` is the escape hatch for an unwrapped action:
 
 ```typescript
-await shield.sendCall({
-  to: vaultAddress,
+await client.sendCall({
+  to,
   data,
-  functionSignature: 'reallocate((bytes32,uint256)[])',
+  value,
+  functionSignature: 'someManagerAction(uint256)',
+  prepareQueryOptions,
 })
 ```
 
-With `sendCall`, your integration owns intent integrity. Encode calldata carefully, pass the exact human-readable `functionSignature`, and provide the policy inputs required by the selected pack.
+The integration owns calldata integrity when using this method.
 
-## Standard and Direct Execution
+## Intent
 
-VaultKit can use two onchain execution paths:
+An `Intent` binds the caller, target, value, calldata, chain, and human-readable function signature. Operators evaluate that exact action; the SDK rejects task and response data that do not match.
 
-| Mode | How it works | Trade-off |
-| --- | --- | --- |
-| Standard | Waits for the aggregator to commit the operator quorum response, then calls `Shield.execute(attestation)`. | Lower gas, more latency. |
-| Direct | Submits the raw task response and BLS signature data to `Shield.executeDirect(...)`. | Higher gas, less aggregator wait. |
+## Verification Ladder
 
-Both modes enforce the same intent, policy, chain, expiration, and replay invariants. See [Attestation Flow](/developers/vaults/protocol/attestation-flow).
+Attachment verification is monotonic:
+
+1. Policy address
+2. Oracle set and WASM identities
+3. Parameter decoding
+4. Canonical byte equality against `expectedParams`
+
+`client.verification` is a snapshot. Call `client.reverify()` after configuration changes. A bare policy with no modules can satisfy address and codec checks but does not prove that an oracle set exists.
+
+## Blocked-Intent Assertions
+
+`assertIntentBlocked(...)` expects a policy denial and confirms through `eth_call` that the denied attestation cannot execute. It is a negative assertion for integration tests and monitoring, not a transaction.
 
 ## Browser Safety
 
-The SDK core is browser-safe and avoids `node:*` imports. Vendor modules and policy packs may inherit requirements from the vendor SDKs or data clients they wrap.
+VaultKit core avoids `node:*` imports. A vendor SDK or custom oracle helper may introduce its own runtime requirements; check those dependencies before bundling for the browser.

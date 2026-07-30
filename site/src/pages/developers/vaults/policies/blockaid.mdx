@@ -28,4 +28,4 @@ The Blockaid policy pack screens transaction or address risk before a manager ac
 
 ## Usage
 
-Install the pack package, include its module in `defineComposite(...)`, upload the API key with `shield.uploadSecrets(...)`, and pass any per-call inputs the pack's `prepareQuery` requires under `prepareQueryOptions.blockaid`.
+Install the pack package, add it with `definePolicy(...).with(blockaid)`, upload the API key with `client.uploadSecrets(...)`, and pass any per-call inputs its `prepareQuery` requires under `prepareQueryOptions.blockaid`.

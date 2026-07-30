@@ -23,7 +23,7 @@ newton-cli regorus eval \
   "data.policy.allow"
 ```
 
-This evaluates your Rego policy locally with full support for Newton crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`). Use `--non-strict` for OPA-compatible evaluation.
+This evaluates your Rego v1 policy locally with Newton crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`). Newton's Regorus 0.9.0 fork implements an OPA v1.2.0-compatible subset, not every OPA built-in. Use `--non-strict` for OPA-style non-strict evaluation; it does not enable unavailable built-ins.
 
 For writing Rego unit tests with `opa test`, see [Testing Policies & Oracles](/developers/guides/testing-policies).
 

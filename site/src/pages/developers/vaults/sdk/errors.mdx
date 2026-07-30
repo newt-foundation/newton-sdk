@@ -1,115 +1,131 @@
 ---
 title: "Errors"
-description: "Newton VaultKit SDK errors and retry guidance."
+description: "VaultKit 2.1 error classes, stable codes, diagnostics, and retry guidance."
 keywords:
   - vaultkit errors
+  - rpc read error
   - policy denied
-  - attestation timeout
-  - shield execution
 showAskAi: false
 ---
 
-# Errors [Newton VaultKit SDK errors and retry guidance.]
+# Errors [VaultKit 2.1 error classes, stable codes, diagnostics, and retry guidance.]
 
-VaultKit errors share a common base class and stable error code. Catch the base class for unified logging, or a subclass when retry behavior matters. `NewtonShieldError` remains as a compatibility alias, but new code should import `ShieldError`.
+Every SDK error extends `ShieldError` and carries a stable `code`. `NewtonShieldError` is retained as a deprecated alias.
 
 ```typescript
-class ShieldError extends Error {
-  readonly code: string
-  readonly cause?: unknown
+import { isShieldError, ShieldError } from '@newton-xyz/vaultkit'
+
+try {
+  await operation()
+} catch (error) {
+  if (isShieldError(error)) {
+    console.error(error.code, error.message, error.cause)
+  }
 }
 ```
 
 ## Error Classes
 
-| Error | When it occurs | Retry safe? |
+| Class | Code | Retry guidance |
 | --- | --- | --- |
-| `PolicyDeniedError` | Newton operators evaluated the policy and denied the intent. | No. Rebuild the action or accept the denial. |
-| `NewtonTaskEvaluationError` | `newt_createTask` failed or returned a malformed or negative evaluation result. Check the gateway result's `operator_errors[]` before retrying. | Depends. A `retryable: false` operator error is deterministic. |
-| `AttestationTimeoutError` | The gateway did not return attestation data before the SDK timeout. | Yes, with a fresh task. |
-| `GatewayError` | A gateway transport or envelope failure occurred. | Usually yes, with backoff. |
-| `GatewayHttpError` | Gateway returned a non-success HTTP response such as `401` or a surviving `5xx`. | Depends. Retry `5xx`; fix auth or request issues for `4xx`. |
-| `GatewayRpcError` | Gateway returned a JSON-RPC `error`. | Depends on the RPC code. |
-| `GatewayTimeoutError` | A gateway request timed out before a response arrived. | Yes, with backoff. |
-| `ParamMismatchError` | An existing Shield clone has policy params that do not match the expected params. | No. Reconcile configuration manually. |
-| `PolicyMismatchError` | An existing Shield clone is bound to a different policy than the selected pack expects. | No. Verify the clone or deploy a new version slot. |
-| `ShieldExecutionError` | `Shield.execute`, `executeDirect`, or `executeBypass` reverted. | Depends on the decoded contract error. |
-| `InvalidConfigurationError` | Caller configuration is invalid before network or chain calls begin. | No. |
-| `IntentConfigurationError` | Intent submission parameters are malformed. | No. |
-| `IntentMismatchError` | Direct execution saw a task intent that differs from the task-response intent. | No. Rebuild and re-attest. |
-| `ConcurrentIntentError` | Another gated call is already in flight for the same clone. | Yes, after the prior call settles. |
-| `ExtendCollisionError` | A vendor overlay would overwrite an existing client member. | No. |
-| `TransactionFailedError` | A transaction failed outside the Shield-specific execution decode path. | Depends on `cause`. |
-| `ShieldDeploymentNotFoundError` | A chain and environment are known, but the SDK has no Shield deployment recorded. | Maybe. Try a different environment or wait for deployment. |
-| `UnsupportedChainError` | The wallet client chain is not supported by VaultKit. | No. |
+| `PolicyDeniedError` | `policy_denied` | Do not retry unchanged input. Rebuild against current state or accept the denial. |
+| `PolicyNotDeniedError` | `policy_not_denied` | `assertIntentBlocked(...)` received an allowed intent; supply a genuinely noncompliant intent. |
+| `NotApprovedDelegateError` | `not_approved_delegate` | Authorize the wallet or use an approved wallet. |
+| `NewtonTaskEvaluationError` | `newton_task_evaluation_failed` | Inspect `operator_errors[]`; retry only transient operator failures. |
+| `AttestationTimeoutError` | `attestation_timeout` | Retry with a fresh task after backoff. |
+| `GatewayError` | `gateway_error` | Transport umbrella; inspect the subtype and status. |
+| `GatewayHttpError` | `gateway_http_error` | Retry 5xx; fix authentication or request errors for 4xx. |
+| `GatewayRpcError` | `gateway_rpc_error` | Depends on the JSON-RPC code. |
+| `GatewayTimeoutError` | `gateway_timeout` | Retry with backoff. |
+| `RpcReadError` | `rpc_read_error` | Retry against a healthier RPC endpoint. This class is emitted only for reads proven to have failed for a transport reason. |
+| `PolicyMismatchError` | `policy_mismatch` | Reconcile the expected policy, module set, CIDs, or params. |
+| `ParamMismatchError` | `param_mismatch` | Reconcile the expected and stored params. |
+| `InvalidConfigurationError` | `invalid_configuration` | Fix the caller configuration. |
+| `ExistingCloneVersionError` | `existing_clone_version` | Choose the intended existing version or a genuinely new version. |
+| `ShieldDeploymentNotFoundError` | `shield_deployment_not_found` | The chain is supported but that environment has no recorded deployment. |
+| `UnsupportedChainError` | `unsupported_chain` | Select a supported chain. |
+| `ConcurrentIntentError` | `concurrent_intent` | Wait for the in-flight call; serialize calls per client. |
+| `ExtendCollisionError` | `extend_collision` | Remove or rename the colliding extension. |
+| `IntentConfigurationError` | `intent_configuration` | Fix malformed intent inputs. |
+| `IntentMismatchError` | `intent_mismatch` | Rebuild and re-evaluate; never submit mismatched task data. |
+| `TransactionFailedError` | `transaction_failed` | Inspect `cause`; retry only if the underlying failure is transient. |
+| `ShieldExecutionError` | `shield_execution` | Inspect the decoded revert before deciding. |
 
-## Decoded Contract Errors
+## RPC Reads: Transport vs Terminal
 
-When a Shield transaction reverts, the SDK decodes Shield custom errors and exposes them on `ShieldExecutionError.decoded`:
+VaultKit classifies chain-read failures before exposing them. Proven network, timeout, socket, HTTP, or transient JSON-RPC failures become `RpcReadError`. Contract reverts, zero data, decode failures, and configuration mismatches remain terminal errors such as `InvalidConfigurationError` or `PolicyMismatchError`.
 
 ```typescript
-type DecodedContractError = {
-  errorName: string
-  args: readonly unknown[]
-  rawData: `0x${string}`
+try {
+  await createShield(config)
+} catch (error) {
+  if (error instanceof RpcReadError) {
+    console.error(`Transient read failed: ${error.read}`)
+    // Retry against a healthy endpoint with backoff.
+  }
 }
 ```
 
-Common onchain causes include `InvalidAttestation`, `IntentMismatch`, `NotApprovedDelegate`, `IntentExecutionFailed`, `BypassNotReady`, `BypassUnknown`, `BypassAlreadyQueued`, `BypassDelayBelowMinimum`, and target vault reverts.
+A chainless `publicClient` is probed with `getChainId()`. A terminal chain mismatch is not safe to retry.
 
-## Failed Task Diagnostics
+## Failed Evaluation Diagnostics
 
-`NewtonTaskEvaluationError.message` carries the gateway's top-level summary, which can be less actionable than the operator-level detail. Always inspect the raw gateway result's `operator_errors[]` before deciding a failure is transient.
-
-For example, a top-level "Quorum not reached" summary can still include a deterministic operator error such as:
+The top-level task summary can say that quorum was not reached even when operators returned deterministic policy failures. Inspect the raw gateway result's `operator_errors[]` before retrying:
 
 ```json
 {
-  "message": "Policy evaluation failed: Failed to validate params schema: Missing required property 'vaultsfyi' at ''",
-  "retryable": false
+  "error_code": -32002,
+  "message": "Policy evaluation failed: params schema validation failed",
+  "operator_address": "0x...",
+  "retryable": false,
+  "timestamp": "2026-07-01T00:00:00Z"
 }
 ```
 
-In that case, retrying will not help. The fix is to align the onchain composite params schema with the manifest envelope `{ "_manifest", "modules", "params" }` and nest pack params under `params.<short-id>`.
+`retryable: false` usually indicates invalid params, missing secrets, schema mismatch, or deterministic oracle evaluation. Repeating the same request will not repair it.
+
+## Blocked-Intent Errors
+
+`assertIntentBlocked(...)` distinguishes three important outcomes:
+
+- A confirmed `InvalidAttestation` simulation returns `{ blocked: true, taskId, reason }`.
+- An allowed action throws `PolicyNotDeniedError`.
+- An unauthorized wallet throws `NotApprovedDelegateError` before the policy-block assertion, so an authorization failure is never mislabeled as policy enforcement.
+
+For raw simulation tooling, `decodeShieldRevertName(error)` returns the decoded custom-error name when available.
 
 ## Retry Pattern
 
 ```typescript
 import {
   AttestationTimeoutError,
-  GatewayError,
-  ShieldError,
+  GatewayTimeoutError,
+  RpcReadError,
 } from '@newton-xyz/vaultkit'
 
-async function retryable<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+async function retryable<T>(operation: () => Promise<T>, attempts = 3) {
   let lastError: unknown
 
-  for (let i = 0; i < attempts; i++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
-      return await fn()
+      return await operation()
     } catch (error) {
-      if (error instanceof AttestationTimeoutError || error instanceof GatewayError) {
-        lastError = error
-        await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** i))
-        continue
-      }
+      const canRetry =
+        error instanceof AttestationTimeoutError ||
+        error instanceof GatewayTimeoutError ||
+        error instanceof RpcReadError
 
-      throw error
+      if (!canRetry) throw error
+
+      lastError = error
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1_000 * 2 ** attempt),
+      )
     }
   }
 
   throw lastError
 }
-
-try {
-  await retryable(() => shield.sendCall(args))
-} catch (error) {
-  if (error instanceof ShieldError) {
-    console.error({ code: error.code, message: error.message, cause: error.cause })
-  }
-
-  throw error
-}
 ```
 
-Log `code`, `message`, and `cause` together. The code is stable enough for alerts; the cause is what engineers need for diagnosis.
+Always log `code`, `message`, and `cause`. For decoded execution failures, also log the error name and arguments.

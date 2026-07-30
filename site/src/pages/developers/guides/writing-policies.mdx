@@ -19,6 +19,10 @@ import { Card } from 'vocs'
 
 A Newton policy is a Rego program that evaluates whether an Intent should be approved. Policies reference data from two sources: configuration parameters (`data.params`) and runtime data from WASM oracles (`data.wasm`).
 
+:::info
+Newton supports **Rego v1 syntax** through its fork of **Regorus 0.9.0**. The runtime is an **OPA v1.2.0-compatible subset plus Newton-specific extensions**, not a complete implementation of every OPA built-in. Review the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide#language-and-engine-compatibility) before porting an existing OPA policy.
+:::
+
 ## What Makes Up a Policy
 
 Every policy deployment requires these files:

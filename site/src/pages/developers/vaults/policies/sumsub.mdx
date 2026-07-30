@@ -31,4 +31,4 @@ Both values are required because Sumsub requests are HMAC-signed.
 
 ## Usage
 
-Install the pack package, include its module in `defineComposite(...)`, upload both secrets with `shield.uploadSecrets(...)`, and pass any per-call verification input the pack's `prepareQuery` requires under `prepareQueryOptions.sumsub`.
+Install the pack package, add it with `definePolicy(...).with(sumsub)`, upload both secrets with `client.uploadSecrets(...)`, and pass any per-call verification input its `prepareQuery` requires under `prepareQueryOptions.sumsub`.

@@ -28,4 +28,4 @@ The Persona policy pack lets a composite policy include identity or verification
 
 ## Usage
 
-Install the pack package, include its module in `defineComposite(...)`, upload the API key with `shield.uploadSecrets(...)`, and pass any per-call identity input the pack's `prepareQuery` requires under `prepareQueryOptions.persona`.
+Install the pack package, add it with `definePolicy(...).with(persona)`, upload the API key with `client.uploadSecrets(...)`, and pass any per-call identity input its `prepareQuery` requires under `prepareQueryOptions.persona`.

@@ -10,7 +10,7 @@ showAskAi: false
 
 ### Rego Policy Language
 
-Newton's policy engine is built on Newton Rego, an extended version of the official Rego language from the Open Policy Agent (OPA) project — an enterprise-grade, battle-tested, open-source policy infrastructure widely adopted for Kubernetes admission control, API gateway authorization, and CI/CD pipeline policies. Newton extends the base Rego engine with privacy-preserving cryptographic operations and extensible cryptographic primitives for cross-chain signature verification and hash computation, while preserving full compatibility with the existing OPA ecosystem, tooling, and policy libraries.
+Newton's policy engine supports **Rego v1 syntax** through Newton's fork of **Regorus 0.9.0**. Its compatibility target is an **OPA v1.2.0-compatible subset plus Newton-specific extensions**. Newton extends the engine with privacy-preserving operations and cryptographic primitives for cross-chain signature verification and hash computation, but it does not implement every OPA built-in. Existing OPA policies and libraries must be checked for unsupported standard crypto/JWT, GraphQL, JSON Patch, network/CIDR/DNS, AWS provider, metadata, and module-parsing functions before use.
 
 Rego policies are pure functions: given the same input data and policy rules, evaluation always produces the same result. This determinism is essential for Newton's security model -- it enables challengers to independently verify any evaluation and prove correctness via zero-knowledge proofs. Policies are content-addressed on IPFS via CID, ensuring all operators fetch and evaluate the exact same rule set.
 

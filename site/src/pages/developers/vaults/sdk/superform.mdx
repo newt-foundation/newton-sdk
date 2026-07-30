@@ -1,0 +1,98 @@
+---
+title: "Superform"
+description: "Gate Superform SuperVault strategy-manager actions and build typed hook bundles with VaultKit."
+keywords:
+  - superform
+  - supervault
+  - executeHooks
+  - vaultkit
+showAskAi: false
+---
+
+# Superform [Gate Superform SuperVault strategy-manager actions and build typed hook bundles with VaultKit.]
+
+The Superform module targets the `SuperVaultStrategy` manager surface. It does not wrap depositor `deposit`, `mint`, `withdraw`, `redeem`, or request flows.
+
+## Extend the Client
+
+```typescript
+import { superformActions } from '@newton-xyz/vaultkit/vendors/superform'
+
+const client = (await createShield(config)).extend(superformActions)
+```
+
+Superform does not publish a calldata-builder SDK for this surface, so VaultKit maintains typed encoders and checks their selectors against the strategy ABI.
+
+## Typed Hook Execution
+
+```typescript
+await client.superform.executeHooks(
+  strategy,
+  [
+    {
+      kind: 'approveDeposit',
+      hook: approveAndDeposit4626Hook,
+      yieldSourceOracleId: '0x...',
+      yieldSource: sleeveVault,
+      token: sleeveAsset,
+      amount: 1_000_000n,
+      usePrevHookAmount: false,
+      expectedAssetsOrSharesOut: 990_000n,
+      globalProof,
+      strategyProof,
+    },
+  ],
+  0n,
+  {
+    prepareQueryOptions: {
+      vaultsfyi: { vault: sleeveVault },
+    },
+  },
+)
+```
+
+The `approveDeposit` variant builds the allowance and ERC-4626 deposit fields together. Use it when the strategy does not already have a standing allowance.
+
+Typed hook kinds are:
+
+- `swap`
+- `deposit`
+- `approveDeposit`
+- `redeem4626`
+
+`executeHooksRaw(...)` accepts prebuilt bytes for hooks not yet modeled. That path gives the caller responsibility for inner-calldata integrity.
+
+## Other Manager Actions
+
+| Method | Purpose |
+| --- | --- |
+| `fulfillRedeemRequests` | Settle queued redeem requests as a manager. |
+| `fulfillCancelRedeemRequests` | Settle cancelled redeems. |
+| `skimPerformanceFee` | Skim accrued performance fees. |
+| `manageYieldSource` | Add, update, or remove a yield source. |
+| `proposeVaultFeeConfigUpdate` | Propose performance and management fees. |
+| `executeVaultFeeConfigUpdate` | Apply the pending fee configuration. |
+| `managePPSExpiration` | Propose, execute, or cancel a PPS-expiration update. |
+
+Some operations require the strategy's primary-manager role rather than a secondary-manager role. Confirm the target strategy's authorization before building the intent.
+
+## Hook Authorization
+
+Superform validates hook bundles with its own hook registry and Merkle proofs. Newton policy evaluation is an additional gate; it does not replace Superform's authorization.
+
+Policies that constrain the hook target, token, venue, amount, or receiver must inspect the decoded intent and fail closed. A data oracle alone cannot prove those exact calldata fields because oracle query inputs are caller-supplied.
+
+## Pure Hook Utilities
+
+The subpath also exports builders and decoders:
+
+```typescript
+import {
+  buildApproveAndDepositHookData,
+  buildSwapHookData,
+  decodeHook,
+  makeHookRegistry,
+} from '@newton-xyz/vaultkit/vendors/superform'
+```
+
+Use these for authoring, dashboards, and inspection. Runtime enforcement remains in the deployed policy.

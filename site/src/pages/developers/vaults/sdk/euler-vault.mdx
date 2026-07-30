@@ -21,7 +21,7 @@ This guide covers `shield.eulerVault.*`, which wraps EVault governor functions. 
 ## Install Packages
 
 ```bash
-pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 pnpm add @newton-xyz/policy-pack-vaultsfyi
 ```
 
@@ -36,25 +36,22 @@ pnpm add @newton-xyz/policy-pack-redstone @newton-xyz/policy-pack-chainalysis
 Create or attach to a Shield, then extend the client with `eulerVaultActions`:
 
 ```typescript
-import { createShield } from '@newton-xyz/vaultkit'
+import { createShield, definePolicy } from '@newton-xyz/vaultkit'
 import { eulerVaultActions } from '@newton-xyz/vaultkit/vendors/euler-vault'
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi],
+const policy = definePolicy({
   chainId: '8453',
   env: 'prod',
-  publicClient,
-  policyAddress: '0xCompositePolicyAddress',
-})
+}).with(vaultsfyi)
 
 const shield = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.RPC_URL!,
-  env: 'prod',
-  pack,
+  publicClient,
+  policy,
+  policyAddress: '0xCompositePolicyAddress',
   vault: '0xEVault',
 })).extend(eulerVaultActions)
 ```

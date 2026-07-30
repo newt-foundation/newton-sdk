@@ -33,10 +33,10 @@ Newton environments are separate stacks. Create the key from the Newton dashboar
 
 ## Install Packages
 
-Every VaultKit Morpho integration needs VaultKit, Viem, policy-pack shared helpers, the policy packs you plan to enforce, and Morpho's SDK:
+Every VaultKit Morpho integration needs VaultKit, policy core, Viem, the policy packs you plan to enforce, and Morpho's SDK:
 
 ```bash
-pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 pnpm add @newton-xyz/policy-pack-vaultsfyi
 pnpm add @morpho-org/blue-sdk @morpho-org/blue-sdk-viem @morpho-org/morpho-ts
 ```
@@ -49,44 +49,40 @@ pnpm add @newton-xyz/policy-pack-chainalysis
 
 The Morpho packages are optional peer dependencies of VaultKit. Curators who use the generic `sendCall(...)` escape hatch can encode calldata themselves, but the typed path below uses `shield.morpho.reallocate(...)`.
 
-## Build the Composite Policy Pack
+## Declare the Policy
 
-Use `defineComposite(...)` with the modules deployed in your Newton policy. A Vaults.fyi-only policy looks like this:
+Use `definePolicy().with(...)` with the modules deployed in your Newton policy. A Vaults.fyi-only policy looks like this:
 
 ```typescript
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { definePolicy } from '@newton-xyz/vaultkit'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi],
+const policy = definePolicy({
   chainId: '84532',
   env: 'prod',
-  publicClient,
-  policyAddress: '0xCompositePolicyAddress',
-})
+}).with(vaultsfyi)
 ```
 
 For Vaults.fyi plus Chainalysis, install the Chainalysis pack and include both modules:
 
 ```typescript
 import { chainalysis } from '@newton-xyz/policy-pack-chainalysis'
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { definePolicy } from '@newton-xyz/vaultkit'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi, chainalysis],
+const policy = definePolicy({
   chainId: '84532',
   env: 'prod',
-  publicClient,
-  policyAddress: '0xCompositePolicyAddress',
 })
+  .with(vaultsfyi)
+  .with(chainalysis)
 ```
 
 The module list must match the policy's onchain `getPolicyData()` exactly. If the Shield is configured with a policy address that references a different module set, the SDK raises a typed configuration error before executing a vault action.
 
 ## Create or Attach to a Shield
 
-Create one Shield for the curator, vault, chain, policy pack, and version slot:
+Create one client for the curator, vault, chain, policy, and version slot:
 
 ```typescript
 import { createShield } from '@newton-xyz/vaultkit'
@@ -96,8 +92,9 @@ const shield = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.BASE_SEPOLIA_RPC_URL!,
-  env: 'prod',
-  pack,
+  publicClient,
+  policy,
+  policyAddress: '0xCompositePolicyAddress',
   vault: '0xMetaMorphoVaultAddress',
   bypassDelaySeconds: 7n * 24n * 60n * 60n,
 })).extend(morphoActions)
@@ -105,7 +102,7 @@ const shield = (await createShield({
 console.log(shield.policyClientAddress)
 ```
 
-`createShield(...)` is idempotent. It attaches to an existing compatible clone or deploys a new clone through `ShieldFactory`. If a previous run deployed a clone but did not finish writing policy params, pass a new `version` for a fresh clone or use `skipPolicyBindingCheck` only for a recovery run that immediately calls `setParams(...)`.
+`createShield(...)` is idempotent. If a previous run did not finish writing policy params, use `attachWithoutVerify: true` only for a recovery run that immediately calls `setParams(...)`, then remove the flag and call `reverify()`.
 
 ## Configure Params and Secrets
 
@@ -196,7 +193,7 @@ You can validate most of a Morpho integration before granting a vault role:
 | --- | --- | --- |
 | Read-only inspection | Policy source, params, and deployed Shield configuration are coherent. | Public RPC and deployed addresses. |
 | Type-check and encode | Your app compiles against the published package surface and produces MetaMorpho calldata. | Node, package install, and Morpho SDK. |
-| Setup stages | `defineComposite`, `createShield`, `setParams`, and `uploadSecrets` work. | Funded curator key and Newton/API secrets. |
+| Setup stages | `definePolicy`, `createShield`, `setParams`, and `uploadSecrets` work. | Funded curator key and Newton/API secrets. |
 | Full execution | MetaMorpho accepts the Shield-forwarded `reallocate`. | Shield clone has curator, owner, or allocator permissions. |
 
 ## Vaults.fyi Testnet Data
@@ -212,7 +209,7 @@ For demos, point the Vaults.fyi lookup at a real mainnet vault through the polic
 | `401` from Newton Gateway | API key was minted for a different Newton environment. | Create a key for the same stack as `env`, usually `prod` for Base Sepolia testnet production. |
 | `UnsupportedChainError` | Wallet client is not on a VaultKit-supported chain. | Use a supported chain such as Base Sepolia (`84532`) for testnet Morpho flows. |
 | `ShieldDeploymentNotFoundError` | No Shield factory is registered for the selected chain and environment. | Check `env`, chain id, and RPC configuration. |
-| Module-set mismatch or composite policy mismatch | The modules passed to `defineComposite(...)` do not match the policy address. | Use a policy deployed with exactly the selected modules. |
+| Module-set mismatch or composite policy mismatch | The modules declared with `definePolicy().with(...)` do not match the policy address. | Use a policy deployed with exactly the selected modules. |
 | `PolicyMismatchError` | An existing Shield clone is bound to different policy data. | Verify the clone, write the expected params in a recovery run, or use a new `version`. |
 | MetaMorpho role revert | The Shield clone is not curator, owner, or allocator. | Grant the clone a qualifying vault role, then rerun the action. |
 | `PolicyDeniedError` | Newton evaluated the policy and denied the intent. | Inspect the error cause, adjust params, or choose inputs that satisfy the policy. |
