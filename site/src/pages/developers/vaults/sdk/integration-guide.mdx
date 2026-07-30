@@ -1,222 +1,160 @@
 ---
-title: "Getting Started"
-description: "Install Newton VaultKit, create a Shield, configure policy params, and execute a policy-gated vault action."
+title: "Integration Guide"
+description: "Install VaultKit 2.1, declare a Newton policy, and run a typed vault-manager action."
 keywords:
-  - vault sdk integration
+  - vaultkit integration
+  - definePolicy
+  - vault sdk
   - morpho integration
-  - newton vaultkit
-  - vault curator workflow
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
+# Integration Guide [Install VaultKit 2.1, declare a Newton policy, and run a typed vault-manager action.]
 
-# Getting Started [Install Newton VaultKit, create a Shield, configure policy params, and execute a policy-gated vault action.]
-
-Newton VaultKit sits beside the vault SDK you already use. Your app prepares the same manager action it would normally send to a vault, then routes execution through a Shield that requires a Newton attestation.
-
-This guide shows the common VaultKit setup and the typed Morpho path most curators should start with: `defineComposite(...)`, `createShield(...)`, grant the clone its manager role, then call `shield.morpho.reallocate(...)`. For Morpho-specific curator guidance, including Base Sepolia setup and MetaMorpho role requirements, see [Morpho](/developers/vaults/sdk/morpho). For Euler-specific typed overlays, see [Euler](/developers/vaults/sdk/euler-vault) and [Euler Earn](/developers/vaults/sdk/euler). For lower-level examples, see [Examples](/developers/vaults/sdk/examples).
+VaultKit's current authoring flow is policy-first: declare the policy modules synchronously with `definePolicy(...)`, pass the deployed `NewtonPolicy` address to `createShield(...)`, extend the returned client with a vendor module, and then call a typed action.
 
 ## Prerequisites
 
-- Node 22 or newer
-- `pnpm` 10 or newer, or the package manager your app already uses
-- A funded curator EOA or Safe-controlled signer on the target chain
-- A Newton Gateway API key from the [dashboard](https://dashboard.newton.xyz/)
-- The vault protocol SDKs your integration uses
-
-## Install Packages
-
-VaultKit integrations use a core SDK package, a shared policy-pack helper package, one or more individual policy packs, and optionally a vendor SDK.
-
-### Core Packages
-
-Install these for every VaultKit integration:
-
-```bash
-pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
-```
-
-| Package | When you need it |
+| Requirement | Version or purpose |
 | --- | --- |
-| `@newton-xyz/vaultkit` | Always. Provides `createShield`, the Shield client, typed vendor overlays, generic `sendCall`, and SDK errors. |
-| `@newton-xyz/policy-pack-shared` | Always when using published policy packs. Provides helpers such as `defineComposite(...)` for combining one or more policy modules into the pack object passed to `createShield`. |
-| `viem` | Always. VaultKit uses Viem clients for chain reads, signing, and transaction submission. |
-| `zod` | Usually. Policy packs use Zod schemas to validate typed params and secrets. |
+| Node.js | 22 or newer |
+| pnpm | 10 or newer |
+| `viem` | `^2.35.1` |
+| `zod` | `^3.0.0` |
+| Newton API key | Created for the chain environment you will use |
+| Curator wallet | Funded on the target chain and authorized to manage the target vault |
 
-### Individual Policy Packs
-
-Install each policy pack your Shield should enforce. For the Vaults.fyi example in this guide:
+## Install
 
 ```bash
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 pnpm add @newton-xyz/policy-pack-vaultsfyi
 ```
 
-For the currently documented vault policy packs:
+Install only the vendor SDKs your integration needs. The typed MetaMorpho module uses:
 
 ```bash
-pnpm add @newton-xyz/policy-pack-vaultsfyi @newton-xyz/policy-pack-chainalysis @newton-xyz/policy-pack-redstone @newton-xyz/policy-pack-webacy
+pnpm add @morpho-org/blue-sdk @morpho-org/blue-sdk-viem @morpho-org/morpho-ts
 ```
 
-| Package | When you need it |
-| --- | --- |
-| `@newton-xyz/policy-pack-vaultsfyi` | Use when enforcing Vaults.fyi vault-risk checks such as risk score, APY movement, TVL drawdown, critical flags, or corrupted data. |
-| `@newton-xyz/policy-pack-chainalysis` | Use when enforcing Chainalysis sanctions, AML, or high-risk address screening. |
-| `@newton-xyz/policy-pack-redstone` | Use when enforcing RedStone oracle-divergence checks for stale, divergent, or sustained price-feed issues. |
-| `@newton-xyz/policy-pack-webacy` | Use when enforcing Webacy depeg-risk checks for pegged assets. |
-| Other policy packs | Add only when your policy uses another data source or guardrail. |
-
-### Vendor SDKs
-
-Install vendor SDKs only when your app uses them directly. The typed Morpho overlay uses Morpho's published SDK under the hood, so Morpho integrations install the Morpho peer dependency:
-
-```bash
-pnpm add @morpho-org/blue-sdk-viem
-```
-
-If you use `shield.sendCall(...)` and encode calldata yourself, you do not need a vendor SDK. Prefer typed vendor overlays when VaultKit ships one for your protocol.
+`@newton-xyz/policy-pack-shared` is not part of the VaultKit 2.x flow. Policy authoring and manifest utilities now live in `@newton-xyz/policy-core`.
 
 ## 1. Create Viem Clients
 
-VaultKit reads chain state through a `publicClient` and submits transactions through a `walletClient`.
-
 ```typescript
 import { createPublicClient, createWalletClient, http } from 'viem'
-import { base } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
+import { base } from 'viem/chains'
 
-const account = privateKeyToAccount(process.env.CURATOR_PRIVATE_KEY as `0x${string}`)
+const account = privateKeyToAccount(
+  process.env.CURATOR_PRIVATE_KEY as `0x${string}`,
+)
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http(process.env.BASE_RPC_URL),
+  transport: http(process.env.RPC_URL),
 })
 
 const walletClient = createWalletClient({
   account,
   chain: base,
-  transport: http(process.env.BASE_RPC_URL),
+  transport: http(process.env.RPC_URL),
 })
 ```
 
-For a Safe multisig owner, use the Safe-aware signer path your application already supports. Shield ownership is independent of the transaction transport.
-
-## 2. Build a Policy Pack
-
-Policy packs define the typed params, secrets, and per-call `wasmArgs` used during Newton operator evaluation. For composite policies, wrap the modules you want to enforce:
+## 2. Declare the Policy
 
 ```typescript
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
+import { definePolicy } from '@newton-xyz/vaultkit'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi],
+const policy = definePolicy({
   chainId: '8453',
   env: 'prod',
-  publicClient,
-  policyAddress: '0xPolicyAddress',
-})
+}).with(vaultsfyi)
 ```
 
-## 3. Create or Attach to a Shield
+`definePolicy(...)` is synchronous and does not read the chain. Add more published packs or custom `defineOracle(...)` outputs with additional `.with(...)` calls. Module order does not need to match the deployed contract; VaultKit aligns the declared modules to `NewtonPolicy.getPolicyData()` when the client is created.
+
+## 3. Create the Client and Add a Vendor Module
 
 ```typescript
 import { createShield } from '@newton-xyz/vaultkit'
 import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const shield = (await createShield({
+const client = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
-  rpc: process.env.BASE_RPC_URL!,
-  pack,
-  vault: '0xMetaMorphoVaultAddress',
-  bypassDelaySeconds: 7n * 24n * 60n * 60n,
+  publicClient,
+  rpc: process.env.RPC_URL!,
+  vault: '0xMetaMorphoVault',
+  policy,
+  policyAddress: '0xDeployedNewtonPolicy',
 })).extend(morphoActions)
 ```
 
-`createShield` is idempotent. It predicts the deterministic Shield address from the curator, vault, and version. If a clone exists with compatible configuration, the SDK attaches to it; otherwise it deploys a new clone through `ShieldFactory`.
+The `policyAddress` must reference a deployed `NewtonPolicy` whose `getPolicyData()` set matches the modules declared with `.with(...)`. `createShield(...)` resolves that policy and exposes the result as `client.policy`.
 
-If you expect an existing clone, pass the known address and expected params:
-
-```typescript
-const shield = await createShield({
-  apiKey: process.env.NEWTON_API_KEY!,
-  walletClient,
-  rpc: process.env.BASE_RPC_URL!,
-  policyClientAddress: '0xExpectedShieldAddress',
-  pack,
-  vault: '0xMetaMorphoVaultAddress',
-  version: 1n,
-  expectedParams: {
-    vaultsfyi: {
-      apy_z_max: 3,
-      risk_score_floor: 80,
-      tvl_drawdown_24h_max_pct: 25,
-      tvl_drawdown_7d_max_pct: 40,
-      deny_on_allocation_change: true,
-      deny_on_critical_flag: true,
-      deny_on_corrupted: true,
-    },
-  },
-})
-```
-
-If the onchain policy address or params differ from `expectedParams`, the SDK throws a typed configuration error instead of silently using the wrong Shield.
-
-## 4. Configure Policy Params and Secrets
+## 4. Configure Parameters and Secrets
 
 ```typescript
-await shield.setParams({
+await client.setParams({
   vaultsfyi: {
-    apy_z_max: 3,
     risk_score_floor: 80,
     tvl_drawdown_24h_max_pct: 25,
-    tvl_drawdown_7d_max_pct: 40,
-    deny_on_allocation_change: true,
-    deny_on_critical_flag: true,
-    deny_on_corrupted: true,
   },
 })
 
-await shield.uploadSecrets({
+await client.uploadSecrets({
   vaultsfyi: {
     VAULTS_FYI_API_KEY: process.env.VAULTSFYI_API_KEY!,
   },
 })
 ```
 
-`setParams` writes typed policy params onchain through the Shield's bound Newton policy. `uploadSecrets` encrypts API secrets in the SDK and stores them with Newton Gateway so operators can evaluate policies without exposing credentials onchain.
+Parameters are encoded into the onchain composite manifest. Secrets are encrypted client-side and uploaded separately; they are not written onchain.
 
-## 5. Grant the Shield Its Roles
+Use `client.encodeParams(params)` to inspect the exact bytes before writing them.
 
-`execute` and `executeDirect` are gated by Shield's approved-delegate map. The initial owner is approved at clone initialization, but any hot key or Safe module that will submit actions through the Shield must be explicitly approved:
+## 5. Verify the Attachment
 
 ```typescript
-await walletClient.writeContract({
-  address: shield.policyClientAddress,
-  abi: shieldAbi,
-  functionName: 'setApprovedDelegate',
-  args: [account.address, true],
-})
+console.log(client.policy.address)
+console.log(client.policy.modules)
+console.log(client.verification)
 ```
 
-The Shield clone also needs the vendor-side manager role required by the action. For MetaMorpho `reallocate`, grant the clone allocator authority, or make it the curator:
+When attaching to an existing deployment, VaultKit verifies progressively:
+
+1. The attached contract points to the expected policy address.
+2. The onchain oracle set and WASM CIDs match the declared modules.
+3. Stored params decode against the module schemas.
+4. When `expectedParams` is supplied, stored bytes exactly match the expected encoding.
+
+Call `client.reverify()` after changing parameters. Use `attachWithoutVerify: true` only to recover an incomplete first-time setup, and remove it immediately after writing the correct configuration.
+
+## 6. Grant the Required Vault Role
+
+The client address must hold the manager or allocator role required by the vendor action. Role assignment is vendor-specific; VaultKit does not bypass the vendor's authorization model.
 
 ```typescript
-await metaMorpho.write.setIsAllocator([shield.policyClientAddress, true])
+console.log(client.policyClientAddress)
 ```
 
-## 6. Execute a Morpho Action
+Grant that address the appropriate role using the vendor's normal governance process.
 
-For Morpho, use the typed overlay. It builds the MetaMorpho calldata through Morpho's SDK, lets the composite pack derive `wasmArgs`, requests the Newton attestation, and submits `executeDirect`.
+## 7. Execute a Typed Action
 
 ```typescript
-const result = await shield.morpho.reallocate(
-  '0xMetaMorphoVaultAddress',
+const result = await client.morpho.reallocate(
+  '0xMetaMorphoVault',
   [{ marketParams, assets: 1_000_000n }],
   {
     prepareQueryOptions: {
-      vaultsfyi: { previousAllocationHash: '0x...' },
+      vaultsfyi: {
+        previousAllocationHash: '0x...',
+      },
     },
   },
 )
@@ -226,48 +164,44 @@ const receipt = await publicClient.waitForTransactionReceipt({
 })
 ```
 
-The SDK builds the exact `Intent`, signs it with the curator wallet, asks Newton operators to evaluate the configured policy, and submits the attested call through the Shield. If the policy denies the action, the SDK raises a typed policy error and the vault call is not forwarded.
+Each policy module owns its `wasmArgs` construction. Pass module-specific inputs through `prepareQueryOptions.<shortPackId>`; VaultKit validates the resulting data before building the intent.
 
-Use `shield.sendCall(...)` only for vendors or actions without a typed overlay. With `sendCall`, your integration owns the target, calldata, function signature, and any pack-specific per-call inputs.
-
-## 7. Handle Policy Errors
+## 8. Handle Expected Failures
 
 ```typescript
 import {
   AttestationTimeoutError,
-  GatewayError,
   PolicyDeniedError,
+  RpcReadError,
 } from '@newton-xyz/vaultkit'
 
 try {
-  await shield.morpho.reallocate('0xMetaMorphoVaultAddress', allocations)
+  await client.morpho.reallocate('0xMetaMorphoVault', allocations)
 } catch (error) {
   if (error instanceof PolicyDeniedError) {
-    console.error('Vault action denied by policy', error)
-    return
+    console.error('The policy denied this action:', error.reason)
+  } else if (error instanceof AttestationTimeoutError) {
+    console.error('Request a fresh task after backoff')
+  } else if (error instanceof RpcReadError) {
+    console.error(error.read, error.cause)
+  } else {
+    throw error
   }
-
-  if (error instanceof AttestationTimeoutError || error instanceof GatewayError) {
-    console.error('Retry with a fresh task after backoff', error)
-    return
-  }
-
-  throw error
 }
 ```
 
-See [Errors](/developers/vaults/sdk/errors) for retry guidance.
+See [Errors](/developers/vaults/sdk/errors) before adding retries. A deterministic policy or schema failure does not become valid when retried.
 
 ## Next Steps
 
-<Card title="Concepts" icon="book-open" to="/developers/vaults/sdk/concepts">
-  Learn how `Intent`, `wasmArgs`, policy packs, and vendor modules fit together.
+<Card title="Policies" icon="layers" to="/developers/vaults/sdk/policies">
+  Compose published packs, custom oracles, and policy-level parameters.
 </Card>
 
-<Card title="Examples" icon="code" to="/developers/vaults/sdk/examples">
-  Copy patterns for idempotent deploys, generic calls, retries, and read-only inspection.
+<Card title="Custom Oracles" icon="code" to="/developers/vaults/sdk/custom-oracles">
+  Build a typed oracle with `defineOracle(...)`.
 </Card>
 
-<Card title="Reference" icon="book-open" to="/developers/vaults/sdk/reference">
-  Review the SDK API surface.
+<Card title="Examples" icon="terminal" to="/developers/vaults/sdk/examples">
+  Copy current VaultKit 2.1 recipes.
 </Card>

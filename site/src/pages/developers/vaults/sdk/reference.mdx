@@ -1,24 +1,29 @@
 ---
 title: "Reference"
-description: "API reference for Newton VaultKit."
+description: "API reference for @newton-xyz/vaultkit 2.1."
 keywords:
-  - vault sdk reference
-  - newton vaultkit api
+  - vaultkit api
   - createShield
-  - shield runtime
-  - morpho vault sdk
+  - definePolicy
+  - assertIntentBlocked
 showAskAi: false
 ---
 
-# Reference [API reference for Newton VaultKit.]
+# Reference [API reference for `@newton-xyz/vaultkit` 2.1.]
 
-## Package
+## Installation
 
 ```bash
-pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 ```
 
-`viem`, `zod`, and `@newton-xyz/policy-pack-shared` are peer dependencies. Vendor SDKs, such as `@morpho-org/blue-sdk-viem`, are optional peer dependencies so applications only install the vault integrations they use.
+Node 22+ is required. `@newton-xyz/policy-core`, `viem`, and `zod` are peer dependencies. Morpho packages are optional peer dependencies and are only needed for the Morpho vendor modules.
+
+```typescript
+import { VERSION } from '@newton-xyz/vaultkit'
+```
+
+`VERSION` matches the installed package version.
 
 ## Supported Chains
 
@@ -29,224 +34,203 @@ pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
 | Sepolia | `11155111` |
 | Base Sepolia | `84532` |
 
-Calling `createShield` on an unsupported chain errors before sending a transaction.
+## `definePolicy`
+
+```typescript
+function definePolicy(config: {
+  chainId: string
+  env: GatewayEnv
+}): PolicyDraft<readonly []>
+```
+
+A `PolicyDraft` is immutable:
+
+```typescript
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .with(chainalysis)
+  .withPolicyParams(policyParamsSchema)
+```
+
+- `.with(module)` appends a published pack or custom oracle.
+- `.withPolicyParams(schema)` declares the reserved `_policy` params object.
+- Chain reads are deferred until `createShield(...)`.
+
+## `policyFromAddress`
+
+```typescript
+function policyFromAddress(config: {
+  address: Address
+  chainId: string
+  env: GatewayEnv
+  params?: ParamCodec
+}): BarePolicy
+```
+
+Use this for a deployed monolithic or calldata-only policy. `ParamCodec` can supply `encode` and `decode` to enable params methods and higher verification rungs.
 
 ## `createShield`
 
-Creates or attaches to a Shield for a curator and vault. A newly created Shield client normally requires `setParams(...)` and `uploadSecrets(...)` before it can evaluate the selected policy.
-
 ```typescript
-const shield = await createShield({
-  apiKey,
-  policyClientAddress?,
-  walletClient,
-  rpc,
-  env?,
-  gatewayUrl?,
-  pack,
-  vault,
-  version?,
-  expectedParams?,
-  skipPolicyBindingCheck?,
-  mustDeploy?,
-  bypassDelaySeconds?,
-  attestationExpiration?,
-  wsRpcUrl?,
-})
+function createShield(config: CreateShieldConfig): Promise<ShieldClient>
 ```
 
-### Parameters
+| Field | Type | Notes |
+| --- | --- | --- |
+| `apiKey` | `string` | Newton Gateway key for the selected environment. |
+| `walletClient` | `WalletClient` | Curator signer; its chain selects the deployment slot. |
+| `rpc` | `string` | RPC URL for reads and writes. |
+| `policy` | `PolicyDraft \| BarePolicy` | Policy declaration or bare deployed policy. |
+| `policyAddress?` | `Address` | Required for `PolicyDraft`; omit for `BarePolicy`. |
+| `vault` | `Address` | Managed target used in deterministic addressing. |
+| `publicClient?` | `PublicClient` | Reuse an existing client for reads. |
+| `env?` | `GatewayEnv` | Must agree with `policy.env` when provided. |
+| `gatewayUrl?` | `string` | Gateway override for testing. |
+| `version?` | `bigint` | Addressing version; defaults to `0n`. |
+| `policyClientAddress?` | `Address` | Attach to a known address instead of predicting. |
+| `expectedParams?` | `Record<string, unknown>` | Require canonical byte equality at attach time. |
+| `attachWithoutVerify?` | `boolean` | Explicit recovery-only escape below verification rung 1. |
+| `mustDeploy?` | `boolean` | Fail if an existing deployment would be attached. |
+| `bypassDelaySeconds?` | `bigint` | Deployment configuration; default seven days, minimum one day. |
+| `attestationExpiration?` | `bigint` | Per-call expiration override. |
+| `wsRpcUrl?` | `string` | WebSocket RPC for subscription-based paths. |
 
-| Field | Description |
+## `ShieldClient`
+
+| Member | Purpose |
 | --- | --- |
-| `apiKey` | Newton Gateway API key. Create one for your project on the [dashboard](https://dashboard.newton.xyz/). |
-| `policyClientAddress?` | Shield contract address when attaching to a known deployed clone. Leave empty to deploy or attach based on curator, vault, and version. |
-| `walletClient` | Viem wallet client for the signer that will own the Shield and sign intents. The account address participates in deterministic Shield addressing. |
-| `rpc` | RPC URL used for sending transactions, polling chain state, and public-client reads. |
-| `env?` | Newton Gateway environment. Defaults to `prod`. |
-| `gatewayUrl?` | Custom Newton Gateway URL for testing. Defaults to the protocol URL for `env`. |
-| `pack` | `CompositePolicyPack` from `defineComposite(...)`. See [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs). |
-| `vault` | The vault address to be managed. The vault address is one of the deploy params that determines the shield address. |
-| `version?` | Addressing nonce. Defaults to `0`. Use a different version when the same curator and vault need another Shield clone. |
-| `expectedParams?` | Typed policy params expected on an existing Shield. If onchain params differ, the SDK errors instead of attaching. |
-| `skipPolicyBindingCheck?` | Skips the policy pack and contract compatibility check when attaching. Use only for recovery or diagnostics. |
-| `mustDeploy?` | Errors if `createShield` would attach to an existing clone. Use when a fresh deployment is required. |
-| `bypassDelaySeconds?` | Timelock for owner bypass execution. Default is one week; minimum is one day. |
-| `attestationExpiration?` | Number of blocks an approved policy action remains valid. Default is 50 blocks. |
-| `wsRpcUrl?` | Optional websocket RPC URL used for standard attestation-mode polling. This mode is slower but can save gas. |
+| `policy` | Resolved policy address, chain, environment, params codec, and modules. |
+| `verification` | Attach-time `VerificationResult`. |
+| `policyClientAddress` | Onchain client address. |
+| `setParams(params)` | Encode and store policy configuration. |
+| `encodeParams(params)` | Return the exact encoded bytes without writing. |
+| `uploadSecrets(secrets)` | Validate, encrypt, and upload per-module secrets. |
+| `sendCall(args, mode?, timeoutMs?)` | Evaluate and execute a generic manager action. |
+| `assertIntentBlocked(args, timeoutMs?)` | Confirm that a denied intent is rejected, without mining a transaction. |
+| `prepareIntent(args)` | Build and sign an intent without submitting it. |
+| `reverify()` | Refresh the verification result against current state. |
+| `extend(vendorActions)` | Add a typed vendor namespace. |
 
-### Return Value
-
-Calling `createShield` returns a Shield client object with these properties.
-
-| Property | Description |
-| --- | --- |
-| `pack` | The policy pack object that it was configured with. Useful as the policy pack method functions help with the typing of params and secrets objects. |
-| `policyClientAddress` | Shield contract address created or attached to by the client. |
-| `encodeParams` | Helper for encoding policy params into hex. Useful when comparing against onchain configuration. |
-| `setParams` | Writes the versioned onchain manifest envelope to the Shield's bound policy. |
-| `uploadSecrets` | Encrypts and uploads policy secrets to Newton Gateway. |
-| `sendCall` | Generic entrypoint for policy evaluation and intent execution. |
-| `prepareIntent` | Builds and signs the intent without submitting it. |
-| `extend` | Attaches a typed vendor overlay such as `shield.morpho.*`. |
-
-## `setParams`
-
-Configures a newly created Shield contract or reconfigures an existing one with serialized policy params. Uses the `attestationExpiration` value from Shield client creation.
+## `SendCallArgs`
 
 ```typescript
-await shield.setParams({
-  vaultsfyi: {
-    apy_z_max: 3,
-    risk_score_floor: 80,
-    tvl_drawdown_24h_max_pct: 25,
-    tvl_drawdown_7d_max_pct: 40,
-    deny_on_allocation_change: true,
-    deny_on_critical_flag: true,
-    deny_on_corrupted: true,
-  },
-})
-```
-
-### Parameters
-
-| Field | Description |
-| --- | --- |
-| `params` | Typed parameter object from the selected policy pack. |
-
-## `uploadSecrets`
-
-Uploads required API secrets used by the selected policy pack. Values are encrypted in the SDK and stored with Newton Gateway for policy evaluation.
-
-```typescript
-await shield.uploadSecrets({
-  vaultsfyi: {
-    VAULTS_FYI_API_KEY: process.env.VAULTSFYI_API_KEY!,
-  },
-})
-```
-
-### Parameters
-
-| Field | Description |
-| --- | --- |
-| `secrets` | Typed secrets object from the selected policy pack. |
-
-## Shield Runtime
-
-The Shield runtime turns a typed call into:
-
-1. Intent construction
-2. Newton AVS policy evaluation
-3. Policy attestation retrieval
-4. Onchain execution through the Shield contract
-
-The Shield client uses typed vendor overlays for supported protocols and keeps `sendCall(...)` as the escape hatch for unwrapped vendors.
-
-```typescript
-import { createShield } from '@newton-xyz/vaultkit'
-import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
-
-const shield = (await createShield(config)).extend(morphoActions)
-```
-
-## Morpho Module
-
-The Morpho module exposes manager actions under `shield.morpho.*`. `reallocate` is positional in the published module:
-
-```typescript
-await shield.morpho.reallocate(
-  vault,
-  [{ marketParams, assets: 1_000_000n }],
-  { prepareQueryOptions: { vaultsfyi: { previousAllocationHash: '0x...' } } },
-)
-```
-
-The overlay wraps MetaMorpho manager and allocator actions such as `setCurator`, `setIsAllocator`, `submitCap`, `acceptCap`, `setSupplyQueue`, `updateWithdrawQueue`, and `reallocate`. End-user `deposit`, `mint`, `withdraw`, and `redeem` flows are not wrapped.
-
-## `sendCall`
-
-For vendors or actions without a first-class module, use `sendCall`. This function requires you to encode calldata for the delegated contract call yourself. Pack-specific `prepareQueryOptions` tell the composite policy what must be evaluated for this call.
-
-```typescript
-await shield.sendCall({
-  to: '0xTargetAddress',
-  data: '0xCalldata',
-  functionSignature: 'reallocate((bytes32,uint256)[])',
-  prepareQueryOptions: {
-    redstone: {
-      symbol: 'USDC',
-      rpcUrl: 'https://base.example',
-      onchainOracle: {
-        address: '0xOracleAddress',
-        selector: 'latestAnswer()',
-      },
-    },
-  },
-}, 'DIRECT', 30_000)
-```
-
-When using `sendCall`, the integration owns intent integrity for the target call. Use `'DIRECT'` for the current curator path. The lower-level runtime also has an attestation mode path for deployments that support it.
-
-## Composite Manifest
-
-`shield.setParams(...)` writes a versioned UTF-8 JSON manifest into `NewtonPolicy.PolicyConfig.policyParams`. The manifest is the shape operators read and the AVS validates:
-
-```json
-{
-  "_manifest": { "magic": "NPM1", "version": 1 },
-  "modules": [
-    {
-      "id": "vaultsfyi/risk-envelope/v1",
-      "policyDataAddress": "0xVAULTSFYI_PD...",
-      "wasmCid": "bafybei..."
-    }
-  ],
-  "params": {
-    "vaultsfyi": {
-      "risk_score_floor": 80,
-      "tvl_drawdown_24h_max_pct": 25
-    }
-  }
+interface SendCallArgs {
+  to: Address
+  data: Hex
+  value?: bigint
+  functionSignature: string
+  prepareQueryOptions?: Record<string, unknown>
 }
 ```
 
-For the full verifier path and `introspectComposite(...)`, see [Composite Policy Packs](/developers/vaults/sdk/composite-policy-packs).
-
-## Policy Packs
-
-Policy packs are developed in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs) and are available as subpath imports:
-
 ```typescript
-import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+type SubmissionMode = 'ATTESTATION' | 'DIRECT'
+
+interface SendCallResult {
+  transactionHash: Hex
+  taskId: Hex
+  evaluationResult: boolean
+}
 ```
 
-Each pack provides typed params and helper logic for freshness-bound policy inputs.
+## `assertIntentBlocked`
 
-## Errors
+```typescript
+interface PolicyBlockedResult {
+  blocked: true
+  taskId: Hex
+  reason: string
+}
+```
 
-The SDK error hierarchy includes:
+The method expects a denial, simulates the denied direct execution with `eth_call`, and resolves only if the revert is `InvalidAttestation`.
 
-| Error | When it occurs |
-| --- | --- |
-| `InvalidConfigurationError` | Error for when a parameter for `createShield` is invalid. |
-| `IntentConfigurationError` | Intent submission parameters are malformed before network or chain submission. |
-| `ParamMismatchError` | The expected params or param typing does not match the configuration of an attached Shield contract. |
-| `PolicyMismatchError` | The expected policy from the pack does not match the configuration of an attached Shield contract. |
-| `ShieldExecutionError` | The execution of the intent on chain encounters an error. |
-| `PolicyDeniedError` | Newton evaluates the policy and denies the action. |
-| `NewtonTaskEvaluationError` | Newton evaluation fails to evaluate the policy correctly. |
-| `AttestationTimeoutError` | The SDK does not receive an attestation in time. |
-| `GatewayError` / `GatewayHttpError` / `GatewayRpcError` / `GatewayTimeoutError` | The request fails to reach Newton Gateway or Gateway returns a protocol error. |
-| `ConcurrentIntentError` | A second gated call was started against the same clone while another is in flight. |
-| `ExtendCollisionError` | A vendor overlay would overwrite an existing client member. |
-| `TransactionFailedError` | An onchain transaction failed outside the Shield-specific decode path. |
-| `IntentMismatchError` | The task and task-response intents differ in direct execution. |
-| `ShieldDeploymentNotFoundError` | ShieldClient creation tries to use a chain without Shield deployments. |
-| `UnsupportedChainError` | ShieldClient creation tries to use a chain that is unsupported by the Newton Protocol. |
+It can throw:
 
-## See Also
+- `PolicyNotDeniedError` when the supplied action was allowed.
+- `NotApprovedDelegateError` when the wallet is not authorized to call the client.
+- `PolicyDeniedError` when the gateway denial cannot be submitted as the negative assertion requires.
+- The decoded error for any unrelated revert.
 
-- [Concepts](/developers/vaults/sdk/concepts)
-- [Examples](/developers/vaults/sdk/examples)
+## Verification
+
+```typescript
+interface VerificationResult {
+  achievedRung: 0 | 1 | 2 | 3 | 4
+  addressChecked: boolean
+  oracleSetChecked: boolean
+  paramsChecked: boolean
+  byteEqualChecked: boolean
+  skippedReason?: 'attachWithoutVerify' | 'freshDeploy'
+}
+```
+
+A bare policy's empty oracle set satisfies the structural check vacuously. Check `client.policy.modules.length > 0` before presenting “oracle set verified” in a UI.
+
+## Gateway Client
+
+```typescript
+function createGatewayClient(config: GatewayClientConfig): GatewayClient
+function resolveGatewayUrl(
+  chainId: SupportedChainId,
+  env: GatewayEnv,
+): string
+```
+
+Construct a gateway client directly only for lower-level calls such as task creation, policy simulation, or encrypted-secret storage.
+
+## Deployment Utilities
+
+```typescript
+const SHIELD_DEPLOYMENTS: ShieldDeploymentRegistry
+const SUPPORTED_CHAINS: readonly SupportedChainId[]
+const GATEWAY_API_URLS: Record<string, string>
+
+function predictShieldAddress(args: PredictShieldAddressArgs): Address
+function resolveShieldDeployment(
+  chainId: number,
+  env?: GatewayEnv,
+  registry?: ShieldDeploymentRegistry,
+): ShieldDeployment
+function isSupportedChainId(value: unknown): value is SupportedChainId
+function isGatewayEnv(value: unknown): value is GatewayEnv
+```
+
+## Vendor Subpaths
+
+```typescript
+import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
+import { morphoBlueActions } from '@newton-xyz/vaultkit/vendors/morpho-blue'
+import { eulerActions } from '@newton-xyz/vaultkit/vendors/euler'
+import { eulerVaultActions } from '@newton-xyz/vaultkit/vendors/euler-vault'
+import { superformActions } from '@newton-xyz/vaultkit/vendors/superform'
+```
+
+Each extension adds its own namespace. `extend(...)` throws `ExtendCollisionError` if an extension would overwrite an existing member.
+
+## Policy Core
+
+Import these directly from `@newton-xyz/policy-core`:
+
+- `defineOracle`
+- `defineComposite`
+- `introspectComposite`
+- `classifyProvenance`
+- Manifest encoders and decoders
+- Composite params-schema derivation
+
+VaultKit re-exports common policy types and `classifyProvenance`, but authoring and inspection utilities such as `defineOracle` and `defineComposite` come directly from `policy-core`.
+
+## Error Guard
+
+```typescript
+function isShieldError(error: unknown): error is ShieldError
+```
+
+All SDK errors extend `ShieldError`. `NewtonShieldError` remains a deprecated compatibility alias.
+
+## Related
+
+- [Policies](/developers/vaults/sdk/policies)
+- [Custom Oracles](/developers/vaults/sdk/custom-oracles)
 - [Errors](/developers/vaults/sdk/errors)

@@ -28,4 +28,4 @@ The Guardrail policy pack adds a Guardrail risk signal to composite policies for
 
 ## Usage
 
-Install the pack package, include its module in `defineComposite(...)`, and upload `GUARDRAIL_API_KEY` only when your deployment requires it. Per-call inputs go under `prepareQueryOptions.guardrail`.
+Install the pack package, add it with `definePolicy(...).with(guardrail)`, and upload `GUARDRAIL_API_KEY` only when your deployment requires it. Per-call inputs go under `prepareQueryOptions.guardrail`.

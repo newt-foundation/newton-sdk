@@ -21,7 +21,7 @@ This guide covers `shield.euler.*`, which wraps Euler Earn. For Euler Vault Kit 
 ## Install Packages
 
 ```bash
-pnpm add @newton-xyz/vaultkit @newton-xyz/policy-pack-shared viem zod
+pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 pnpm add @newton-xyz/policy-pack-vaultsfyi
 ```
 
@@ -36,25 +36,22 @@ pnpm add @newton-xyz/policy-pack-chainalysis
 Create or attach to a Shield, then extend the client with `eulerActions`:
 
 ```typescript
-import { createShield } from '@newton-xyz/vaultkit'
+import { createShield, definePolicy } from '@newton-xyz/vaultkit'
 import { eulerActions } from '@newton-xyz/vaultkit/vendors/euler'
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi],
+const policy = definePolicy({
   chainId: '8453',
   env: 'prod',
-  publicClient,
-  policyAddress: '0xCompositePolicyAddress',
-})
+}).with(vaultsfyi)
 
 const shield = (await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.RPC_URL!,
-  env: 'prod',
-  pack,
+  publicClient,
+  policy,
+  policyAddress: '0xCompositePolicyAddress',
   vault: '0xEulerEarnVault',
 })).extend(eulerActions)
 ```
@@ -141,7 +138,7 @@ VaultKit intentionally does not wrap end-user ERC-4626 `deposit`, `mint`, `withd
 | --- | --- | --- |
 | Euler Earn role revert | The Shield clone is not owner, curator, allocator, or guardian for that action. | Grant the clone the correct Euler Earn role, then rerun the action. |
 | `PolicyDeniedError` | Newton evaluated the configured policy and denied the intent. | Inspect the policy result, params, and per-call `prepareQueryOptions`. |
-| Module-set mismatch | The modules passed to `defineComposite(...)` do not match the deployed policy. | Use the module set from the policy's onchain `getPolicyData()`. |
+| Module-set mismatch | The modules declared with `definePolicy().with(...)` do not match the deployed policy. | Use the module set from the policy's onchain `getPolicyData()`. |
 | Unexpected calldata | The wrong overlay or vault address was used. | Use `shield.euler.*` only for Euler Earn vaults; use `shield.eulerVault.*` for EVault governor actions. |
 
 <Card title="Euler Guide" icon="landmark" to="/developers/vaults/sdk/euler-vault">

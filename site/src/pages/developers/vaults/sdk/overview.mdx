@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Newton VaultKit is a TypeScript SDK and Shield contract system for routing vault-manager actions through Newton policy attestations."
+description: "VaultKit 2.1 declares typed policies and routes vault-manager actions through Newton attestations."
 keywords:
   - vault sdk
   - newton vaultkit
@@ -12,7 +12,7 @@ showAskAi: false
 import { Card } from 'vocs'
 
 
-# Overview [Newton VaultKit is a TypeScript SDK and Shield contract system for routing vault-manager actions through Newton policy attestations.]
+# Overview [VaultKit 2.1 declares typed policies and routes vault-manager actions through Newton attestations.]
 
 Newton VaultKit is a TypeScript SDK and companion Solidity contract system for vault curators. It routes manager actions through a Newton Policy Protocol attestation gate before the underlying vault receives the call.
 
@@ -40,10 +40,13 @@ sequenceDiagram
 ## Core Pieces
 
 - **Shield clones:** One audited implementation per chain, with deterministic per-curator clones deployed through `ShieldFactory`.
-- **Policy packs:** Typed wrappers around Newton policy templates. Packs validate params, prepare `wasmArgs`, and expose per-pack helpers.
-- **Vendor modules:** Typed wrappers for vault-manager actions, starting with Morpho. Vendor modules produce the calldata that the Shield forwards after policy approval.
+- **Policy-first authoring:** `definePolicy().with(...)` combines published packs and custom `defineOracle(...)` outputs.
+- **Policy core:** `@newton-xyz/policy-core` owns oracle authoring, manifest encoding, schema generation, introspection, and provenance classification.
+- **Vendor modules:** Typed wrappers for MetaMorpho, Morpho Blue, Euler Earn, EVault, and Superform manager actions.
 - **Generic calls:** `shield.sendCall(...)` supports protocols and manager actions without a first-class vendor module.
 - **Typed errors:** SDK failures map to stable error classes such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.
+- **Verification:** `client.policy`, `client.verification`, and `client.reverify()` expose the resolved policy and attach-time checks.
+- **Negative assertions:** `assertIntentBlocked(...)` proves a noncompliant intent is rejected without mining a transaction.
 - **Browser-safe core:** The main package avoids `node:*` imports. Vendor modules may inherit constraints from the vendor SDKs they wrap.
 
 ## Manager Actions Only
@@ -54,6 +57,9 @@ VaultKit is for privileged vault operations such as reallocations, cap changes, 
 
 - Start with [Getting Started](/developers/vaults/sdk/integration-guide) to install packages, create clients, configure a Shield, and run a policy-gated action.
 - Use [Morpho](/developers/vaults/sdk/morpho) for MetaMorpho curator setup, composite policy choices, and `reallocate` role requirements.
+- Use [Morpho Blue](/developers/vaults/sdk/morpho-blue) for managed-sleeve position operations.
+- Use [Superform](/developers/vaults/sdk/superform) for SuperVault manager actions and typed hook bundles.
+- Use [Policies](/developers/vaults/sdk/policies) for published packs, custom oracles, bare policies, and verification.
 - Read [Concepts](/developers/vaults/sdk/concepts) if you want the mental model for `createShield`, packs, vendor modules, and `sendCall`.
 - Use [Examples](/developers/vaults/sdk/examples) for copyable integration patterns.
 - Keep [Reference](/developers/vaults/sdk/reference) nearby for parameters, return values, supported chains, and exported errors.

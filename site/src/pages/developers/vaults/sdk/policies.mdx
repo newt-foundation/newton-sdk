@@ -1,0 +1,180 @@
+---
+title: "Policies"
+description: "Declare VaultKit policies from published packs, custom oracles, or a bare deployed policy."
+keywords:
+  - vaultkit policies
+  - definePolicy
+  - policy-core
+  - custom oracle
+showAskAi: false
+---
+import { Card } from 'vocs'
+
+# Policies [Declare VaultKit policies from published packs, custom oracles, or a bare deployed policy.]
+
+Every VaultKit client resolves to one `NewtonPolicy`. That policy can contain one or more policy-data oracles, or it can be a bare monolithic policy with no composable modules.
+
+## Published Policy Packs
+
+```typescript
+import { definePolicy } from '@newton-xyz/vaultkit'
+import { chainalysis } from '@newton-xyz/policy-pack-chainalysis'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .with(chainalysis)
+```
+
+`definePolicy(...)` is synchronous and chainless. `createShield(...)` performs the onchain read, matches the declared modules to `NewtonPolicy.getPolicyData()`, and exposes the resolved result on `client.policy`.
+
+```typescript
+const client = await createShield({
+  apiKey,
+  walletClient,
+  rpc,
+  vault,
+  policy,
+  policyAddress: '0xDeployedNewtonPolicy',
+})
+```
+
+A duplicate short ID is rejected because params and per-call inputs are namespaced by that ID.
+
+## Custom Oracles
+
+Published packs and custom `defineOracle(...)` outputs implement the same `PolicyPack` contract:
+
+```typescript
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .with(myOracle)
+```
+
+There is no custom-module registry gate. The same deployment matching, WASM CID checks, schema validation, and manifest encoding apply to every module.
+
+## Policy-Level Parameters
+
+Use `.withPolicyParams(...)` for composite-wide values that belong to the policy rather than a single oracle:
+
+```typescript
+import { z } from 'zod'
+
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .withPolicyParams(
+    z.object({
+      allowedYieldSources: z.array(z.string()),
+      maxFeeBps: z.number().int().min(0).max(10_000),
+    }),
+  )
+
+await client.setParams({
+  _policy: {
+    allowedYieldSources: ['0xYieldSource'],
+    maxFeeBps: 100,
+  },
+  vaultsfyi: { risk_score_floor: 80 },
+})
+```
+
+The manifest stores that slice at `params._policy`; Rego reads it at `data.params.params._policy`.
+
+## Bare Policies
+
+Use `policyFromAddress(...)` for a deployed monolithic or calldata-only policy:
+
+```typescript
+import { policyFromAddress } from '@newton-xyz/vaultkit'
+
+const policy = policyFromAddress({
+  address: '0xNewtonPolicy',
+  chainId: '8453',
+  env: 'prod',
+  params: {
+    encode: encodeMyParams,
+    decode: decodeMyParams,
+  },
+})
+```
+
+A bare policy has `modules: []`. Its optional codec enables `setParams(...)`, decoding, and higher verification rungs. Pass this object as `policy` and omit the separate `policyAddress`.
+
+## Manifest Shape
+
+`setParams(...)` writes a versioned UTF-8 JSON envelope:
+
+```json
+{
+  "_manifest": { "magic": "NPM1", "version": 1 },
+  "modules": [
+    {
+      "id": "vaultsfyi/risk-envelope/v1",
+      "policyDataAddress": "0xPolicyData",
+      "wasmCid": "bafy..."
+    }
+  ],
+  "params": {
+    "_policy": { "maxFeeBps": 100 },
+    "vaultsfyi": { "risk_score_floor": 80 }
+  }
+}
+```
+
+Generate schemas and encode this format with `@newton-xyz/policy-core`; do not hand-maintain a second manifest encoder.
+
+## Per-Call Inputs
+
+```typescript
+await client.sendCall({
+  to,
+  data,
+  functionSignature,
+  prepareQueryOptions: {
+    vaultsfyi: { previousAllocationHash: '0x...' },
+    my_oracle: { market: '0xMarket' },
+  },
+})
+```
+
+Each module receives only its short-ID-keyed options. Its `prepareQuery(...)` result is checked against its `wasmArgsSchema`; a failure stops intent construction.
+
+## Verification and Introspection
+
+The resolved client exposes objective onchain facts:
+
+```typescript
+client.policy.address
+client.policy.modules
+client.verification
+await client.reverify()
+```
+
+For an independent report:
+
+```typescript
+import { introspectComposite } from '@newton-xyz/policy-core'
+
+const report = await introspectComposite({
+  publicClient,
+  shieldAddress: client.policyClientAddress,
+})
+```
+
+`introspectComposite(...)` returns comparison booleans instead of throwing on a binding mismatch. It throws only when the stored manifest cannot be decoded.
+
+## Provenance Is Consumer-Selected
+
+`ResolvedModule` reports objective values such as `id`, `policyDataAddress`, and `wasmCid`. It does not claim that a module is audited or trusted. Consumers can classify those facts with `classifyProvenance(...)` from `@newton-xyz/policy-core` and a registry they trust.
+
+## Low-Level Composition
+
+VaultKit no longer re-exports `defineComposite(...)`. Most curator integrations should use `definePolicy().with(...)`. Import `defineComposite`, `defineOracle`, manifest encoders, schema generators, and introspection helpers directly from `@newton-xyz/policy-core` when building tooling outside `createShield(...)`.
+
+<Card title="Custom Oracles" icon="code" to="/developers/vaults/sdk/custom-oracles">
+  Define schemas, query preparation, deployments, and metadata for your own oracle.
+</Card>
+
+<Card title="Policy Packs" icon="boxes" to="/developers/vaults/policy-packs">
+  Browse published risk, compliance, and market-data packs.
+</Card>

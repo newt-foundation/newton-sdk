@@ -1,166 +1,207 @@
 ---
 title: "Examples"
-description: "Recipe-shaped Newton VaultKit examples for Shield creation, typed vendor calls, generic calls, error handling, inspection, and multi-chain use."
+description: "VaultKit 2.1 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions."
 keywords:
   - vaultkit examples
-  - newton shield examples
-  - morpho vaultkit
-  - sendcall
+  - definePolicy
+  - assertIntentBlocked
 showAskAi: false
 ---
 
-# Examples [Recipe-shaped Newton VaultKit examples for Shield creation, typed vendor calls, generic calls, error handling, inspection, and multi-chain use.]
+# Examples [VaultKit 2.1 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions.]
 
-These snippets assume you have `publicClient`, `walletClient`, a Newton API key, and a policy pack set up as shown in [Getting Started](/developers/vaults/sdk/integration-guide).
+## Declare a Published Policy
 
-## Idempotent Attach or Deploy
+```typescript
+import { definePolicy } from '@newton-xyz/vaultkit'
+import { chainalysis } from '@newton-xyz/policy-pack-chainalysis'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-`createShield` predicts the deterministic clone address and either attaches to an existing compatible clone or deploys a new one.
+const policy = definePolicy({
+  chainId: '8453',
+  env: 'prod',
+})
+  .with(vaultsfyi)
+  .with(chainalysis)
+```
+
+## Attach or Deploy Idempotently
 
 ```typescript
 import { createShield } from '@newton-xyz/vaultkit'
-import { defineComposite } from '@newton-xyz/policy-pack-shared'
-import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
-const pack = await defineComposite({
-  modules: [vaultsfyi],
-  chainId: '8453',
-  env: 'prod',
-  publicClient,
-  policyAddress: '0xPolicyAddress',
-})
-
-const shield = await createShield({
+const client = await createShield({
   apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
-  rpc: process.env.BASE_RPC_URL!,
-  vault: '0xMetaMorphoVaultAddress',
-  pack,
-  bypassDelaySeconds: 7n * 24n * 60n * 60n,
+  publicClient,
+  rpc: process.env.RPC_URL!,
+  vault: '0xVault',
+  policy,
+  policyAddress: '0xNewtonPolicy',
+  expectedParams: {
+    vaultsfyi: { risk_score_floor: 80 },
+    chainalysis: { deny_on_sanctioned: true },
+  },
 })
-
-console.log(shield.policyClientAddress)
 ```
 
-If a clone exists but the policy binding or params do not match your expectations, the SDK raises a typed configuration error instead of attaching silently.
+An existing attachment must pass the verification ladder. A mismatch throws instead of silently changing the policy.
 
-## Typed Morpho Call
+## Use a Bare Policy
 
-Use the typed Morpho overlay for MetaMorpho manager actions.
+```typescript
+import { createShield, policyFromAddress } from '@newton-xyz/vaultkit'
+
+const policy = policyFromAddress({
+  address: '0xNewtonPolicy',
+  chainId: '8453',
+  env: 'prod',
+  params: {
+    encode: (value) => encodeMyPolicyParams(value),
+    decode: (value) => decodeMyPolicyParams(value),
+  },
+})
+
+const client = await createShield({
+  apiKey,
+  walletClient,
+  rpc,
+  vault,
+  policy,
+})
+```
+
+Use `policyFromAddress(...)` for a monolithic or calldata-only policy that does not use the composite module model. Do not also pass `policyAddress`; the address is already part of the bare policy.
+
+## Add Policy-Level Parameters
+
+```typescript
+import { z } from 'zod'
+
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .withPolicyParams(
+    z.object({
+      allowedYieldSources: z.array(z.string()),
+      maxFeeBps: z.number().int().min(0).max(10_000),
+    }),
+  )
+
+await client.setParams({
+  _policy: {
+    allowedYieldSources: ['0xYieldSource'],
+    maxFeeBps: 100,
+  },
+  vaultsfyi: {
+    risk_score_floor: 80,
+  },
+})
+```
+
+The gate reads these composite-wide values under `data.params.params._policy`.
+
+## Extend with a Typed Vendor Module
 
 ```typescript
 import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
-const morphoShield = shield.extend(morphoActions)
+const morphoClient = client.extend(morphoActions)
 
-const result = await morphoShield.morpho.reallocate(
-  '0xMetaMorphoVaultAddress',
+await morphoClient.morpho.reallocate(
+  '0xMetaMorphoVault',
   [{ marketParams, assets: 1_000_000n }],
+  {
+    prepareQueryOptions: {
+      chainalysis: { address: curatorAddress },
+    },
+  },
 )
-
-await publicClient.waitForTransactionReceipt({ hash: result.transactionHash })
 ```
 
-Newton operators evaluate the configured policy before the Shield forwards the typed calldata.
-
-## Generic `sendCall`
-
-Use `sendCall` for a manager action without a first-class vendor helper.
+## Use the Generic Escape Hatch
 
 ```typescript
-import { encodeFunctionData } from 'viem'
-
-const data = encodeFunctionData({
-  abi: vaultAbi,
-  functionName: 'someManagerAction',
-  args: [42n],
-})
-
-await shield.sendCall({
-  to: vaultAddress,
-  data,
-  functionSignature: 'someManagerAction(uint256)',
-})
+await client.sendCall(
+  {
+    to: '0xTarget',
+    data: encodedCalldata,
+    functionSignature: 'someManagerAction(uint256)',
+    prepareQueryOptions: {
+      vaultsfyi: { previousAllocationHash: '0x...' },
+    },
+  },
+  'DIRECT',
+  30_000,
+)
 ```
 
-Prefer typed vendor modules when they exist. With `sendCall`, your app is responsible for matching the calldata, signature, target, and policy inputs.
+With `sendCall(...)`, your integration owns the target, calldata, value, and human-readable function signature. Prefer a typed vendor module when one exists.
 
-## Error Handling
+## Inspect and Reverify
 
-Catch specific subclasses when retry behavior matters.
+```typescript
+console.log(client.policy.address)
+console.table(client.policy.modules)
+console.log(client.verification.achievedRung)
+
+await client.setParams(nextParams)
+const current = await client.reverify()
+```
+
+For independent manifest inspection, import `introspectComposite(...)` from `@newton-xyz/policy-core`.
+
+## Prove a Denied Intent Is Blocked
 
 ```typescript
 import {
-  AttestationTimeoutError,
-  GatewayError,
-  PolicyDeniedError,
-  ShieldExecutionError,
+  NotApprovedDelegateError,
+  PolicyNotDeniedError,
 } from '@newton-xyz/vaultkit'
 
 try {
-  await shield.sendCall(args)
+  const proof = await client.assertIntentBlocked({
+    to: '0xTarget',
+    data: noncompliantCalldata,
+    functionSignature: 'someManagerAction(uint256)',
+  })
+
+  console.log(proof.blocked, proof.taskId, proof.reason)
 } catch (error) {
-  if (error instanceof PolicyDeniedError) {
-    return
+  if (error instanceof PolicyNotDeniedError) {
+    console.error('The supplied intent was allowed, so it proves no block')
+  } else if (error instanceof NotApprovedDelegateError) {
+    console.error('Use a wallet approved for this client')
+  } else {
+    throw error
   }
-
-  if (error instanceof AttestationTimeoutError || error instanceof GatewayError) {
-    await sleep(2_000)
-    return shield.sendCall(args)
-  }
-
-  if (error instanceof ShieldExecutionError) {
-    console.error(error.cause)
-  }
-
-  throw error
 }
 ```
 
-`PolicyDeniedError` is not retry-safe without changing the action or accepting the denial. Gateway and timeout failures are usually retry-safe with a fresh task.
+`assertIntentBlocked(...)` evaluates the intent and uses `eth_call` to confirm that the denied attestation reverts specifically with `InvalidAttestation`. It does not mine a transaction and does not return a transaction hash.
 
-## Read-Only Inspection
+## Use Multiple Chains
 
-Anyone can inspect a Shield clone without holding the curator key.
-
-```typescript
-import { introspectComposite } from '@newton-xyz/policy-pack-shared'
-
-const report = await introspectComposite({
-  publicClient,
-  shieldAddress: '0xShieldAddress',
-})
-
-if (!report.verification.onChainPolicyDataMatches) {
-  throw new Error('Policy data does not match the published pack manifest')
-}
-
-console.log(report.policyAddress)
-console.log(report.manifest.params)
-```
-
-This is useful for dashboards, depositor diligence, and operations review.
-
-## Multiple Chains
-
-Create one pack and one Shield client per chain. The SDK reads the chain from each `walletClient`; there is no global chain singleton.
+Create one policy declaration and one client per chain. Never reuse a client while changing the wallet's active chain implicitly.
 
 ```typescript
-const baseShield = await createShield({
+const basePolicy = definePolicy({ chainId: '8453', env: 'prod' }).with(vaultsfyi)
+const ethereumPolicy = definePolicy({ chainId: '1', env: 'prod' }).with(vaultsfyi)
+
+const baseClient = await createShield({
   apiKey,
   walletClient: baseWalletClient,
-  rpc: process.env.BASE_RPC_URL!,
-  vault: '0xBaseVault',
-  pack: basePack,
+  rpc: baseRpc,
+  vault: baseVault,
+  policy: basePolicy,
+  policyAddress: basePolicyAddress,
 })
 
-const ethereumShield = await createShield({
+const ethereumClient = await createShield({
   apiKey,
   walletClient: ethereumWalletClient,
-  rpc: process.env.ETHEREUM_RPC_URL!,
-  vault: '0xEthereumVault',
-  pack: ethereumPack,
+  rpc: ethereumRpc,
+  vault: ethereumVault,
+  policy: ethereumPolicy,
+  policyAddress: ethereumPolicyAddress,
 })
 ```
-
-If a chain is not in the SDK deployment registry, `createShield` throws `UnsupportedChainError` before sending a transaction.

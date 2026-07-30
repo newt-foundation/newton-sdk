@@ -28,4 +28,4 @@ The Balancer policy pack uses keyless Balancer data in composite policies. It is
 
 ## Usage
 
-Install the pack package, include its module in `defineComposite(...)`, and pass any per-call inputs the pack's `prepareQuery` requires under `prepareQueryOptions.balancer`.
+Install the pack package, add it with `definePolicy(...).with(balancer)`, and pass any per-call inputs its `prepareQuery` requires under `prepareQueryOptions.balancer`.

@@ -1,0 +1,74 @@
+---
+title: "Morpho Blue"
+description: "Use VaultKit's typed Morpho Blue position module for managed lending sleeves."
+keywords:
+  - morpho blue
+  - vaultkit
+  - lending sleeve
+showAskAi: false
+---
+
+# Morpho Blue [Use VaultKit's typed Morpho Blue position module for managed lending sleeves.]
+
+`vendors/morpho-blue` wraps position operations on the Morpho Blue singleton. It is distinct from `vendors/morpho`, which wraps MetaMorpho curator and allocator governance.
+
+## Install and Extend
+
+```bash
+pnpm add @newton-xyz/vaultkit @morpho-org/blue-sdk @morpho-org/blue-sdk-viem
+```
+
+```typescript
+import { morphoBlueActions } from '@newton-xyz/vaultkit/vendors/morpho-blue'
+
+const client = (await createShield(config)).extend(morphoBlueActions)
+```
+
+## Supply Collateral
+
+```typescript
+await client.morphoBlue.supplyCollateral(
+  morphoBlueSingleton,
+  {
+    marketParams,
+    assets: 1_000_000n,
+    onBehalf: managedVault,
+  },
+  {
+    prepareQueryOptions: {
+      venue_allowlist: { venue: morphoBlueSingleton },
+    },
+  },
+)
+```
+
+The first argument is the singleton address. The market is identified by `marketParams` inside calldata.
+
+## Wrapped Operations
+
+| Method | Purpose |
+| --- | --- |
+| `supplyCollateral` | Post collateral for a managed position. |
+| `borrow` | Borrow assets or shares against collateral. |
+| `supply` | Supply loan-token liquidity. |
+| `repay` | Repay assets or shares. |
+| `withdraw` | Withdraw supplied loan-token liquidity. |
+| `withdrawCollateral` | Withdraw posted collateral. |
+
+Methods that accept an amount require exactly one of:
+
+```typescript
+{ assets: 1_000_000n }
+{ shares: 1_000_000n }
+```
+
+Both-zero and both-specified inputs are rejected before submission.
+
+## Safety Constraints
+
+- Callback data is always `0x`; the client contract is not a Morpho callback receiver.
+- Position owners and receivers cannot be the zero address, singleton, or an address copied from `marketParams`.
+- The module does not prove that `onBehalf` is the managed vault or that `receiver` is approved. Bind those constraints in the policy.
+- `marketParams.lltv` uses 1e18 WAD scale. Euler EVault LTV values use a different 1e4 scale.
+
+Use this module only for positions operated as part of a managed vault or sleeve. It is not intended to interpose on direct end-user Morpho positions.

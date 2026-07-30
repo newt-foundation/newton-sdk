@@ -15,6 +15,16 @@ import { Card } from 'vocs'
 
 Newton vault policy packs combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
 
+In VaultKit 2.1, each published pack implements the `PolicyPack` contract from `@newton-xyz/policy-core`. Declare packs with `definePolicy(...).with(pack)`; use `defineOracle(...)` when authoring your own compatible oracle.
+
+```typescript
+import { definePolicy } from '@newton-xyz/vaultkit'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+```
+
 In the Newton dashboard, use **Explore Data Oracles** to browse available data oracles, inspect the data they provide, and add the relevant oracle to a policy. Vault policy packs can combine multiple oracles, so a single vault action can be checked against risk, compliance, and market data before it is approved.
 
 The open-source policy packs live in [newt-foundation/newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs). Data providers can follow the repo's [CONTRIBUTING guide](https://github.com/newt-foundation/newton-policy-packs/blob/main/CONTRIBUTING.md) to add a pack that other developers can reuse in Newton-powered applications.
@@ -33,6 +43,11 @@ The canonical deployment source is [`newton-policy-packs/deployments.json`](http
 | [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
 | [Webacy Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
 | [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+| Balancer | Adding keyless Balancer pool or market data |
+| Blockaid | Screening transaction and address risk |
+| Guardrail | Adding a Guardrail risk signal |
+| Persona | Adding identity and verification checks |
+| Sumsub | Adding KYC and verification checks |
 
 ## Deployed PolicyData Addresses
 
@@ -55,6 +70,8 @@ Vault policy packs are most useful when combined. For example, a regulated yield
 - RedStone oracle divergence checks before curator reallocations
 
 The result is a vault whose rules are explicit, inspectable, and enforced before execution.
+
+For custom oracles, policy-level `_policy` params, bare policies, manifest introspection, and provenance classification, see [Policies](/developers/vaults/sdk/policies) and [Custom Oracles](/developers/vaults/sdk/custom-oracles).
 
 <Card title="Policy Packs Guide" icon="book-open" to="/developers/guides/policy-packs">
   Learn how policy packs are structured, implemented, and used in Newton policies.

@@ -1,0 +1,124 @@
+---
+title: "Custom Oracles"
+description: "Author a typed policy-data oracle with @newton-xyz/policy-core and compose it into VaultKit."
+keywords:
+  - defineOracle
+  - policy-core
+  - custom policy oracle
+showAskAi: false
+---
+
+# Custom Oracles [Author a typed policy-data oracle with `@newton-xyz/policy-core` and compose it into VaultKit.]
+
+`defineOracle(...)` gives custom and published oracles the same typed interface. It describes schemas, deployments, query preparation, and metadata; it does not build the oracle WASM or deploy `NewtonPolicyData`.
+
+## Define the Oracle
+
+```typescript
+import { defineOracle } from '@newton-xyz/policy-core'
+import { z } from 'zod'
+
+export const maxLtvOracle = defineOracle({
+  id: 'my_oracle/max-ltv/v1',
+  paramsSchema: z.object({
+    max_ltv: z.number().int().min(0).max(10_000),
+  }).strict(),
+  wasmArgsSchema: z.object({
+    market: z.string(),
+  }).strict(),
+  secretsSchema: z.object({
+    MY_ORACLE_API_KEY: z.string().min(1),
+  }).strict(),
+  async prepareQuery(
+    args,
+    options?: { market?: string },
+  ) {
+    return {
+      wasmArgs: {
+        market: options?.market ?? args.target,
+      },
+    }
+  },
+  deployments: {
+    '8453': {
+      prod: {
+        policyData: '0xPolicyData',
+        wasmCid: 'bafy...',
+        policyCodeHash: '0x...',
+        deployedAt: '2026-07-30',
+      },
+    },
+  },
+  metadata: {
+    name: 'Max LTV',
+    version: '1.0.0',
+    description: 'Checks current LTV against a configured ceiling.',
+  },
+})
+```
+
+## ID Rules
+
+IDs use `<short>/<purpose>/<version>`. The short ID becomes a Rego dot-path and must match `^[a-z][a-z0-9_]*$`.
+
+- `my_oracle/max-ltv/v1` is valid.
+- `my-oracle/max-ltv/v1` is invalid because the short ID contains a hyphen.
+
+## Compose It
+
+```typescript
+import { definePolicy } from '@newton-xyz/vaultkit'
+import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
+
+const policy = definePolicy({ chainId: '8453', env: 'prod' })
+  .with(vaultsfyi)
+  .with(maxLtvOracle)
+```
+
+Custom and published modules receive identical module-set, deployment, WASM CID, and schema checks.
+
+## Configure and Call
+
+```typescript
+await client.setParams({
+  vaultsfyi: { risk_score_floor: 80 },
+  my_oracle: { max_ltv: 7_500 },
+})
+
+await client.uploadSecrets({
+  my_oracle: {
+    MY_ORACLE_API_KEY: process.env.MY_ORACLE_API_KEY!,
+  },
+})
+
+await client.sendCall({
+  to,
+  data,
+  functionSignature,
+  prepareQueryOptions: {
+    my_oracle: { market: '0xMarket' },
+  },
+})
+```
+
+## Generate the Params Schema
+
+Use the schema derivation utilities from `@newton-xyz/policy-core` to generate the complete `{ _manifest, modules, params }` schema. The deployed policy validates the full manifest envelope, not only `params.my_oracle`.
+
+Commit the generated schema alongside the policy-authorship project and regenerate it when a module schema changes.
+
+## Deployment Boundary
+
+The TypeScript definition is only the consumer-side contract. Taking an oracle live also requires:
+
+1. Implementing and testing the WASM oracle.
+2. Authoring fail-closed Rego.
+3. Building and publishing the content-addressed artifacts.
+4. Deploying `NewtonPolicyData` and a `NewtonPolicy` that references it.
+5. Recording the real address and WASM CID in `deployments`.
+
+An empty deployment record is valid during offline authoring, but `createShield(...)` cannot resolve it for a live chain.
+
+## Provenance
+
+Do not hard-code “audited” into the oracle object. Consumers can call `classifyProvenance(...)` with the module's objective facts and an audited-address registry they trust.
