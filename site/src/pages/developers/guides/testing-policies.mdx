@@ -16,6 +16,10 @@ import { Card,Cards } from 'vocs'
 
 Test at every layer before you deploy: unit-test your Rego rules with `opa test`, run your WASM oracle in isolation, then simulate the full policy end-to-end against the Newton network. This guide covers all three. For diagnosing failures after deployment, see [Testing & Debugging](/developers/resources/testing-debugging).
 
+:::warning
+Newton evaluates Rego v1 with its fork of Regorus 0.9.0, using an OPA v1.2.0-compatible subset plus Newton-specific extensions. Passing `opa test` validates policy logic against OPA, but it does not prove that every built-in used by the policy exists in Newton. Run the CLI Regorus checks and an end-to-end Newton simulation before deployment.
+:::
+
 ## Unit-test your Rego with `opa test`
 
 Rego rules are pure functions of `input`, `data.params`, and `data.wasm`, which makes them easy to unit-test without the network. Write a companion `policy_test.rego` and mock the data with `with`.
@@ -114,7 +118,7 @@ Recommended coverage:
 
 ### Quick local checks with the CLI
 
-The CLI bundles a Rego engine with Newton's crypto and identity built-ins. Use it to evaluate a query or validate syntax:
+The CLI uses the same Newton Regorus engine family as operator evaluation, including Newton's crypto and identity built-ins. Use it to evaluate a query and validate runtime syntax and built-in availability:
 
 ```bash
 # Evaluate a query against policy + data + input files
@@ -131,7 +135,7 @@ newton-cli regorus lex policy.rego
 ```
 
 :::note
-Pass `--non-strict` for OPA-compatible evaluation. `-d` (data/policy) can be repeated; `-i` is the input (intent) file. See the [CLI Reference](/developers/reference/command-line-tool#regorus).
+Pass `--non-strict` for OPA-style non-strict evaluation. This does not add unsupported OPA built-ins or make the engine fully OPA-compatible. `-d` (data/policy) can be repeated; `-i` is the input (intent) file. See the [CLI Reference](/developers/reference/command-line-tool#regorus).
 :::
 
 ## Test your WASM oracle

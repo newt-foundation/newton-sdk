@@ -6,6 +6,16 @@ showAskAi: false
 
 # Rego Syntax Guide [Supported Rego syntax, builtins, and Newton extensions (crypto, identity) for policy development]
 
+## Language and Engine Compatibility
+
+**Policy language:** Rego v1, evaluated by the Newton Regorus engine. Newton uses its own fork of **Regorus 0.9.0**, configured for Rego v1.
+
+The engine implements an **OPA v1.2.0-compatible subset plus Newton-specific extensions**. It is mostly compatible with OPA v1.2.0 syntax and semantics, but it does not implement every OPA built-in function. Do not describe Newton policies as simply “Rego 1.2” or assume that a policy accepted by OPA v1.2.0 will run unchanged.
+
+:::warning
+Check the [unsupported built-ins](#unsupported-opa-built-ins) before porting an OPA policy. In particular, portions of the standard crypto/JWT, GraphQL, JSON Patch, network/CIDR/DNS, AWS provider, Rego metadata, and module-parsing APIs are unavailable. Newton's `newton.*` built-ins extend the runtime but are not one-for-one replacements for every missing OPA built-in.
+:::
+
 ## Modules & Files
 
 **A module is one policy file.**
@@ -652,14 +662,16 @@ allow if {
 
 ---
 
-## Not Yet Supported
+## Unsupported OPA Built-ins
 
-- **Standard Crypto / Tokens / JWT**: `crypto.*`, `jwtverify*`, `jwtencode*` — use Newton crypto extensions instead
+- **Standard Crypto / Tokens / JWT**: portions of `crypto.*`, `jwtverify*`, and `jwtencode*` are unavailable. Newton supplies specific `newton.crypto.*` functions, but they are not complete replacements for the OPA APIs.
 - **HTTP**: `http.send` — not implemented (use PolicyData WASM oracles for external data)
 - **GraphQL**: `graphql.*` — not implemented
 - **Glob matching**: `regex.globs_match` — not implemented
 - **JSON Patch**: `json.patch` — not implemented
-- **Networking**: `net.*` — not implemented
+- **Networking / CIDR / DNS**: portions of `net.*` and related network functions are not implemented
 - **AWS Providers**: `providers.aws.*` — not implemented
 - **Rego Meta**: `rego.metadata.*`, `rego.parse_module` — not implemented
 - **Template rendering**: `strings.render_template` — not implemented
+
+This list highlights known gaps rather than promising that every unlisted OPA built-in is available. Validate the exact functions your policy uses with `newton-cli regorus parse` and `newton-cli regorus eval`.

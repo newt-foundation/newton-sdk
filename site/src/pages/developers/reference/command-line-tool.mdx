@@ -608,7 +608,9 @@ The command normalizes the intent (converts `value`/`chainId` to hex), signs the
 
 ### Regorus
 
-The `regorus` command wraps the Regorus Rego policy engine with Newton-specific crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`) and identity built-ins (`newton.identity.*`, `newton.confidential.*`).
+The `regorus` command wraps Newton's fork of **Regorus 0.9.0**, configured for **Rego v1**, with Newton-specific crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`) and identity built-ins (`newton.identity.*`, `newton.confidential.*`).
+
+Its compatibility target is an **OPA v1.2.0-compatible subset plus Newton-specific extensions**. It does not implement every OPA built-in. See the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide#unsupported-opa-built-ins) before relying on standard crypto/JWT, GraphQL, JSON Patch, network/CIDR/DNS, AWS provider, metadata, or module-parsing functions.
 
 #### `eval`
 
@@ -638,7 +640,7 @@ newton-cli regorus eval \
 ```
 
 :::note
-The `--non-strict` flag is required for OPA-compatible evaluation with Newton's regorus engine.
+The `--non-strict` flag enables OPA-style non-strict evaluation. It does not enable missing OPA built-ins or imply complete OPA v1.2.0 compatibility.
 :::
 
 #### `lex`
