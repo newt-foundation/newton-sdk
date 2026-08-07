@@ -45,6 +45,10 @@ dist
 **/PLAN.md
 .claude-sessions/
 .omc/
+plugins/
+graphify-out/
+.superpowers/
+.code-review-graph/
 **/plans/
 **/superpowers/
 .omx/
