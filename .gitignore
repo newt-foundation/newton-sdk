@@ -43,6 +43,8 @@ dist
 **/.claude
 **/.cursor
 **/PLAN.md
+**/CLAUDE.md
+**/AGENTS.md
 .claude-sessions/
 .omc/
 plugins/
