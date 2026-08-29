@@ -41,7 +41,7 @@ Encrypts plaintext into an HPKE SecureEnvelope with Ed25519 signature. This is a
 ```typescript
 async function createSecureEnvelope(
   params: CreateSecureEnvelopeParams,
-  signingKey: string
+  signingKey: Uint8Array
 ): Promise<SecureEnvelopeResult>
 ```
 
