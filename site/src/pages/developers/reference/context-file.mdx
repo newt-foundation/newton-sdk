@@ -1,57 +1,56 @@
 ---
-title: "LLM Context Files"
-description: "Download Newton Protocol LLM context files for use with AI coding assistants"
+title: "Agent Skills"
+description: "Install Newton Agent Skills for versioned policy, PolicyClient, and application workflows"
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# LLM Context Files [Download Newton Protocol LLM context files for use with AI coding assistants]
+# Agent Skills [Install Newton Agent Skills for versioned policy, PolicyClient, and application workflows]
 
-## What are the LLM context files?
+Newton Agent Skills replace the previous standalone LLM context files. Skills are versioned alongside templates and references, split by task, and designed to resume work through machine-readable handoff files.
 
-Newton provides two separate LLM context files — one for policy development and one for TypeScript SDK integration. Load the relevant file (or both) into your AI coding assistant to give it the full context it needs to help you build on Newton.
+:::warning
+The skills are under active dogfood testing. Review generated code and report friction instead of silently working around it.
+:::
 
-## Download
+## Available skills
 
-<Card title="Newton Policy Guide" icon="download" to="https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context">
-  Creating and deploying Newton policies (WASM oracles, Rego, newton-cli)
-</Card>
+| Skill | Use when |
+|---|---|
+| `newton-policy` | Installing `newton-cli`, authoring Rego + WASM, and running the local build/simulate loop |
+| `newton-policy-client` | Adding `_validateAttestationDirect` to a Solidity integration and testing intent binding |
+| `newton-demo` | Turning a brief into a policy, PolicyClient, and local Next.js application |
 
-<Card title="Newton TypeScript SDK Guide" icon="download" to="https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context">
-  Building frontends with the Newton TypeScript SDK
-</Card>
+The skills preserve state in `policy-handoff.json`, `client-handoff.json`, and `demo-config.json`. These files contain addresses and intent configuration, but never credentials.
 
-## Usage
-
-Place the relevant file(s) in your project root and point your AI coding assistant to them:
-
-**Claude Code**
-
-Save as `CLAUDE.md` in your project root. Claude Code automatically reads this file for context.
+## Install
 
 ```bash
-# Policy development
-curl -o newton-policy-guide.md "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
-
-# TypeScript SDK integration
-curl -o newton-sdk-guide.md "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
+git clone https://github.com/newt-foundation/newton-agent-skills.git
+cd newton-agent-skills
 ```
 
-Rename either file to `CLAUDE.md` (or concatenate both) to have Claude Code pick it up automatically.
-
-**Cursor**
-
-Save as `.cursorrules` or add to your project's context files.
+For local Cursor or Codex discovery while the skills repository is the workspace:
 
 ```bash
-# Policy development
-curl -o .cursorrules "https://gist.githubusercontent.com/vmathur/3fce8ced4a8ef8cbe1219366abee9d42/raw/6d472427eda1448350878ed2072ee13027cdcb32/Newton%20Policy%20Guide%20LLM%20context"
-
-# TypeScript SDK integration
-curl -o .cursorrules "https://gist.githubusercontent.com/vmathur/bc9a1bfa6cb736daf2ab14d6196223c5/raw/2386e7b13fa3b2591ba2d3c4d0d4bc518bcfbb3b/Newton%20Typescript%20SDK%20guide%20LLM%20context"
+mkdir -p .agents
+ln -sfn ../skills .agents/skills
 ```
 
-**Other tools**
+For Claude Code, copy the folders into `.claude/skills/` or `~/.claude/skills/`. Other Agent Skills clients can load the required folders from `skills/` using their supported discovery directory.
 
-Most AI coding assistants support loading a context file. Refer to your tool's documentation for the expected file name and location.
+## Safety model
+
+- Local policy work does not require login or deploy credentials.
+- The agent must not request private keys, API keys, JWTs, or RPC credentials in chat.
+- Deployment, gateway evaluation, the first attested transaction, and hosting require separate user confirmation.
+- `NEWTON_API_KEY` belongs on the server, never in a `NEXT_PUBLIC_*` variable or browser bundle.
+
+<Card title="Build with an Agent" icon="play" to="/developers/overview/agent-quickstart">
+  Install the skills, write a brief, review local results, and approve live checkpoints
+</Card>
+
+<Card title="Newton Agent Skills on GitHub" icon="github" to="https://github.com/newt-foundation/newton-agent-skills">
+  Browse the current skills, references, templates, and sample briefs
+</Card>

@@ -1,173 +1,238 @@
 ---
 title: "Deploying with CLI"
-description: "Deploy Newton Protocol policies and data oracles to IPFS and on-chain using newton-cli"
+description: "Build, simulate, and deploy Newton policies with newton-cli, then wire a tested PolicyClient with Foundry and cast"
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Deploying with CLI [Deploy Newton Protocol policies and data oracles to IPFS and on-chain using newton-cli]
+# Deploying with CLI [Build, simulate, and deploy Newton policies with newton-cli, then wire a tested PolicyClient with Foundry and cast]
 
-This guide walks through deploying your policy files to IPFS and registering them on-chain using `newton-cli`. By the end, you will have a deployed PolicyData contract, a deployed Policy contract, and a registered PolicyClient.
+This guide starts from a scaffolded Newton policy, proves its allow and deny behavior locally, deploys PolicyData and Policy contracts, and then wires an existing PolicyClient.
+
+:::warning
+Deployment uploads artifacts and sends transactions. Finish local simulation first, review the target chain and transactions, and use a funded testnet signer before broadcasting.
+:::
 
 ## Prerequisites
 
-- **newton-cli** installed: `curl -L cli.newton.xyz | sh && newtup` (see [CLI Reference](/developers/reference/command-line-tool#installation))
-- **Pinata account** for IPFS pinning ([pinata.cloud](https://pinata.cloud))
-- **Sepolia ETH** in your deployer wallet
-- Completed [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies)
+- `newton-cli`: `curl -L cli.newton.xyz | sh && newtup`
+- A policy created with `newton-cli policy scaffold`
+- A tested contract that inherits `NewtonPolicyClient`
+- A target chain, funded deployer, and RPC endpoint
+- Foundry (`forge` and `cast`) for PolicyClient deployment and wiring
+
+Run the toolchain check before building:
+
+```bash
+newton-cli --version
+newton-cli doctor
+```
+
+Dashboard login is not required to scaffold, build, or simulate locally.
+
+## Credential handling
+
+Provide deploy credentials through the current process environment or `~/.newton/.env`:
+
+```bash
+export CHAIN_ID=11155111
+export RPC_URL=https://your-sepolia-rpc.example
+export PRIVATE_KEY=0xYourDeploymentKey
+```
+
+Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent.
+
+`newton-cli policy deploy` uses the Newton upload proxy by default. Direct Pinata upload is optional and requires both `PINATA_JWT` and `PINATA_GATEWAY` in the same protected environment.
+
+## Step 1 — Build the policy
+
+Given a scaffolded directory such as `policies/transfer-limit`:
+
+```bash
+newton-cli policy build -p policies/transfer-limit
+```
+
+Use the CLI build command instead of invoking `jco componentize` directly. It validates the expected policy files and writes compiled artifacts under `dist/`.
+
+## Step 2 — Simulate allow and deny
+
+Configure `configs/intent.json`, `configs/wasm_args.json`, and `configs/params.json`, then run:
+
+```bash
+newton-cli policy simulate -p policies/transfer-limit
+```
+
+Run at least one expected allow case and one expected deny case. When the WASM provider calls `getSecrets()`, pass a non-production fixture stored outside tracked source:
+
+```bash
+newton-cli policy simulate -p policies/transfer-limit \
+  --secrets-file /secure/local-fixtures/transfer-limit-secrets.json
+```
+
+Local WASM output is available to Rego under `data.wasm.*`; policy parameters are under `data.params.*`; the transaction intent is `input`.
+
+Do not deploy until both cases match the intended policy.
+
+## Step 3 — Review deployment configuration
+
+`policy scaffold` creates the non-secret file `configs/deployment.toml`. Review its chain and expiration settings before deployment. Environment variables and explicit CLI flags override the file.
+
+The policy directory should now include:
+
+```text
+policies/transfer-limit/
+  policy.js
+  policy.rego
+  params_schema.json
+  configs/
+    deployment.toml
+    intent.json
+    params.json
+    wasm_args.json
+  dist/
+    policy.wasm
+    policy.rego
+```
+
+## Step 4 — Deploy PolicyData and Policy
+
+The orchestrated deploy generates CIDs, uploads policy artifacts, deploys PolicyData, and deploys the Policy bound to it:
+
+```bash
+newton-cli policy deploy -p policies/transfer-limit
+```
+
+Record:
+
+- `dist/policy_cids.json`
+- PolicyData address or addresses, in order
+- Policy address
+- Chain ID and expiration configuration
+
+If the policy has `secrets_schema.json`, the CLI includes it automatically. Confirm `secretsSchemaCid` is present in `dist/policy_cids.json` before uploading secrets.
+
+Useful reuse options include `--skip-cids` and `--skip-data --policy-data-address 0x...`. Preserve PolicyData address order for composite policies because evaluation is positional.
 
 :::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
 
-## Environment Variables
+## Step 5 — Deploy the PolicyClient
 
-Create a `.env` file with deployment credentials:
-
-```bash
-CHAIN_ID=11155111
-PINATA_JWT=your_pinata_jwt
-PINATA_GATEWAY=your_pinata_gateway
-PRIVATE_KEY=0xYourDeploymentPK
-RPC_URL=https://eth-sepolia.g.alchemy.com/v2/apiKey
-```
-
-Load the variables:
+The PolicyClient is application code, not something `registerClient` creates. Implement and test it with Foundry first, then deploy it with the local deployer as initial owner:
 
 ```bash
-set -a && source .env && set +a
+forge build
+forge test
+forge script script/DeployPolicyClient.s.sol:DeployPolicyClient \
+  --rpc-url "$RPC_URL" \
+  --broadcast
 ```
 
-## Step 1: Generate CIDs and Upload to IPFS
+Resolve current protocol addresses for the target chain rather than copying constants from an old guide:
 
 ```bash
-newton-cli policy-files generate-cids \
-  --directory policy-files \
-  --output policy_cids.json \
-  --entrypoint "your_policy.allow"
+newton-cli --chain-id "$CHAIN_ID" deployments show
 ```
 
-This uploads your policy files to IPFS via Pinata and generates `policy_cids.json` containing the content identifiers.
+## Step 6 — Bind policy and parameters
 
-:::note
-The `--entrypoint` value must match your Rego package name + rule name. For `package your_policy` with rule `allow`, use `your_policy.allow`.
-:::
-
-## Step 2: Deploy PolicyData
-
-Deploy the WASM oracle on-chain:
+While the local deployer still owns the PolicyClient, set its Policy address:
 
 ```bash
-newton-cli policy-data deploy --policy-cids policy_cids.json
+cast send 0xPOLICY_CLIENT \
+  "setPolicyAddress(address)" 0xPOLICY \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY"
 ```
 
-Save the output address:
-
-```
-Policy data deployed successfully at address: 0xPolicyDataAddress
-```
-
-## Step 3: Deploy Policy
-
-Deploy the Rego policy on-chain, referencing the PolicyData:
+If the Rego policy reads `data.params.*`, serialize the flat JSON that matches `params_schema.json` and call `setPolicy` with a non-zero expiration:
 
 ```bash
-newton-cli policy deploy \
-  --policy-cids policy_cids.json \
-  --policy-data-address "0xPolicyDataAddress"
+PARAMS_HEX=$(cast --from-utf8 "$(cat policies/transfer-limit/configs/params.json)")
+
+cast send 0xPOLICY_CLIENT \
+  "setPolicy((bytes,uint32))" "($PARAMS_HEX,1000)" \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY"
 ```
 
-Save the output address — you will use it when deploying your PolicyClient contract.
+Choose `expireAfter` for the target chain and application. Calling `setPolicy` produces a new `policyId`; verify it immediately and update any recorded handoff or application configuration.
 
-## Step 4: Deploy Your Smart Contract
+## Step 7 — Register when required
 
-Before registering a PolicyClient, you need a deployed contract that inherits `NewtonPolicyClient`. Follow the [Smart Contract Integration](/developers/guides/smart-contract-integration) guide, then return here with your deployed contract address.
-
-## Step 5: Register PolicyClient
-
-Register your deployed contract with the PolicyClientRegistry:
+Registry membership is required for features such as identity linking, but not every PolicyClient flow. When needed, use the current registry address reported by `deployments show`:
 
 ```bash
-newton-cli policy-client register \
-  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
-  --client "0xYourPolicyClientAddress"
+cast send 0xPOLICY_CLIENT_REGISTRY \
+  "registerClient(address)" 0xPOLICY_CLIENT \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY"
 ```
 
-## Step 6: Set Policy on Client
+Registration does not set the PolicyClient contract owner.
 
-Configure the policy and parameters on your PolicyClient:
+## Step 8 — Transfer ownership for dashboard operations
+
+Gateway secrets and client-scoped live evaluation authorize against `PolicyClient.getOwner()`. If the dashboard login wallet must own the client, transfer only after policy binding and optional registration are complete:
 
 ```bash
-newton-cli policy-client set-policy \
-  --policy-client "0xYourPolicyClientAddress" \
-  --policy-address "0xPolicyAddress"
+cast send 0xPOLICY_CLIENT \
+  "setPolicyClientOwner(address)" 0xDASHBOARD_LOGIN_WALLET \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY"
 ```
 
-Set policy parameters and expiration:
-
-```bash
-newton-cli policy-client set-policy-params \
-  --policy-client "0xYourPolicyClientAddress" \
-  --policy-params policy_params.json \
-  --expire-after 1000
-```
+Verify `getOwner()` on-chain. `PolicyClientRegistry.setClientOwner` changes the registry record; it is not a substitute for `setPolicyClientOwner` on the contract.
 
 :::warning
-**`set-policy-params` changes the `policyId`.** Every call internally calls `setPolicy(PolicyConfig)` which re-registers with the Policy contract and returns a new `policyId`. Any previously recorded `policyId` becomes stale. Always verify the new `policyId` on-chain after updating params.
+After ownership transfer, the local deployer can no longer call owner-only `setPolicy` or `setPolicyAddress`. Plan policy and parameter updates before transfer. If the application treats clients as replaceable, deploy and wire a new client for later changes.
 :::
 
-### Policy Params Format
+## Step 9 — Upload secrets when used
 
-On-chain policy params must be **flat JSON** matching your `params_schema.json`. The gateway reads these bytes directly and passes them to Rego as `data.params`. Do not use the nested CLI format.
+Only upload secrets after:
 
-| File | Purpose | Use With |
-|------|---------|----------|
-| `policy_params.json` | Template with `VAULT_ADDRESS_PLACEHOLDER` | Never use directly |
-| `policy_params_live.json` | Nested CLI format with real vault address | Reference only |
-| `policy_params_onchain.json` | Flat JSON matching the params schema | `set-policy-params` |
-
-If on-chain params are in the nested CLI format instead of flat JSON, policy evaluation fails with `Missing required property` during schema validation.
-
-## Step 7: Verify
-
-Check that your PolicyClient is registered and active:
+- PolicyData has the intended secrets schema CID
+- The PolicyClient address is final
+- `getOwner()` matches the dashboard identity behind the API key
+- The secrets JSON matches the schema
 
 ```bash
-newton-cli policy-client status \
-  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd \
-  --client "0xYourPolicyClientAddress"
+newton-cli --chain-id "$CHAIN_ID" secrets upload \
+  --secrets-file /secure/secrets/transfer-limit.json \
+  --policy-client 0xPOLICY_CLIENT \
+  --policy-data-address 0xPOLICY_DATA
 ```
 
-You can also test the full policy via the Gateway:
+Keep the secrets file outside tracked source. Do not print the file or API key while diagnosing upload problems.
 
-```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your_api_key>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulatePolicy",
-    "params": {
-      "policy_client": "0xYourPolicyClientAddress",
-      "policy": "package your_policy\ndefault allow := false\nallow if { data.wasm.success }",
-      "intent": {
-        "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
-        "value": "0x0",
-        "data": "0x",
-        "chain_id": "0xaa36a7",
-        "function_signature": "0x"
-      },
-      "policy_data": [{"policy_data_address": "0xPolicyDataAddress"}],
-      "policy_params": {}
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
-```
+## Step 10 — Verify before live evaluation
 
-## Next Steps
+Check these values on-chain:
+
+- PolicyClient TaskManager matches the target Newton deployment
+- Policy address and `policyId` are non-zero and current
+- Params and `expireAfter` are correct
+- `getOwner()` is the expected wallet
+- Registry record matches when registration is used
+- Client-scoped secrets exist when the WASM provider requires them
+
+Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler supplies `NEWTON_API_KEY`. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
+
+## Agent-assisted deployment
+
+Newton Agent Skills automate the same local-first sequence and preserve policy and client state in handoff files. They still pause before uploads, broadcasts, ownership transfer, gateway evaluation, and the first attested application transaction.
+
+<Card icon="terminal" to="/developers/overview/agent-quickstart" title="Build with an Agent">
+  Start from a product brief and review each live checkpoint
+</Card>
+
+<Card icon="shield" to="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
+  Implement and test the PolicyClient before deployment
+</Card>
 
 <Card icon="window" to="/developers/guides/frontend-sdk-integration" title="Frontend SDK Integration">
-  Build a frontend that submits tasks via the SDK
+  Sign in the browser, evaluate on the server, and submit only on allow
 </Card>

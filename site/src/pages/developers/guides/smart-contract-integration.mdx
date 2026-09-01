@@ -378,9 +378,10 @@ The Task Manager address **must** be `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13
 Deploy:
 
 ```bash
-source .env
 forge script script/Deploy.s.sol:DeployScript --rpc-url $RPC_URL --broadcast
 ```
+
+Provide `PRIVATE_KEY` and `RPC_URL` through the current process environment or `~/.newton/.env`. Do not commit or source a project-local `.env` containing deployment credentials.
 
 ## Set Policy
 
