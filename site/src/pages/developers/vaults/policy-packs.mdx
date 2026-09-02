@@ -37,23 +37,25 @@ The canonical deployment source is [`newton-policy-packs/deployments.json`](http
 
 ## Available Packs
 
-| Policy pack | Use it for |
-| --- | --- |
-| [Vaults.fyi Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
-| [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
-| [Webacy Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
-| [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
-| [Arkham Entity-Aware Spending Gate](/developers/vaults/policies/arkham-entity) | Tiering a spending limit by who the destination actually is |
-| [Arkham Adaptive Counterparty Gate](/developers/vaults/policies/arkham-counterparty) | Judging a payment against the sending wallet's own history and outflow baseline |
-| [Arkham Explainable Risk Exposure](/developers/vaults/policies/arkham-risk) | Denying exposure you can trace to a specific transaction route |
-| [Pharos Risk-Adjusted Treasury Gate](/developers/vaults/policies/pharos-treasury) | Admitting a stablecoin only when peg, stress, redemption, and exit capacity are all healthy |
-| [Pharos Stablecoin Safe Mode](/developers/vaults/policies/pharos-safe-mode) | Blocking exposure-increasing actions under stress while leaving withdrawals open |
-| [Pharos Redemption-Backed Asset Gate](/developers/vaults/policies/pharos-redemption) | Admitting a stablecoin only when it can actually be redeemed at par |
-| Balancer | Adding keyless Balancer pool or market data |
-| Blockaid | Screening transaction and address risk |
-| Guardrail | Adding a Guardrail risk signal |
-| Persona | Adding identity and verification checks |
-| Sumsub | Adding KYC and verification checks |
+Grouped by data provider. Arkham and Pharos each publish three packs; every other provider publishes one.
+
+| Provider | Policy pack | Use it for |
+| --- | --- | --- |
+| [Arkham](https://arkm.com) | [Entity-Aware Spending Gate](/developers/vaults/policies/arkham-entity) | Tiering a spending limit by who the destination actually is |
+| [Arkham](https://arkm.com) | [Adaptive Counterparty Gate](/developers/vaults/policies/arkham-counterparty) | Judging a payment against the sending wallet's own history and outflow baseline |
+| [Arkham](https://arkm.com) | [Explainable Risk Exposure](/developers/vaults/policies/arkham-risk) | Denying exposure you can trace to a specific transaction route |
+| [Balancer](https://balancer.fi) | Data Checks | Adding keyless Balancer pool or market data |
+| [Blockaid](https://www.blockaid.io) | Transaction Screening | Screening transaction and address risk |
+| [Chainalysis](https://www.chainalysis.com) | [Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
+| [Guardrail](https://guardrail.so) | Risk Checks | Adding a Guardrail risk signal |
+| [Persona](https://withpersona.com) | Identity Checks | Adding identity and verification checks |
+| [Pharos](https://pharos.watch) | [Risk-Adjusted Treasury Gate](/developers/vaults/policies/pharos-treasury) | Admitting a stablecoin only when peg, stress, redemption, and exit capacity are all healthy |
+| [Pharos](https://pharos.watch) | [Stablecoin Safe Mode](/developers/vaults/policies/pharos-safe-mode) | Blocking exposure-increasing actions under stress while leaving withdrawals open |
+| [Pharos](https://pharos.watch) | [Redemption-Backed Asset Gate](/developers/vaults/policies/pharos-redemption) | Admitting a stablecoin only when it can actually be redeemed at par |
+| [RedStone](https://redstone.finance) | [Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+| [Sumsub](https://sumsub.com) | Verification Checks | Adding KYC and verification checks |
+| [Vaults.fyi](https://vaults.fyi) | [Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
+| [Webacy](https://developers.webacy.co/) | [Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
 
 ## Deployed PolicyData Addresses
 
