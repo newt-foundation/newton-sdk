@@ -43,6 +43,12 @@ The canonical deployment source is [`newton-policy-packs/deployments.json`](http
 | [Chainalysis Address Screening](/developers/vaults/policies/chainalysis) | Screening addresses for sanctions, high-risk categories, and configured blocklists |
 | [Webacy Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
 | [RedStone Oracle Divergence](/developers/vaults/policies/redstone) | Stopping actions when market data is stale, divergent, or persistently outside thresholds |
+| [Arkham Entity-Aware Spending Gate](/developers/vaults/policies/arkham-entity) | Tiering a spending limit by who the destination actually is |
+| [Arkham Adaptive Counterparty Gate](/developers/vaults/policies/arkham-counterparty) | Judging a payment against the sending wallet's own history and outflow baseline |
+| [Arkham Explainable Risk Exposure](/developers/vaults/policies/arkham-risk) | Denying exposure you can trace to a specific transaction route |
+| [Pharos Risk-Adjusted Treasury Gate](/developers/vaults/policies/pharos-treasury) | Admitting a stablecoin only when peg, stress, redemption, and exit capacity are all healthy |
+| [Pharos Stablecoin Safe Mode](/developers/vaults/policies/pharos-safe-mode) | Blocking exposure-increasing actions under stress while leaving withdrawals open |
+| [Pharos Redemption-Backed Asset Gate](/developers/vaults/policies/pharos-redemption) | Admitting a stablecoin only when it can actually be redeemed at par |
 | Balancer | Adding keyless Balancer pool or market data |
 | Blockaid | Screening transaction and address risk |
 | Guardrail | Adding a Guardrail risk signal |
@@ -52,6 +58,10 @@ The canonical deployment source is [`newton-policy-packs/deployments.json`](http
 ## Deployed PolicyData Addresses
 
 Production `PolicyData` addresses for each pack:
+
+:::note
+The six Arkham and Pharos packs are documented but **not yet deployed**, so they have no row below. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth and will carry their addresses first.
+:::
 
 | Pack | Ethereum (`1`) | Base (`8453`) | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
 | --- | --- | --- | --- | --- |
@@ -91,4 +101,28 @@ For custom oracles, policy-level `_policy` params, bare policies, manifest intro
 
 <Card title="RedStone Oracle Divergence" icon="activity" to="/developers/vaults/policies/redstone">
   Compare RedStone price data against onchain oracle data before allowing actions.
+</Card>
+
+<Card title="Arkham Entity-Aware Spending Gate" icon="user-check" to="/developers/vaults/policies/arkham-entity">
+  Tier a spending limit by the destination's real-world entity attribution.
+</Card>
+
+<Card title="Arkham Adaptive Counterparty Gate" icon="activity" to="/developers/vaults/policies/arkham-counterparty">
+  Judge a payment against the sending wallet's own counterparty history.
+</Card>
+
+<Card title="Arkham Explainable Risk Exposure" icon="shield-alert" to="/developers/vaults/policies/arkham-risk">
+  Deny risk exposure traced to a specific transaction route.
+</Card>
+
+<Card title="Pharos Risk-Adjusted Treasury Gate" icon="chart-line" to="/developers/vaults/policies/pharos-treasury">
+  Admit a stablecoin only when peg, stress, redemption, and exit capacity all hold.
+</Card>
+
+<Card title="Pharos Stablecoin Safe Mode" icon="shield-check" to="/developers/vaults/policies/pharos-safe-mode">
+  Block exposure-increasing actions under stress while leaving the exits open.
+</Card>
+
+<Card title="Pharos Redemption-Backed Asset Gate" icon="book-open" to="/developers/vaults/policies/pharos-redemption">
+  Admit a stablecoin only when it can actually be redeemed at par.
 </Card>

@@ -105,6 +105,18 @@ export default defineConfig({
           { text: 'Chainalysis', link: '/developers/vaults/policies/chainalysis' },
           { text: 'RedStone', link: '/developers/vaults/policies/redstone' },
           { text: 'Webacy', link: '/developers/vaults/policies/webacy' },
+          { text: 'Arkham: Entity', link: '/developers/vaults/policies/arkham-entity' },
+          {
+            text: 'Arkham: Counterparty',
+            link: '/developers/vaults/policies/arkham-counterparty',
+          },
+          { text: 'Arkham: Risk', link: '/developers/vaults/policies/arkham-risk' },
+          { text: 'Pharos: Treasury', link: '/developers/vaults/policies/pharos-treasury' },
+          { text: 'Pharos: Safe Mode', link: '/developers/vaults/policies/pharos-safe-mode' },
+          {
+            text: 'Pharos: Redemption',
+            link: '/developers/vaults/policies/pharos-redemption',
+          },
         ],
       },
       {

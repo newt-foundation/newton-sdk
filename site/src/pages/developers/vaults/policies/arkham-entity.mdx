@@ -1,0 +1,265 @@
+---
+title: "Arkham Entity-Aware Spending Gate"
+description: "Use Arkham entity attribution in Newton policies to tier a spending limit by who the destination actually is."
+keywords:
+  - arkham
+  - entity attribution
+  - spending limit
+  - agent wallet
+  - newton vault policies
+showAskAi: false
+---
+
+# Arkham Entity-Aware Spending Gate [Use Arkham entity attribution in Newton policies to tier a spending limit by who the destination actually is.]
+
+This policy tiers a spending limit by **who the destination actually is**, using [Arkham Intelligence](https://arkm.com). Arkham connects on-chain addresses to real-world entities, so instead of a flat allow/deny an autonomous wallet gets graduated authority: a verified, approved-category destination (exchange, custodian, established protocol) gets the full tier, an unlabelled one gets a small introductory cap, a low-confidence attribution denies so a human can approve it out of band, and a prohibited risk tag denies outright at any size.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `arkham_entity` |
+| Rego package | `arkham_entity_wallet` (the `--entrypoint` is `arkham_entity_wallet.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com) |
+
+Sent by the oracle as the `API-Key` request header.
+
+## Data Inputs
+
+Two GET requests against `https://api.arkm.com`: `/intelligence/address_enriched/{address}/all` for entity attribution, labels, tags and predictions, and `/risk/address/{address}` for the headline risk level and score.
+
+Arkham returns **per-chain** results, because the same address can carry different labels and activity on different networks. When `chain` is supplied the oracle takes that slice; otherwise it takes the first populated one and reports which, so the decision stays traceable to a specific network rather than silently blending several.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `address` | The queried destination address | Echoed for traceability |
+| `chain` | The chain slice actually used, which may differ from the request when `chain` was omitted | Makes the decision traceable to one network |
+| `has_attribution` | True when Arkham has either a verified entity or a prediction | Selects the verified tier vs. the introductory cap |
+| `entity_name` | Real-world entity behind the address, or `null` | Reviewer context |
+| `entity_category` | Arkham entity category (`cex`, `custodian`, `defi`, …), or `null` | Checked against `approved_entity_categories` |
+| `address_role` | From `arkhamLabel.name` — e.g. `Hot Wallet`, `Deposit` | Reviewer context |
+| `is_contract` | Whether Arkham marks the address as a contract | Reviewer context |
+| `tags` | From `populatedTags[].id` — the stable machine name (`cex`), lowercased and deduplicated, **not** the display label | Matched against `prohibited_tags` |
+| `attribution_type` | `verified`, `predicted`, or `none` | Reviewer context |
+| `attribution_confidence` | `1` for a verified `arkhamEntity` (Arkham asserts these and attaches no confidence field), the prediction's own value for a predicted match, `null` when unattributed | Gated by `min_attribution_confidence` |
+| `risk_level` | Arkham headline risk level | Reviewer context |
+| `max_risk_score` | Highest category score driving the risk level, or `null` | Gated by `max_risk_score` |
+| `transaction_amount_usd` | Echoed from `wasmArgs` — **not attested**, see Notes | Every tier comparison rests on it |
+| `data_age_seconds` | Age of the Arkham observation, or `null` | Gated by `max_data_age_seconds` |
+| `timestamp` | When this snapshot was taken | Audit |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: the address it screens is not something the SDK can read off the vault, so the curator supplies it per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `address` | Required | The destination being judged |
+| `chain` | Optional | Arkham chain slug (`ethereum`, `base`, `arbitrum_one`, …). Arkham indexes production networks only |
+| `transaction_amount_usd` | Optional, defaults to `0` | USD notional, for the tier rules |
+
+From the CLI or dashboard, these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag — keyed by pack id, and typed per module, so a misspelled field is a compile error rather than a fail-closed evaluation at run time:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    arkham_entity: {
+      address: destination,
+      chain: 'ethereum',
+      transaction_amount_usd: 5_000,
+    },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for why this is a separate bag from `prepareQueryOptions`.
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `prohibited_tags` | `string[]` | Tags that deny outright regardless of amount. Matched case-sensitively against the lowercased form the oracle emits, so configure in lowercase |
+| `approved_entity_categories` | `string[]` | Categories qualifying for the full tier |
+| `tier_verified_max_usd` | `number` | Hard per-transaction ceiling in USD, applied even to trusted destinations |
+| `tier_unlabelled_max_usd` | `number` | Introductory cap for unattributed or unapproved destinations |
+| `min_attribution_confidence` | `number` | Minimum confidence 0-1 to act on an entity match |
+| `deny_on_no_attribution` | `boolean` | Refuse unattributed destinations outright |
+| `max_risk_score` | `number` | Maximum tolerated headline risk score 0-100 |
+| `max_data_age_seconds` | `number` | Freshness ceiling |
+| `deny_on_missing_fields` | `string[]` | Field names whose unreported (`null`) value denies rather than passes. Accepts `attribution_confidence`, `max_risk_score`, `data_age_seconds`. An empty list opts out |
+
+## Rego Checks
+
+Every rule this policy enforces:
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `prohibited_tag` | any tag in `prohibited_tags` | Sanctioned, hacker, scam or mixer destinations, at any size |
+| `no_attribution` | `deny_on_no_attribution` and no attribution | Unlabelled destinations, when the curator refuses them outright |
+| `no_attribution_over_limit` | unattributed and amount over `tier_unlabelled_max_usd` | An unknown address used for more than an introductory amount |
+| `unapproved_entity_category` | attributed, category not approved, amount over the intro cap | A known but out-of-policy venue used at scale |
+| `low_attribution_confidence` | confidence below `min_attribution_confidence` | Weak entity matches that need human review |
+| `amount_over_verified_tier` | amount over `tier_verified_max_usd` | The hard ceiling |
+| `risk_score_above_max` | score over `max_risk_score` | Elevated headline risk |
+| `stale_data` | age over `max_data_age_seconds` | Decisions made on stale intelligence |
+| `missing_<field>` | the field is named in `deny_on_missing_fields` and the oracle reported `null` | A configured threshold quietly doing nothing |
+
+### Prohibited Tag
+
+A prohibited tag denies at any size — there is no amount below which a sanctioned or mixer destination becomes acceptable. `prohibited_tag_hits` is a set rather than a bare boolean so the offending tag stays traceable.
+
+```rego
+prohibited_tag_hits contains tag if {
+    some tag in v.tags
+    tag in t.prohibited_tags
+}
+
+deny contains "prohibited_tag" if count(prohibited_tag_hits) > 0
+```
+
+### Unattributed Destination
+
+Two rules, so the curator picks the posture. `deny_on_no_attribution` refuses an unknown address outright; leave it off and an unknown address is instead capped at the introductory tier.
+
+```rego
+deny contains "no_attribution" if {
+    t.deny_on_no_attribution
+    v.has_attribution == false
+}
+
+deny contains "no_attribution_over_limit" if {
+    v.has_attribution == false
+    amount > t.tier_unlabelled_max_usd
+}
+```
+
+### Unapproved Entity Category
+
+Note the `has_attribution == true` guard: an unattributed address has no category to judge, and is handled by the rules above instead.
+
+```rego
+deny contains "unapproved_entity_category" if {
+    v.has_attribution == true
+    not v.entity_category in t.approved_entity_categories
+    amount > t.tier_unlabelled_max_usd
+}
+```
+
+### Missing Fields
+
+A threshold the curator configured is worth nothing if the oracle never reports the value it applies to. This is opt-in **per field** rather than one blanket switch, so a provider that never populates a given field cannot force a choice between requiring the field you care about and denying every transaction.
+
+```rego
+deny contains sprintf("missing_%v", [name]) if {
+    some name in t.deny_on_missing_fields
+    nullable_fields[name] == null
+}
+```
+
+### Final Allow Rule
+
+The groundedness probes are load-bearing, not decoration. Every deny rule silent-skips on an undefined field, so an error envelope yields an **empty** deny set — a bare `count(deny) == 0` would fail *open* on exactly the payload that most needs to fail closed.
+
+```rego
+allow if {
+    not v.error
+    is_boolean(v.has_attribution)
+    is_number(amount)
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package arkham_entity_wallet
+
+import future.keywords
+
+default allow := false
+
+t := data.params.arkham_entity
+v := data.wasm.arkham_entity
+
+amount := v.transaction_amount_usd
+
+nullable_fields := {
+    "attribution_confidence": v.attribution_confidence,
+    "max_risk_score": v.max_risk_score,
+    "data_age_seconds": v.data_age_seconds,
+}
+
+prohibited_tag_hits contains tag if {
+    some tag in v.tags
+    tag in t.prohibited_tags
+}
+
+deny contains "prohibited_tag" if count(prohibited_tag_hits) > 0
+
+deny contains "no_attribution" if {
+    t.deny_on_no_attribution
+    v.has_attribution == false
+}
+
+deny contains "no_attribution_over_limit" if {
+    v.has_attribution == false
+    amount > t.tier_unlabelled_max_usd
+}
+
+deny contains "unapproved_entity_category" if {
+    v.has_attribution == true
+    not v.entity_category in t.approved_entity_categories
+    amount > t.tier_unlabelled_max_usd
+}
+
+deny contains "low_attribution_confidence" if {
+    v.attribution_confidence != null
+    v.attribution_confidence < t.min_attribution_confidence
+}
+
+deny contains "amount_over_verified_tier" if amount > t.tier_verified_max_usd
+
+deny contains "risk_score_above_max" if {
+    v.max_risk_score != null
+    v.max_risk_score > t.max_risk_score
+}
+
+deny contains "stale_data" if {
+    v.data_age_seconds != null
+    v.data_age_seconds > t.max_data_age_seconds
+}
+
+deny contains sprintf("missing_%v", [name]) if {
+    some name in t.deny_on_missing_fields
+    nullable_fields[name] == null
+}
+
+allow if {
+    not v.error
+    is_boolean(v.has_attribution)
+    is_number(amount)
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.arkham_entity`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **`transaction_amount_usd` is caller-supplied and NOT attested.** It arrives through `wasmArgs`, so a caller controls it, and every tier rule rests on it. The attested alternative — `input.value` — is native-token wei rather than USD, and arrives as a *string*. A curator who needs a tamper-proof ceiling should pair this pack with a native-value cap in a composite rather than relying on the USD tiers alone.
+- `null` is the oracle's "Arkham did not report this", deliberately distinct from `0`: a null risk score means "not reported", a zero score would be a genuine clean verdict. Null optional fields fail soft. A **missing** key rather than an explicit null leaves the groundedness probes undefined and correctly blocks `allow`.
+- **Verified attribution carries no confidence field.** Arkham asserts `arkhamEntity` rather than inferring it, so the oracle scores it `1`. Only `arkhamEntityPrediction` has a real confidence value, which is what `min_attribution_confidence` meaningfully gates.
+- Arkham populates all three `deny_on_missing_fields` candidates for an attributed address, so listing them is safe for curators who would rather an unreported value block than pass.
+- Tags are lowercased by the oracle and matched case-sensitively against that normalised form, so configure `prohibited_tags` in lowercase.
+- The lookup chain is **not** the execution chain. Arkham indexes production networks only, so on a testnet `chain` must name a real mainnet or the oracle has no data and the policy fails closed.
