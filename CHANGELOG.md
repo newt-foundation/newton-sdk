@@ -1,3 +1,25 @@
+# v1.1.1 (Wed Sep 02 2026)
+
+#### 🐛 Bug Fix
+
+- docs: add the six Arkham and Pharos policy pack pages (NEWT-2489) [#184](https://github.com/newt-foundation/newton-sdk/pull/184) ([@alecsavvy](https://github.com/alecsavvy))
+- docs: add Q2 2026 transparency report [#182](https://github.com/newt-foundation/newton-sdk/pull/182) ([@vmathur](https://github.com/vmathur))
+- docs: update VaultKit and Rego compatibility guides [#181](https://github.com/newt-foundation/newton-sdk/pull/181) ([@vmathur](https://github.com/vmathur))
+
+#### ⚠️ Pushed to `main`
+
+- chore: isolate Claude and Codex guidance files ([@denniswon](https://github.com/denniswon))
+- chore: ignore agent-owned sync paths ([@denniswon](https://github.com/denniswon))
+- chore(agent-ignore): ignore unified agent transport ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 3
+
+- [@alecsavvy](https://github.com/alecsavvy)
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v1.1.0 (Fri Jul 24 2026)
 
 #### 🚀 Enhancement
