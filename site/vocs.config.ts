@@ -3,11 +3,42 @@ import { defineConfig } from 'vocs/config'
 // TextMate grammar (Apache-2.0, vendored under syntaxes/) so ```rego blocks highlight.
 import regoGrammar from './syntaxes/rego.tmLanguage.json' with { type: 'json' }
 
+/**
+ * Canonical origin — set on production ONLY, deliberately.
+ *
+ * Vocs renders `baseUrl` into a `<base>` tag on every page
+ * (`vocs/dist/react/Head.js`: `base = tag(head.base, baseUrl)`), and a `<base>`
+ * tag is what EVERY relative href on the page resolves against. So any absolute
+ * `baseUrl` pins in-site navigation to that one origin, wherever the reader
+ * actually is. Vocs' own `rehypeHeadingAnchors` notes the same trap for
+ * hash-only anchors.
+ *
+ * That made previews unusable: a hardcoded production domain sent every link on
+ * a preview to docs.newton.xyz. Pointing it at `VERCEL_URL` instead is no fix —
+ * that is the per-DEPLOYMENT host, so browsing the branch alias
+ * (`<project>-git-<branch>-<team>.vercel.app`) and clicking any link threw you
+ * onto the immutable per-deployment URL. Same class of bug, different
+ * destination. `VERCEL_BRANCH_URL` merely moves the bounce the other way.
+ *
+ * Omitting `baseUrl` emits no `<base>` tag, so relative hrefs resolve against
+ * whatever origin is serving the page — the branch alias, a deployment URL, or
+ * localhost all just work. Production still needs it, for `sitemap.xml` and
+ * `<link rel="canonical">`; a preview wants neither (Vercel sends
+ * `X-Robots-Tag: noindex` there, and a preview should not advertise canonicals).
+ *
+ * Do not add a non-production branch here without re-reading the above.
+ */
+function resolveBaseUrl(): string | undefined {
+  return process.env.VERCEL_ENV === 'production'
+    ? 'https://docs.newton.xyz'
+    : undefined
+}
+
 export default defineConfig({
   title: 'Newton Protocol Docs',
   description:
     'Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.',
-  baseUrl: 'https://docs.newton.xyz',
+  baseUrl: resolveBaseUrl(),
   logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
   iconUrl: '/favicon.svg',
   titleTemplate: '%s · Newton',
