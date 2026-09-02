@@ -28,4 +28,14 @@ The Balancer policy pack uses keyless Balancer data in composite policies. It is
 
 ## Usage
 
-Install the pack package, add it with `definePolicy(...).with(balancer)`, and pass any per-call inputs its `prepareQuery` requires under `prepareQueryOptions.balancer`.
+Install the pack package and add it with `definePolicy(...).with(balancer)`.
+
+This pack ships **no `prepareQuery`** — `poolId` and `chain` name a pool the SDK cannot read off the vault — so its `wasmArgs` are curator-supplied per call, under `wasmArgs.balancer` rather than `prepareQueryOptions.balancer`:
+
+```typescript
+await shield.morpho.reallocate(vault, allocations, {
+  wasmArgs: { balancer: { poolId, chain: 'base' } },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).

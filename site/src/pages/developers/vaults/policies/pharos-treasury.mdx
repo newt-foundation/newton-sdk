@@ -1,0 +1,283 @@
+---
+title: "Pharos Risk-Adjusted Treasury Gate"
+description: "Use Pharos stablecoin data in Newton policies to admit an asset only when peg, stress, redemption, and exit capacity are all healthy."
+keywords:
+  - pharos
+  - stablecoin risk
+  - depeg
+  - exit capacity
+  - newton vault policies
+showAskAi: false
+---
+
+# Pharos Risk-Adjusted Treasury Gate [Use Pharos stablecoin data in Newton policies to admit an asset only when peg, stress, redemption, and exit capacity are all healthy.]
+
+This policy admits a stablecoin into a treasury only when it is healthy on **all four** dimensions [Pharos](https://pharos.watch) measures — not on price alone: no active depeg and current deviation within tolerance, stress below threshold (the earlier, broader signal that rises before a full depeg), an approved redemption route so the position has a credible exit at par, and exit capacity comfortably larger than the position being taken on.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `pharos_treasury` |
+| Rego package | `pharos_treasury_risk` (the `--entrypoint` is `pharos_treasury_risk.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `PHAROS_API_KEY` | Required | [pharos.watch](https://pharos.watch) |
+
+Sent by the oracle as the `X-API-Key` request header.
+
+:::warning
+This is the heaviest pack in the catalog: **five API calls per evaluation**, against a self-serve Pharos rate limit of 30 requests per minute.
+:::
+
+## Data Inputs
+
+Five GET requests against `https://api.pharos.watch`. Four of the five are scoped to a single asset, using per-asset endpoints that are orders of magnitude smaller than the bulk alternatives:
+
+| Call | Size | Why this one |
+| --- | --- | --- |
+| `/api/stablecoin-summary/{id}` | ~0.6 KB | Identity, `priceUsd`, peg type/mechanism, supply, chain count. Replaces `/api/stablecoin/{id}`, a 345 KB supply time series with no price in it |
+| `/api/depeg-events?stablecoin={id}&active=true&includePending=true` | ~0.3 KB | Confirmed active incidents |
+| `/api/stress-signals?stablecoin={id}&days={n}` | ~7.5 KB | Stress score, band, per-signal sub-scores |
+| `/api/dex-liquidity-history?stablecoin={id}&days=1` | ~47 KB | Liquidity score, TVL, and the `exitRouteObservations` capacity curves. Replaces `/api/dex-liquidity` (2.98 MB, all assets, no query parameters) — a 63× reduction |
+| `/api/redemption-backstops` | 1.1 MB | The one endpoint with **no filter at all**. This coin's object is cut out of the raw text and only that ~3 KB parsed; `JSON.parse` on the full document exhausts the WASM heap |
+
+**Reading exit capacity correctly.** Each observation's top-level `executableUsd` is capped at its `requestedNotionalUsd`, so a $1M simulation that fills completely reports $1M — which says nothing about the ceiling. The real ladder is `capacityCurve`: successive notionals (100k → 1M → 10M → 25M) each with the `executionCostBps` actually incurred. The oracle walks that curve and takes the largest rung within the caller's `max_cost_bps`. An observation's own `maxCostBps` is the bound the *simulation ran under* (always 200), not the cost incurred — filtering on it would use the wrong number. Across routes it takes the **max**, not the sum: routes overlap, so summing double-counts shared liquidity.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `stablecoin_id` / `symbol` / `name` | Asset identity | Audit |
+| `peg_type` / `peg_mechanism` | e.g. `peggedUSD`, `fiat-backed` | Reviewer context |
+| `price` / `price_confidence` | Aggregated price and Pharos's confidence in it | Reviewer context |
+| `peg_target` / `peg_deviation_bps` | Target (1) and **signed** deviation. `null` when no source could resolve a price — never `0`, which would read as a perfect peg | Gated symmetrically via `abs()` |
+| `depeg_active` / `depeg_severity` / `depeg_direction` | Confirmed incident state | Gated by `deny_on_active_depeg` |
+| `depeg_pending_count` | Unconfirmed threshold crossings; does **not** trip `depeg_active` | Reviewer context |
+| `supply_usd` / `supply_change_7d_usd` / `chain_count` | Market footprint | Reviewer context |
+| `stress_score` / `stress_band` / `stress_signals` | Stress posture; `stress_signals` is the raw `{name: 0-100}` map | Gated by `max_stress_score` |
+| `active_stress_indicators` | Convenience view of signals at or above 50. No rule depends on it | Reviewer context |
+| `liquidity_score` / `effective_tvl_usd` / `volume_24h_usd` / `pool_count` | Liquidity depth | Gated by `min_liquidity_score` |
+| `exit_capacity_usd` / `exit_capacity_multiple` | Capacity within `max_cost_bps`, and its ratio to the position | Gated by `min_exit_capacity_multiple` |
+| `redemption_available` / `redemption_route_family` / `redemption_access_model` / `redemption_route_status` / `redemption_score` | Redemption posture | Four separate route rules |
+| `immediate_capacity_usd` | Redeemable right now | Reviewer context |
+| `price_data_age_seconds` / `stress_data_age_seconds` / `liquidity_data_age_seconds` / `redemption_data_age_seconds` | Per-source ages — these move on very different clocks | Diagnosing which feed drives staleness |
+| `data_age_seconds` | The **oldest** of the above | Gated by `max_data_age_seconds` |
+| `timestamp` | When this snapshot was taken | Audit |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: nothing on-chain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `stablecoin_id` | Required | `ticker-issuer` form, e.g. `usdc-circle` |
+| `transaction_amount_usd` | Optional, defaults to `0` | Position size. Omit and `exit_capacity_multiple` is `null` |
+| `stress_lookback_days` | Optional, defaults to `7` | Stress window |
+| `max_cost_bps` | Optional | Execution-cost bound for the capacity curve walk |
+
+From the CLI or dashboard these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    pharos_treasury: {
+      stablecoin_id: 'usdc-circle',
+      transaction_amount_usd: 1_000_000,
+    },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `deny_on_active_depeg` | `boolean` | Deny outright during a confirmed depeg. Contrast `pharos_safe_mode`'s `safe_mode_on_active_depeg`, which only *engages* safe mode |
+| `max_peg_deviation_bps` | `number` | Symmetric deviation tolerance in bps |
+| `max_stress_score` | `number` | Stress ceiling 0-100 |
+| `require_redemption` | `boolean` | Require a working redemption route |
+| `approved_redemption_route_families` | `string[]` | Acceptable route families |
+| `approved_access_models` | `string[]` | Acceptable access models |
+| `required_route_status` | `string` | Status a working route must report. Pharos reports **`open`**, not `active` |
+| `min_exit_capacity_multiple` | `number` | Required exit capacity as a multiple of the position |
+| `min_liquidity_score` | `number` | Liquidity score floor 0-100 |
+| `max_data_age_seconds` | `number` | Freshness ceiling on the oldest source. Read the Notes before tightening it |
+| `deny_on_missing_fields` | `string[]` | Field names whose unreported (`null`) value denies. Listing `exit_capacity_multiple` requires every call to supply a position size |
+
+## Rego Checks
+
+Every rule this policy enforces:
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `active_depeg` | `deny_on_active_depeg` and an incident is active | A confirmed depeg in progress |
+| `peg_deviation_above_max` | `abs(deviation)` over `max_peg_deviation_bps` | Drift off peg before an incident is declared |
+| `missing_peg_deviation_bps` | deviation is `null` | An unresolvable price. **Cannot be opted out of** |
+| `stress_above_max` | stress over `max_stress_score` | Developing stress ahead of a depeg |
+| `redemption_unavailable` | `require_redemption` and no route | No credible exit at par |
+| `unapproved_redemption_route` | route family not approved | Redemption through an out-of-policy mechanism |
+| `unapproved_access_model` | access model not approved | The wrong parties can redeem |
+| `route_status_not_approved` | status is not `required_route_status` | A route reported as impaired or suspended |
+| `insufficient_exit_capacity` | multiple below `min_exit_capacity_multiple` | A position that cannot realistically be exited |
+| `liquidity_score_below_min` | score below `min_liquidity_score` | Thin or fragile DEX liquidity |
+| `stale_data` | age over `max_data_age_seconds` | Decisions made on stale data |
+| `missing_<field>` | the field is named in `deny_on_missing_fields` and the oracle reported `null` | A configured threshold quietly doing nothing |
+
+### Peg Deviation
+
+Deviation is **signed** by the oracle (negative = below peg) because the direction matters to a reader; the threshold is symmetric via `abs()`. A naive unsigned comparison would miss the direction that matters most.
+
+```rego
+deny contains "peg_deviation_above_max" if abs(v.peg_deviation_bps) > t.max_peg_deviation_bps
+```
+
+### Unresolvable Peg
+
+Unconditional, and deliberately **not** a `deny_on_missing_fields` entry: this pack's peg rule is built on the deviation, so an unresolvable one is never tolerable. The oracle used to report `0` here when it could not resolve a price, which reads as a perfect peg — the safest possible input — so it now reports `null`.
+
+```rego
+deny contains "missing_peg_deviation_bps" if v.peg_deviation_bps == null
+```
+
+### Route Status
+
+Pharos reports **`open`** for a working route, not `active`. A curator who guesses `active` denies every healthy asset, which is why the value is a param rather than a constant — and why the pack pins it with a test.
+
+```rego
+deny contains "route_status_not_approved" if {
+    v.redemption_route_status != null
+    v.redemption_route_status != t.required_route_status
+}
+```
+
+### Exit Capacity
+
+The differentiated Pharos signal: can this position actually be exited? Passing no `transaction_amount_usd` leaves the multiple `null` rather than infinity, so the rule fails soft rather than reading an unbounded ratio as safe.
+
+```rego
+deny contains "insufficient_exit_capacity" if {
+    v.exit_capacity_multiple != null
+    v.exit_capacity_multiple < t.min_exit_capacity_multiple
+}
+```
+
+### Final Allow Rule
+
+The groundedness probes are load-bearing. `is_number(v.peg_deviation_bps)` also grounds the `abs()` in the peg rule, which is *undefined* rather than false on a non-number.
+
+```rego
+allow if {
+    not v.error
+    is_boolean(v.depeg_active)
+    is_boolean(v.redemption_available)
+    is_number(v.peg_deviation_bps)
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package pharos_treasury_risk
+
+import future.keywords
+
+default allow := false
+
+t := data.params.pharos_treasury
+v := data.wasm.pharos_treasury
+
+nullable_fields := {
+    "stress_score": v.stress_score,
+    "redemption_route_family": v.redemption_route_family,
+    "redemption_access_model": v.redemption_access_model,
+    "redemption_route_status": v.redemption_route_status,
+    "exit_capacity_multiple": v.exit_capacity_multiple,
+    "liquidity_score": v.liquidity_score,
+    "data_age_seconds": v.data_age_seconds,
+}
+
+deny contains "active_depeg" if {
+    t.deny_on_active_depeg
+    v.depeg_active == true
+}
+
+deny contains "peg_deviation_above_max" if abs(v.peg_deviation_bps) > t.max_peg_deviation_bps
+
+deny contains "missing_peg_deviation_bps" if v.peg_deviation_bps == null
+
+deny contains "stress_above_max" if {
+    v.stress_score != null
+    v.stress_score > t.max_stress_score
+}
+
+deny contains "redemption_unavailable" if {
+    t.require_redemption
+    v.redemption_available == false
+}
+
+deny contains "unapproved_redemption_route" if {
+    v.redemption_route_family != null
+    not v.redemption_route_family in t.approved_redemption_route_families
+}
+
+deny contains "unapproved_access_model" if {
+    v.redemption_access_model != null
+    not v.redemption_access_model in t.approved_access_models
+}
+
+deny contains "route_status_not_approved" if {
+    v.redemption_route_status != null
+    v.redemption_route_status != t.required_route_status
+}
+
+deny contains "insufficient_exit_capacity" if {
+    v.exit_capacity_multiple != null
+    v.exit_capacity_multiple < t.min_exit_capacity_multiple
+}
+
+deny contains "liquidity_score_below_min" if {
+    v.liquidity_score != null
+    v.liquidity_score < t.min_liquidity_score
+}
+
+deny contains "stale_data" if {
+    v.data_age_seconds != null
+    v.data_age_seconds > t.max_data_age_seconds
+}
+
+deny contains sprintf("missing_%v", [name]) if {
+    some name in t.deny_on_missing_fields
+    nullable_fields[name] == null
+}
+
+allow if {
+    not v.error
+    is_boolean(v.depeg_active)
+    is_boolean(v.redemption_available)
+    is_number(v.peg_deviation_bps)
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.pharos_treasury`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **`required_route_status` is `"open"`, not `"active"`.** Configuring `active` — the intuitive guess — denies every healthy asset. A test pins this.
+- **Freshness ceilings need care.** The four sources move on very different clocks: price and stress refresh in minutes, `dex-liquidity-history` is a **daily bucket** (up to ~24h old by construction), and redemption-backstops lags by hours. `data_age_seconds` is the oldest of them, so a ceiling below ~24h denies permanently. The per-source ages are emitted separately so you can see which feed is actually driving it.
+- **`transaction_amount_usd` is caller-supplied and NOT attested.** The attested alternative, `input.value`, is native-token wei (and a *string*), not USD. Pair with a native-value cap in a composite if you need a tamper-proof ceiling.
+- `null` is the oracle's "not reported", deliberately distinct from `0`. Null optional fields fail soft; a **missing** key leaves the groundedness probes undefined and correctly blocks `allow`.
+- **`peg_deviation_bps` is the exception** — it denies unconditionally when `null`, as `missing_peg_deviation_bps`, and is not a `deny_on_missing_fields` entry.
+- Listing `exit_capacity_multiple` in `deny_on_missing_fields` requires every call to supply a position size. Because the list is per field, you can require the rest without that.
+- **This pack rides within about 40% of a hard runtime memory limit.** `/api/redemption-backstops` has no filter, so the oracle downloads all ~1.14 MB and slices this coin's ~3 KB object out of the raw text. A `MAX_SLICEABLE_BYTES` guard trips first and returns a readable error — which fails closed — rather than trapping the component with no verdict. The durable fix is a per-asset endpoint from Pharos.

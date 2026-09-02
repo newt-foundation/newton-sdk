@@ -1,0 +1,318 @@
+---
+title: "Pharos Stablecoin Safe Mode"
+description: "Use Pharos stress signals in Newton policies to block exposure-increasing actions under stablecoin stress while leaving the exits open."
+keywords:
+  - pharos
+  - safe mode
+  - stablecoin stress
+  - graduated response
+  - newton vault policies
+showAskAi: false
+---
+
+# Pharos Stablecoin Safe Mode [Use Pharos stress signals in Newton policies to block exposure-increasing actions under stablecoin stress while leaving the exits open.]
+
+This policy is a **graduated response** to stablecoin stress, using [Pharos](https://pharos.watch). When stress rises or a depeg goes active, it stops actions that *increase* exposure while leaving the exits open: deposits and mints are blocked, withdrawals, redemptions and repayments are always permitted, and swaps are permitted only into a curator-approved safer asset. That is the point — an application gets a graduated response instead of a blunt protocol-wide pause.
+
+:::note
+This is the only pack in the catalog that reads the **attested intent** as well as oracle data. A graduated response has to know whether the caller is adding exposure or shedding it, and that fact must come from the signed intent rather than from anything the oracle asserts.
+:::
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `pharos_safe_mode` |
+| Rego package | `pharos_safe_mode` (the `--entrypoint` is `pharos_safe_mode.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `PHAROS_API_KEY` | Required | [pharos.watch](https://pharos.watch) |
+
+Sent by the oracle as the `X-API-Key` request header.
+
+## Data Inputs
+
+Three GET requests against `https://api.pharos.watch`, all filtered by `stablecoin`, totalling roughly 11 KB per evaluation — the lightest Pharos pack: `/api/stress-signals?stablecoin={id}&days={n}`, `/api/depeg-events?stablecoin={id}&active=true&includePending=true`, and `/api/mint-burn-flows?stablecoin={id}&hours={n}`.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `stablecoin_id` / `symbol` | Asset identity | Audit |
+| `stress_score` / `stress_band` | From `current.score` / `current.band`, lowercased | Gated by `safe_mode_stress_threshold` |
+| `stress_signals` | Raw `{name: 0-100}` map from `current.signals`, skipping unavailable ones | Reviewer context |
+| `active_indicators` | Convenience view of signals at or above 50. No rule depends on it | Reviewer context |
+| `age_classification` | Pharos's own freshness label (e.g. `fresh`) | Reviewer context |
+| `depeg_active` / `depeg_severity` / `peg_deviation_bps` | Active incident state. `peg_deviation_bps` is informational here and is `null`, never `0`, when unresolvable | `depeg_active` engages safe mode |
+| `net_flow_usd` / `mint_volume_usd` / `burn_volume_usd` | Mint/burn flow | Reviewer context |
+| `flow_stress_score` / `burn_surge` | From the stress `flow` signal, which already folds burn surge and burn/mint ratio against a baseline | Reviewer context |
+| `flow_anomaly` | True when `flow_stress_score` is at or above 50 | Reviewer context |
+| `data_age_seconds` | Oldest age across all three responses | Gated by `max_data_age_seconds` |
+| `timestamp` | When this snapshot was taken | Audit |
+
+### The attested intent
+
+The classifier is `input.function.name` — the bare function name, verified against newton-cli 0.5.2. The full `input` shape:
+
+```json
+{
+  "from": "0x...", "to": "0x...", "value": "1000000000000000000",
+  "chain_id": "1",
+  "data": "0xb460af94...",
+  "function_signature": "0x7769746864726177...",
+  "function": { "name": "withdraw", "type": "function",
+                "stateMutability": "nonpayable", "inputs": [], "outputs": [] },
+  "decoded_function_signature": "function withdraw(uint256, address, address)",
+  "decoded_function_arguments": ["1000000000000000000", "0x...", "0x..."]
+}
+```
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: nothing on-chain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call. Note there is deliberately **no amount** — this pack classifies the *action*, not the size.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `stablecoin_id` | Required | `ticker-issuer` form, e.g. `usdc-circle` |
+| `stress_lookback_days` | Optional, defaults to `7` | Stress window |
+| `flow_window_hours` | Optional, defaults to `24` | Mint/burn flow window |
+
+From the CLI or dashboard these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    pharos_safe_mode: { stablecoin_id: 'usdc-circle' },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `safe_mode_stress_threshold` | `number` | Stress score at or above which safe mode engages |
+| `safe_mode_on_active_depeg` | `boolean` | Let an active depeg engage safe mode on its own. **Engages** safe mode — does not deny outright |
+| `exposure_increasing_functions` | `string[]` | Bare names blocked in safe mode (e.g. `deposit`, `mint`) |
+| `exposure_reducing_functions` | `string[]` | Bare names always permitted (e.g. `withdraw`, `redeem`) |
+| `swap_functions` | `string[]` | Bare names treated as swaps |
+| `swap_destination_arg_index` | `object` | Map from swap function name to the index into `decoded_function_arguments` holding the destination token |
+| `approved_safe_assets` | `string[]` | Token addresses acceptable as swap destinations. Compared case-insensitively |
+| `max_data_age_seconds` | `number` | Freshness ceiling |
+| `deny_on_missing_fields` | `string[]` | Field names (`stress_score`, `data_age_seconds`) whose unreported (`null`) value denies rather than passes |
+
+:::warning
+The three function lists are an **allowlist**. A function in none of them denies as `unclassified_function` — in a calm market too, not just under stress. Enumerate every function your vault actually calls.
+:::
+
+## Rego Checks
+
+Every rule this policy enforces:
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `unclassified_function` | the function is in none of the three lists | A novel call that would otherwise sail past every rule |
+| `safe_mode_blocks_exposure_increase` | safe mode and an exposure-increasing call | Adding exposure to a stressed asset |
+| `unapproved_swap_destination` | safe mode, a swap, destination not approved | Rotating out of a stressed asset into another risky one |
+| `missing_swap_destination_index` | a listed swap function has no mapped index | A swap whose destination cannot be evaluated at all |
+| `stale_data` | age over `max_data_age_seconds` | Decisions made on stale data |
+| `missing_<field>` | the field is named in `deny_on_missing_fields` and the oracle reported `null` | A stress threshold quietly doing nothing |
+
+### Safe-Mode Trigger
+
+Named `safe_mode_on_*`, not `deny_on_*`, because that is what it does: an active depeg **engages safe mode**, it does not deny outright. Exposure-reducing calls stay permitted throughout. If you want a depeg to stop everything, [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `deny_on_active_depeg` is the blunt instrument; the two are deliberately named apart.
+
+```rego
+safe_mode if {
+    t.safe_mode_on_active_depeg
+    v.depeg_active == true
+}
+
+safe_mode if {
+    v.stress_score != null
+    v.stress_score >= t.safe_mode_stress_threshold
+}
+```
+
+### Action Classification
+
+Fail closed on an action the curator has not classified. Without `unclassified_function`, a novel function name would sail past every rule below.
+
+```rego
+fn := input.function.name
+
+is_reducing if fn in t.exposure_reducing_functions
+
+is_increasing if fn in t.exposure_increasing_functions
+
+is_swap if fn in t.swap_functions
+
+classified if is_reducing
+classified if is_increasing
+classified if is_swap
+
+deny contains "unclassified_function" if not classified
+
+deny contains "safe_mode_blocks_exposure_increase" if {
+    safe_mode
+    is_increasing
+}
+```
+
+### Swap Destination
+
+Keyed by function name, because swap ABIs disagree on where the destination sits: `swap(tokenIn, tokenOut, amt)` is index 1, `swapExactIn(tokenOut, amt)` is 0, and a Curve-style `exchange(i, j, dx)` has no address argument at all and belongs unmapped.
+
+`has_swap_index` is a named helper for the same reason as `arkham_counterparty`'s multiplier guard: OPA hoists the ref out of a bare `not t.swap_destination_arg_index[fn]`, so an unmapped function would leave the rule *undefined* rather than negating to true. `is_number` also keeps a legitimate index of `0` valid.
+
+```rego
+swap_destination_index := t.swap_destination_arg_index[fn]
+
+swap_destination := lower(input.decoded_function_arguments[swap_destination_index])
+
+has_swap_index if is_number(swap_destination_index)
+
+swap_destination_approved if {
+    some asset in t.approved_safe_assets
+    lower(asset) == swap_destination
+}
+
+deny contains "unapproved_swap_destination" if {
+    safe_mode
+    is_swap
+    not swap_destination_approved
+}
+
+deny contains "missing_swap_destination_index" if {
+    is_swap
+    not has_swap_index
+}
+```
+
+### Final Allow Rule
+
+`is_boolean(v.depeg_active)` grounds the oracle payload and `is_string(fn)` grounds the intent. Note what is deliberately **absent**: there is no blanket stress ceiling that denies everything. Withdrawals and redemptions stay permitted at any stress level.
+
+```rego
+allow if {
+    not v.error
+    is_boolean(v.depeg_active)
+    is_string(fn)
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package pharos_safe_mode
+
+import future.keywords
+
+default allow := false
+
+t := data.params.pharos_safe_mode
+v := data.wasm.pharos_safe_mode
+
+nullable_fields := {
+    "stress_score": v.stress_score,
+    "data_age_seconds": v.data_age_seconds,
+}
+
+fn := input.function.name
+
+safe_mode if {
+    t.safe_mode_on_active_depeg
+    v.depeg_active == true
+}
+
+safe_mode if {
+    v.stress_score != null
+    v.stress_score >= t.safe_mode_stress_threshold
+}
+
+is_reducing if fn in t.exposure_reducing_functions
+
+is_increasing if fn in t.exposure_increasing_functions
+
+is_swap if fn in t.swap_functions
+
+classified if is_reducing
+
+classified if is_increasing
+
+classified if is_swap
+
+swap_destination_index := t.swap_destination_arg_index[fn]
+
+swap_destination := lower(input.decoded_function_arguments[swap_destination_index])
+
+has_swap_index if is_number(swap_destination_index)
+
+swap_destination_approved if {
+    some asset in t.approved_safe_assets
+    lower(asset) == swap_destination
+}
+
+deny contains "unclassified_function" if not classified
+
+deny contains "safe_mode_blocks_exposure_increase" if {
+    safe_mode
+    is_increasing
+}
+
+deny contains "unapproved_swap_destination" if {
+    safe_mode
+    is_swap
+    not swap_destination_approved
+}
+
+deny contains "missing_swap_destination_index" if {
+    is_swap
+    not has_swap_index
+}
+
+deny contains "stale_data" if {
+    v.data_age_seconds != null
+    v.data_age_seconds > t.max_data_age_seconds
+}
+
+deny contains sprintf("missing_%v", [name]) if {
+    some name in t.deny_on_missing_fields
+    nullable_fields[name] == null
+}
+
+allow if {
+    not v.error
+    is_boolean(v.depeg_active)
+    is_string(fn)
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.pharos_safe_mode`. See [Policies](/developers/vaults/sdk/policies).
+
+:::warning
+Composing this pack with [`pharos_treasury`](/developers/vaults/policies/pharos-treasury) changes the **shape** of the response, not just its strictness. `pharos_treasury.deny_on_active_depeg` denies everything during a depeg, including the unwind this pack would have permitted. AND-composition takes the stricter of the two, so set `deny_on_active_depeg: false` if you want the graduated behaviour to survive composition.
+:::
+
+## Notes
+
+- **Unclassified functions deny, always** — including in a calm market. The three function lists are an allowlist, not a safe-mode-only concern.
+- **`swap_destination_arg_index` is keyed per function**, because swap ABIs disagree on where the destination sits. Give each name in `swap_functions` its own entry — `{"swap": 1, "swapExactIn": 0}`.
+- **A swap function with no mapped index denies** as `missing_swap_destination_index`, in a calm market as well as in safe mode: the policy cannot evaluate the destination at all, so it fails closed rather than waving the call through. Leave a Curve-style `exchange` unmapped and it is denied, not misread.
+- **An out-of-range index also fails closed.** The destination is left undefined, which denies rather than reading as approved.
+- Swap destinations are compared **case-insensitively**: the intent lowercases addresses while curator params are typically checksummed.
+- `null` is the oracle's "not reported", deliberately distinct from `0`. Worth listing `stress_score` in `deny_on_missing_fields` if you rely on `safe_mode_stress_threshold` — without a score, safe mode can only ever engage via the depeg branch.
+- `input.chain_id` arrives as a *string* and is only populated when the intent JSON sets `chainId` (camelCase in, snake_case out). The `--chain-id` CLI flag does **not** populate it, so no rule here depends on it.
+- **`/api/mint-burn-flows` carries no anomaly flag of its own.** Pharos's judgement of flow abnormality lives in the stress `flow` signal, so the oracle uses that rather than inventing a threshold over raw mint/burn volumes.
+- Stress data is nested under `current` (`current.score`, `current.band`, `current.signals`) — not at the top level.

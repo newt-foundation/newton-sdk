@@ -125,19 +125,35 @@ Generate schemas and encode this format with `@newton-xyz/policy-core`; do not h
 
 ## Per-Call Inputs
 
+`sendCall` takes two short-ID-keyed per-module bags. Which one a pack uses depends on whether it ships a `prepareQuery`.
+
 ```typescript
 await client.sendCall({
   to,
   data,
   functionSignature,
+  // INPUTS to a pack's own prepareQuery, for packs that have one.
   prepareQueryOptions: {
     vaultsfyi: { previousAllocationHash: '0x...' },
     my_oracle: { market: '0xMarket' },
   },
+  // The wasmArgs THEMSELVES, for packs that ship no prepareQuery.
+  wasmArgs: {
+    arkham_entity: { address: '0xDestination', chain: 'ethereum' },
+    pharos_treasury: { stablecoin_id: 'usdc-circle' },
+  },
 })
 ```
 
-Each module receives only its short-ID-keyed options. Its `prepareQuery(...)` result is checked against its `wasmArgsSchema`; a failure stops intent construction.
+Each module receives only its short-ID-keyed slice. Its `prepareQuery(...)` result is checked against its `wasmArgsSchema`; a failure stops intent construction.
+
+A pack ships no `prepareQuery` when its `wasmArgs` name something the SDK cannot read from chain state — [`balancer`](/developers/vaults/policies/balancer)'s `poolId`, [`arkham_entity`](/developers/vaults/policies/arkham-entity)'s `address`, [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `stablecoin_id`. Those modules take their slice from `wasmArgs` instead.
+
+The two are separate fields rather than one because they are different things: `prepareQueryOptions` is input **to** a `prepareQuery`, `wasmArgs` is what one would have **returned**. A pack with no `prepareQuery` also carries `TOptions = unknown`, so routing its args through the options bag would compile while checking nothing; `wasmArgs` is typed per module, so a misspelled field is a compile error.
+
+A module that ships a `prepareQuery` owns its slice outright — there is no merge, so a stray `wasmArgs` entry cannot override what the pack derived from chain state. Either way a slice its schema rejects, including the `{}` a `prepareQuery`-less module gets when nothing is supplied, throws `InvalidConfigurationError` rather than reaching the AVS.
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later.
 
 ## Verification and Introspection
 

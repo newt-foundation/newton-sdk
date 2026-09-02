@@ -1,0 +1,266 @@
+---
+title: "Pharos Redemption-Backed Asset Gate"
+description: "Use Pharos redemption data in Newton policies to admit a stablecoin only when it can actually be redeemed at par."
+keywords:
+  - pharos
+  - stablecoin redemption
+  - reserve quality
+  - redemption capacity
+  - newton vault policies
+showAskAi: false
+---
+
+# Pharos Redemption-Backed Asset Gate [Use Pharos redemption data in Newton policies to admit a stablecoin only when it can actually be redeemed at par.]
+
+This policy admits a stablecoin only when it can actually be **redeemed at par**, using [Pharos](https://pharos.watch). Market price says nothing about whether a holder can convert back to the underlying, so this pack gates on the redemption path itself: direct redemption must be available, the provider and mechanism must be approved, applicable limits must support the intended position size, and the oracle response must be current.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `pharos_redemption` |
+| Rego package | `pharos_redemption_backing` (the `--entrypoint` is `pharos_redemption_backing.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `PHAROS_API_KEY` | Required | [pharos.watch](https://pharos.watch) |
+
+Sent by the oracle as the `X-API-Key` request header.
+
+## Data Inputs
+
+Two GET requests against `https://api.pharos.watch`:
+
+1. `/api/redemption-backstops` — the redemption map. This endpoint takes **no query parameters at all** and returns all ~328 coins as a 1.1 MB document. `JSON.parse` on that exhausts the WASM heap, so this coin's object is cut out of the **raw text** and only that ~3 KB is parsed.
+2. `/api/stablecoin-reserves/{id}` — ~1.4 KB, reserve composition and provenance.
+
+"Available" means Pharos actually reported a route for this asset — an absent entry is a genuine "no redemption path", not a soft null.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `stablecoin_id` / `symbol` / `issuer` | Identity, derived from the `ticker-issuer` id | Audit |
+| `redemption_available` | Whether a route was reported at all | Gated by `require_redemption_available` |
+| `route_family` / `access_model` / `settlement_model` / `execution_model` | How redemption works, who may use it, how it settles | Three separate approval rules |
+| `route_status` | Route health. Pharos reports **`open`** for a working route, not `active` | Gated by `required_route_status` |
+| `holder_eligibility` / `provider` / `source_mode` | Who qualifies, and who Pharos attributes the route to | Reviewer context |
+| `immediate_capacity_usd` / `modeled_exit_size_usd` | What can be redeemed now, and the size Pharos modelled | Basis for the capacity multiple |
+| `capacity_multiple` | `immediate_capacity_usd / transaction_amount_usd`, or `null` when no amount was supplied | Gated by `min_capacity_multiple` |
+| `capacity_confidence` | Qualitative band (e.g. `documented-bound`) — a **string**, not a number | Gated by `approved_capacity_confidence` |
+| `route_score` / `access_score` / `settlement_score` / `capacity_score` | Pharos's 0-100 quality measures | `route_score` gated by `min_route_score` |
+| `fee_bps` / `queue_enabled` | Cost and whether redemptions queue | Reviewer context |
+| `reserve_composition` | `{slice name: percentage}` | Reviewer context |
+| `reserve_elevated_risk_pct` | Share of reserves Pharos rates worse than low risk | Gated by `max_reserve_elevated_risk_pct` |
+| `reserve_mode` / `reserve_source` / `reserve_sync_status` / `reserve_stale` | Backing provenance | Reviewer context |
+| `data_age_seconds` | Oldest age across both responses | Gated by `max_data_age_seconds` |
+| `timestamp` | When this snapshot was taken | Audit |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: nothing on-chain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `stablecoin_id` | Required | `ticker-issuer` form, e.g. `usdc-circle` |
+| `transaction_amount_usd` | Optional, defaults to `0` | Position size. Omit and `capacity_multiple` is `null` |
+
+From the CLI or dashboard these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    pharos_redemption: {
+      stablecoin_id: 'usdc-circle',
+      transaction_amount_usd: 1_000_000,
+    },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `require_redemption_available` | `boolean` | Require a working redemption route |
+| `approved_route_families` | `string[]` | Acceptable route families (observed: `offchain-issuer`) |
+| `approved_access_models` | `string[]` | Acceptable access models (observed: `issuer-api`) |
+| `approved_settlement_models` | `string[]` | Acceptable settlement models (observed: `same-day`) |
+| `required_route_status` | `string` | Status a working route must report — **`open`**, not `active` |
+| `min_route_score` | `number` | Minimum 0-100 route score |
+| `approved_capacity_confidence` | `string[]` | Acceptable confidence bands; an empty array disables the check |
+| `min_capacity_multiple` | `number` | Required immediate capacity as a multiple of the position |
+| `max_reserve_elevated_risk_pct` | `number` | Max share of reserves rated worse than low risk |
+| `max_data_age_seconds` | `number` | Freshness ceiling; the feed lags hours, so keep this generous |
+| `deny_on_missing_fields` | `string[]` | Field names whose unreported (`null`) value denies. Listing `capacity_multiple` requires every call to supply a position size |
+
+## Rego Checks
+
+Every rule this policy enforces:
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `redemption_unavailable` | `require_redemption_available` and no route | No redemption path at all |
+| `unapproved_route_family` | family not approved | Redemption through an out-of-policy mechanism |
+| `unapproved_access_model` | access model not approved | The wrong parties can redeem |
+| `unapproved_settlement_model` | settlement model not approved | Settlement slower than the curator accepts |
+| `route_status_not_approved` | status is not `required_route_status` | An impaired or suspended route |
+| `position_exceeds_capacity` | multiple below `min_capacity_multiple` | A position larger than what can actually be redeemed now |
+| `low_route_score` | score below `min_route_score` | A route Pharos rates poorly |
+| `unapproved_capacity_confidence` | band not in `approved_capacity_confidence` | Capacity Pharos cannot evidence |
+| `reserve_risk_above_max` | elevated-risk share over `max_reserve_elevated_risk_pct` | Backing concentrated in riskier assets |
+| `stale_data` | age over `max_data_age_seconds` | Decisions made on stale data |
+| `missing_<field>` | the field is named in `deny_on_missing_fields` and the oracle reported `null` | A configured threshold quietly doing nothing |
+
+### Route Status
+
+Pharos reports **`open`** for a working route, not `active`. Configuring `active` — the intuitive guess — denies every healthy asset. A test pins this.
+
+```rego
+deny contains "route_status_not_approved" if {
+    v.route_status != null
+    v.route_status != t.required_route_status
+}
+```
+
+### Position Sizing
+
+Sizing is against **immediate** capacity: Pharos publishes no daily limit and no redemption minimum on this endpoint. Passing no amount leaves the multiple `null` and the rule fails soft.
+
+```rego
+deny contains "position_exceeds_capacity" if {
+    v.capacity_multiple != null
+    v.capacity_multiple < t.min_capacity_multiple
+}
+```
+
+### Capacity Confidence
+
+`capacity_confidence` is a qualitative **string** band, not a number, so this is a membership check rather than a floor. The `count(...) > 0` guard is what lets an empty `approved_capacity_confidence` disable the check entirely.
+
+```rego
+deny contains "unapproved_capacity_confidence" if {
+    count(t.approved_capacity_confidence) > 0
+    v.capacity_confidence != null
+    not v.capacity_confidence in t.approved_capacity_confidence
+}
+```
+
+### Final Allow Rule
+
+The groundedness probe is load-bearing: every deny rule silent-skips on an undefined field, so an error envelope yields an **empty** deny set and a bare `count(deny) == 0` would fail *open*.
+
+```rego
+allow if {
+    not v.error
+    is_boolean(v.redemption_available)
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package pharos_redemption_backing
+
+import future.keywords
+
+default allow := false
+
+t := data.params.pharos_redemption
+v := data.wasm.pharos_redemption
+
+nullable_fields := {
+    "route_family": v.route_family,
+    "access_model": v.access_model,
+    "settlement_model": v.settlement_model,
+    "route_status": v.route_status,
+    "capacity_multiple": v.capacity_multiple,
+    "route_score": v.route_score,
+    "capacity_confidence": v.capacity_confidence,
+    "reserve_elevated_risk_pct": v.reserve_elevated_risk_pct,
+    "data_age_seconds": v.data_age_seconds,
+}
+
+deny contains "redemption_unavailable" if {
+    t.require_redemption_available
+    v.redemption_available == false
+}
+
+deny contains "unapproved_route_family" if {
+    v.route_family != null
+    not v.route_family in t.approved_route_families
+}
+
+deny contains "unapproved_access_model" if {
+    v.access_model != null
+    not v.access_model in t.approved_access_models
+}
+
+deny contains "unapproved_settlement_model" if {
+    v.settlement_model != null
+    not v.settlement_model in t.approved_settlement_models
+}
+
+deny contains "route_status_not_approved" if {
+    v.route_status != null
+    v.route_status != t.required_route_status
+}
+
+deny contains "position_exceeds_capacity" if {
+    v.capacity_multiple != null
+    v.capacity_multiple < t.min_capacity_multiple
+}
+
+deny contains "low_route_score" if {
+    v.route_score != null
+    v.route_score < t.min_route_score
+}
+
+deny contains "unapproved_capacity_confidence" if {
+    count(t.approved_capacity_confidence) > 0
+    v.capacity_confidence != null
+    not v.capacity_confidence in t.approved_capacity_confidence
+}
+
+deny contains "reserve_risk_above_max" if {
+    v.reserve_elevated_risk_pct != null
+    v.reserve_elevated_risk_pct > t.max_reserve_elevated_risk_pct
+}
+
+deny contains "stale_data" if {
+    v.data_age_seconds != null
+    v.data_age_seconds > t.max_data_age_seconds
+}
+
+deny contains sprintf("missing_%v", [name]) if {
+    some name in t.deny_on_missing_fields
+    nullable_fields[name] == null
+}
+
+allow if {
+    not v.error
+    is_boolean(v.redemption_available)
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.pharos_redemption`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **`required_route_status` is `"open"`, not `"active"`** — configuring `active` denies every healthy asset. A test pins this.
+- **Pharos publishes no daily limit and no redemption minimum.** Sizing is therefore against `immediate_capacity_usd`, and there is no `below_min_redeem` rule.
+- **There is no numeric confidence either.** `capacity_confidence` is a qualitative band (`documented-bound`), so route quality is gated on the 0-100 `route_score`.
+- **`transaction_amount_usd` is caller-supplied and NOT attested.** See [`pharos_treasury`](/developers/vaults/policies/pharos-treasury) for the same caveat.
+- `null` is the oracle's "not reported", distinct from `0`. Null optional fields fail soft; a **missing** key blocks `allow`.
+- Listing `capacity_multiple` in `deny_on_missing_fields` requires every call to supply a position size. Because the list is per field, you can require the rest without that.
+- **This pack rides within about 40% of a hard runtime memory limit.** `/api/redemption-backstops` has no filter, so the oracle downloads all ~1.14 MB and slices this coin's ~3 KB object out of the raw text. A `MAX_SLICEABLE_BYTES` guard trips first and returns a readable error — which fails closed — rather than trapping the component with no verdict. The durable fix is a per-asset endpoint from Pharos.
