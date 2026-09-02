@@ -160,22 +160,9 @@ cast send 0xPOLICY_CLIENT \
 
 Choose `expireAfter` for the target chain and application. Calling `setPolicy` produces a new `policyId`; verify it immediately and update any recorded handoff or application configuration.
 
-## Step 7 — Register when required
+## Step 7 — Transfer ownership for dashboard operations
 
-Registry membership is required for features such as identity linking, but not every PolicyClient flow. When needed, use the current registry address reported by `deployments show`:
-
-```bash
-cast send 0xPOLICY_CLIENT_REGISTRY \
-  "registerClient(address)" 0xPOLICY_CLIENT \
-  --rpc-url "$RPC_URL" \
-  --private-key "$PRIVATE_KEY"
-```
-
-Registration does not set the PolicyClient contract owner.
-
-## Step 8 — Transfer ownership for dashboard operations
-
-Gateway secrets and client-scoped live evaluation authorize against `PolicyClient.getOwner()`. If the dashboard login wallet must own the client, transfer only after policy binding and optional registration are complete:
+Gateway secrets and client-scoped live evaluation authorize against `PolicyClient.getOwner()`. If the dashboard login wallet must own the client, transfer after policy binding is complete:
 
 ```bash
 cast send 0xPOLICY_CLIENT \
@@ -188,6 +175,12 @@ Verify `getOwner()` on-chain. `PolicyClientRegistry.setClientOwner` changes the 
 
 :::warning
 After ownership transfer, the local deployer can no longer call owner-only `setPolicy` or `setPolicyAddress`. Plan policy and parameter updates before transfer. If the application treats clients as replaceable, deploy and wire a new client for later changes.
+:::
+
+## Step 8 — Register with the dashboard user (coming soon)
+
+:::note
+PolicyClient registration is temporarily omitted from this guide. After [newt-foundation/newton-prover-avs#771](https://github.com/newt-foundation/newton-prover-avs/pull/771) lands in a stable `newton-cli` release, `newton-cli policy-client register` will open the dashboard so the dashboard user can sign and register the client. The exact released command and verification steps will be added here then.
 :::
 
 ## Step 9 — Upload secrets when used
@@ -216,14 +209,14 @@ Check these values on-chain:
 - Policy address and `policyId` are non-zero and current
 - Params and `expireAfter` are correct
 - `getOwner()` is the expected wallet
-- Registry record matches when registration is used
+- Registry record matches the dashboard user when registration is available and required
 - Client-scoped secrets exist when the WASM provider requires them
 
 Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler supplies `NEWTON_API_KEY`. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
 ## Agent-assisted deployment
 
-Newton Agent Skills automate the same local-first sequence and preserve policy and client state in handoff files. They still pause before uploads, broadcasts, ownership transfer, gateway evaluation, and the first attested application transaction.
+Newton Agent Skills automate the same local-first sequence and preserve policy and client state in handoff files. They still pause before uploads, broadcasts, ownership transfer, dashboard registration when available, gateway evaluation, and the first attested application transaction.
 
 <Card icon="terminal" to="/developers/overview/agent-quickstart" title="Build with an Agent">
   Start from a product brief and review each live checkpoint
