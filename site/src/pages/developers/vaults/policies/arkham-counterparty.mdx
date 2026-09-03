@@ -12,7 +12,7 @@ showAskAi: false
 
 # Arkham Adaptive Counterparty Gate [Use Arkham counterparty history in Newton policies to judge a payment against the sending wallet's own baseline.]
 
-This policy judges a payment against **the sending wallet's own history**, using [Arkham Intelligence](https://arkm.com). Routine payments to established counterparties clear automatically; anything that breaks the wallet's established pattern stops for human approval. A new recipient is capped at an introductory amount, an unusually large payment relative to prior transactions with that counterparty denies, a concentration spike denies, and total outflow running well above the wallet's normal daily level denies.
+This policy judges a payment against **the sending wallet's own history**, using [Arkham Intelligence](https://arkm.com/api). Routine payments to established counterparties clear automatically; anything that breaks the wallet's established pattern stops for human approval. A new recipient is capped at an introductory amount, an unusually large payment relative to prior transactions with that counterparty denies, a concentration spike denies, and total outflow running well above the wallet's normal daily level denies.
 
 ## Deployment
 
@@ -31,7 +31,7 @@ This oracle is not deployed yet, so it has no row in the VaultKit address table.
 
 | Secret | Required? | Where to get it |
 | --- | --- | --- |
-| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com) |
+| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com/api) |
 
 Sent by the oracle as the `API-Key` request header.
 
