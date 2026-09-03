@@ -12,7 +12,7 @@ showAskAi: false
 
 # Arkham Explainable Risk Exposure [Use Arkham exposure paths in Newton policies to deny risk you can trace to a specific transaction route.]
 
-This policy denies **risk exposure you can explain**, using [Arkham Intelligence](https://arkm.com). Rather than collapsing everything into one score, it reasons about the actual transaction routes connecting an address to a risky source: direct or near-hop exposure to a severe category denies on presence alone, more distant exposure denies only when materially large or recent, dust is ignored outright so a dusting attack cannot brick a wallet, and the deny set names the offending route so a reviewer can see *why*.
+This policy denies **risk exposure you can explain**, using [Arkham Intelligence](https://arkm.com/api). Rather than collapsing everything into one score, it reasons about the actual transaction routes connecting an address to a risky source: direct or near-hop exposure to a severe category denies on presence alone, more distant exposure denies only when materially large or recent, dust is ignored outright so a dusting attack cannot brick a wallet, and the deny set names the offending route so a reviewer can see *why*.
 
 ## Deployment
 
@@ -31,7 +31,7 @@ This oracle is not deployed yet, so it has no row in the VaultKit address table.
 
 | Secret | Required? | Where to get it |
 | --- | --- | --- |
-| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com) |
+| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com/api) |
 
 Sent by the oracle as the `API-Key` request header.
 

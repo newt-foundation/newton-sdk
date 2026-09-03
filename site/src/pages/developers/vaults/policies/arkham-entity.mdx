@@ -12,7 +12,7 @@ showAskAi: false
 
 # Arkham Entity-Aware Spending Gate [Use Arkham entity attribution in Newton policies to tier a spending limit by who the destination actually is.]
 
-This policy tiers a spending limit by **who the destination actually is**, using [Arkham Intelligence](https://arkm.com). Arkham connects on-chain addresses to real-world entities, so instead of a flat allow/deny an autonomous wallet gets graduated authority: a verified, approved-category destination (exchange, custodian, established protocol) gets the full tier, an unlabelled one gets a small introductory cap, a low-confidence attribution denies so a human can approve it out of band, and a prohibited risk tag denies outright at any size.
+This policy tiers a spending limit by **who the destination actually is**, using [Arkham Intelligence](https://arkm.com/api). Arkham connects on-chain addresses to real-world entities, so instead of a flat allow/deny an autonomous wallet gets graduated authority: a verified, approved-category destination (exchange, custodian, established protocol) gets the full tier, an unlabelled one gets a small introductory cap, a low-confidence attribution denies so a human can approve it out of band, and a prohibited risk tag denies outright at any size.
 
 ## Deployment
 
@@ -31,7 +31,7 @@ This oracle is not deployed yet, so it has no row in the VaultKit address table.
 
 | Secret | Required? | Where to get it |
 | --- | --- | --- |
-| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com) |
+| `ARKHAM_API_KEY` | Required | [arkm.com](https://arkm.com/api) |
 
 Sent by the oracle as the `API-Key` request header.
 
