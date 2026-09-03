@@ -5,6 +5,7 @@ TypeScript SDK for the [Newton Protocol](https://docs.newton.xyz/developers/over
 ## Documentation
 
 - [Quickstart](https://docs.newton.xyz/developers/overview/quickstart) — simulate your first policy evaluation in 5 minutes
+- [Build with an Agent](https://docs.newton.xyz/developers/overview/agent-quickstart) — turn a product brief into a locally tested policy, PolicyClient, and demo
 - [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide) — full end-to-end integration with policy, contract, and frontend
 - [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference) — complete API documentation
 - [Core Concepts](https://docs.newton.xyz/developers/overview/core-concepts) — policies, intents, tasks, and attestations

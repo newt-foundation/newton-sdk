@@ -61,29 +61,27 @@ Windows does not have prebuilt binaries. Use WSL and follow the Linux install ab
 
 ### Config File
 
-Create `~/.newton/newton-cli.toml` for persistent defaults:
+Create `~/.newton/newton-cli.toml` for non-secret persistent defaults:
 
 ```toml
-eth_rpc_url = "https://base-sepolia.gateway.tenderly.co"
 gateway_url = "https://gateway.testnet.newton.xyz/rpc"
-
-[signer]
-private_key = "0x..."
 ```
 
 Contract addresses are loaded automatically from bundled deployment files — you do not need to configure them manually.
 
 ### Environment Variables
 
-Most commands accept configuration through environment variables or command-line arguments. Create a `.env` file in your working directory to set common values:
+Most commands accept configuration through environment variables or command-line arguments. Inject credentials into the current process environment or the user-level `~/.newton/.env`; do not commit or source a project-local `.env`:
 
 ```bash
-CHAIN_ID=84532
-PRIVATE_KEY="your_private_key"
-RPC_URL="https://base-sepolia.gateway.tenderly.co"
-PINATA_JWT="your_pinata_jwt"
-PINATA_GATEWAY="your_pinata_gateway"
+export CHAIN_ID=84532
+export PRIVATE_KEY="your_private_key"
+export RPC_URL="https://your-rpc.example"
+export PINATA_JWT="your_pinata_jwt"
+export PINATA_GATEWAY="your_pinata_gateway"
 ```
+
+Never paste secret values into chat with a coding agent or place them directly in command arguments, where they can leak through shell history and process inspection.
 
 ### Global Flags
 
@@ -115,28 +113,12 @@ Generates CIDs for policy files and uploads them to IPFS via Pinata.
 
 **Usage**
 
-:::code-group
-```bash [Inline Arguments]
-newton-cli --chain-id 84532 policy-files generate-cids \
-    --directory policy-files \
-    --output policy-files/policy_cids.json \
-    --pinata-jwt "your pinata jwt" \
-    --pinata-gateway "your pinata gateway" \
-    --entrypoint "max_gas_price.allow"
-```
-
-```bash [Environment Variables]
-# .env
-# CHAIN_ID=84532
-# PINATA_JWT="your pinata jwt"
-# PINATA_GATEWAY="your pinata gateway"
-
+```bash
 newton-cli policy-files generate-cids \
     --directory policy-files \
     --output policy-files/policy_cids.json \
     --entrypoint "max_gas_price.allow"
 ```
-:::
 
 ---
 
@@ -156,23 +138,9 @@ Deploys a policy data contract with the specified policy CIDs.
 
 **Usage**
 
-:::code-group
-```bash [Inline Arguments]
-newton-cli --chain-id 84532 policy-data deploy \
-  --private-key "development_pk" \
-  --rpc-url "https://base-sepolia.gateway.tenderly.co" \
-  --policy-cids policy-files/policy_cids.json
-```
-
-```bash [Environment Variables]
-# .env
-# CHAIN_ID=84532
-# PRIVATE_KEY="development_pk"
-# RPC_URL="https://base-sepolia.gateway.tenderly.co"
-
+```bash
 newton-cli policy-data deploy --policy-cids policy-files/policy_cids.json
 ```
-:::
 
 #### `simulate`
 
@@ -231,26 +199,11 @@ Mainnet policy usage requires allowlisting by the Newton team. Before deploying 
 
 **Usage**
 
-:::code-group
-```bash [Inline Arguments]
-newton-cli --chain-id 84532 policy deploy \
-  --private-key "development_pk" \
-  --rpc-url "https://base-sepolia.gateway.tenderly.co" \
-  --policy-cids policy-files/policy_cids.json \
-  --policy-data-address "0xdB9578b6c719122ECd30667D84D1fb483c789BC8"
-```
-
-```bash [Environment Variables]
-# .env
-# CHAIN_ID=84532
-# PRIVATE_KEY="development_pk"
-# RPC_URL="https://base-sepolia.gateway.tenderly.co"
-
+```bash
 newton-cli policy deploy \
   --policy-cids policy-files/policy_cids.json \
   --policy-data-address "0xab23A45365F0BF660887B54b42787fA5519eb574"
 ```
-:::
 
 #### `simulate`
 
@@ -355,9 +308,7 @@ Calling `set-policy-params` internally calls `setPolicy(PolicyConfig)` which re-
 newton-cli --chain-id 84532 policy-client set-policy-params \
   --policy-client 0x... \
   --policy-params policy-files/policy_params_data.json \
-  --expire-after 1000 \
-  --private-key "development_pk" \
-  --rpc-url "https://base-sepolia.gateway.tenderly.co"
+  --expire-after 1000
 ```
 
 #### `status`
@@ -740,29 +691,28 @@ Runs automated migration for PolicyClient contracts that are incompatible with t
 ```bash
 newton-cli version migrate \
   --policy-client "0x..." \
-  --chain-id 84532 \
-  --private-key "development_pk"
+  --chain-id 84532
 ```
 
 ---
 
 ## Integration Workflow
 
-A typical workflow for integrating a new smart contract with Newton:
+A typical local-first workflow for integrating a new smart contract with Newton:
 
 | Step | Command | Purpose |
 | --- | --- | --- |
-| 1 | `newton-cli regorus eval` | Test Rego policy locally |
-| 2 | `newton-cli policy-files generate-cids` | Upload to IPFS, generate CIDs |
-| 3 | `newton-cli policy-data deploy` | Deploy WASM data provider |
-| 4 | `newton-cli policy deploy` | Deploy Rego policy |
-| 5 | `newton-cli policy-client register` | Register in PolicyClientRegistry |
-| 6 | `newton-cli policy-client set-policy` | Set policy on client |
-| 7 | `newton-cli policy-client set-policy-params` | Configure parameters and expiration |
-| 8 | `newton-cli secrets upload` | Upload WASM provider secrets |
-| 9 | `newton-cli privacy identity/confidential/ephemeral` | Upload privacy data (if applicable) |
-| 10 | `newton-cli policy simulate` | End-to-end dry run |
-| 11 | `newton-cli task submit-evaluation-request` | Submit production task |
+| 1 | `newton-cli policy scaffold` | Create the policy source, schemas, fixtures, and deployment config |
+| 2 | `newton-cli policy build -p <dir>` | Validate and compile the policy artifacts |
+| 3 | `newton-cli policy simulate -p <dir>` | Prove at least one allow and one deny case locally |
+| 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy PolicyData + Policy after approval |
+| 5 | `forge build && forge test` | Build and adversarially test the application PolicyClient |
+| 6 | `forge script ... --broadcast` | Deploy the tested PolicyClient after approval |
+| 7 | `cast send ... setPolicyAddress/setPolicy` | Bind policy and params while the local deployer is owner |
+| 8 | `cast send ... registerClient` | Register only when the application requires it |
+| 9 | `cast send ... setPolicyClientOwner` | Transfer ownership to the dashboard login wallet when required |
+| 10 | `newton-cli secrets upload` | Upload client-scoped secrets after owner and schema checks |
+| 11 | SDK `evaluateIntentDirect` | Sign the EIP-712 intent and evaluate through a server-side gateway client |
 
 For the full contract-side integration, see the [Smart Contract Integration](/developers/guides/smart-contract-integration) guide.
 
@@ -801,7 +751,7 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
   The `secrets upload` command encrypts client-side. The gateway's HPKE public key is fetched automatically via `newt_getSecretsPublicKey` — no local key configuration is needed.
 :::
 :::details[IncompatiblePolicyVersion]
-  Your policy was deployed with an older factory. Deploy a new policy via the latest factory, then call `newton-cli policy-client set-policy` to update. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility).
+  Your policy was deployed with an older factory. Deploy a new policy via the latest factory, then follow the [deployment guide](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters) to bind it while an available signer still owns the PolicyClient. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility).
 :::
 ## Next Steps
 

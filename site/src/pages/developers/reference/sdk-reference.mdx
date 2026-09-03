@@ -202,7 +202,7 @@ const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequ
     chainId: '0xaa36a7', // Ethereum Sepolia (11155111)
     functionSignature: '0x...',
   },
-  timeout: 60000,
+  timeout: 60,
 });
 
 console.log(result.taskId);  // Hex
@@ -288,7 +288,7 @@ const { result } = await walletClient.evaluateIntentDirect({
   policyClient,
   intent,
   intentSignature,
-  timeout: 30000,
+  timeout: 30,
 });
 
 console.log(result.evaluationResult); // boolean
@@ -319,7 +319,7 @@ evaluateIntentDirect(
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
 | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
 | `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
-| `timeout`      | `number`           | No       | Request timeout in milliseconds                                                                    |
+| `timeout`      | `number`           | No       | Request timeout in seconds                                                                         |
 
 **Returns:**
 

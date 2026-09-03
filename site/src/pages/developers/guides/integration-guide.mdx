@@ -18,7 +18,14 @@ This guide walks through the full Newton Protocol integration: a [WASM data orac
   <Tab title="Build everything from scratch">
     Follow all five steps below to create a data oracle, write a Rego policy, deploy it, and integrate with a smart contract and frontend.
   </Tab>
+  <Tab title="Build with an agent">
+    Start with the [Agent Quickstart](/developers/overview/agent-quickstart). Newton Agent Skills turn a brief into locally tested policy and contract artifacts, preserve state in handoff files, and pause before deployment, gateway evaluation, and live transactions.
+  </Tab>
 </Tabs>
+
+:::note
+The agent and manual routes produce the same Newton components. The agent route adds resumable `policy-handoff.json`, `client-handoff.json`, and `demo-config.json` files; it does not bypass local simulation, Foundry tests, or deployment approvals.
+:::
 
 ## Overview
 
@@ -122,6 +129,10 @@ Build a Next.js application that submits evaluation requests via the [SDK](/deve
   Create Newton client, submit evaluations, execute with attestations
 </Card>
 
+<Card icon="terminal" to="/developers/overview/agent-quickstart" title="Build with an Agent">
+  Use a product brief to coordinate the same policy, PolicyClient, and frontend flow
+</Card>
+
 ## End-to-End Flow
 
 Once everything is deployed:
@@ -144,14 +155,15 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
     source ~/.zshrc  # or source ~/.bashrc
     ```
 :::
-:::details[jco componentize fails]
-  Ensure both packages are installed:
+:::details[Policy build fails during componentization]
+  Run the CLI toolchain check and install any missing componentization packages it reports:
 
   ```bash
+  newton-cli doctor
   npm install -g @bytecodealliance/jco @bytecodealliance/componentize-js
   ```
 
-  If installed locally, use `npx jco componentize ...`.
+  Re-run `newton-cli policy build -p <policy-dir>` after fixing the reported dependency or source error.
 :::
 :::details[InvalidAttestation error (0xbd8ba84d)]
   Most common cause: wrong Task Manager address. The wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address.
