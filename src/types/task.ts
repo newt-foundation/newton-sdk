@@ -19,7 +19,7 @@ export interface SubmitEvaluationRequestParams {
   quorumNumber?: Hex
   quorumThresholdPercentage?: number
   /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
-  wasmArgs?: Hex[]
+  wasmArgs: Hex[]
   timeout: number // in seconds
   identityDomain?: Hex
   /** Encrypted data reference UUIDs for privacy-preserving evaluation */
@@ -185,7 +185,7 @@ export interface SimulatePolicyParams {
   chainId: number
   intent: IntentFromParams
   /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
-  wasmArgs?: Hex[]
+  wasmArgs: Hex[]
   intentSignature?: Hex
 }
 
