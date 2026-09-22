@@ -47,7 +47,7 @@ import type {
   UnlinkIdentityAsSignerParams,
   UnlinkIdentityAsUserParams,
 } from './types/identity'
-import type { PolicyParamsJson } from './types/policy'
+import type { PolicySpec } from './types/policy'
 import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
@@ -80,6 +80,7 @@ import type {
   SubmitIntentResult,
   Task,
   TaskId,
+  TaskResponse,
   TaskResponseResult,
   TaskStatus,
   UnregisterWebhookResult,
@@ -143,9 +144,9 @@ const newtonWalletClientActions =
         args: SubmitEvaluationRequestParams,
       ): Promise<{
         result: {
-          evaluationResult: boolean
+          allowed: boolean
           task: Task
-          taskResponse: unknown
+          taskResponse: TaskResponse
           blsSignature: unknown
         }
       }> => evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
@@ -547,25 +548,25 @@ const newtonPublicClientActions =
         })
       },
 
+      getPolicies: (args: { policyClientAddress: Address }) =>
+        policyReadFunctions.getPolicies({ publicClient, ...args }),
+
+      getPolicySetSnapshot: (args: { policyClientAddress: Address }) =>
+        policyReadFunctions.getPolicySetSnapshot({ publicClient, ...args }),
+
+      policyRevision: (args: { policyClientAddress: Address }) =>
+        policyReadFunctions.policyRevision({ publicClient, ...args }),
+
+      isPolicy: (args: { policyFactoryAddress: Address; policy: Address }) =>
+        policyReadFunctions.isPolicy({ publicClient, ...args }),
+
       // SDK utility function
       precomputePolicyId: (args: {
-        policyContract: Address
-        policyData: Address[]
-        params: PolicyParamsJson
+        chainId: number | bigint
         client: Address
-        policyUri: string
-        schemaUri: string
-        entrypoint: string
-        expireAfter?: number
-        blockTimestamp?: bigint
-      }) => {
-        const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.precomputePolicyId({
-          publicClient,
-          policyContractAddress: validatedAddress,
-          ...args,
-        })
-      },
+        revision: number | bigint
+        policies: PolicySpec[]
+      }) => policyReadFunctions.precomputePolicyId(args),
     }
   }
 

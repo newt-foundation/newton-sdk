@@ -12,7 +12,7 @@ set -euo pipefail
 #
 # This script generates three ABI files consumed by the SDK:
 #   - src/abis/newtonAbi.ts                 (NewtonProverTaskManager, AttestationValidator)
-#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy)
+#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy, NewtonPolicyFactory, INewtonPolicyClient)
 #   - src/abis/newtonIdentityRegistryAbi.ts (IdentityRegistry)
 
 REPO_URL="https://github.com/newt-foundation/newton-contracts.git"
@@ -26,6 +26,8 @@ ENTRIES=(
   "NewtonProverTaskManager:NewtonProverTaskManagerAbi:newtonAbi.ts"
   "AttestationValidator:AttestationValidatorAbi:newtonAbi.ts"
   "NewtonPolicy:NewtonPolicyAbi:newtonPolicyAbi.ts"
+  "NewtonPolicyFactory:NewtonPolicyFactoryAbi:newtonPolicyAbi.ts"
+  "INewtonPolicyClient:NewtonPolicyClientAbi:newtonPolicyAbi.ts"
   "IdentityRegistry:IdentityRegistryAbi:newtonIdentityRegistryAbi.ts"
 )
 

@@ -51,3 +51,19 @@ export interface PolicyDataInfo {
 export interface PolicyCodeInfo {
   codeUri: string // e.g., IPFS for Rego or other
 }
+
+/** Per-policy configuration stored alongside each policy in a client's set. */
+export interface PolicyConfig {
+  policyParams: Hex
+  /** Attestation lifetime in blocks. Must be non-zero. */
+  expireAfter: number
+}
+
+/** One entry in a client's ordered policy set. Order is significant and repeats are legal. */
+export interface PolicySpec {
+  policy: Address
+  config: PolicyConfig
+}
+
+/** keccak256("newton.policy.set") */
+export const POLICY_SET_DOMAIN = '0x671cdd5663cea1dd5f0b42278ce65570194bc54e20449731d2ae86713689de91' as Hex

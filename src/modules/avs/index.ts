@@ -16,6 +16,7 @@ import {
   type SubmitIntentResult,
   type Task,
   type TaskId,
+  type TaskResponse,
   type TaskResponseResult,
   TaskStatus,
   type UnregisterWebhookResult,
@@ -30,7 +31,6 @@ import {
   type Hex,
   type PublicClient,
   type WalletClient,
-  bytesToHex,
   hexToBigInt,
   padHex,
   publicActions,
@@ -226,7 +226,7 @@ async function submitEvaluationRequest(
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
     quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
-    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    wasm_args: (args.wasmArgs ?? []).map(removeHexPrefix),
     timeout: args.timeout,
     direct_broadcast: true,
     encrypted_data_refs: args.encryptedDataRefs ?? null,
@@ -285,9 +285,9 @@ async function evaluateIntentDirect(
   gatewayApiUrlOverride?: string,
 ): Promise<{
   result: {
-    evaluationResult: boolean
+    allowed: boolean
     task: Task
-    taskResponse: unknown
+    taskResponse: TaskResponse
     blsSignature: unknown
   }
 }> {
@@ -301,7 +301,7 @@ async function evaluateIntentDirect(
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
     quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
-    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    wasm_args: (args.wasmArgs ?? []).map(removeHexPrefix),
     timeout: args.timeout,
     direct_broadcast: true,
     identity_domain: args.identityDomain ?? null,
@@ -319,22 +319,21 @@ async function evaluateIntentDirect(
   if (res.result.error) throw new Error(res.result.error)
 
   const createTaskResult = res.result as GatewayCreateTaskResult
+  // policyTaskData passes through unflattened: the order is what operators signed over.
   const taskResponse = {
-    evaluationResult: bytesToHex(Uint8Array.from(createTaskResult.task_response.evaluation_result)),
+    allowed: createTaskResult.task_response.allowed,
     intent: createTaskResult.task_response.intent,
     intentSignature: createTaskResult.task_response.intent_signature,
-    policyAddress: createTaskResult.task_response.policy_address,
     policyClient: createTaskResult.task_response.policy_client,
-    policyConfig: createTaskResult.task_response.policy_config,
     policyId: createTaskResult.task_response.policy_id,
     policyTaskData: createTaskResult.task_response.policy_task_data,
     taskId: createTaskResult.task_id,
     initializationTimestamp: createTaskResult.task_response.initialization_timestamp,
-  }
+  } as unknown as TaskResponse
 
   return {
     result: {
-      evaluationResult: !!hexToBigInt(taskResponse.evaluationResult),
+      allowed: createTaskResult.task_response.allowed,
       task: createTaskResult.task,
       taskResponse,
       blsSignature: createTaskResult.signature_data,
@@ -369,7 +368,7 @@ async function submitIntentAndSubscribe(
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : null,
     quorum_number: args.quorumNumber ? removeHexPrefix(args.quorumNumber) : null,
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
-    wasm_args: args.wasmArgs ? removeHexPrefix(args.wasmArgs) : null,
+    wasm_args: (args.wasmArgs ?? []).map(removeHexPrefix),
     timeout: args.timeout,
     direct_broadcast: true,
     encrypted_data_refs: args.encryptedDataRefs ?? null,
@@ -436,14 +435,9 @@ async function simulatePolicy(
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
     policy_client: args.policyClient,
-    policy: args.policy,
+    chain_id: args.chainId,
     intent: sanitizeIntentForRequest(args.intent),
-    entrypoint: args.entrypoint ?? undefined,
-    policy_data: args.policyData.map(pd => ({
-      policy_data_address: pd.policyDataAddress,
-      wasm_args: pd.wasmArgs,
-    })),
-    policy_params: args.policyParams ?? {},
+    wasm_args: (args.wasmArgs ?? []).map(removeHexPrefix),
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : undefined,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, apiKey)

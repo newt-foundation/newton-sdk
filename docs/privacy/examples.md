@@ -108,7 +108,7 @@ async function submitPrivateTask() {
     appPublicKey: auth.appPublicKey,
   })
 
-  console.log('Policy evaluation result:', result.result.evaluationResult)
+  console.log('Policy evaluation result:', result.result.allowed)
   return result
 }
 

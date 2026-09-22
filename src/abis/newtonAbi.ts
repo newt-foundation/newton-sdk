@@ -251,6 +251,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -303,9 +313,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -338,11 +377,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -387,14 +421,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -437,23 +471,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -493,6 +510,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -545,9 +572,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -580,11 +636,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -629,14 +680,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -679,23 +730,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -884,6 +918,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -936,9 +980,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -1084,6 +1157,155 @@ export const NewtonProverTaskManagerAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isAttestationDirectLive",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "intent",
+        "type": "tuple",
+        "internalType": "struct NewtonMessage.Intent",
+        "components": [
+          {
+            "name": "from",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "to",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "value",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "chainId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "functionSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAttestationValid",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "attestation",
+        "type": "tuple",
+        "internalType": "struct NewtonMessage.Attestation",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "expiration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "intent",
+            "type": "tuple",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1249,6 +1471,19 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     "type": "function",
+    "name": "policyFactory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "raiseAndResolveChallenge",
     "inputs": [
       {
@@ -1265,6 +1500,16 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyClient",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
             "name": "taskCreatedBlock",
@@ -1319,9 +1564,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -1354,11 +1628,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -1403,14 +1672,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -1453,23 +1722,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -1590,6 +1842,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -1642,9 +1904,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -1677,11 +1968,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -1726,14 +2012,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -1776,23 +2062,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -1863,6 +2132,19 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     "type": "function",
+    "name": "setPolicyFactory",
+    "inputs": [
+      {
+        "name": "_policyFactory",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "slashForCrossChainChallenge",
     "inputs": [
       {
@@ -1884,6 +2166,16 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyClient",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
             "name": "taskCreatedBlock",
@@ -1938,9 +2230,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -1973,11 +2294,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -2022,14 +2338,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -2072,23 +2388,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -2480,6 +2779,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -2532,9 +2841,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -2567,11 +2905,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -2616,14 +2949,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -2666,23 +2999,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -2850,6 +3166,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -2902,9 +3228,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -2938,11 +3293,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -2987,14 +3337,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -3037,23 +3387,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -3107,6 +3440,16 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -3159,9 +3502,38 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -3172,41 +3544,6 @@ export const NewtonProverTaskManagerAbi = [
             "name": "initializationTimestamp",
             "type": "uint256",
             "internalType": "uint256"
-          }
-        ]
-      },
-      {
-        "name": "state",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct INewtonPolicy.PolicyState",
-        "components": [
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "policyId",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
-              }
-            ]
           }
         ]
       }
@@ -3247,6 +3584,56 @@ export const NewtonProverTaskManagerAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PolicyDenied",
+    "inputs": [
+      {
+        "name": "policyClient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "policyId",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "intentHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "referenceBlock",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PolicyFactoryUpdated",
+    "inputs": [
+      {
+        "name": "policyFactory",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -3315,11 +3702,6 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes32"
           },
           {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "intent",
             "type": "tuple",
             "internalType": "struct NewtonMessage.Intent",
@@ -3362,14 +3744,14 @@ export const NewtonProverTaskManagerAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -3412,23 +3794,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -3579,24 +3944,8 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidPolicyAddress",
+    "name": "InvalidPolicyFactory",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidPolicyVersion",
-    "inputs": [
-      {
-        "name": "actual",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "minimum",
-        "type": "string",
-        "internalType": "string"
-      }
-    ]
   },
   {
     "type": "error",
@@ -3617,28 +3966,6 @@ export const NewtonProverTaskManagerAbi = [
     "type": "error",
     "name": "InvalidTaskResponseHandler",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidVersionFormat",
-    "inputs": [
-      {
-        "name": "version",
-        "type": "string",
-        "internalType": "string"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidVersionNumber",
-    "inputs": [
-      {
-        "name": "component",
-        "type": "string",
-        "internalType": "string"
-      }
-    ]
   },
   {
     "type": "error",
@@ -3668,6 +3995,32 @@ export const NewtonProverTaskManagerAbi = [
   {
     "type": "error",
     "name": "OnlyUnpauser",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyIdMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyNotFromActiveFactory",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "policy",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicySnapshotMismatch",
     "inputs": []
   },
   {
@@ -3710,6 +4063,11 @@ export const NewtonProverTaskManagerAbi = [
   },
   {
     "type": "error",
+    "name": "TaskManagerMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "TaskMismatch",
     "inputs": [
       {
@@ -3723,11 +4081,6 @@ export const NewtonProverTaskManagerAbi = [
         "internalType": "bytes32"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "TaskResponseMismatch",
-    "inputs": []
   }
 ] as const
 
@@ -3758,7 +4111,7 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "function",
-    "name": "_checkSanityTaskResponse",
+    "name": "_checkPolicySnapshot",
     "inputs": [
       {
         "name": "task",
@@ -3774,6 +4127,16 @@ export const AttestationValidatorAbi = [
             "name": "policyClient",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
             "name": "taskCreatedBlock",
@@ -3828,9 +4191,246 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
+            "type": "bytes[]",
+            "internalType": "bytes[]"
+          },
+          {
+            "name": "quorumNumbers",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "initializationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "_checkSanityAttestation",
+    "inputs": [
+      {
+        "name": "attestation",
+        "type": "tuple",
+        "internalType": "struct NewtonMessage.Attestation",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "expiration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "intent",
+            "type": "tuple",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "_checkSanityTaskResponse",
+    "inputs": [
+      {
+        "name": "task",
+        "type": "tuple",
+        "internalType": "struct INewtonProverTaskManager.Task",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "taskCreatedBlock",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "quorumThresholdPercentage",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "intent",
+            "type": "tuple",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "wasmArgs",
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -3865,11 +4465,6 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes32"
           },
           {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "intent",
             "type": "tuple",
             "internalType": "struct NewtonMessage.Intent",
@@ -3912,14 +4507,14 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -3962,23 +4557,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -4005,12 +4583,12 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "function",
-    "name": "_checkTaskResponsePolicyData",
+    "name": "_checkValidateResponse",
     "inputs": [
       {
-        "name": "taskResponse",
+        "name": "task",
         "type": "tuple",
-        "internalType": "struct INewtonProverTaskManager.TaskResponse",
+        "internalType": "struct INewtonProverTaskManager.Task",
         "components": [
           {
             "name": "taskId",
@@ -4028,9 +4606,19 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes32"
           },
           {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "taskCreatedBlock",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "quorumThresholdPercentage",
+            "type": "uint32",
+            "internalType": "uint32"
           },
           {
             "name": "intent",
@@ -4075,14 +4663,122 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "wasmArgs",
+            "type": "bytes[]",
+            "internalType": "bytes[]"
+          },
+          {
+            "name": "quorumNumbers",
             "type": "bytes",
             "internalType": "bytes"
           },
           {
-            "name": "policyTaskData",
+            "name": "initializationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "taskResponse",
+        "type": "tuple",
+        "internalType": "struct INewtonProverTaskManager.TaskResponse",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "intent",
             "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "policyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -4129,23 +4825,6 @@ export const AttestationValidatorAbi = [
             ]
           },
           {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
-              }
-            ]
-          },
-          {
             "name": "initializationTimestamp",
             "type": "uint256",
             "internalType": "uint256"
@@ -4153,7 +4832,13 @@ export const AttestationValidatorAbi = [
         ]
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
     "stateMutability": "view"
   },
   {
@@ -4343,6 +5028,63 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "function",
+    "name": "directAttestationApproved",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "directAttestationBindings",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "directAttestationExpirations",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "directTaskHashes",
     "inputs": [
       {
@@ -4426,6 +5168,67 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "function",
+    "name": "isAttestationDirectLive",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "intent",
+        "type": "tuple",
+        "internalType": "struct NewtonMessage.Intent",
+        "components": [
+          {
+            "name": "from",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "to",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "value",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "chainId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "functionSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isAttestationDirectValid",
     "inputs": [
       {
@@ -4447,6 +5250,16 @@ export const AttestationValidatorAbi = [
             "name": "policyClient",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
             "name": "taskCreatedBlock",
@@ -4501,9 +5314,38 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -4536,11 +5378,6 @@ export const AttestationValidatorAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -4585,14 +5422,14 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -4635,23 +5472,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -5034,6 +5854,16 @@ export const AttestationValidatorAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -5086,9 +5916,38 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -5121,11 +5980,6 @@ export const AttestationValidatorAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -5170,14 +6024,14 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -5224,23 +6078,6 @@ export const AttestationValidatorAbi = [
             ]
           },
           {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
-              }
-            ]
-          },
-          {
             "name": "initializationTimestamp",
             "type": "uint256",
             "internalType": "uint256"
@@ -5261,6 +6098,271 @@ export const AttestationValidatorAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "validateResponse",
+    "inputs": [
+      {
+        "name": "task",
+        "type": "tuple",
+        "internalType": "struct INewtonProverTaskManager.Task",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "taskCreatedBlock",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "quorumThresholdPercentage",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "intent",
+            "type": "tuple",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "wasmArgs",
+            "type": "bytes[]",
+            "internalType": "bytes[]"
+          },
+          {
+            "name": "quorumNumbers",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "initializationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "taskResponse",
+        "type": "tuple",
+        "internalType": "struct INewtonProverTaskManager.TaskResponse",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyClient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "intent",
+            "type": "tuple",
+            "internalType": "struct NewtonMessage.Intent",
+            "components": [
+              {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "functionSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "intentSignature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "policyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
+            "components": [
+              {
+                "name": "policyId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "policyAddress",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "policy",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "policyData",
+                "type": "tuple[]",
+                "internalType": "struct NewtonMessage.PolicyData[]",
+                "components": [
+                  {
+                    "name": "wasmArgs",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "policyDataAddress",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "expireBlock",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "initializationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "minPolicyVersion",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -5302,6 +6404,16 @@ export const AttestationValidatorAbi = [
             "internalType": "address"
           },
           {
+            "name": "policyId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "policyRevision",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
             "name": "taskCreatedBlock",
             "type": "uint32",
             "internalType": "uint32"
@@ -5354,9 +6466,38 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
+            "name": "policies",
+            "type": "tuple[]",
+            "internalType": "struct INewtonPolicyClient.PolicySpec[]",
+            "components": [
+              {
+                "name": "policy",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "config",
+                "type": "tuple",
+                "internalType": "struct INewtonPolicy.PolicyConfig",
+                "components": [
+                  {
+                    "name": "policyParams",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "expireAfter",
+                    "type": "uint32",
+                    "internalType": "uint32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "name": "wasmArgs",
-            "type": "bytes",
-            "internalType": "bytes"
+            "type": "bytes[]",
+            "internalType": "bytes[]"
           },
           {
             "name": "quorumNumbers",
@@ -5390,11 +6531,6 @@ export const AttestationValidatorAbi = [
             "name": "policyId",
             "type": "bytes32",
             "internalType": "bytes32"
-          },
-          {
-            "name": "policyAddress",
-            "type": "address",
-            "internalType": "address"
           },
           {
             "name": "intent",
@@ -5439,14 +6575,14 @@ export const AttestationValidatorAbi = [
             "internalType": "bytes"
           },
           {
-            "name": "evaluationResult",
-            "type": "bytes",
-            "internalType": "bytes"
+            "name": "allowed",
+            "type": "bool",
+            "internalType": "bool"
           },
           {
             "name": "policyTaskData",
-            "type": "tuple",
-            "internalType": "struct NewtonMessage.PolicyTaskData",
+            "type": "tuple[]",
+            "internalType": "struct NewtonMessage.PolicyTaskData[]",
             "components": [
               {
                 "name": "policyId",
@@ -5489,23 +6625,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "uint32"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "name": "policyConfig",
-            "type": "tuple",
-            "internalType": "struct INewtonPolicy.PolicyConfig",
-            "components": [
-              {
-                "name": "policyParams",
-                "type": "bytes",
-                "internalType": "bytes"
-              },
-              {
-                "name": "expireAfter",
-                "type": "uint32",
-                "internalType": "uint32"
               }
             ]
           },
@@ -5568,12 +6687,65 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "error",
+    "name": "IncompatiblePolicyDataVersion",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actual",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "minimum",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "IncompatiblePolicyVersion",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actual",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "minimum",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidOracleOutput",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidPolicyClient",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "InvalidPolicyId",
+    "name": "InvalidPolicyFactory",
     "inputs": []
   },
   {
@@ -5583,12 +6755,198 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidVersionFormat",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidVersionNumber",
+    "inputs": [
+      {
+        "name": "component",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "OnlyTaskManager",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "PolicyNotVerified",
+    "name": "OracleOutputTooLarge",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "size",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyAddressMismatch",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyDataAddressMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyDataExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyDataLengthMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyIdMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicyInputTooLarge",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "size",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyNotFromActiveFactory",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "policy",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyParamsTooLarge",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "size",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyRegoTooLarge",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "size",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PolicySetEmpty",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicySetTooLarge",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PolicySnapshotMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PureRegoInputNotEmpty",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PureRegoOutputNotEmpty",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "RegoCodeHashMismatch",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ResponseLengthMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TaskCreatedBlockInFuture",
     "inputs": []
   },
   {
@@ -5609,8 +6967,30 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "error",
+    "name": "TaskPolicyDataTooLarge",
+    "inputs": [
+      {
+        "name": "size",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "TaskResponseMismatch",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WasmArgsMismatch",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ] as const
 
