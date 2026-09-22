@@ -1,6 +1,15 @@
-import { NewtonPolicyAbi } from '@core/abis/newtonPolicyAbi'
-import type { PolicyId, PolicyParamsJson } from '@core/types/policy'
-import { type Address, type Hex, type PublicClient, type WalletClient, encodePacked, fromHex, keccak256 } from 'viem'
+import { NewtonPolicyAbi, NewtonPolicyClientAbi, NewtonPolicyFactoryAbi } from '@core/abis/newtonPolicyAbi'
+import { POLICY_SET_DOMAIN } from '@core/types/policy'
+import type { PolicyId, PolicySpec } from '@core/types/policy'
+import {
+  type Address,
+  type Hex,
+  type PublicClient,
+  type WalletClient,
+  encodeAbiParameters,
+  fromHex,
+  keccak256,
+} from 'viem'
 
 // Read function wrappers - exact same names as on-chain functions
 
@@ -384,42 +393,44 @@ const schemaCid = async ({
   }
 }
 
-const precomputePolicyId = ({
-  publicClient,
-  policyContractAddress,
-  ...args
-}: {
-  publicClient: PublicClient
-  policyContractAddress: Address
-  policyContract: Address
-  policyData: Address[]
-  params: PolicyParamsJson
+/**
+ * Recomputes a client's policy set id. Mirrors `NewtonPolicyClient._setPolicies`.
+ *
+ * `revision` is the value the set will carry — the client's current `policyRevision()` plus
+ * one when predicting a pending `setPolicies`. Order and repeats are significant.
+ */
+const precomputePolicyId = (args: {
+  chainId: number | bigint
   client: Address
-  policyUri: string
-  schemaUri: string
-  entrypoint: string
-  expireAfter?: number
-  blockTimestamp?: bigint
+  revision: number | bigint
+  policies: PolicySpec[]
 }): PolicyId => {
   try {
-    const blockTimestamp = args.blockTimestamp || BigInt(Math.floor(Date.now() / 1000))
-
-    const paramsBytes =
-      `0x${new TextEncoder().encode(JSON.stringify(args.params)).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')}` as `0x${string}`
-
-    const policyConfig = {
-      policyParams: paramsBytes,
-      expireAfter: args.expireAfter || 0,
-    }
-
-    // This replicates the solidity policyId computation in setPolicy found here: https://github.com/newt-foundation/newton-prover-avs/blob/712c435a663d168db111f4001f85d0cf0ed7d9c2/contracts/src/core/NewtonPolicy.sol#L64-L66
-    const encoded = encodePacked(
-      ['address', 'address[]', 'string', 'string', 'string', 'tuple(bytes,uint32)', 'uint256'],
-      [args.client, args.policyData, args.policyUri, args.schemaUri, args.entrypoint, policyConfig, blockTimestamp],
+    const encoded = encodeAbiParameters(
+      [
+        { type: 'bytes32' },
+        { type: 'uint256' },
+        { type: 'address' },
+        { type: 'uint64' },
+        {
+          type: 'tuple[]',
+          components: [
+            { name: 'policy', type: 'address' },
+            {
+              name: 'config',
+              type: 'tuple',
+              components: [
+                { name: 'policyParams', type: 'bytes' },
+                { name: 'expireAfter', type: 'uint32' },
+              ],
+            },
+          ],
+        },
+      ],
+      [POLICY_SET_DOMAIN, BigInt(args.chainId), args.client, BigInt(args.revision), args.policies],
     )
 
-    const policyId = keccak256(encoded)
-    return policyId as PolicyId
+    return keccak256(encoded) as PolicyId
   } catch (error) {
     throw new Error(
       `Newton SDK: Failed to precompute policy ID - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -554,9 +565,130 @@ const transferOwnership = async ({
   }
 }
 
+// Policy-set bindings on NewtonPolicyClient.
+
+const getPolicies = async ({
+  publicClient,
+  policyClientAddress,
+}: {
+  publicClient: PublicClient
+  policyClientAddress: Address
+}): Promise<PolicySpec[]> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyClientAddress,
+      abi: NewtonPolicyClientAbi,
+      functionName: 'getPolicies',
+    })
+    return result as unknown as PolicySpec[]
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getPolicies - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+const policyRevision = async ({
+  publicClient,
+  policyClientAddress,
+}: {
+  publicClient: PublicClient
+  policyClientAddress: Address
+}): Promise<bigint> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyClientAddress,
+      abi: NewtonPolicyClientAbi,
+      functionName: 'policyRevision',
+    })
+    return result as bigint
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get policyRevision - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+/** Atomic read of id, revision and set. Prefer this over three separate reads. */
+const getPolicySetSnapshot = async ({
+  publicClient,
+  policyClientAddress,
+}: {
+  publicClient: PublicClient
+  policyClientAddress: Address
+}): Promise<{ policyId: Hex; revision: bigint; policies: PolicySpec[] }> => {
+  try {
+    const [policyId, revision, policies] = (await publicClient.readContract({
+      address: policyClientAddress,
+      abi: NewtonPolicyClientAbi,
+      functionName: 'getPolicySetSnapshot',
+    })) as unknown as [Hex, bigint, PolicySpec[]]
+    return { policyId, revision, policies }
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getPolicySetSnapshot - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+const setPolicies = async ({
+  walletClient,
+  publicClient,
+  policyClientAddress,
+  policies,
+}: {
+  walletClient: WalletClient
+  publicClient: PublicClient
+  policyClientAddress: Address
+  policies: PolicySpec[]
+}): Promise<{ txHash: Hex; policyId: PolicyId }> => {
+  try {
+    if (!walletClient.account) throw new Error('walletClient has no account')
+
+    const { request } = await publicClient.simulateContract({
+      address: policyClientAddress,
+      abi: NewtonPolicyClientAbi,
+      functionName: 'setPolicies',
+      args: [policies] as never,
+      account: walletClient.account,
+    })
+    const txHash = await walletClient.writeContract(request)
+    await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+    const { policyId } = await getPolicySetSnapshot({ publicClient, policyClientAddress })
+    return { txHash, policyId }
+  } catch (error) {
+    throw new Error(`Newton SDK: Failed to setPolicies - ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+/** Factory provenance. A policy's self-reported `factory()` is not authoritative. */
+const isPolicy = async ({
+  publicClient,
+  policyFactoryAddress,
+  policy,
+}: {
+  publicClient: PublicClient
+  policyFactoryAddress: Address
+  policy: Address
+}): Promise<boolean> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyFactoryAddress,
+      abi: NewtonPolicyFactoryAbi,
+      functionName: 'isPolicy',
+      args: [policy],
+    })
+    return result as boolean
+  } catch (error) {
+    throw new Error(`Newton SDK: Failed to get isPolicy - ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
 export const policyWriteFunctions = {
   // On-chain write functions
   initialize,
+  setPolicies,
   renounceOwnership,
   transferOwnership,
 }
@@ -576,7 +708,11 @@ export const policyReadFunctions = {
   getPolicyCid,
   getPolicyData,
   getSchemaCid,
+  isPolicy,
   isPolicyVerified,
+  getPolicies,
+  getPolicySetSnapshot,
+  policyRevision,
   metadataCid,
   policyCid,
   schemaCid,

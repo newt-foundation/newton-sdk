@@ -149,7 +149,7 @@ const result = await newton.evaluateIntentDirect({
   appPublicKey: auth.appPublicKey,
 })
 
-console.log('Evaluation result:', result.result.evaluationResult)
+console.log('Evaluation result:', result.result.allowed)
 ```
 
 The gateway will:

@@ -1,4 +1,5 @@
 import type { Address, Hex } from 'viem'
+import type { PolicySpec } from './policy'
 
 export type TaskId = Hex
 
@@ -17,7 +18,8 @@ export interface SubmitEvaluationRequestParams {
   intentSignature?: Hex
   quorumNumber?: Hex
   quorumThresholdPercentage?: number
-  wasmArgs?: Hex
+  /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
+  wasmArgs: Hex[]
   timeout: number // in seconds
   identityDomain?: Hex
   /** Encrypted data reference UUIDs for privacy-preserving evaluation */
@@ -61,21 +63,31 @@ export interface HexlifiedIntent {
   function_signature: string
 }
 
+/** One oracle's contribution to a policy's evidence. */
+export interface PolicyDataEntry {
+  wasmArgs: Hex
+  data: Hex
+  policyDataAddress: Address
+  expireBlock: number
+}
+
+/** One entry per policy, in set order. Never collapse repeats or reorder — operators signed this. */
+export interface PolicyTaskData {
+  policyId: Hex
+  policyAddress: Address
+  policy: Hex
+  policyData: PolicyDataEntry[]
+}
+
 export interface TaskResponse {
   taskId: Hex
   policyClient: Address
   policyId: Hex
-  policyAddress: Address
-  intent: {
-    from: Address
-    to: Address
-    value: bigint
-    data: string
-    chainId: bigint
-    functionSignature: string
-  }
+  intent: NormalizedIntent
   intentSignature: Hex
-  evaluationResult: boolean
+  /** True only when every policy allows. */
+  allowed: boolean
+  policyTaskData: PolicyTaskData[]
 }
 
 interface ResponseCertificate {
@@ -129,11 +141,15 @@ export interface Task {
   }
   intentSignature: Hex
   policyClient: Address
+  policyId: Hex
+  policyRevision: number
+  /** Frozen at admission. Order and repeats are significant. */
+  policies: PolicySpec[]
+  wasmArgs: Hex[]
   quorumNumbers: Hex
   quorumThresholdPercentage: number
   taskCreatedBlock: number
   taskId: Hex
-  wasmArgs: Hex
 }
 
 /** PolicyData item for newt_simulateTask policy_task_data.policyData */
@@ -164,42 +180,31 @@ export interface SimulateTaskResult {
   details: unknown
 }
 
-/** PolicyDataInput for newt_simulatePolicy policy_data array */
-export interface PolicyDataInput {
-  policyDataAddress: Address
-  wasmArgs?: Hex
-}
-
 export interface SimulatePolicyParams {
   policyClient: Address
-  policy: string
+  chainId: number
   intent: IntentFromParams
-  entrypoint?: string
-  policyData: PolicyDataInput[]
-  policyParams?: Record<string, unknown>
+  /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
+  wasmArgs: Hex[]
   intentSignature?: Hex
 }
 
-export interface SimulatePolicyEvaluationResult {
-  policy: string
-  parsed_intent: unknown
-  policy_params_and_data: unknown
-  entrypoint: string
+/** One policy's outcome within a simulated set. */
+export interface PolicySimulationResult {
+  policy_index: number
+  policy: Address
   result: unknown
+  allowed: boolean
   expire_after: number
 }
 
 export interface SimulatePolicyResult {
   success: boolean
-  evaluation_result: SimulatePolicyEvaluationResult | null
+  allowed: boolean | null
+  policy_id: string | null
+  policies: PolicySimulationResult[] | null
   error: string | null
-  error_details: {
-    missing_secrets?: Array<{
-      policy_data_address: Address
-      has_secrets_schema: boolean
-    }>
-    suggested_actions?: string[]
-  } | null
+  parsed_intent: unknown | null
 }
 
 export type TaskFailureType =
@@ -285,7 +290,7 @@ export interface GatewayCreateTaskResult {
   task: Task
   task_id: Hex
   task_response: {
-    evaluation_result: number[]
+    allowed: boolean
     initialization_timestamp: Hex
     intent: {
       chainId: Hex
@@ -296,11 +301,9 @@ export interface GatewayCreateTaskResult {
       value: Hex
     }
     intent_signature: Hex
-    policy_address: Address
     policy_client: Address
-    policy_config: { expireAfter: number; policyParams: Hex }
     policy_id: Hex
-    policy_task_data: {
+    policy_task_data: Array<{
       policy: Hex
       policyAddress: Address
       policyData: Array<{
@@ -310,7 +313,7 @@ export interface GatewayCreateTaskResult {
         wasmArgs: Hex
       }>
       policyId: Hex
-    }
+    }>
     task_id: Hex
   }
   signature_data: Hex

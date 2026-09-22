@@ -1,13 +1,13 @@
 import type { TaskRespondedLog } from '@core/abis/newtonAbi'
-import type { TaskResponseResult } from '@core/types/task'
-import { hexToBigInt } from 'viem'
+import type { TaskResponse, TaskResponseResult } from '@core/types/task'
 
 export function convertLogToTaskResponse(log: TaskRespondedLog): TaskResponseResult {
   const taskResponse = {
     ...log.args.taskResponse,
     intent: { ...log.args.taskResponse.intent },
-    evaluationResult: !!(log.args.taskResponse.evaluationResult && hexToBigInt(log.args.taskResponse.evaluationResult)),
-  }
+    // Kept as decoded: per-policy order is load-bearing.
+    policyTaskData: [...log.args.taskResponse.policyTaskData],
+  } as unknown as TaskResponse
 
   const responseCertificate = {
     taskResponsedBlock: log.args.responseCertificate.referenceBlock,
