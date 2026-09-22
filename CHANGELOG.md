@@ -1,3 +1,21 @@
+# v1.2.0 (Tue Sep 22 2026)
+
+#### 🚀 Enhancement
+
+- send wasmArgs as an array + regenerate bindings [#186](https://github.com/newt-foundation/newton-sdk/pull/186) ([@wesl-ee](https://github.com/wesl-ee))
+
+#### 🐛 Bug Fix
+
+- docs: update Arkham API links [#185](https://github.com/newt-foundation/newton-sdk/pull/185) ([@vmathur](https://github.com/vmathur))
+- docs: add Agent Skills onboarding flow [#183](https://github.com/newt-foundation/newton-sdk/pull/183) ([@vmathur](https://github.com/vmathur))
+
+#### Authors: 2
+
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+- wesl-ee ([@wesl-ee](https://github.com/wesl-ee))
+
+---
+
 # v1.1.1 (Wed Sep 02 2026)
 
 #### 🐛 Bug Fix
