@@ -208,10 +208,10 @@ Test your WASM oracle before deploying:
 
 ```bash
 # Simulate with empty args
-newton-cli policy-data simulate --wasm-file policy.wasm --input-json '{}'
+newton-cli policy simulate-wasm --wasm-file policy.wasm --input-json '{}'
 
 # Simulate with specific args
-newton-cli policy-data simulate \
+newton-cli policy simulate-wasm \
   --wasm-file policy.wasm \
   --input-json '{"base_symbol": "BTC"}'
 ```
@@ -226,7 +226,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "jsonrpc": "2.0",
     "method": "newt_simulatePolicyData",
     "params": {
-      "policy_data_address": "0x...",
+      "policy_address": "0x...",
       "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"

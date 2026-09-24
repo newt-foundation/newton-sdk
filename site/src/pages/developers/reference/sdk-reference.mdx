@@ -477,8 +477,6 @@ const result = await walletClient.simulateTask({
       {
         wasmArgs: '0x',
         data: '0x...',
-        attestation: '0x...',
-        policyDataAddress: '0x...',
         expireBlock: 999999,
       },
     ],
@@ -501,29 +499,26 @@ simulateTask(args: SimulateTaskParams): Promise<SimulateTaskResult>
 
 ### simulatePolicy
 
-Simulates full Rego policy evaluation (`newt_simulatePolicy`). Tests a policy with a sample intent and policy data. May require ownership if `PolicyData` uses stored secrets.
+Simulates full Rego policy evaluation (`newt_simulatePolicy`). Tests a policy client's whole policy set against a sample intent. May require ownership if a policy in the set uses stored secrets.
 
 ```ts
 const result = await walletClient.simulatePolicy({
   policyClient: '0x...',
-  policy: '<rego-policy-string>',
+  chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
   intent: {
     from: '0x...',
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
+    chainId: 11155111,
     functionSignature: '0x...',
   },
-  policyData: [
-    { policyDataAddress: '0x...' },
-  ],
-  policyParams: { max_amount: 1000 },
-  entrypoint: 'newton/policy/allow',
+  // one entry per policy in the set, positionally aligned; '0x' for a pure-Rego policy
+  wasmArgs: ['0x'],
 });
 
-console.log(result.success);
-console.log(result.evaluation_result);
+console.log(result.allowed);
+console.log(result.policies);
 console.log(result.error);
 ```
 
@@ -537,11 +532,11 @@ simulatePolicy(args: SimulatePolicyParams): Promise<SimulatePolicyResult>
 
 ### simulatePolicyData
 
-Simulates PolicyData WASM execution (`newt_simulatePolicyData`) with caller-provided secrets. No ownership verification is required.
+Simulates a policy's WASM oracle execution (`newt_simulatePolicyData`) with caller-provided secrets. No ownership verification is required.
 
 ```ts
 const result = await walletClient.simulatePolicyData({
-  policyDataAddress: '0x...',
+  policyAddress: '0x...',
   secrets: '<secrets-json-string>',
   wasmArgs: '0x...',
   chainId: 11155111, // required
@@ -564,11 +559,11 @@ simulatePolicyData(
 
 ### simulatePolicyDataWithClient
 
-Simulates PolicyData WASM execution (`newt_simulatePolicyDataWithClient`) using stored secrets for a policy client. Requires ownership of the policy client.
+Simulates a policy's WASM oracle execution (`newt_simulatePolicyDataWithClient`) using stored secrets for a policy client. Requires ownership of the policy client.
 
 ```ts
 const result = await walletClient.simulatePolicyDataWithClient({
-  policyDataAddress: '0x...',
+  policyAddress: '0x...',
   policyClient: '0x...',
   wasmArgs: '0x...',
 });
@@ -617,7 +612,8 @@ type InitializePolicyArgs = {
   entrypoint: string;
   policyCid: string;
   schemaCid: string;
-  policyData: Address[];
+  wasmCid: string;
+  secretsSchemaCid: string;
   metadataCid: string;
   owner: Address;
 } & ({ policyCodeHash: Hex } | { policyBytes: Uint8Array });
@@ -633,13 +629,34 @@ initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 | `entrypoint`     | `string`     | Yes               | Policy entrypoint path (e.g., `"newton/policy/allow"`)                   |
 | `policyCid`      | `string`     | Yes               | Content identifier (CID) of the policy WASM                              |
 | `schemaCid`      | `string`     | Yes               | Content identifier (CID) of the policy schema                            |
-| `policyData`     | `Address[]`  | Yes               | Array of PolicyData contract addresses                                   |
+| `wasmCid`        | `string`     | Yes               | CID of the WASM oracle; empty string for a pure-Rego policy              |
+| `secretsSchemaCid` | `string`   | Yes               | CID of the oracle's secrets schema; empty unless `wasmCid` is set        |
 | `metadataCid`    | `string`     | Yes               | Content identifier (CID) of the policy metadata                          |
 | `owner`          | `Address`    | Yes               | Owner address of the policy contract                                     |
 | `policyCodeHash` | `Hex`        | One of these two  | Pre-computed `keccak256` of the Rego policy bytes                        |
 | `policyBytes`    | `Uint8Array` | One of these two  | Raw Rego policy bytes; SDK computes `keccak256(policyBytes)` for you     |
 
 **Returns:** `` `0x${string}` `` -- The transaction hash.
+
+---
+
+### setSecretsSchemaCid
+
+Sets the secrets schema CID on the policy contract. Owner only.
+
+```ts
+const txHash = await walletClient.setSecretsSchemaCid({
+  secretsSchemaCid: 'bafy...',
+});
+```
+
+**Signature:**
+
+```ts
+setSecretsSchemaCid(args: {
+  secretsSchemaCid: string;
+}): Promise<`0x${string}`>
+```
 
 ---
 
@@ -955,12 +972,12 @@ This is a **synchronous** method. Keys are generated locally and never sent to a
 
 #### storeEncryptedSecrets
 
-Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway's X25519 public key is fetched automatically if not provided.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a policy client's policy. The gateway's X25519 public key is fetched automatically if not provided.
 
 ```ts
 const { success } = await walletClient.storeEncryptedSecrets({
   policyClient: '0x...',
-  policyDataAddress: '0x...',
+  policyAddress: '0x...',
   plaintext: { API_KEY: 'sk-...', ENDPOINT: 'https://api.example.com' },
   chainId: 11155111,
 });
@@ -1445,18 +1462,34 @@ getEntrypoint(): Promise<string>
 
 ---
 
-#### getPolicyData
+#### getWasmCid
 
-Returns the array of PolicyData contract addresses associated with the policy.
+Returns the IPFS CID of the policy's WASM oracle plugin. Empty for a pure-Rego policy.
 
 ```ts
-const addresses = await publicClient.getPolicyData();
+const wasmCid = await publicClient.getWasmCid();
 ```
 
 **Signature:**
 
 ```ts
-getPolicyData(): Promise<Address[]>
+getWasmCid(): Promise<string>
+```
+
+---
+
+#### getSecretsSchemaCid
+
+Returns the IPFS CID of the JSON schema that the oracle's secrets must conform to.
+
+```ts
+const schemaCid = await publicClient.getSecretsSchemaCid();
+```
+
+**Signature:**
+
+```ts
+getSecretsSchemaCid(): Promise<string>
 ```
 
 ---
@@ -1483,18 +1516,12 @@ Synchronously computes a policy ID from its constituent parts without making an 
 
 ```ts
 const policyId = publicClient.precomputePolicyId({
-  policyContract: '0x...',
-  policyData: ['0x...'],
-  params: {
-    admin: '0x...',
-    allowed_actions: {},
-    token_whitelist: {},
-  },
+  chainId: 11155111,
   client: '0x...',
-  policyUri: 'ipfs://...',
-  schemaUri: 'ipfs://...',
-  entrypoint: 'newton/policy/allow',
-  expireAfter: 3600,
+  revision: 1,
+  policies: [
+    { policy: '0x...', config: { policyParams: '0x...', expireAfter: 300 } },
+  ],
 });
 ```
 
@@ -1502,15 +1529,10 @@ const policyId = publicClient.precomputePolicyId({
 
 ```ts
 precomputePolicyId(args: {
-  policyContract: Address;
-  policyData: Address[];
-  params: Record<string, any>;
+  chainId: number | bigint;
   client: Address;
-  policyUri: string;
-  schemaUri: string;
-  entrypoint: string;
-  expireAfter?: number;
-  blockTimestamp?: bigint;
+  revision: number | bigint;
+  policies: PolicySpec[];
 }): `0x${string}`
 ```
 
@@ -1530,7 +1552,6 @@ The following methods read individual fields from the policy contract. They all 
 | `factory()`                          | `Promise<Address>`          | Returns the factory address that deployed the contract |
 | `entrypoint()`                       | `Promise<string>`           | Returns the policy entrypoint path                     |
 | `clientToPolicyId({ client })`       | `Promise<\`0x\$string\`\>\` | Maps a client address to its policy ID                 |
-| `policyData({ index })`              | `Promise<Address>`          | Returns the PolicyData contract address at the given index |
 | `policyCid()`                        | `Promise<string>`           | Returns the policy CID                                 |
 | `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
 | `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
@@ -2142,8 +2163,6 @@ unlinkIdentityAsUser(
   interface SimulateTaskPolicyData {
     wasmArgs: Hex;
     data: Hex;
-    attestation: Hex;
-    policyDataAddress: Address;
     expireBlock: number;
   }
   
@@ -2162,11 +2181,11 @@ unlinkIdentityAsUser(
   ```ts
   interface SimulatePolicyParams {
     policyClient: Address;
-    policy: string;
+    chainId: number;
     intent: IntentFromParams;
-    policyData: Array<{ policyDataAddress: Address }>;
-    policyParams?: Record<string, any>;
-    entrypoint?: string;
+    /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
+    wasmArgs: Hex[];
+    intentSignature?: Hex;
   }
   
   interface SimulatePolicyResult {
@@ -2185,7 +2204,7 @@ unlinkIdentityAsUser(
 :::details[SimulatePolicyDataParams & SimulatePolicyDataResult]
   ```ts
   interface SimulatePolicyDataParams {
-    policyDataAddress: Address;
+    policyAddress: Address;
     secrets?: string;
     wasmArgs?: Hex;
     chainId: number; // required
@@ -2206,7 +2225,7 @@ unlinkIdentityAsUser(
 :::details[SimulatePolicyDataWithClientParams & SimulatePolicyDataWithClientResult]
   ```ts
   interface SimulatePolicyDataWithClientParams {
-    policyDataAddress: Address;
+    policyAddress: Address;
     policyClient: Address;
     wasmArgs?: Hex;
   }
@@ -2227,7 +2246,7 @@ unlinkIdentityAsUser(
 
 ### Policy Types
 
-:::details[PolicyId, PolicyInfo, PolicyCodeInfo, PolicyDataInfo]
+:::details[PolicyId, PolicyInfo, PolicyCodeInfo]
   ```ts
   type PolicyId = `0x${string}`;
   
@@ -2244,34 +2263,22 @@ unlinkIdentityAsUser(
     metadataCid: string;
     entrypoint: string;
   }
-  
-  interface PolicyDataInfo {
-    addresses: Address[];
-  }
   ```
 :::
 
-:::details[PolicyParamsJson, SetPolicyInput, SetPolicyResult, PolicyDataInput]
+:::details[PolicyParamsJson, SetPolicyInput, SetPolicyResult]
   ```ts
   type PolicyParamsJson = Record<string, any>;
   
   interface SetPolicyInput {
     client: Address;
-    policyUri: string;
-    schemaUri: string;
-    entrypoint: string;
+    policyContract: Address;
     params: PolicyParamsJson;
-    policyData: Address[];
-    expireAfter: number;
   }
   
   interface SetPolicyResult {
     txHash: `0x${string}`;
     policyId: PolicyId;
-  }
-  
-  interface PolicyDataInput {
-    policyDataAddress: Address;
   }
   ```
 :::
@@ -2458,7 +2465,7 @@ unlinkIdentityAsUser(
   ```ts
   interface StoreEncryptedSecretsParams {
     policyClient: Address;
-    policyDataAddress: Address;
+    policyAddress: Address;
     /** Plaintext secrets as a JSON object (e.g., { "API_KEY": "...", "ENDPOINT": "..." }) */
     plaintext: Record<string, unknown>;
     chainId: number;

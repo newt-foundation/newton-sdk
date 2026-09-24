@@ -251,7 +251,7 @@ wasm-tools component new target/wasm32-wasip1/release/<package_name>.wasm \
 Use the Newton CLI to simulate your WASM data provider locally without deploying to the blockchain:
 
 ```bash
-newton-cli --chain-id 11155111 policy-data simulate \
+newton-cli --chain-id 11155111 policy simulate-wasm \
   --wasm-file target/wasm32-wasip1/release/<package_name>.wasm \
   --input-json '{}'
 ```

@@ -37,7 +37,7 @@ A PolicyClient is required to get into the editor. Either enter the address of a
 The policy editor is a three-pane workspace:
 
 - **Rego editor** — a Monaco editor with syntax highlighting for your `policy.rego`. Edit the rules directly.
-- **Oracle sidebar** — add or remove data oracles. Adding more than one produces a [multi-oracle policy](/developers/guides/chaining-data-oracles); each oracle's output is namespaced under its pack id, so reference it in Rego as `data.wasm.<pack-id>.*`.
+- **Oracle sidebar** — pick the data oracle this policy runs. A policy carries at most one; gate on more signals by [composing several policies](/developers/guides/chaining-data-oracles). Packs namespace their output under a pack id, so reference it in Rego as `data.wasm.<pack-id>.*`.
 - **Configuration** — per oracle, set:
   - **Parameters** — the thresholds your Rego reads from `data.params.<pack-id>.*` (e.g. `risk_score_floor`).
   - **Secrets** — the API key(s) the oracle needs (e.g. `VAULTS_FYI_API_KEY`). The dashboard encrypts these client-side and uploads them per PolicyData address, exactly like [`newton-cli secrets upload`](/developers/guides/secrets-in-oracles).
@@ -61,10 +61,10 @@ Mainnet policy usage requires allowlisting by the Newton team. Before deploying 
 :::
 
 1. Generates CIDs for your Rego and schemas and uploads them to IPFS.
-2. Deploys the PolicyData contract(s) and the `NewtonPolicy` contract — bound to **all** selected oracle addresses, so multi-oracle policies deploy in one step.
+2. Deploys the `NewtonPolicy` contract carrying the selected oracle's `wasmCid` and `secretsSchemaCid`.
 3. Binds the policy to your PolicyClient and records the deployed addresses.
 
-This is the recommended way to deploy a [multi-oracle policy](/developers/guides/chaining-data-oracles) today, since the CLI currently binds a single PolicyData address per `policy deploy`.
+This is the recommended way to deploy a [policy set](/developers/guides/chaining-data-oracles) today, since it deploys each policy and writes the ordered set onto your client in one flow.
 
 ## Integrate with Newton Shield
 
@@ -79,7 +79,7 @@ For projects using the Newton Shield template, the dashboard generates a ready-t
 <Card icon="cubes" to="/developers/guides/policy-packs" title="Policy Packs">
   The oracles available in the editor
 </Card>
-<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Composing Multiple Policies">
   How multiple oracles compose under one policy
 </Card>
 <Card icon="terminal" to="/developers/reference/command-line-tool" title="CLI Reference">

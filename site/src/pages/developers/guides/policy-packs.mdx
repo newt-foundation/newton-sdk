@@ -25,7 +25,7 @@ Each pack ships:
 - A typed npm package such as `@newton-xyz/policy-pack-vaultsfyi`.
 - Canonical deployment metadata in [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json).
 
-Policy packs can be composed. Each pack namespaces its output under its pack id, so Rego can safely read values such as `data.wasm.vaultsfyi.risk_score` and `data.params.chainalysis.deny_on_sanctioned` in the same policy. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the merge model.
+Policy packs can be composed. A policy carries at most one pack, so compose them by giving each pack its own policy in the client's set. Each pack namespaces its output under its pack id, so Rego reads values such as `data.wasm.vaultsfyi.risk_score`. See [Composing Multiple Policies](/developers/guides/chaining-data-oracles) for how a set is evaluated.
 
 ## Pack Catalog
 
@@ -95,7 +95,7 @@ This tutorial focuses on the pack-specific steps. For signing in, generating an 
     <img src="/images/packs-dashboard-secrets.png" alt="Data oracle setup form for entering a pack's secret key" />
   
 ### Reference the pack in Rego
-    The pack now appears in the **Data Oracles** sidebar. The configure panel (previous step) gives you the deny rules to copy into your Rego — read the pack's output under its pack id, for example `data.wasm.vaultsfyi.risk_score`, and the thresholds you configured under `data.params.<pack-id>.*`. Add more packs to compose a multi-oracle policy; see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+    The pack now appears in the **Data Oracles** sidebar. The configure panel (previous step) gives you the deny rules to copy into your Rego — read the pack's output under its pack id, for example `data.wasm.vaultsfyi.risk_score`, and the thresholds you configured under `data.params.<pack-id>.*`. Add more packs as further policies in the client's set; see [Composing Multiple Policies](/developers/guides/chaining-data-oracles).
   
 ### Simulate
     Click **Test** to run the full pipeline against sample inputs — every oracle executes, outputs merge into `data.wasm`, and your Rego is evaluated. The output panel shows the allow/deny result and the merged data the policy saw. Use it to confirm your references resolve before deploying. See [Testing Policies](/developers/guides/testing-policies).
@@ -130,17 +130,17 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
     newton-cli --chain-id 11155111 secrets upload \
       --secrets-file secrets.json \
       --policy-client 0xYourPolicyClient \
-      --policy-data-address 0xPackPolicyData \
+      --policy-address 0xPackPolicy \
       --api-key $NEWTON_API_KEY
     ```
 
     Packs that need no credentials skip this step. See [Secrets in Oracles](/developers/guides/secrets-in-oracles) for the full lifecycle.
   
 ### Write a policy that reads the pack
-    In your Rego, read the pack's output under its pack id (`data.wasm.<pack-id>.*`) and the thresholds you configure under `data.params.<pack-id>.*`. Compose multiple packs by referencing several pack ids in the same policy — see [Chaining Data Oracles](/developers/guides/chaining-data-oracles).
+    In your Rego, read the pack's output under its pack id (`data.wasm.<pack-id>.*`) and the thresholds you configure under `data.params.<pack-id>.*`. Compose multiple packs by giving each its own policy in the client's set — see [Composing Multiple Policies](/developers/guides/chaining-data-oracles).
   
 ### Deploy and bind the policy to the pack
-    Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` against the pack's `PolicyData` address, then set it on your PolicyClient.
+    Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` carrying the pack's `wasmCid`, then set it on your PolicyClient.
 
     ```bash
     # 1. Upload Rego + schemas to IPFS
@@ -149,10 +149,9 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
       --output policy_cids.json \
       --entrypoint "your_policy.allow"
 
-    # 2. Deploy the policy bound to the pack's PolicyData address
+    # 2. Deploy the policy
     newton-cli policy deploy \
-      --policy-cids policy_cids.json \
-      --policy-data-address 0xPackPolicyData
+      --policy-cids policy_cids.json
 
     # 3. Set the deployed policy on your PolicyClient
     newton-cli policy-client set-policy \
@@ -160,7 +159,7 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
       --policy-address 0xDeployedPolicy
     ```
 
-    Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
+    Because you reuse the pack's published `wasmCid`, there is no separate oracle deploy step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
   
 ### Simulate
     Verify the policy resolves the pack's data before going live with `newt_simulatePolicy` (or `newt_simulatePolicyDataWithClient` to confirm uploaded secrets resolve). See [Testing Policies](/developers/guides/testing-policies).
@@ -168,7 +167,7 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
 ::::
 
 <Cards>
-<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Composing Multiple Policies">
   Compose several packs under one Newton policy.
 </Card>
 <Card icon="key" to="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">

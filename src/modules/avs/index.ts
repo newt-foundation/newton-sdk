@@ -422,7 +422,7 @@ async function simulateTask(
 }
 
 /**
- * Simulates full Rego policy evaluation (newt_simulatePolicy). Tests policy with sample intent and policy data; may require ownership if PolicyData uses stored secrets.
+ * Simulates full Rego policy evaluation (newt_simulatePolicy). Tests a policy client's whole set against a sample intent; may require ownership if a policy uses stored secrets.
  */
 async function simulatePolicy(
   walletClient: WalletClient,
@@ -445,7 +445,7 @@ async function simulatePolicy(
 }
 
 /**
- * Simulates PolicyData WASM execution with caller-provided secrets (newt_simulatePolicyData). No ownership verification.
+ * Simulates a policy's WASM oracle with caller-provided secrets (newt_simulatePolicyData). No ownership verification.
  */
 async function simulatePolicyData(
   walletClient: WalletClient,
@@ -467,7 +467,7 @@ async function simulatePolicyData(
 }
 
 /**
- * Simulates PolicyData WASM execution with stored secrets for a policy client (newt_simulatePolicyDataWithClient). Requires ownership.
+ * Simulates a policy's WASM oracle with stored secrets for a policy client (newt_simulatePolicyDataWithClient). Requires ownership.
  */
 async function simulatePolicyDataWithClient(
   walletClient: WalletClient,

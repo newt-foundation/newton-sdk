@@ -122,67 +122,29 @@ newton-cli policy-files generate-cids \
 
 ---
 
-### Policy Data
+### Policy
 
-#### `deploy`
+#### `simulate-wasm`
 
-Deploys a policy data contract with the specified policy CIDs.
+Runs a policy's WASM oracle locally, without deploying anything.
 
 **Parameters**
 
 | Flag | Required | Description |
 | --- | --- | --- |
-| `--policy-cids` | Yes | Path to the policy CIDs JSON file |
-| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
-| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
-
-**Usage**
-
-```bash
-newton-cli policy-data deploy --policy-cids policy-files/policy_cids.json
-```
-
-#### `simulate`
-
-Simulates WASM execution without deploying. Supports both local and gateway-based simulation.
-
-**Local simulation:**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--wasm-file` | Yes | Path to the compiled policy WASM file |
+| `--wasm-file` | Yes | Path to the compiled oracle WASM file |
 | `--input-json` | Yes | JSON input for the simulation |
 
 ```bash
-newton-cli --chain-id 84532 policy-data simulate \
+newton-cli --chain-id 84532 policy simulate-wasm \
   --wasm-file policy-files/policy.wasm \
   --input-json "{}"
 ```
 
-**Gateway simulation:**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--policy-data-address` | Yes | Deployed PolicyData contract address |
-| `--wasm-args` | Yes | JSON arguments for the WASM provider |
-| `--gateway-url` | Yes | Gateway RPC URL |
-| `--api-key` | Yes | Newton API key |
-
-```bash
-newton-cli --chain-id 84532 policy-data simulate \
-  --policy-data-address 0x... \
-  --wasm-args '{"base_symbol":"BTC"}' \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
-```
-
----
-
-### Policy
 
 #### `deploy`
 
-Deploys a policy contract with the specified policy CIDs and policy data address.
+Deploys a policy contract with the specified policy CIDs.
 
 :::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
@@ -193,16 +155,13 @@ Mainnet policy usage requires allowlisting by the Newton team. Before deploying 
 | Flag | Required | Description |
 | --- | --- | --- |
 | `--policy-cids` | Yes | Path to the policy CIDs JSON file |
-| `--policy-data-address` | Yes | Address of the deployed policy data contract |
 | `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
 | `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
 
 **Usage**
 
 ```bash
-newton-cli policy deploy \
-  --policy-cids policy-files/policy_cids.json \
-  --policy-data-address "0xab23A45365F0BF660887B54b42787fA5519eb574"
+newton-cli policy deploy --policy-cids policy-files/policy_cids.json
 ```
 
 #### `simulate`
@@ -233,7 +192,7 @@ newton-cli --chain-id 84532 policy simulate \
 ```
 
 :::note
-`policy simulate` and `policy-data simulate` (gateway mode) delegate to operators for the full data pipeline. Use them to debug Rego logic before going live.
+`policy simulate` delegates to operators for the full data pipeline. Use it to debug Rego logic before going live.
 :::
 
 ---
@@ -396,7 +355,7 @@ newton-cli --chain-id 84532 policy-client transfer-ownership \
 
 ### Secrets
 
-Upload HPKE-encrypted secrets for WASM data providers that call `secrets::get()` at runtime. Secrets are scoped per `policy_data_address` — redeploying PolicyData creates a new contract, so you must re-upload secrets for the new address.
+Upload HPKE-encrypted secrets for WASM data providers that call `secrets::get()` at runtime. Secrets are scoped to a policy's address. When you redeploy a policy it gets a new address.
 
 #### `upload`
 
@@ -408,7 +367,7 @@ Encrypts secrets client-side via HPKE and uploads the sealed envelope to the gat
 | --- | --- | --- |
 | `--secrets-file` | Yes | Path to JSON file containing key-value secrets |
 | `--policy-client` | Yes | PolicyClient contract address |
-| `--policy-data-address` | Yes | PolicyData contract address |
+| `--policy-address` | Yes | Policy contract address |
 | `--api-key` | Yes | Newton API key |
 | `--chain-id` | Yes | Chain ID |
 | `--gateway-url` | No | Gateway RPC URL (auto-resolved from chain ID if omitted) |
@@ -416,7 +375,7 @@ Encrypts secrets client-side via HPKE and uploads the sealed envelope to the gat
 **Usage**
 
 ```bash
-# Create a secrets file matching your PolicyData's schema
+# Create a secrets file matching your policy's secrets schema
 cat > secrets.json << 'EOF'
 {
   "INDEXER_API_KEY": "sk-prod-xxxxxxxxxxxx",
@@ -428,7 +387,7 @@ EOF
 newton-cli --chain-id 84532 secrets upload \
   --secrets-file secrets.json \
   --policy-client 0x... \
-  --policy-data-address 0x... \
+  --policy-address 0x... \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -705,7 +664,7 @@ A typical local-first workflow for integrating a new smart contract with Newton:
 | 1 | `newton-cli policy scaffold` | Create the policy source, schemas, fixtures, and deployment config |
 | 2 | `newton-cli policy build -p <dir>` | Validate and compile the policy artifacts |
 | 3 | `newton-cli policy simulate -p <dir>` | Prove at least one allow and one deny case locally |
-| 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy PolicyData + Policy after approval |
+| 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy the policy after approval |
 | 5 | `forge build && forge test` | Build and adversarially test the application PolicyClient |
 | 6 | `forge script ... --broadcast` | Deploy the tested PolicyClient after approval |
 | 7 | `cast send ... setPolicyAddress/setPolicy` | Bind policy and params while the local deployer is owner |
