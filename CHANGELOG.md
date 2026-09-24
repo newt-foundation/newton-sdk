@@ -1,3 +1,15 @@
+# v1.2.1 (Thu Sep 24 2026)
+
+#### 🐛 Bug Fix
+
+- fold NewtonPolicyData into NewtonPolicy across the SDK [#187](https://github.com/newt-foundation/newton-sdk/pull/187) ([@wesl-ee](https://github.com/wesl-ee))
+
+#### Authors: 1
+
+- wesl-ee ([@wesl-ee](https://github.com/wesl-ee))
+
+---
+
 # v1.2.0 (Tue Sep 22 2026)
 
 #### 🚀 Enhancement
