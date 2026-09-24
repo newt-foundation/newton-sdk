@@ -36,8 +36,12 @@ describe('newtonPublicClientActions type tests', () => {
     expectTypeOf<PublicActions['isPolicyVerified']>().returns.resolves.toEqualTypeOf<boolean>()
   })
 
-  it('getPolicyData returns Address array', () => {
-    expectTypeOf<PublicActions['getPolicyData']>().returns.resolves.toEqualTypeOf<Address[]>()
+  it('getWasmCid returns string', () => {
+    expectTypeOf<PublicActions['getWasmCid']>().returns.resolves.toEqualTypeOf<string>()
+  })
+
+  it('getSecretsSchemaCid returns string', () => {
+    expectTypeOf<PublicActions['getSecretsSchemaCid']>().returns.resolves.toEqualTypeOf<string>()
   })
 
   it('precomputePolicyId is synchronous and returns string (PolicyId)', () => {

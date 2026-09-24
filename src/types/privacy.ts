@@ -91,8 +91,8 @@ export interface Ed25519KeyPair {
 export interface StoreEncryptedSecretsParams {
   /** Policy client address secrets are scoped to */
   policyClient: Address
-  /** PolicyData address secrets are scoped to */
-  policyDataAddress: Address
+  /** Policy address secrets are scoped to */
+  policyAddress: Address
   /** Plaintext secrets as a JSON object (e.g., { "API_KEY_1": "...", "API_KEY_2": "..." }) */
   plaintext: Record<string, unknown>
   /** Chain ID the policy client lives on */
@@ -113,7 +113,7 @@ export interface StoreEncryptedSecretsResponse {
 /** RPC request body for newt_storeEncryptedSecrets. */
 export interface StoreEncryptedSecretsRpcRequest {
   policy_client: Address
-  policy_data_address: Address
+  policy_address: Address
   envelope: string
   chain_id: number
 }

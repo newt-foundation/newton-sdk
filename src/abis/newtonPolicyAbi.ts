@@ -137,19 +137,6 @@ export const NewtonPolicyAbi = [
   },
   {
     "type": "function",
-    "name": "getPolicyData",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getPolicyId",
     "inputs": [
       {
@@ -182,6 +169,32 @@ export const NewtonPolicyAbi = [
   },
   {
     "type": "function",
+    "name": "getSecretsSchemaCid",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getWasmCid",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -190,29 +203,41 @@ export const NewtonPolicyAbi = [
         "internalType": "address"
       },
       {
-        "name": "_entrypoint",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "_policyCid",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "_schemaCid",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "_policyData",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "_metadataCid",
-        "type": "string",
-        "internalType": "string"
+        "name": "artifacts",
+        "type": "tuple",
+        "internalType": "struct INewtonPolicy.PolicyArtifacts",
+        "components": [
+          {
+            "name": "entrypoint",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "policyCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "schemaCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "wasmCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "secretsSchemaCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "metadataCid",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
       },
       {
         "name": "_owner",
@@ -295,25 +320,6 @@ export const NewtonPolicyAbi = [
   },
   {
     "type": "function",
-    "name": "policyData",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
     "outputs": [],
@@ -322,6 +328,19 @@ export const NewtonPolicyAbi = [
   {
     "type": "function",
     "name": "schemaCid",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "secretsSchemaCid",
     "inputs": [],
     "outputs": [
       {
@@ -378,6 +397,19 @@ export const NewtonPolicyAbi = [
   },
   {
     "type": "function",
+    "name": "setSecretsSchemaCid",
+    "inputs": [
+      {
+        "name": "_secretsSchemaCid",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -411,6 +443,19 @@ export const NewtonPolicyAbi = [
   {
     "type": "function",
     "name": "version",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "wasmCid",
     "inputs": [],
     "outputs": [
       {
@@ -523,9 +568,14 @@ export const NewtonPolicyAbi = [
             ]
           },
           {
-            "name": "policyData",
-            "type": "address[]",
-            "internalType": "address[]"
+            "name": "wasmCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "secretsSchemaCid",
+            "type": "string",
+            "internalType": "string"
           },
           {
             "name": "policyCodeHash",
@@ -538,6 +588,19 @@ export const NewtonPolicyAbi = [
             "internalType": "string"
           }
         ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SecretsSchemaCidUpdated",
+    "inputs": [
+      {
+        "name": "secretsSchemaCid",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       }
     ],
     "anonymous": false
@@ -573,6 +636,11 @@ export const NewtonPolicyAbi = [
   {
     "type": "error",
     "name": "OnlyPolicyClient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SecretsSchemaWithoutWasm",
     "inputs": []
   },
   {
@@ -633,9 +701,14 @@ export const NewtonPolicyFactoryAbi = [
         "internalType": "string"
       },
       {
-        "name": "_policyData",
-        "type": "address[]",
-        "internalType": "address[]"
+        "name": "_wasmCid",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_secretsSchemaCid",
+        "type": "string",
+        "internalType": "string"
       },
       {
         "name": "_metadataCid",
@@ -682,9 +755,14 @@ export const NewtonPolicyFactoryAbi = [
         "internalType": "string"
       },
       {
-        "name": "_policyData",
-        "type": "address[]",
-        "internalType": "address[]"
+        "name": "_wasmCid",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_secretsSchemaCid",
+        "type": "string",
+        "internalType": "string"
       },
       {
         "name": "_metadataCid",
@@ -1055,9 +1133,14 @@ export const NewtonPolicyFactoryAbi = [
             "internalType": "string"
           },
           {
-            "name": "policyData",
-            "type": "address[]",
-            "internalType": "address[]"
+            "name": "wasmCid",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "secretsSchemaCid",
+            "type": "string",
+            "internalType": "string"
           },
           {
             "name": "policyCodeHash",
@@ -1114,6 +1197,11 @@ export const NewtonPolicyFactoryAbi = [
   {
     "type": "error",
     "name": "NotAdminOrOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SecretsSchemaWithoutWasm",
     "inputs": []
   },
   {
@@ -1430,28 +1518,6 @@ export const NewtonPolicyClientAbi = [
     "type": "error",
     "name": "InvalidPolicyID",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "MultiOracleNotComposable",
-    "inputs": [
-      {
-        "name": "policy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "OracleWithoutWasm",
-    "inputs": [
-      {
-        "name": "policy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
   },
   {
     "type": "error",

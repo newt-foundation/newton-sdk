@@ -183,6 +183,15 @@ const newtonWalletClientActions =
         })
       },
 
+      setSecretsSchemaCid: (args: { secretsSchemaCid: string }): Promise<`0x${string}`> => {
+        const validatedAddress = validatePolicyContractAddress()
+        return policyWriteFunctions.setSecretsSchemaCid({
+          walletClient,
+          policyContractAddress: validatedAddress,
+          ...args,
+        })
+      },
+
       renounceOwnership: (): Promise<`0x${string}`> => {
         const validatedAddress = validatePolicyContractAddress()
         return policyWriteFunctions.renounceOwnership({
@@ -463,9 +472,17 @@ const newtonPublicClientActions =
         })
       },
 
-      getPolicyData: (): Promise<Address[]> => {
+      getWasmCid: (): Promise<string> => {
         const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.getPolicyData({
+        return policyReadFunctions.getWasmCid({
+          publicClient,
+          policyContractAddress: validatedAddress,
+        })
+      },
+
+      getSecretsSchemaCid: (): Promise<string> => {
+        const validatedAddress = validatePolicyContractAddress()
+        return policyReadFunctions.getSecretsSchemaCid({
           publicClient,
           policyContractAddress: validatedAddress,
         })
@@ -517,15 +534,6 @@ const newtonPublicClientActions =
         return policyReadFunctions.policyCid({
           publicClient,
           policyContractAddress: validatedAddress,
-        })
-      },
-
-      policyData: (args: { index: number }): Promise<Address> => {
-        const validatedAddress = validatePolicyContractAddress()
-        return policyReadFunctions.policyData({
-          publicClient,
-          policyContractAddress: validatedAddress,
-          ...args,
         })
       },
 

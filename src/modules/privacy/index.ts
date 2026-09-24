@@ -272,10 +272,10 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
 }
 
 /**
- * Upload HPKE-encrypted secrets for a policy client's PolicyData.
+ * Upload HPKE-encrypted secrets for a policy client's policy.
  *
  * The gateway decrypts the HPKE envelope, validates the plaintext against
- * the PolicyData schema, and stores the envelope for operator-side decryption
+ * the policy's secrets schema, and stores the envelope for operator-side decryption
  * during policy evaluation.
  */
 export async function storeEncryptedSecrets(
@@ -308,7 +308,7 @@ export async function storeEncryptedSecrets(
 
   const rpcRequest: StoreEncryptedSecretsRpcRequest = {
     policy_client: params.policyClient,
-    policy_data_address: params.policyDataAddress,
+    policy_address: params.policyAddress,
     envelope: JSON.stringify(envelope),
     chain_id: params.chainId,
   }
