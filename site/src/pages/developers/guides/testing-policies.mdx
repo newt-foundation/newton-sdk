@@ -144,7 +144,7 @@ Run the compiled oracle in isolation to confirm it produces the data shape your 
 
 ```bash
 # Local execution in a sandbox with the Newton HTTP host
-newton-cli --chain-id 11155111 policy simulate-wasm \
+newton-cli --chain-id 11155111 policy-data simulate \
   --wasm-file ./dist/policy.wasm \
   --input-json '{"network":"mainnet","vaultAddress":"0x..."}'
 ```
@@ -164,7 +164,7 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "jsonrpc": "2.0",
     "method": "newt_simulatePolicyData",
     "params": {
-      "policy_address": "0xYourPolicy",
+      "policy_data_address": "0xYourPolicyData",
       "wasm_args": "0x7b226e6574776f726b223a226d61696e6e6574227d"
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -175,7 +175,7 @@ See [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-ora
 
 ## Simulate the full policy
 
-The final step before deploying: evaluate the policy client's whole policy set against a sample intent with `newt_simulatePolicy`. Pass one `wasm_args` entry per policy in the set, positionally aligned:
+The final step before deploying: evaluate the complete policy (Rego + every oracle + merged data) against a sample intent with `newt_simulatePolicy`. Pass one entry per oracle in `policy_data` and namespaced `policy_params`:
 
 ```bash
 curl -X POST https://gateway.testnet.newton.xyz/rpc \
@@ -186,7 +186,8 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "method": "newt_simulatePolicy",
     "params": {
       "policy_client": "0xYourPolicyClient",
-      "chain_id": 11155111,
+      "policy": "package vault_risk_rating\n...",
+      "entrypoint": "vault_risk_rating.allow",
       "intent": {
         "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
@@ -195,18 +196,21 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
         "chain_id": "0xaa36a7",
         "function_signature": "0x"
       },
-      "wasm_args": ["7b226e6574776f726b223a226d61696e6e6574227d"]
+      "policy_data": [
+        { "policy_data_address": "0xYourPolicyData" }
+      ],
+      "policy_params": { "vaultsfyi": { "apy_z_max": 4, "risk_score_floor": 60 } }
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
-Inspect `policies[]` in the response for the per-policy results, and `allowed` for the aggregate decision. For a client with more than one policy, see [Composing Multiple Policies](/developers/guides/chaining-data-oracles#simulating-the-set).
+Inspect `evaluation_result.policy_params_and_data` in the response to confirm the merged `data.wasm` shape, and `evaluation_result.result` for the allow/deny decision. For multi-oracle policies, see [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles#simulating-a-multi-oracle-policy).
 
 ## Recommended workflow
 
 1. `opa test` your Rego rules.
-2. `policy simulate-wasm` each oracle locally.
+2. `policy-data simulate` each oracle locally.
 3. Upload secrets, then `newt_simulatePolicyDataWithClient` to verify they resolve.
 4. `newt_simulatePolicy` for the full end-to-end decision.
 5. Deploy, then submit production tasks.
@@ -217,7 +221,7 @@ Inspect `policies[]` in the response for the per-policy results, and `allowed` f
 <Card icon="bug" to="/developers/resources/testing-debugging" title="Testing & Debugging">
   Diagnose failures after deployment
 </Card>
-<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Composing Multiple Policies">
+<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
   Simulate and test multi-oracle policies
 </Card>
 <Card icon="list-check" to="/developers/resources/deployment-checklist" title="Deployment Checklist">

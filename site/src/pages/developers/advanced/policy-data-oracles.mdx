@@ -86,11 +86,11 @@ To integrate a reference oracle into your project:
 4. **Test locally** — simulate the oracle with the Newton CLI:
 
    ```bash
-   newton-cli --chain-id 11155111 policy simulate-wasm \
+   newton-cli --chain-id 11155111 policy-data simulate \
      --wasm-file policy.wasm \
      --input-json '{"address": "0x..."}'
    ```
-5. **Deploy on-chain** — use the CLI to upload your WASM to IPFS and deploy the policy carrying its `wasmCid`. See [Deploying with CLI](/developers/guides/deploying-with-cli).
+5. **Deploy on-chain** — use the CLI to upload your WASM to IPFS and deploy a PolicyData contract. See [Deploying with CLI](/developers/guides/deploying-with-cli).
 6. **Reference in your policy** — access the oracle output in your Rego policy via `data.wasm`:
 
    ```rego

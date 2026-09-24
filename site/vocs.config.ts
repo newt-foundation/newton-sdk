@@ -199,7 +199,7 @@ export default defineConfig({
           { text: 'Writing Data Oracles', link: '/developers/guides/writing-data-oracles' },
           { text: 'Writing Policies', link: '/developers/guides/writing-policies' },
           { text: 'Secrets in Oracles', link: '/developers/guides/secrets-in-oracles' },
-          { text: 'Composing Multiple Policies', link: '/developers/guides/chaining-data-oracles' },
+          { text: 'Chaining Data Oracles', link: '/developers/guides/chaining-data-oracles' },
           { text: 'Policy Packs', link: '/developers/guides/policy-packs' },
           { text: 'Deploying with CLI', link: '/developers/guides/deploying-with-cli' },
           { text: 'Smart Contract Integration', link: '/developers/guides/smart-contract-integration' },

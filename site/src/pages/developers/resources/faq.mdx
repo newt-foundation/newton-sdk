@@ -107,7 +107,7 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 **Cause:** The WASM component's `run` function is not returning valid JSON, or the HTTP fetch is failing silently.
 
 **Fix:**
-1. Test locally: `newton-cli --chain-id 11155111 policy simulate-wasm --wasm-file policy.wasm --input-json '{}'`
+1. Test locally: `newton-cli --chain-id 11155111 policy-data simulate --wasm-file policy.wasm --input-json '{}'`
 2. Verify your `run` function returns a JSON string (not an object)
 3. Check that HTTP requests use the correct URL and headers
 4. Ensure secrets are stored if your oracle requires API keys

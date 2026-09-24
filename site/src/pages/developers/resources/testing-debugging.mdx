@@ -32,7 +32,7 @@ For writing Rego unit tests with `opa test`, see [Testing Policies & Oracles](/d
 Test your WASM data oracle without deploying:
 
 ```bash
-newton-cli --chain-id 11155111 policy simulate-wasm \
+newton-cli --chain-id 11155111 policy-data simulate \
   --wasm-file policy.wasm \
   --input-json '{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"}'
 ```
@@ -82,15 +82,17 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "method": "newt_simulatePolicy",
     "params": {
       "policy_client": "0xYourPolicyClient",
-      "chain_id": 11155111,
+      "policy": "package trading\n\ndefault allow := false\n...",
+      "entrypoint": "trading.allow",
       "intent": { "from": "0x...", "to": "0x...", "value": "0x0", "data": "0x", "chain_id": "0xaa36a7", "function_signature": "0x" },
-      "wasm_args": ["7b22626173655f73796d626f6c223a22425443227d"]
+      "policy_data": [ { "policy_data_address": "0xYourPolicyData" } ],
+      "policy_params": { "max_price": 50000 }
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
-### Simulate the Oracle Only
+### Simulate PolicyData Only
 
 Test a WASM oracle execution via the Gateway:
 
@@ -104,7 +106,7 @@ Test a WASM oracle execution via the Gateway:
         "jsonrpc": "2.0",
         "method": "newt_simulatePolicyData",
         "params": {
-          "policy_address": "0xYourPolicy",
+          "policy_data_address": "0xYourPolicyData",
           "wasm_args": "0x7b2261646472657373223a22307830227d",
           "chain_id": 11155111
         },
@@ -124,7 +126,7 @@ Pass encrypted secrets via the optional `secrets` field (base64-encoded cipherte
         "jsonrpc": "2.0",
         "method": "newt_simulatePolicyDataWithClient",
         "params": {
-          "policy_address": "0xYourPolicy",
+          "policy_data_address": "0xYourPolicyData",
           "policy_client": "0xYourPolicyClientAddress",
           "wasm_args": "0x7b2261646472657373223a22307830227d"
         },
@@ -148,11 +150,11 @@ Newton provides four distinct simulation endpoints for different phases of polic
 | `newt_simulatePolicy` | Full Rego + WASM evaluation | Delegates to operators for full pipeline | Yes (full pipeline) | Final testing before deployment |
 | `newt_simulateTask` | Replay with pre-assembled data | Uses provided PolicyTaskData directly | No (local only) | Replay historical tasks, debugging |
 
-`simulatePolicy` delegates to an operator via `broadcast_first_success` — it runs the full data pipeline (fetches WASM from IPFS, decrypts stored secrets, executes each policy's WASM oracle, evaluates each policy's Rego). `simulateTask` takes pre-assembled `PolicyTaskData` and evaluates Rego against it locally — the data pipeline is skipped because data is already assembled.
+`simulatePolicy` delegates to an operator via `broadcast_first_success` — it runs the full data pipeline (fetches WASM from IPFS, decrypts stored secrets, executes each PolicyData plugin, merges outputs, evaluates Rego). `simulateTask` takes pre-assembled `PolicyTaskData` and evaluates Rego against it locally — the data pipeline is skipped because data is already assembled.
 
 **Recommended development workflow:**
 
-1. Deploy the policy contracts
+1. Deploy PolicyData contracts
 2. Test WASM locally with `newt_simulatePolicyData`
 3. Upload secrets via `newt_storeEncryptedSecrets`
 4. Verify stored secrets with `newt_simulatePolicyDataWithClient`
@@ -185,7 +187,7 @@ If an attestation fails on-chain verification, check:
 | Symptom | Likely Cause | Diagnostic Step |
 |---------|-------------|-----------------|
 | `newt_simulateTask` returns `non-compliant` | Policy logic rejects the intent | Run `newt_simulatePolicy` with the same inputs to isolate the Rego evaluation |
-| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy simulate-wasm` |
+| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy-data simulate` |
 | Attestation expires before on-chain submission | Too much time between evaluation and transaction | Reduce latency or increase the `expiry_offset` parameter |
 | On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
 | `TaskAlreadyExists` error | Duplicate intent hash | Modify the intent nonce or wait for the existing task |

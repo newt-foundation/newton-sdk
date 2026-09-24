@@ -24,7 +24,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
   
 ### Data oracle returns valid JSON
     ```bash
-    newton-cli --chain-id 11155111 policy simulate-wasm \
+    newton-cli --chain-id 11155111 policy-data simulate \
       --wasm-file policy.wasm \
       --input-json '{...}'
     ```
@@ -48,12 +48,21 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 ### Mainnet policy allowlisting confirmed
     Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
   
+### PolicyData contract deployed
+    ```bash
+    newton-cli --chain-id 11155111 policy-data deploy \
+      --wasm-cid bafyrei... \
+      --secrets-schema-cid bafyrei...
+    ```
+    Record the deployed `PolicyData` address.
+  
 ### Policy contract deployed
     ```bash
     newton-cli --chain-id 11155111 policy deploy \
-      --policy-cids policy-files/policy_cids.json
+      --rego-cid bafyrei... \
+      --policy-data-address 0x...
     ```
-    The policy carries its own `wasmCid` and `secretsSchemaCid`. Record the deployed `Policy` address.
+    Record the deployed `Policy` address.
   
 ### PolicyClient contract deployed
     Deploy your contract that inherits `NewtonPolicyClient`. Verify it compiles with Solidity ^0.8.x and the correct foundry remappings.
@@ -97,7 +106,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/encrypting-secrets).
   
 ### Secrets match schema
-    Confirm your uploaded secrets match the `secretsSchemaCid` defined on your policy contract. Schema mismatches produce validation errors.
+    Confirm your uploaded secrets match the `secretsSchemaCid` defined on your PolicyData contract. Schema mismatches produce validation errors.
   
 ::::
 

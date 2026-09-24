@@ -555,7 +555,7 @@ If `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePolicyVer
 3. Deploy a new policy through the current `NewtonPolicyFactory`:
    ```solidity
    address newPolicy = policyFactory.deployPolicy(
-       entrypoint, policyCid, schemaCid, wasmCid, secretsSchemaCid, metadataCid, owner, policyCodeHash
+       entrypoint, policyCid, schemaCid, policyDataAddresses, metadataCid, owner
    );
    ```
 

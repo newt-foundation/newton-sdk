@@ -43,7 +43,7 @@ Your Rego policy can access three data namespaces:
 |------|--------|-------------|
 | `input` | Intent | The transaction intent being evaluated (from, to, value, data, chain_id, function_signature) |
 | `data.params` | PolicyClient | Configuration parameters set by the contract owner (thresholds, allowlists) |
-| `data.wasm` | WASM oracle | Runtime data returned by this policy's WASM oracle (prices, KYC status). Packs namespace their output under a pack id — see [Reading a pack's output](#reading-a-packs-output) |
+| `data.wasm` | PolicyData WASM | Runtime data returned by your WASM oracle(s) (prices, KYC status). With multiple oracles, each is namespaced under its pack id — see [Consuming Multiple Oracles](#consuming-multiple-oracles) |
 
 ## Your First Policy
 
@@ -112,12 +112,12 @@ allow if {
 ```
 
 :::note
-Your own oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). A [policy pack](/developers/guides/policy-packs) namespaces its output under a pack id (`data.wasm.<pack-id>.price`) — see [Reading a pack's output](#reading-a-packs-output).
+A single oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). When a policy reads multiple oracles, each oracle namespaces its output under a pack id (`data.wasm.<pack-id>.price`) — see [Consuming Multiple Oracles](#consuming-multiple-oracles).
 :::
 
-## Reading a pack's output
+## Consuming Multiple Oracles
 
-A policy carries at most one WASM oracle. When that oracle is a [policy pack](/developers/guides/policy-packs), it wraps its output under a **pack id**, so your Rego reads `data.wasm.<pack-id>.*` and the thresholds you configure under `data.params.<pack-id>.*`:
+A policy can read from more than one PolicyData oracle. When it does, each oracle namespaces its output under a unique **pack id**, and the network merges them into a single `data.wasm` object. Your Rego then reads `data.wasm.<pack-id>.*` and `data.params.<pack-id>.*`:
 
 ```rego
 package vault_gate
@@ -132,13 +132,12 @@ deny contains "risk floor" if {
     data.wasm.vaultsfyi.risk_score < data.params.vaultsfyi.risk_score_floor
 }
 
-deny contains msg if {
-    err := data.wasm.vaultsfyi.error
-    msg := sprintf("oracle error: %v", [err])
+deny contains "token collapsed" if {
+    data.wasm.webacy.is_collapsed
 }
 ```
 
-To gate on a second signal, give it its own policy in the client's set — see [Composing Multiple Policies](/developers/guides/chaining-data-oracles) for how a set is evaluated and the deny-set pattern.
+See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles) for the full merge model and the deny-set pattern, and [Policy Packs](/developers/guides/policy-packs) for prebuilt oracles you can compose.
 
 ## Parameter Schema
 

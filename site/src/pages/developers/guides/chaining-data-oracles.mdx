@@ -1,10 +1,10 @@
 ---
-title: "Composing Multiple Policies"
-description: "Gate one action on several independent signals by giving each signal its own Newton policy. How a policy set is evaluated, how to write Rego for one signal, and how to simulate the whole set end-to-end."
+title: "Chaining Multiple Data Oracles"
+description: "Compose more than one PolicyData oracle under a single Newton policy. How outputs are namespaced and merged, how to write Rego that reads two oracles, and how to simulate a multi-oracle policy end-to-end."
 keywords:
-  - policy set
-  - compose policies
-  - multi signal policy
+  - multi oracle policy
+  - compose data oracles
+  - policy data namespacing
   - data.wasm rego
   - composite policy
 showAskAi: false
@@ -12,76 +12,125 @@ showAskAi: false
 import { Card,Cards } from 'vocs'
 
 
-# Composing Multiple Policies [Gate one action on several independent signals by giving each signal its own Newton policy. How a policy set is evaluated, how to write Rego for one signal, and how to simulate the whole set end-to-end.]
+# Chaining Multiple Data Oracles [Compose more than one PolicyData oracle under a single Newton policy. How outputs are namespaced and merged, how to write Rego that reads two oracles, and how to simulate a multi-oracle policy end-to-end.]
 
-A policy can have at most one WASM oracle. To gate an action on a set of independent signals, create a policy for each signal and add them to the policy client's set. Each policy will run its own oracle and evaluate its own Rego; the client's verdict is the AND of the set so only one need deny the action.
+A single Newton policy can read from **more than one PolicyData oracle**. This lets one policy gate an action on several independent signals at once — for example, vault risk *and* sanctions screening *and* oracle health — while still resolving to a single allow/deny decision and a single attestation.
 
-This guide explains how a policy set is evaluated, how to write the Rego for a single policy in the set, and how to simulate the whole set before deploying.
+This guide explains how multiple oracle outputs are merged into your Rego evaluation context, how to write Rego that consumes two oracles without key collisions, and how to simulate the whole thing before deploying.
 
-## When to compose
+## When to chain oracles
 
 | Goal | Shape |
 |------|-------|
-| Gate a deposit on vault risk only | One policy |
-| Gate a deposit on vault risk **and** depositor reputation | **Two policies** in the client's set |
-| Gate on risk **and** sanctions **and** oracle divergence | **Three policies** in the client's set |
+| Gate a deposit on vault risk only | Single oracle — one PolicyData |
+| Gate a deposit on vault risk **and** depositor reputation | **Two oracles** — read both in one policy |
+| Gate on risk **and** sanctions **and** oracle divergence | **Three oracles** — one decision over all three |
 
-If you only need one signal, see [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies). This guide builds on both.
+If you only need one data source, see [Writing Data Oracles](/developers/guides/writing-data-oracles) and [Writing Policies](/developers/guides/writing-policies). This guide builds on both.
 
-## How a set is evaluated
+## How outputs are merged
 
-Each policy is evaluated in isolation. The output of its oracle is available in that policy's `data.wasm` and its parameters are in `data.params`. This means that two policies could both define a top-level `score` without interfering with each-other.
+Each PolicyData oracle is an independent WASM component that returns a JSON object (see [Writing Data Oracles](/developers/guides/writing-data-oracles)). When a policy references multiple oracles, the Newton network:
 
-The network:
+1. Runs **every** referenced oracle's WASM (each receives the same `wasm_args` blob).
+2. **Shallow-merges** every oracle's JSON output into a single object exposed to Rego as `data.wasm`.
+3. Evaluates your Rego against the merged `data.wasm` plus your configured `data.params`.
 
-1. Runs each policy's WASM oracle, if it has one, with that policy's `wasm_args` and its own stored secrets.
-2. Evaluates each policy's Rego against its own `{ params, wasm }` context.
-3. ANDs the per-policy verdicts into one decision, and returns the per-policy results alongside it.
+Because the merge is shallow (top-level keys are combined into one object), two oracles that both emit a top-level `score` field would collide — the last one merged would win. To avoid this, each oracle **namespaces its output under a unique key**.
 
-:::note
-Because nothing merges across policies, a policy's oracle no longer needs to namespace its output under a pack id to avoid collisions. Newton's [policy packs](/developers/guides/policy-packs) still wrap their output under a pack-id key, so read those from `data.wasm.<pack-id>` as their documentation shows.
-:::
+### The namespacing convention
 
-## Writing Rego for one policy in the set
+Every oracle wraps its entire output under a single top-level key — its **pack id** (a short, unique identifier, conventionally the oracle's name):
 
-The recommended pattern within a policy is a **deny set**: each rule adds a reason string to `deny` when a condition fails, and the policy allows only when no deny rule fires. Multiple simultaneous failures then coexist instead of conflicting, so the policy can never accidentally fail open when two rules fire at once.
+```js
+// In oracle A's policy.js
+return JSON.stringify({ vaultsfyi: { risk_score: 75, tvl_drawdown_24h_pct: 1.2, /* ... */ } });
+
+// In oracle B's policy.js
+return JSON.stringify({ webacy: { is_collapsed: false, abs_dev_clean: 0.001, /* ... */ } });
+```
+
+After the network merges both outputs, your Rego sees:
 
 ```rego
-package vault_risk
+data.wasm.vaultsfyi.risk_score          # number, from oracle A
+data.wasm.webacy.is_collapsed           # bool, from oracle B
+```
+
+Parameters follow the same convention — namespace each oracle's thresholds under the same key so a single `params` object can configure every oracle:
+
+```rego
+data.params.vaultsfyi.risk_score_floor  # configured threshold for oracle A
+data.params.webacy.deny_on_collapsed    # configured threshold for oracle B
+```
+
+:::note
+Wrapping every return path (including error returns) under a single pack-id key is the convention used by all [Newton policy packs](/developers/guides/policy-packs). If you write your own oracle that you intend to chain, adopt the same wrapper so it composes cleanly with others.
+:::
+
+## Writing Rego that consumes two oracles
+
+The recommended pattern is a **deny set**: each rule adds a reason string to `deny` when a condition fails, and the policy allows only when no deny rule fires. This composes naturally across oracles — every oracle contributes its own deny rules over its own namespace, and the final `allow` is simply "nothing denied."
+
+```rego
+package vault_gate
 
 import rego.v1
 
 default allow := false
 
-# Allow only when no deny rule fires.
+# Allow only when no deny rule across any oracle fires.
 allow if count(deny) == 0
+
+# --- Oracle A: vaultsfyi (vault risk) ---
 
 deny contains msg if {
     score := data.wasm.vaultsfyi.risk_score
-    floor := data.params.risk_score_floor
+    floor := data.params.vaultsfyi.risk_score_floor
     score != null
     score < floor
-    msg := sprintf("risk score %v below floor %v", [score, floor])
+    msg := sprintf("vaultsfyi: risk score %v below floor %v", [score, floor])
 }
 
-deny contains "tvl drawdown 24h exceeded" if {
-    data.wasm.vaultsfyi.tvl_drawdown_24h_pct > data.params.tvl_drawdown_24h_max_pct
+deny contains "vaultsfyi: tvl drawdown 24h exceeded" if {
+    data.wasm.vaultsfyi.tvl_drawdown_24h_pct > data.params.vaultsfyi.tvl_drawdown_24h_max_pct
 }
 
-# Fail closed if the oracle errored.
+# --- Oracle B: webacy (depeg / reputation) ---
+
+deny contains "webacy: token collapsed" if {
+    data.params.webacy.deny_on_collapsed
+    data.wasm.webacy.is_collapsed
+}
+
+deny contains "webacy: outside expected peg range" if {
+    data.wasm.webacy.within_expected_range == false
+}
+
+# --- Fail closed if either oracle errored ---
+
 deny contains msg if {
     err := data.wasm.vaultsfyi.error
-    msg := sprintf("oracle error: %v", [err])
+    msg := sprintf("vaultsfyi oracle error: %v", [err])
+}
+
+deny contains msg if {
+    err := data.wasm.webacy.error
+    msg := sprintf("webacy oracle error: %v", [err])
 }
 ```
 
-The second signal is a second policy with its own `package`, its own oracle and its own deny rules. Neither policy can read the other's data, and the client denies the action if either one does.
+Key points:
+
+- **One `allow` rule, many `deny` rules.** Using a deny *set* (`deny contains ...`) instead of a single-valued `deny` rule means multiple simultaneous failures coexist instead of conflicting — the policy can never accidentally fail open when two rules fire at once.
+- **Read each oracle from its own namespace** (`data.wasm.<pack-id>`) and its thresholds from `data.params.<pack-id>`.
+- **Fail closed on oracle errors.** A namespaced `error` field is the convention for signaling that an oracle could not produce data; deny on it unless you have a reason not to.
 
 For Rego language details — `if`, `contains`, `sprintf`, comprehensions — see the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide).
 
-## Simulating the set
+## Simulating a multi-oracle policy
 
-Call `newt_simulatePolicy` to simulate the entire set at once. Pass one `wasm_args` entry per policy in set order, and read the per-policy verdicts back out of `policies[]`.
+Before deploying, simulate the full policy against both oracles with the Gateway's `newt_simulatePolicy` method (or the SDK's `simulatePolicy`). Pass **multiple entries** in `policy_data` — one per oracle — and a `policy_params` object namespaced to match your Rego.
 
 :::code-group
 ```bash [Gateway RPC]
@@ -93,7 +142,8 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "method": "newt_simulatePolicy",
     "params": {
       "policy_client": "0xYourPolicyClientAddress",
-      "chain_id": 11155111,
+      "policy": "package vault_gate\n\nimport rego.v1\n...",
+      "entrypoint": "vault_gate.allow",
       "intent": {
         "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
@@ -102,10 +152,14 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
         "chain_id": "0xaa36a7",
         "function_signature": "0x"
       },
-      "wasm_args": [
-        "7b227661756c74223a22307830227d",
-        "7b22746f6b656e223a22307830227d"
-      ]
+      "policy_data": [
+        { "policy_data_address": "0xVAULTSFYI_POLICY_DATA" },
+        { "policy_data_address": "0xWEBACY_POLICY_DATA" }
+      ],
+      "policy_params": {
+        "vaultsfyi": { "risk_score_floor": 60, "tvl_drawdown_24h_max_pct": 25 },
+        "webacy":    { "deny_on_collapsed": true }
+      }
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
@@ -127,35 +181,45 @@ const client = createWalletClient({
 
 const result = await client.simulatePolicy({
   policyClient: '0xYourPolicyClientAddress',
-  chainId: 11155111,
+  policy: regoSource,
+  entrypoint: 'vault_gate.allow',
   intent: { from: '0x...', to: '0x...', value: '0x0', data: '0x' },
-  // one entry per policy in the set, positionally aligned
-  wasmArgs: ['0x7b227661756c74223a22307830227d', '0x7b22746f6b656e223a22307830227d'],
+  policyData: [
+    { policyDataAddress: '0xVAULTSFYI_POLICY_DATA' },
+    { policyDataAddress: '0xWEBACY_POLICY_DATA' },
+  ],
+  policyParams: {
+    vaultsfyi: { risk_score_floor: 60, tvl_drawdown_24h_max_pct: 25 },
+    webacy: { deny_on_collapsed: true },
+  },
 })
 
-console.log(result.allowed)
-for (const p of result.policies ?? []) {
-  console.log(p.policy_index, p.policy, p.allowed)
-}
+console.log(result)
 ```
 :::
 
+The simulator runs the full pipeline — fetches each oracle's WASM, decrypts any stored secrets, executes every oracle, merges the outputs into `data.wasm`, and evaluates your Rego. Inspect `evaluation_result.policy_params_and_data` in the response to confirm the merged `data.wasm` shape matches what your Rego expects.
+
 :::note
-If a policy requires secrets, upload them against that policy's address first (see [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles)). `newt_simulatePolicy` requires ownership of the PolicyClient when at least one policy in the set has a secrets schema. To iterate on a single oracle in isolation, use `newt_simulatePolicyData` with inline secrets.
+If any oracle requires secrets, upload them per PolicyData address first (see [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles)). `newt_simulatePolicy` requires ownership of the PolicyClient when at least one referenced oracle has a secrets schema. To iterate on a single oracle in isolation, use `newt_simulatePolicyData` with inline secrets.
 :::
 
-## Deploying the set
+## Deploying a multi-oracle policy
 
-Set the whole ordered set of policies on the client with `setPolicies`. Order is significant and repeats are legal.
+The two ways to put a multi-oracle policy on-chain:
 
-- **Newton Dashboard** — the policy editor deploys each policy and writes the resulting set onto your policy client. This is the recommended path today. See [Using the Dashboard](/developers/guides/using-the-dashboard).
-- **CLI** — deploy each policy with `newton-cli policy deploy`, then bind the ordered set to the client with `newton-cli policy-client set-policy`.
+- **Newton Dashboard** — the policy editor lets you add multiple oracle modules to one policy and deploys the `NewtonPolicy` contract bound to all of their PolicyData addresses. This is the recommended path today. See [Using the Dashboard](/developers/guides/using-the-dashboard).
+- **CLI** — `newton-cli policy deploy` currently binds a **single** `--policy-data-address` per policy. Multi-PolicyData deploys via the CLI are coming soon; until then, use the dashboard to deploy policies that reference more than one oracle.
+
+:::warning
+Oracle order matters on-chain. The merged `data.wasm` is order-independent because each oracle is namespaced, but the policy's on-chain `policyData[]` array is positionally validated against what was registered. Deploy through the dashboard (or the forthcoming multi-address CLI flow) rather than hand-assembling the array.
+:::
 
 ## Next Steps
 
 <Cards>
 <Card icon="cubes" to="/developers/guides/policy-packs" title="Policy Packs">
-  Prebuilt, deployed oracles you can compose together today
+  Prebuilt, deployed oracles you can chain together today
 </Card>
 <Card icon="key" to="/developers/guides/secrets-in-oracles" title="Secrets in Oracles">
   Upload and access API keys for oracles that need them

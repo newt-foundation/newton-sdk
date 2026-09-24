@@ -112,7 +112,7 @@ Record:
 
 If the policy has `secrets_schema.json`, the CLI includes it automatically. Confirm `secretsSchemaCid` is present in `dist/policy_cids.json` before uploading secrets.
 
-A useful reuse option is `--skip-cids`, which deploys against CIDs you already generated.
+Useful reuse options include `--skip-cids` and `--skip-data --policy-data-address 0x...`. Preserve PolicyData address order for composite policies because evaluation is positional.
 
 :::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
@@ -196,7 +196,7 @@ Only upload secrets after:
 newton-cli --chain-id "$CHAIN_ID" secrets upload \
   --secrets-file /secure/secrets/transfer-limit.json \
   --policy-client 0xPOLICY_CLIENT \
-  --policy-address 0xPOLICY
+  --policy-data-address 0xPOLICY_DATA
 ```
 
 Keep the secrets file outside tracked source. Do not print the file or API key while diagnosing upload problems.

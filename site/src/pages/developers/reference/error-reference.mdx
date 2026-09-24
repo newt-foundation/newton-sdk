@@ -40,7 +40,7 @@ This page documents all error codes and messages you may encounter when interact
 | `"Invalid API key"` | API key is invalid or expired | Verify key or create a new one via [Dashboard](/developers/overview/dashboard-api-keys) |
 | `"policy_client is owned by another user"` | On-chain owner does not match API key holder | Use API key associated with the on-chain `getOwner()` address |
 | `"policy client has no owner"` | Contract returned zero address for `getOwner()` | Verify contract is initialized with an owner |
-| `"Missing secrets for policy {addr}"` | Secrets not uploaded for the policy | Upload secrets via `newt_storeEncryptedSecrets` |
+| `"Missing secrets for N PolicyData contract(s)"` | Secrets not uploaded for PolicyData contracts | Upload secrets via `newt_storeEncryptedSecrets` |
 | `"No secrets found for policy_client ... and policy_data..."` | No secrets stored for this client/data pair | Upload secrets or use `newt_simulatePolicyData` with inline secrets |
 | `"Secrets upload validation failed: {details}"` | Secrets JSON does not match on-chain schema | Fix secrets format to match `secretsSchemaCid` schema |
 | `"WASM execution failed: {details}"` | WASM oracle runtime error | Check WASM binary, inputs, and `wasm_args` |
@@ -160,7 +160,7 @@ try {
 
 - **`newton-cli regorus eval`** — test Rego policies locally with Newton crypto extensions
 - **`newton-cli policy simulate`** — test full policy evaluation locally
-- **`newton-cli policy simulate-wasm`** — test WASM oracle execution locally
+- **`newton-cli policy-data simulate`** — test WASM oracle execution locally
 - **`newt_simulatePolicy`** — test policy evaluation via the Gateway
 - **`newt_simulatePolicyData`** — test WASM execution via the Gateway
 - **[Newton Explorer](https://explorer.newton.xyz)** — view task status and evaluation results
