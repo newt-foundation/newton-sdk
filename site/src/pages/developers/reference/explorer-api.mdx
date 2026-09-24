@@ -1,0 +1,391 @@
+---
+title: "Explorer API"
+description: "Read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats with your Newton API key."
+keywords:
+  - newton explorer api
+  - newton task status
+  - newton api key
+showAskAi: false
+---
+import { Card } from 'vocs'
+
+
+# Explorer API [Read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats with your Newton API key.]
+
+The Explorer API is the read-only REST API behind [Newton Explorer](/developers/resources/newton-explorer). It serves the indexed history of every task and policy on the protocol, so scripts, CLIs, and backends can look up the same data the Explorer UI shows.
+
+Use it alongside the other Newton interfaces:
+
+| Need | Use |
+|------|-----|
+| Submit or simulate a task, manage secrets | [RPC API](/developers/reference/rpc-api) (Newton Gateway) |
+| Check a task's on-chain status from your app | SDK [`getTaskStatus`](/developers/reference/sdk-reference#gettaskstatus) |
+| Look up a task's evaluation result, errors, and policy data after the fact | Explorer API |
+| List tasks for a policy, browse policies, or pull protocol stats | Explorer API |
+
+## Base URL
+
+```
+https://explorer.api.newton.xyz/v1
+```
+
+One host serves every network. Select the network with the `X-Protocol-Network` header:
+
+| Network | `X-Protocol-Network` |
+|---------|----------------------|
+| Testnet (Sepolia) | `testnet` (default) |
+| Base Sepolia | `base-sepolia` |
+| Mainnet | `mainnet` |
+| Base | `base` |
+
+Requests without the header read testnet.
+
+---
+
+## Authentication
+
+:::info
+Every `/v1` request requires your Newton API key, the same `gw_…` key you use with the Newton Gateway. Send it in the `Authorization` header:
+
+```
+Authorization: Bearer <your_api_key>
+```
+
+`X-API-Key: <your_api_key>` is also accepted. Get a key from [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
+:::
+
+The key needs the `rpc_read` permission. Keys created in the dashboard carry `rpc`, which includes it. Rotating or deleting a key in the dashboard takes effect on the next request.
+
+:::warning
+Keep the API key server-side. Read it from `NEWTON_API_KEY` in scripts and Route Handlers; never embed it in browser bundles or commit it to source.
+:::
+
+### Example
+
+```bash
+export NEWTON_API_KEY="gw_..."
+
+curl -sS https://explorer.api.newton.xyz/v1/task?size=5 \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet"
+```
+
+---
+
+## Conventions
+
+### Pagination
+
+List endpoints accept `page` (from `1`, default `1`) and `size` (`1`–`100`, default `10`) query parameters and return:
+
+```json
+{
+  "total": 1284,
+  "page": 1,
+  "size": 10,
+  "results": [ ... ]
+}
+```
+
+### Error format
+
+Errors return a non-2xx status with a JSON body of the form `{ "detail": "<message>" }`. See [Errors](#errors) for the full table.
+
+### Timestamps and fields
+
+Timestamps are ISO 8601 in UTC. Fields that have not happened yet — for example `task_responded_at` before operators respond — are `null`.
+
+---
+
+## Tasks
+
+### Task object
+
+List endpoints return task summaries. [Get a task](#get-a-task) returns the full detail, which adds the intent, policy data, and transaction hashes.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | 32-byte task identifier (`task_id` from [`newt_createTask`](/developers/reference/rpc-api#newt_createtask)) |
+| `network` | `string` | `testnet`, `base-sepolia`, `mainnet`, or `base` |
+| `sender_address` | `string` | Address that submitted the task |
+| `policy_client_address` | `string` | PolicyClient the task was evaluated for |
+| `policy_id` | `string \| null` | Policy ID bound to the PolicyClient |
+| `policy_address` | `string \| null` | Policy contract address |
+| `evaluation_result` | `string \| null` | Hex-encoded evaluation result from the task response. `null` until operators respond |
+| `error` | `string \| null` | Task-level error, if the task failed |
+| `operator_errors` | `object \| array \| null` | Errors reported by individual operators |
+| `created_block` | `number \| null` | Block the task was created in |
+| `task_created_at` | `string \| null` | When the task was created on-chain |
+| `task_responded_at` | `string \| null` | When operators responded |
+| `attestation_spent_at` | `string \| null` | When the attestation was consumed by the PolicyClient |
+| `task_challenged_at` | `string \| null` | When the task was challenged |
+| `challenge_result` | `string \| null` | `unchallenged`, `success`, or `unsuccessful` |
+| `task_responded_metadata` | `object \| null` | Response certificate metadata |
+| `updated_at` | `string` | When the indexer last updated this task |
+
+Task detail adds:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `intent` | `object` | The evaluated [Intent](/developers/overview/core-concepts#intent) |
+| `policy_config` | `object \| null` | Policy configuration (params) used for the evaluation |
+| `policy_task_data` | `object \| null` | Data oracle output the policy was evaluated against |
+| `created_txn_hash` | `string \| null` | Task creation transaction |
+| `responded_txn_hash` | `string \| null` | Task response transaction |
+| `challenged_txn_hash` | `string \| null` | Challenge transaction |
+| `spent_txn_hash` | `string \| null` | Attestation spend transaction |
+
+### Get a task
+
+`GET /v1/task/{task_id}`
+
+| Parameter | In | Description |
+|-----------|----|-------------|
+| `task_id` | path | 32-byte task identifier |
+
+:::code-group
+```bash [Request]
+curl -sS https://explorer.api.newton.xyz/v1/task/0x1234...abcd \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet"
+```
+
+```json [Response]
+{
+  "id": "0x1234...abcd",
+  "network": "testnet",
+  "sender_address": "0xSender...",
+  "policy_client_address": "0xPolicyClient...",
+  "policy_id": "0xPolicyId...",
+  "policy_address": "0xPolicy...",
+  "evaluation_result": "0x...",
+  "error": null,
+  "operator_errors": null,
+  "created_block": 8912345,
+  "task_created_at": "2026-09-24T17:02:11Z",
+  "task_responded_at": "2026-09-24T17:02:14Z",
+  "attestation_spent_at": null,
+  "task_challenged_at": null,
+  "challenge_result": null,
+  "intent": { "from": "0x...", "to": "0x...", "value": "0x0", "data": "0x...", "chainId": 11155111, "functionSignature": "0x..." },
+  "policy_config": { ... },
+  "policy_task_data": { ... },
+  "created_txn_hash": "0x...",
+  "responded_txn_hash": "0x...",
+  "challenged_txn_hash": null,
+  "spent_txn_hash": null,
+  "updated_at": "2026-09-24T17:02:15Z"
+}
+```
+:::
+
+Returns `404` with `{"detail": "Task not found."}` if the indexer has not seen the task on the selected network. Tasks appear shortly after the creation transaction is indexed; check that `X-Protocol-Network` matches the chain you submitted to.
+
+### List tasks
+
+`GET /v1/task`
+
+Lists tasks on the selected network. Supports [pagination](#pagination).
+
+```bash
+curl -sS "https://explorer.api.newton.xyz/v1/task?page=1&size=20" \
+  -H "Authorization: Bearer $NEWTON_API_KEY"
+```
+
+Returns a paginated list of [task summaries](#task-object).
+
+---
+
+## Policies
+
+### Policy object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | `string` | Policy contract address |
+| `network` | `string` | Network the policy is deployed on |
+| `name` | `string \| null` | Name from the policy metadata |
+| `version` | `string \| null` | Version from the policy metadata |
+| `author` | `string \| null` | Author from the policy metadata |
+| `description` | `string \| null` | Description from the policy metadata |
+| `verified` | `boolean \| null` | Whether the policy is verified |
+| `policy_info` | `object \| null` | On-chain policy info (including the metadata reference) |
+| `deployed_txn_hash` | `string \| null` | Deployment transaction |
+| `policy_deployed_at` | `string \| null` | Deployment time |
+
+### Get a policy
+
+`GET /v1/policy/{address}`
+
+:::code-group
+```bash [Request]
+curl -sS https://explorer.api.newton.xyz/v1/policy/0xPolicy... \
+  -H "Authorization: Bearer $NEWTON_API_KEY"
+```
+
+```json [Response]
+{
+  "address": "0xPolicy...",
+  "network": "testnet",
+  "name": "sanctions-screening",
+  "version": "1.0.0",
+  "author": "0xAuthor...",
+  "description": "Blocks transfers to sanctioned addresses",
+  "verified": true,
+  "policy_info": { ... },
+  "deployed_txn_hash": "0x...",
+  "policy_deployed_at": "2026-09-01T12:00:00Z"
+}
+```
+:::
+
+Returns `404` if no policy exists at that address on the selected network.
+
+### List policies
+
+`GET /v1/policy`
+
+Lists policies on the selected network. Supports [pagination](#pagination).
+
+```bash
+curl -sS "https://explorer.api.newton.xyz/v1/policy?size=50" \
+  -H "Authorization: Bearer $NEWTON_API_KEY"
+```
+
+### List tasks for a policy
+
+`GET /v1/policy/id/{policy_id}/task`
+
+`GET /v1/policy/address/{policy_address}/task`
+
+Lists tasks evaluated against a policy, by policy ID or by policy contract address. Supports [pagination](#pagination) and returns [task summaries](#task-object).
+
+```bash
+curl -sS "https://explorer.api.newton.xyz/v1/policy/address/0xPolicy.../task?size=20" \
+  -H "Authorization: Bearer $NEWTON_API_KEY"
+```
+
+---
+
+## Stats
+
+### Get stats
+
+`GET /v1/stats`
+
+Counts tasks and policies within a time window.
+
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `task_window_start` | query | Yes | ISO 8601 start of the task window |
+| `task_window_end` | query | No | ISO 8601 end of the task window |
+| `policy_window_start` | query | No | ISO 8601 start of the policy window |
+| `policy_window_end` | query | No | ISO 8601 end of the policy window |
+
+:::code-group
+```bash [Request]
+curl -sS "https://explorer.api.newton.xyz/v1/stats?task_window_start=2026-09-01T00:00:00Z" \
+  -H "Authorization: Bearer $NEWTON_API_KEY"
+```
+
+```json [Response]
+{
+  "total_tasks": 18234,
+  "total_policies": 97
+}
+```
+:::
+
+---
+
+## Recipes
+
+### Check a task after submitting it
+
+Take the `task_id` returned by [`newt_createTask`](/developers/reference/rpc-api#newt_createtask) and pull the fields you need to debug the evaluation:
+
+```bash
+TASK_ID="0x..."
+
+curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet" \
+  | jq '{evaluation_result, error, operator_errors, policy_task_data}'
+```
+
+- `error` or `operator_errors` set: the evaluation failed. Check the oracle with [`newt_simulatePolicyData`](/developers/reference/rpc-api#newt_simulatepolicydata) and the policy with [`newt_simulatePolicy`](/developers/reference/rpc-api#newt_simulatepolicy).
+- `policy_task_data` shows exactly what your Rego policy was evaluated against. Replay it with [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask).
+
+### Recent tasks for your PolicyClient's policy
+
+```bash
+POLICY_ADDRESS="0x..."
+
+curl -sS "https://explorer.api.newton.xyz/v1/policy/address/$POLICY_ADDRESS/task?size=20" \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  | jq -r '.results[] | [.id, .task_created_at, .evaluation_result, (.error // "")] | @tsv'
+```
+
+### Page through every result
+
+```bash
+page=1
+while :; do
+  resp=$(curl -sS "https://explorer.api.newton.xyz/v1/task?page=$page&size=100" \
+    -H "Authorization: Bearer $NEWTON_API_KEY")
+  echo "$resp" | jq -c '.results[]'
+  [ "$(echo "$resp" | jq '.page * .size < .total')" = "true" ] || break
+  page=$((page + 1))
+done
+```
+
+### Server-side TypeScript helper
+
+Call the Explorer API from a server Route Handler or backend job so the key never reaches the browser:
+
+```typescript
+const EXPLORER_API_URL = 'https://explorer.api.newton.xyz/v1'
+
+type Network = 'testnet' | 'base-sepolia' | 'mainnet' | 'base'
+
+export async function getTask(taskId: `0x${string}`, network: Network = 'testnet') {
+  const res = await fetch(`${EXPLORER_API_URL}/task/${taskId}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.NEWTON_API_KEY}`,
+      'X-Protocol-Network': network,
+    },
+  })
+  if (res.status === 404) return null
+  if (!res.ok) {
+    const { detail } = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(`Explorer API ${res.status}: ${detail}`)
+  }
+  return res.json()
+}
+```
+
+---
+
+## Errors
+
+| Status | `detail` | Fix |
+|--------|----------|-----|
+| `400` | `Invalid protocol network header` | Use `testnet`, `base-sepolia`, `mainnet`, or `base` for `X-Protocol-Network` |
+| `401` | `API key required (Authorization: Bearer or X-API-Key)` | Send your API key in one of the two headers |
+| `401` | `invalid or expired API key` | Check for typos and whitespace; the key may have been rotated or deleted in the [dashboard](https://dashboard.newton.xyz/) |
+| `403` | `API key missing required permission: rpc_read` | Use a key with `rpc_read` or `rpc` permission |
+| `404` | `Task not found.` / `Policy Template not found.` | Confirm the ID or address and that `X-Protocol-Network` matches its network |
+| `422` | Validation error | Check query parameters, e.g. `size` must be between 1 and 100 |
+| `503` | `API key validation unavailable` | Temporary; retry with backoff |
+
+## Next Steps
+
+<Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
+  Submit and simulate tasks through the Newton Gateway
+</Card>
+<Card icon="bug" to="/developers/resources/testing-debugging" title="Testing & Debugging">
+  Debug policies, oracles, and attestations
+</Card>
+<Card icon="activity" to="/developers/resources/newton-explorer" title="Newton Explorer">
+  Field definitions and the task lifecycle
+</Card>

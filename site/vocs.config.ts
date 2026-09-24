@@ -232,6 +232,7 @@ export default defineConfig({
         items: [
           { text: 'SDK Reference', link: '/developers/reference/sdk-reference' },
           { text: 'RPC API', link: '/developers/reference/rpc-api' },
+          { text: 'Explorer API', link: '/developers/reference/explorer-api' },
           { text: 'Command Line Tool', link: '/developers/reference/command-line-tool' },
           { text: 'Contract Addresses', link: '/developers/reference/contract-addresses' },
           { text: 'Error Reference', link: '/developers/reference/error-reference' },

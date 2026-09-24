@@ -214,6 +214,17 @@ Check these values on-chain:
 
 Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler supplies `NEWTON_API_KEY`. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
+After the first live evaluation, confirm the task was recorded against the right PolicyClient with the [Explorer API](/developers/reference/explorer-api), using the same `NEWTON_API_KEY`:
+
+```bash
+curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet" \
+  | jq '{policy_client_address, policy_id, evaluation_result, error}'
+```
+
+`policy_client_address` and `policy_id` should match what you bound in Step 6.
+
 ## Agent-assisted deployment
 
 Newton Agent Skills automate the same local-first sequence and preserve policy and client state in handoff files. They still pause before uploads, broadcasts, ownership transfer, dashboard registration when available, gateway evaluation, and the first attested application transaction.

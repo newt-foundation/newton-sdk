@@ -8,6 +8,16 @@ showAskAi: false
 
 **Newton Explorer:** https://explorer.newton.xyz/
 
+## Programmatic access
+
+The tasks and policies shown in the Explorer are also available from the [Explorer API](/developers/reference/explorer-api), authenticated with your [Newton API key](/developers/overview/dashboard-api-keys). Use it to look up tasks and policies from scripts, CLIs, and backends:
+
+```bash
+curl -sS https://explorer.api.newton.xyz/v1/task/<task_id> \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet"
+```
+
 ## Definitions
 
 ### General
