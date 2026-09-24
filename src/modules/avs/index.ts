@@ -412,7 +412,6 @@ async function simulateTask(
       policyData: args.policyTaskData.policyData.map(pd => ({
         wasmArgs: pd.wasmArgs,
         data: pd.data,
-        policyDataAddress: pd.policyDataAddress,
         expireBlock: pd.expireBlock,
       })),
     },
@@ -457,7 +456,7 @@ async function simulatePolicyData(
   const walletWithPublic = walletClient.extend(publicActions)
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
-    policy_data_address: args.policyDataAddress,
+    policy_address: args.policyAddress,
     secrets: args.secrets,
     wasm_args: args.wasmArgs,
     chain_id: args.chainId,
@@ -479,7 +478,7 @@ async function simulatePolicyDataWithClient(
   const walletWithPublic = walletClient.extend(publicActions)
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
-    policy_data_address: args.policyDataAddress,
+    policy_address: args.policyAddress,
     policy_client: args.policyClient,
     wasm_args: args.wasmArgs,
   }

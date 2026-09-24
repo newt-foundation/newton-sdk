@@ -227,7 +227,7 @@ const keyPair = generateSigningKeyPair()
 
 ## storeEncryptedSecrets
 
-Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway validates the decrypted JSON against the PolicyData schema and stores the envelope for operator-side decryption during task evaluation.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's policy. The gateway validates the decrypted JSON against the policy's secrets schema and stores the envelope for operator-side decryption during task evaluation.
 
 ```typescript
 async function storeEncryptedSecrets(
@@ -245,7 +245,7 @@ async function storeEncryptedSecrets(
 | Field | Type | Description |
 |-------|------|-------------|
 | `policyClient` | `Address` | Policy client address |
-| `policyDataAddress` | `Address` | PolicyData contract address |
+| `policyAddress` | `Address` | Policy contract address |
 | `plaintext` | `Record<string, unknown>` | Plaintext secrets as a JSON object (e.g., `{ "API_KEY": "sk-..." }`) |
 | `chainId` | `number` | Chain ID the policy client lives on |
 | `recipientPublicKey` | `string?` | Gateway's X25519 public key (hex, no 0x prefix). If omitted, fetched via RPC. |
@@ -257,7 +257,7 @@ async function storeEncryptedSecrets(
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | `boolean` | Whether the upload succeeded |
-| `schema` | `Record<string, unknown> \| null` | PolicyData schema used for validation |
+| `schema` | `Record<string, unknown> \| null` | Secrets schema used for validation |
 | `error` | `string \| null` | Error message (on failure) |
 
 ### Notes

@@ -461,11 +461,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -718,11 +713,6 @@ export const NewtonProverTaskManagerAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -1712,11 +1702,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -2052,11 +2037,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -2376,11 +2356,6 @@ export const NewtonProverTaskManagerAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -2989,11 +2964,6 @@ export const NewtonProverTaskManagerAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -3375,11 +3345,6 @@ export const NewtonProverTaskManagerAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -3782,11 +3747,6 @@ export const NewtonProverTaskManagerAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -4547,11 +4507,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -4809,11 +4764,6 @@ export const AttestationValidatorAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -5462,11 +5412,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -6064,11 +6009,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -6327,11 +6267,6 @@ export const AttestationValidatorAbi = [
                     "name": "data",
                     "type": "bytes",
                     "internalType": "bytes"
-                  },
-                  {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
                   },
                   {
                     "name": "expireBlock",
@@ -6615,11 +6550,6 @@ export const AttestationValidatorAbi = [
                     "internalType": "bytes"
                   },
                   {
-                    "name": "policyDataAddress",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
                     "name": "expireBlock",
                     "type": "uint32",
                     "internalType": "uint32"
@@ -6684,27 +6614,6 @@ export const AttestationValidatorAbi = [
     "type": "error",
     "name": "AttestationHashMismatch",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "IncompatiblePolicyDataVersion",
-    "inputs": [
-      {
-        "name": "index",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "actual",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "minimum",
-        "type": "string",
-        "internalType": "string"
-      }
-    ]
   },
   {
     "type": "error",
@@ -6809,17 +6718,7 @@ export const AttestationValidatorAbi = [
   },
   {
     "type": "error",
-    "name": "PolicyDataAddressMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "PolicyDataExpired",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PolicyDataLengthMismatch",
     "inputs": []
   },
   {

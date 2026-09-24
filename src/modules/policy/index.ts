@@ -184,30 +184,6 @@ const clientToPolicyId = async ({
   }
 }
 
-const policyData = async ({
-  publicClient,
-  policyContractAddress,
-  index,
-}: {
-  publicClient: PublicClient
-  policyContractAddress: Address
-  index: number
-}): Promise<Address> => {
-  try {
-    const result = await publicClient.readContract({
-      address: policyContractAddress,
-      abi: NewtonPolicyAbi,
-      functionName: 'policyData',
-      args: [BigInt(index)],
-    })
-    return result as Address
-  } catch (error) {
-    throw new Error(
-      `Newton SDK: Failed to get policyData - ${error instanceof Error ? error.message : 'Unknown error'}`,
-    )
-  }
-}
-
 const getEntrypoint = async ({
   publicClient,
   policyContractAddress,
@@ -271,23 +247,75 @@ const getPolicyCid = async ({
   }
 }
 
-const getPolicyData = async ({
+const getWasmCid = async ({
   publicClient,
   policyContractAddress,
 }: {
   publicClient: PublicClient
   policyContractAddress: Address
-}): Promise<Address[]> => {
+}): Promise<string> => {
   try {
     const result = await publicClient.readContract({
       address: policyContractAddress,
       abi: NewtonPolicyAbi,
-      functionName: 'getPolicyData',
+      functionName: 'getWasmCid',
     })
-    return result as Address[]
+    return result as string
   } catch (error) {
     throw new Error(
-      `Newton SDK: Failed to get getPolicyData - ${error instanceof Error ? error.message : 'Unknown error'}`,
+      `Newton SDK: Failed to get getWasmCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+const getSecretsSchemaCid = async ({
+  publicClient,
+  policyContractAddress,
+}: {
+  publicClient: PublicClient
+  policyContractAddress: Address
+}): Promise<string> => {
+  try {
+    const result = await publicClient.readContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'getSecretsSchemaCid',
+    })
+    return result as string
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to get getSecretsSchemaCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+const setSecretsSchemaCid = async ({
+  walletClient,
+  policyContractAddress,
+  secretsSchemaCid,
+}: {
+  walletClient: WalletClient
+  policyContractAddress: Address
+  secretsSchemaCid: string
+}): Promise<`0x${string}`> => {
+  try {
+    if (!walletClient.chain) {
+      throw new Error('Newton SDK: account and chain must be set on Wallet client')
+    }
+
+    const account = walletClient.account ?? (await walletClient.getAddresses())[0]
+    const hash = await walletClient.writeContract({
+      address: policyContractAddress,
+      abi: NewtonPolicyAbi,
+      functionName: 'setSecretsSchemaCid',
+      args: [secretsSchemaCid],
+      chain: walletClient.chain,
+      account,
+    })
+    return hash
+  } catch (error) {
+    throw new Error(
+      `Newton SDK: Failed to setSecretsSchemaCid - ${error instanceof Error ? error.message : 'Unknown error'}`,
     )
   }
 }
@@ -443,7 +471,10 @@ type InitializeContractArgs = {
   entrypoint: string
   policyCid: string
   schemaCid: string
-  policyData: Address[]
+  /** Empty for a pure-Rego policy. */
+  wasmCid: string
+  /** Empty unless `wasmCid` is set. */
+  secretsSchemaCid: string
   metadataCid: string
   owner: Address
 }
@@ -489,11 +520,14 @@ const initialize = async ({ walletClient, policyContractAddress, ...args }: Init
       functionName: 'initialize',
       args: [
         args.factory,
-        args.entrypoint,
-        args.policyCid,
-        args.schemaCid,
-        args.policyData,
-        args.metadataCid,
+        {
+          entrypoint: args.entrypoint,
+          policyCid: args.policyCid,
+          schemaCid: args.schemaCid,
+          wasmCid: args.wasmCid,
+          secretsSchemaCid: args.secretsSchemaCid,
+          metadataCid: args.metadataCid,
+        },
         args.owner,
         policyCodeHash,
       ],
@@ -689,6 +723,7 @@ export const policyWriteFunctions = {
   // On-chain write functions
   initialize,
   setPolicies,
+  setSecretsSchemaCid,
   renounceOwnership,
   transferOwnership,
 }
@@ -702,11 +737,11 @@ export const policyReadFunctions = {
   factory,
   entrypoint,
   clientToPolicyId,
-  policyData,
   getEntrypoint,
   getMetadataCid,
   getPolicyCid,
-  getPolicyData,
+  getWasmCid,
+  getSecretsSchemaCid,
   getSchemaCid,
   isPolicy,
   isPolicyVerified,

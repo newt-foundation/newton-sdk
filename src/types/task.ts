@@ -63,11 +63,10 @@ export interface HexlifiedIntent {
   function_signature: string
 }
 
-/** One oracle's contribution to a policy's evidence. */
+/** One oracle's contribution to a policy's evidence. The policy address is one level up, in `PolicyTaskData.policyAddress`. */
 export interface PolicyDataEntry {
   wasmArgs: Hex
   data: Hex
-  policyDataAddress: Address
   expireBlock: number
 }
 
@@ -156,7 +155,6 @@ export interface Task {
 export interface SimulateTaskPolicyData {
   wasmArgs: Hex
   data: Hex
-  policyDataAddress: Address
   expireBlock: number
 }
 
@@ -240,7 +238,7 @@ export interface UnregisterWebhookResult {
 }
 
 export interface SimulatePolicyDataParams {
-  policyDataAddress: Address
+  policyAddress: Address
   secrets?: string
   wasmArgs?: Hex
   chainId: number
@@ -257,7 +255,7 @@ export interface SimulatePolicyDataResult {
 }
 
 export interface SimulatePolicyDataWithClientParams {
-  policyDataAddress: Address
+  policyAddress: Address
   policyClient: Address
   wasmArgs?: Hex
 }
@@ -309,7 +307,6 @@ export interface GatewayCreateTaskResult {
       policyData: Array<{
         data: Hex
         expireBlock: number
-        policyDataAddress: Address
         wasmArgs: Hex
       }>
       policyId: Hex
