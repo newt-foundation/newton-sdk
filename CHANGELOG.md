@@ -1,3 +1,15 @@
+# v1.2.2 (Fri Sep 25 2026)
+
+#### 🐛 Bug Fix
+
+- Document the Explorer API and dashboard API key access [#188](https://github.com/newt-foundation/newton-sdk/pull/188) ([@alecsavvy](https://github.com/alecsavvy))
+
+#### Authors: 1
+
+- [@alecsavvy](https://github.com/alecsavvy)
+
+---
+
 # v1.2.1 (Thu Sep 24 2026)
 
 #### 🐛 Bug Fix
