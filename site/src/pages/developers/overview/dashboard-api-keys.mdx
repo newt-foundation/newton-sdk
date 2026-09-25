@@ -98,6 +98,12 @@ Once authenticated, create an API key for use with the Newton Gateway.
       -H "Authorization: Bearer <your_api_key>" \
       -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
     ```
+
+    The same key also reads task and policy data from the [Explorer API](/developers/reference/explorer-api):
+    ```bash
+    curl https://explorer.api.newton.xyz/v1/task/<task_id> \
+      -H "Authorization: Bearer <your_api_key>"
+    ```
   
 ::::
 
@@ -156,4 +162,7 @@ If you prefer not to use the Dashboard API, you can request an API key by emaili
 </Card>
 <Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
   Full Gateway API reference
+</Card>
+<Card icon="activity" to="/developers/reference/explorer-api" title="Explorer API">
+  Query tasks and policies with your API key
 </Card>

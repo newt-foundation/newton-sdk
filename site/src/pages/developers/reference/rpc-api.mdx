@@ -379,6 +379,8 @@ For manual fallback, the typed-data domain must match the policy client's Solidi
 The `task`, `task_response`, `reference_block`, and `expiration` fields enable clients to call `validateAttestationDirect` optimistically without waiting for on-chain task submission. The `signature_data` field contains pre-built, chain-aware encoded bytes ready to pass directly to the contract.
 :::
 
+To look the task up later — its evaluation result, operator errors, and the policy data it was evaluated against — pass `task_id` to the [Explorer API](/developers/reference/explorer-api#get-a-task).
+
 #### Example
 
 :::code-group

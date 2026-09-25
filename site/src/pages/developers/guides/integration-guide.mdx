@@ -190,6 +190,19 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   - Increase the `timeout` value in the evaluation request
   - Check external APIs your WASM calls are responding
 :::
+:::details[Find out why a live task was non-compliant]
+  Fetch the task from the [Explorer API](/developers/reference/explorer-api) with your Newton API key, using the `task_id` returned by the Gateway:
+
+  ```bash
+  curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
+    -H "Authorization: Bearer $NEWTON_API_KEY" \
+    -H "X-Protocol-Network: testnet" \
+    | jq '{evaluation_result, error, operator_errors, policy_task_data}'
+  ```
+
+  - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy-data simulate`.
+  - `policy_task_data` shows the oracle output the policy evaluated. Replay it with `newt_simulateTask` to see which rule rejected the intent.
+:::
 ## Factory Pattern
 
 :::details[Advanced: Factory pattern for deploying multiple PolicyClients]

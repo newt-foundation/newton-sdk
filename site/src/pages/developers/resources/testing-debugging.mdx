@@ -171,6 +171,19 @@ The [Newton Explorer](/developers/resources/newton-explorer) provides a visual i
 - Inspect attestation details (signers, quorum, expiration)
 - Trace the evaluation flow from intent to on-chain verification
 
+### From the terminal
+
+The same data is available from the [Explorer API](/developers/reference/explorer-api) with your `NEWTON_API_KEY`. Fetch a live task by the `task_id` from `newt_createTask` and pull out the fields that explain its result:
+
+```bash
+curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
+  -H "Authorization: Bearer $NEWTON_API_KEY" \
+  -H "X-Protocol-Network: testnet" \
+  | jq '{evaluation_result, error, operator_errors, policy_task_data}'
+```
+
+`policy_task_data` is the exact oracle output the policy saw. Pass it to `newt_simulateTask` to replay the evaluation locally.
+
 ## BLS Diagnostics
 
 If an attestation fails on-chain verification, check:
@@ -192,6 +205,7 @@ If an attestation fails on-chain verification, check:
 | On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
 | `TaskAlreadyExists` error | Duplicate intent hash | Modify the intent nonce or wait for the existing task |
 | Policy returns `CAP` instead of `ALLOW` | Intent value exceeds policy threshold | Check `data.params` values on your PolicyClient |
+| A live task was non-compliant or failed and you need to know why | Oracle data, params, or operator errors | Fetch the task from the [Explorer API](/developers/reference/explorer-api#check-a-task-after-submitting-it) and inspect `error`, `operator_errors`, and `policy_task_data` |
 
 ## SDK Debugging
 
