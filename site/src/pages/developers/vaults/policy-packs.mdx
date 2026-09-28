@@ -56,13 +56,16 @@ Grouped by data provider.
 | [Sumsub](https://sumsub.com) | Verification Checks | Adding KYC and verification checks |
 | [Vaults.fyi](https://vaults.fyi) | [Vault Risk Rating](/developers/vaults/policies/vaultsfyi) | Gating actions on APY, TVL, risk score, allocation changes, critical flags, and corruption status |
 | [Webacy](https://developers.webacy.co/) | [Depeg Risk](/developers/vaults/policies/webacy) | Monitoring pegged-token depeg risk for manager-action gates |
+| [Xerberus](https://xerberus.io) | [Liquidity Exit](/developers/vaults/policies/xerberus-liquidity-exit) | Denying a position that can't be unwound quickly at a bounded market impact |
+| [Xerberus](https://xerberus.io) | [Portfolio What-If](/developers/vaults/policies/xerberus-what-if) | Denying a trade that concentrates the book or makes it harder to exit |
+| [Xerberus](https://xerberus.io) | [Common Cause](/developers/vaults/policies/xerberus-common-cause) | Denying false diversification across venues that share an oracle, collateral, or missing safeguard |
 
 ## Deployed PolicyData Addresses
 
 Production `PolicyData` addresses for each pack:
 
 :::note
-The six Arkham and Pharos packs are documented but **not yet deployed**, so they have no row below. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth and will carry their addresses first.
+The Arkham, Pharos and Xerberus packs are documented but **not yet deployed**, so they have no row below. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth and will carry their addresses first.
 :::
 
 | Pack | Ethereum (`1`) | Base (`8453`) | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
@@ -82,6 +85,8 @@ Vault policy packs are most useful when combined. For example, a regulated yield
 - RedStone oracle divergence checks before curator reallocations
 
 The result is a vault whose rules are explicit, inspectable, and enforced before execution.
+
+The three Xerberus packs are built to run together as one gate for exposure-increasing actions: an exit quote for the asset, a what-if for the portfolio, and a common-cause check across venues. Pass the same `window` to all three so every result comes from one Xerberus snapshot.
 
 For custom oracles, policy-level `_policy` params, bare policies, manifest introspection, and provenance classification, see [Policies](/developers/vaults/sdk/policies) and [Custom Oracles](/developers/vaults/sdk/custom-oracles).
 
@@ -127,4 +132,16 @@ For custom oracles, policy-level `_policy` params, bare policies, manifest intro
 
 <Card title="Pharos Redemption-Backed Asset Gate" icon="book-open" to="/developers/vaults/policies/pharos-redemption">
   Admit a stablecoin only when it can actually be redeemed at par.
+</Card>
+
+<Card title="Xerberus Liquidity Exit" icon="activity" to="/developers/vaults/policies/xerberus-liquidity-exit">
+  Deny a position that can't be unwound quickly at a bounded market impact.
+</Card>
+
+<Card title="Xerberus Portfolio What-If" icon="chart-line" to="/developers/vaults/policies/xerberus-what-if">
+  Deny a trade that concentrates the book or makes it harder to exit.
+</Card>
+
+<Card title="Xerberus Common Cause" icon="shield-alert" to="/developers/vaults/policies/xerberus-common-cause">
+  Deny false diversification across venues that share a failure mechanism.
 </Card>

@@ -1,0 +1,223 @@
+---
+title: "Xerberus Liquidity Exit"
+description: "Use Xerberus exit quotes in Newton policies to deny positions that cannot be unwound quickly at a bounded market impact."
+keywords:
+  - xerberus
+  - liquidity exit
+  - days to exit
+  - market impact
+  - newton vault policies
+showAskAi: false
+---
+
+# Xerberus Liquidity Exit [Use Xerberus exit quotes in Newton policies to deny positions that cannot be unwound quickly at a bounded market impact.]
+
+This policy asks one question before an agent or curator takes on a position: **can it be unwound?** Using [Xerberus](https://xerberus.io), it estimates how many days selling the proposed notional would take while staying inside a market-impact band, and denies positions that would take too long to exit.
+
+It is an asset-level check. It does not tell you whether the portfolio as a whole becomes too concentrated. Pair it with [Xerberus Portfolio What-If](/developers/vaults/policies/xerberus-what-if) and [Xerberus Common Cause](/developers/vaults/policies/xerberus-common-cause) for that.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `xerberus_liquidity_exit` |
+| Rego package | `xerberus_liquidity_exit` (the `--entrypoint` is `xerberus_liquidity_exit.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `XERBERUS_API_KEY` | Required | [xerberus.io](https://xerberus.io) |
+
+Sent by the oracle as the `x-api-key` request header.
+
+## Data Inputs
+
+One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to `https://mcp.xerberus.io/enterprise/mcp`. Xerberus exposes its risk functions as MCP tools rather than REST paths, so all three Xerberus packs share one transport:
+
+- Non-2xx HTTP, a JSON-RPC `error`, or a tool result with `isError` all fail the oracle, and the policy fails closed.
+- The response may be plain JSON or a single-shot `text/event-stream`. Either way the oracle reads the JSON-RPC message carrying its request id.
+- `structuredContent` is preferred; otherwise the JSON in the tool's text content is parsed.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `token` | Echoed from `wasmArgs`. Addresses are lowercased | Gated by `require_token_in_intent` |
+| `symbol` / `chain` | Token symbol; chain (always `ethereum` today) | Audit |
+| `notional_usd` | Position size quoted | Audit |
+| `impact_band_pct` | Impact band the quote was modeled at | Gated by `max_impact_band_pct` |
+| `max_sale_per_day_usd` | Most that can be sold per day inside the band | `no_exit_liquidity` |
+| `days_to_exit` | Estimated days to fully exit | Gated by `max_days_to_exit` |
+| `classification` | Xerberus's label, e.g. moderate, under one week | Reviewer context |
+| `cex_status` | Whether a centralized spot market was found | Reviewer context |
+| `requested_window` / `data_window` | The window asked for, and the window Xerberus answered from | Audit |
+| `window_honored` | `true` or `false` when a window was pinned, `null` otherwise | `window_not_honored` |
+| `is_stale` | Xerberus's own freshness flag | Gated by `deny_on_stale` |
+| `data_age_seconds` | Age of `data_window` at evaluation time | Gated by `max_data_age_seconds` |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: the token and notional of the position being acquired are not something the SDK can read off the vault, so the curator supplies them per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `token` | Required | Token contract address. Symbols work but are ambiguous and can't be bound to the intent |
+| `usd_notional` | Required | Proposed position size in USD |
+| `impact_pct` | Optional | Maximum acceptable market impact, in percent. Use 0.5 for stablecoins |
+| `chain` | Optional | `ethereum`, the only chain Xerberus scores today. Defaults to `ethereum` |
+| `window` | Optional | Xerberus data-window timestamp (ISO-8601). Pass the same value to every Xerberus pack |
+
+From the CLI or dashboard this goes in the simulate payload's `wasm_args`. From the SDK it goes in `sendCall`'s `wasmArgs` bag:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    xerberus_liquidity_exit: {
+      token: '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0', // wstETH
+      usd_notional: 1_000_000,
+      impact_pct: 1,
+      window,
+    },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `max_days_to_exit` | `number` | Days-to-exit ceiling. The Xerberus reference design uses 7 |
+| `max_impact_band_pct` | `number` | Loosest impact band accepted, so a caller can't request a looser band than you allow. Reference: 1 (0.5 for stablecoins) |
+| `deny_on_stale` | `boolean` | Deny when Xerberus flags its data window as stale. Keep on for exposure-increasing actions |
+| `max_data_age_seconds` | `number` | Oldest data window accepted |
+| `require_token_in_intent` | `boolean` | Deny unless the quoted token is the intent's target or appears in its decoded arguments |
+
+## Rego Checks
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `oracle_error` | The oracle emitted `{error}` | Transport, auth, or tool failures |
+| `malformed_oracle_output` | A field the rules read is missing or `null` | An unpriced quote or a changed response shape |
+| `stale_data` | `deny_on_stale` and `is_stale` | Decisions made on data Xerberus itself calls stale |
+| `data_too_old` | `data_age_seconds > max_data_age_seconds` | Data older than you accept |
+| `window_not_honored` | A window was pinned and Xerberus answered from another | Results that can't be lined up with the other Xerberus packs |
+| `exit_too_slow` | `days_to_exit > max_days_to_exit` | Positions that take too long to unwind |
+| `impact_band_exceeded` | `impact_band_pct > max_impact_band_pct` | A quote modeled at a looser impact than you accept |
+| `no_exit_liquidity` | `max_sale_per_day_usd <= 0` | No modeled exit at all |
+| `token_not_in_intent` | `require_token_in_intent` and the token isn't the target or an argument | A quote for one token authorizing a transaction on another |
+
+### Intent Binding
+
+The token is matched against the call target and every decoded argument. `contains` rather than equality lets an address nested in a tuple argument still match.
+
+```rego
+intent_mentions(addr) if lower(input.to) == addr
+
+intent_mentions(addr) if {
+    some arg in input.decoded_function_arguments
+    is_string(arg)
+    contains(lower(arg), addr)
+}
+
+deny contains "token_not_in_intent" if {
+    t.require_token_in_intent
+    is_string(v.token)
+    not intent_mentions(lower(v.token))
+}
+```
+
+### Final Allow Rule
+
+`well_formed` requires every field a deny rule reads, including the freshness fields. An error envelope, an empty slot, or an unpriced quote leaves them undefined, so a bare `count(deny) == 0` would fail *open*.
+
+```rego
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package xerberus_liquidity_exit
+
+import future.keywords
+
+default allow := false
+
+t := data.params.xerberus_liquidity_exit
+v := data.wasm.xerberus_liquidity_exit
+
+well_formed if {
+    is_string(v.token)
+    is_number(v.days_to_exit)
+    is_number(v.max_sale_per_day_usd)
+    is_number(v.impact_band_pct)
+    is_boolean(v.is_stale)
+    is_number(v.data_age_seconds)
+}
+
+intent_mentions(addr) if lower(input.to) == addr
+
+intent_mentions(addr) if {
+    some arg in input.decoded_function_arguments
+    is_string(arg)
+    contains(lower(arg), addr)
+}
+
+deny contains "oracle_error" if v.error
+
+deny contains "malformed_oracle_output" if {
+    not v.error
+    not well_formed
+}
+
+deny contains "stale_data" if {
+    t.deny_on_stale
+    v.is_stale == true
+}
+
+deny contains "data_too_old" if v.data_age_seconds > t.max_data_age_seconds
+
+deny contains "window_not_honored" if v.window_honored == false
+
+deny contains "exit_too_slow" if v.days_to_exit > t.max_days_to_exit
+
+deny contains "impact_band_exceeded" if v.impact_band_pct > t.max_impact_band_pct
+
+deny contains "no_exit_liquidity" if {
+    is_number(v.max_sale_per_day_usd)
+    v.max_sale_per_day_usd <= 0
+}
+
+deny contains "token_not_in_intent" if {
+    t.require_token_in_intent
+    is_string(v.token)
+    not intent_mentions(lower(v.token))
+}
+
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.xerberus_liquidity_exit`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **Stale data fails closed.** A missing `is_stale` or an unparseable `data_window` makes the output malformed, which blocks `allow`.
+- **Pin the window when composing.** Pass one `window` to all three Xerberus packs so their results come from the same Xerberus snapshot. Never combine a fresh exit quote with an older portfolio or common-cause result.
+- **Use token addresses.** A symbol can't be matched against the intent, so `require_token_in_intent` only works with an address.
+- **The notional is caller-supplied.** The pack can't price calldata itself, so your intent builder is responsible for passing the real USD size.
+- **Exit time is asset-level.** In Xerberus's reference scenario, a $1M wstETH position exits in about 5.3 days and passes a 7-day limit, yet the same trade makes the portfolio more concentrated and less liquid. Only [Portfolio What-If](/developers/vaults/policies/xerberus-what-if) catches that.

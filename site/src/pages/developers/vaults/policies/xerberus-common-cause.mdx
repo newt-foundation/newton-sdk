@@ -1,0 +1,274 @@
+---
+title: "Xerberus Common Cause"
+description: "Use Xerberus common-cause analysis in Newton policies to deny false diversification across venues that share a failure mechanism."
+keywords:
+  - xerberus
+  - common cause
+  - shared dependencies
+  - false diversification
+  - newton vault policies
+showAskAi: false
+---
+
+# Xerberus Common Cause [Use Xerberus common-cause analysis in Newton policies to deny false diversification across venues that share a failure mechanism.]
+
+This policy catches **false diversification**. Positions in Fluid, Morpho and Compound look independent, but they can depend on the same oracle, hold the same collateral, or lack the same safeguard, and a failure in that shared piece hits them all at once. Using [Xerberus](https://xerberus.io), it compares the venues a portfolio holds and denies when their shared failure mechanisms exceed your limits.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `xerberus_common_cause` |
+| Rego package | `xerberus_common_cause` (the `--entrypoint` is `xerberus_common_cause.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `XERBERUS_API_KEY` | Required | [xerberus.io](https://xerberus.io) |
+
+Sent by the oracle as the `x-api-key` request header.
+
+## Data Inputs
+
+One MCP `tools/call` of the `common_cause` tool against `https://mcp.xerberus.io/enterprise/mcp`, using the same transport as [Xerberus Liquidity Exit](/developers/vaults/policies/xerberus-liquidity-exit#data-inputs).
+
+Arrays are capped at 25 entries, largest first. Failure classes, dependency targets and collateral addresses are lowercased.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `wallets` | Echoed from `wasmArgs`, lowercased | Gated by `require_intent_party_in_wallets` |
+| `subjects_compared_count` / `scored_subjects_count` | Venues compared, and how many Xerberus could score | `insufficient_venues` |
+| `total_exposure_usd` | Exposure summed across the compared venues | Denominator for the collateral share |
+| `unscored_subjects[]` | `{ subject, exposure_usd }` for venues Xerberus couldn't score | Gated by `deny_on_unscored` |
+| `shared_gaps[]` | `{ tag, failure_class, subject_count, combined_exposure_usd }`: a missing safeguard shared across venues | Gated by `max_shared_gap_exposure_usd` |
+| `largest_shared_gap_exposure_usd` | Largest combined exposure behind one shared gap | Reviewer context |
+| `shared_dependencies[]` | `{ target, connection_types, subject_count }`: a declared dependency shared across venues | Gated by `forbidden_shared_dependencies` |
+| `shared_collateral[]` | `{ token, symbol, subject_count, combined_exposure_usd }`: a collateral token shared across venues | Gated by `max_shared_collateral_pct_of_book` |
+| `largest_shared_collateral_exposure_usd` | Largest combined exposure behind one collateral token | Reviewer context |
+| `basis` | Xerberus's basis for the comparison | Reviewer context |
+| `requested_window` / `data_window` / `window_honored` / `is_stale` / `data_age_seconds` | Freshness, as in [Liquidity Exit](/developers/vaults/policies/xerberus-liquidity-exit#data-inputs) | Freshness rules |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**, so the curator supplies the wallets per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `wallets` | Required | 1–10 wallet addresses holding the positions to compare. At least two Xerberus-mapped venues are needed for a meaningful result |
+| `chain` | Optional | `ethereum` only today. Defaults to `ethereum` |
+| `window` | Optional | Xerberus data-window timestamp (ISO-8601). Pass the same value to every Xerberus pack |
+
+From the SDK:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    xerberus_common_cause: { wallets: [vault], window },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `max_shared_gap_exposure_usd` | `number` | Exposure ceiling behind one shared missing safeguard. The Xerberus reference design uses 5,000,000 |
+| `gap_failure_classes` | `string[]` | Failure classes the gap limit applies to (case-insensitive). Empty means every class |
+| `forbidden_shared_dependencies` | `string[]` | Dependency targets that must not be shared, such as `protocol:chainlink` (case-insensitive). Empty disables the check |
+| `min_venues_for_shared_dependency` | `number` | How many venues must share a forbidden dependency before it denies. Reference: 2 |
+| `max_shared_collateral_pct_of_book` | `number` | Ceiling on one collateral token's share of the compared exposure, in percent. Reference: 25 |
+| `material_subject_usd` | `number` | Exposure at which an unscored venue matters |
+| `deny_on_unscored` | `boolean` | Deny if a material venue is unscored |
+| `min_subjects_compared` | `number` | Venues needed for a meaningful comparison. Reference: 2 |
+| `deny_on_stale` | `boolean` | Deny when Xerberus flags its data window as stale |
+| `max_data_age_seconds` | `number` | Oldest data window accepted |
+| `require_intent_party_in_wallets` | `boolean` | Deny unless the intent's sender or target is one of the analysed wallets |
+
+## Rego Checks
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `oracle_error` / `malformed_oracle_output` | Oracle error, or a field the rules read is missing | Failures that must not read as "nothing shared" |
+| `stale_data` | `deny_on_stale` and `is_stale` | Decisions made on stale data |
+| `data_too_old` | `data_age_seconds > max_data_age_seconds` | Data older than you accept |
+| `window_not_honored` | A window was pinned and Xerberus answered from another | Results that can't be lined up with the other Xerberus packs |
+| `shared_gap_limit` | An in-scope shared gap carries more than `max_shared_gap_exposure_usd` | One missing safeguard exposing too much at once |
+| `shared_dependency_limit` | A forbidden target is shared by at least `min_venues_for_shared_dependency` venues | Several venues leaning on the same provider |
+| `shared_collateral_limit` | One shared collateral token exceeds `max_shared_collateral_pct_of_book` | Concentration hidden behind different venues |
+| `unscored_material_subject` | `deny_on_unscored` and an unscored venue holds at least `material_subject_usd` | Material exposure Xerberus couldn't assess |
+| `insufficient_venues` | Fewer than `min_subjects_compared` venues | A single-venue result reading as "no shared risk" |
+| `wallets_not_bound_to_intent` | `require_intent_party_in_wallets` and neither sender nor target is an analysed wallet | Analysis of one portfolio authorizing a trade on another |
+
+### Shared Risks
+
+Each breach is a set, so a reviewer can see exactly which gap, dependency or collateral tripped.
+
+```rego
+gap_breaches contains g if {
+    some g in v.shared_gaps
+    gap_in_scope(g)
+    g.combined_exposure_usd > t.max_shared_gap_exposure_usd
+}
+
+dependency_breaches contains d if {
+    some d in v.shared_dependencies
+    d.target in forbidden_dependencies
+    d.subject_count >= t.min_venues_for_shared_dependency
+}
+```
+
+### Explainability
+
+A separate `shared_risks` rule renders each breach as text, for example `"forbidden dependency protocol:chainlink shared by 3 venues"`. This is **not** evaluated on-chain; the AVS entrypoint is `xerberus_common_cause.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
+
+### Final Allow Rule
+
+`well_formed` requires every array the breach sets iterate over. An error envelope has none of them, every set comes out empty, and a bare `count(deny) == 0` would fail *open*.
+
+```rego
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package xerberus_common_cause
+
+import future.keywords
+
+default allow := false
+
+t := data.params.xerberus_common_cause
+v := data.wasm.xerberus_common_cause
+
+well_formed if {
+    is_array(v.wallets)
+    is_number(v.subjects_compared_count)
+    is_number(v.total_exposure_usd)
+    is_array(v.unscored_subjects)
+    is_array(v.shared_gaps)
+    is_array(v.shared_dependencies)
+    is_array(v.shared_collateral)
+    is_boolean(v.is_stale)
+    is_number(v.data_age_seconds)
+}
+
+gap_classes := {lower(c) | some c in t.gap_failure_classes}
+
+forbidden_dependencies := {lower(d) | some d in t.forbidden_shared_dependencies}
+
+gap_in_scope(_) if count(gap_classes) == 0
+
+gap_in_scope(g) if g.failure_class in gap_classes
+
+gap_breaches contains g if {
+    some g in v.shared_gaps
+    gap_in_scope(g)
+    g.combined_exposure_usd > t.max_shared_gap_exposure_usd
+}
+
+dependency_breaches contains d if {
+    some d in v.shared_dependencies
+    d.target in forbidden_dependencies
+    d.subject_count >= t.min_venues_for_shared_dependency
+}
+
+collateral_breaches contains c if {
+    v.total_exposure_usd > 0
+    some c in v.shared_collateral
+    (c.combined_exposure_usd / v.total_exposure_usd) * 100 > t.max_shared_collateral_pct_of_book
+}
+
+unscored_material contains s if {
+    some s in v.unscored_subjects
+    s.exposure_usd >= t.material_subject_usd
+}
+
+shared_risks contains detail if {
+    some g in gap_breaches
+    detail := sprintf("missing safeguard %v (%v) across %v venues, $%v combined", [g.tag, g.failure_class, g.subject_count, g.combined_exposure_usd])
+}
+
+shared_risks contains detail if {
+    some d in dependency_breaches
+    detail := sprintf("forbidden dependency %v shared by %v venues", [d.target, d.subject_count])
+}
+
+shared_risks contains detail if {
+    some c in collateral_breaches
+    detail := sprintf("collateral %v shared by %v venues, $%v combined", [c.symbol, c.subject_count, c.combined_exposure_usd])
+}
+
+wallets_bound_to_intent if {
+    some w in v.wallets
+    w == lower(input.from)
+}
+
+wallets_bound_to_intent if {
+    some w in v.wallets
+    w == lower(input.to)
+}
+
+deny contains "oracle_error" if v.error
+
+deny contains "malformed_oracle_output" if {
+    not v.error
+    not well_formed
+}
+
+deny contains "stale_data" if {
+    t.deny_on_stale
+    v.is_stale == true
+}
+
+deny contains "data_too_old" if v.data_age_seconds > t.max_data_age_seconds
+
+deny contains "window_not_honored" if v.window_honored == false
+
+deny contains "shared_gap_limit" if count(gap_breaches) > 0
+
+deny contains "shared_dependency_limit" if count(dependency_breaches) > 0
+
+deny contains "shared_collateral_limit" if count(collateral_breaches) > 0
+
+deny contains "unscored_material_subject" if {
+    t.deny_on_unscored
+    count(unscored_material) > 0
+}
+
+deny contains "insufficient_venues" if v.subjects_compared_count < t.min_subjects_compared
+
+deny contains "wallets_not_bound_to_intent" if {
+    t.require_intent_party_in_wallets
+    is_array(v.wallets)
+    not wallets_bound_to_intent
+}
+
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.xerberus_common_cause`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **New venues are invisible.** Xerberus only sees positions that already exist in the supplied wallets, so a transaction entering a brand-new venue can't be checked for shared risk until after it lands. Gate first-time venue entry separately, with a destination-protocol check or manual approval.
+- **Collateral share is measured against compared exposure**, not the whole book. That's stricter: in Xerberus's reference scenario, WBTC's $3.80M is about 21% of the $17.8M treasury but about 41% of the $9.31M across the compared venues.
+- **The reference scenario denies.** About $9.31M across Fluid, Morpho and Compound shares oracle-integrity gaps (price-deviation circuit breakers, graceful degradation, minimum-price protection), and all three declare a Chainlink dependency.
+- **Pin the window when composing** with the other Xerberus packs, so all results come from one snapshot.
