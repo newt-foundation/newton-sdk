@@ -13,10 +13,6 @@ import { Card } from 'vocs'
 
 # Policy Packs [Use Newton policy packs to enforce risk, compliance, and oracle checks before vault actions execute.]
 
-:::note
-The PolicyData addresses and dashboard/CLI flows on this page describe the legacy deployment model. They are not policy-set configuration instructions. The pinned policy-set protocol stores optional WASM and secrets-schema CIDs on each Policy, and composes independent policies with `setPolicies`. Verify your pack or dashboard release before reusing these addresses. Use [Composing Policies and Oracles](/developers/guides/chaining-data-oracles) and [Deploying with CLI](/developers/guides/deploying-with-cli) for the policy-set workflow.
-:::
-
 Newton vault policy packs combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
 
 In VaultKit 2.1, each published pack implements the `PolicyPack` contract from `@newton-xyz/policy-core`. Declare packs with `definePolicy(...).with(pack)`; use `defineOracle(...)` when authoring your own compatible oracle.

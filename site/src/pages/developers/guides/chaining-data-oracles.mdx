@@ -1,50 +1,9 @@
 ---
 title: "Composing Policies and Oracles"
-description: "Compose independent policies and their optional oracles in an ordered Newton policy set."
+description: "This guide moved to the policy-set composition guide."
 showAskAi: false
 ---
 
-# Composing Policies and Oracles
+# This guide moved
 
-A policy-set client composes independent policies. Each Policy stores its Rego artifacts and at most one optional WASM oracle. The aggregate decision is allow only when every policy allows. Pure-Rego policies need no oracle.
-
-This replaces the legacy design in which one policy referenced multiple PolicyData contracts and shallow-merged their outputs. Do not apply the legacy merge or deployment instructions to policy-set contracts.
-
-## When to compose policies
-
-| Requirement | Policy-set shape |
-|---|---|
-| Vault risk check | One risk policy with its optional oracle |
-| Risk and sanctions | Two independent policies, each with its own params and optional oracle |
-| Risk, sanctions, and a local rule | Three policies; the local pure-Rego rule retains an empty WASM input slot |
-
-Each policy reads its own `data.params` and `data.wasm`. There is no automatic cross-policy merge. Pack-specific namespaces remain part of that pack's own output schema. If one rule needs several external sources, implement their collection in that policy's single WASM module or keep the checks independent where appropriate.
-
-## Configure and preserve order
-
-Deploy the independent policies and call `setPolicies` with their ordered specs. See [Smart Contract Integration](/developers/guides/smart-contract-integration#configure-the-policy-set). The owner's params and expiry belong to each entry. Never sort or deduplicate entries, including repeated addresses.
-
-## Simulating a multi-oracle policy
-
-For the policy-set implementation, simulate the complete **set**:
-
-```typescript
-const result = await client.simulatePolicy({
-  policyClient,
-  chainId: 11155111,
-  intent,
-  wasmArgs: [riskInputHex, sanctionsInputHex, '0x'],
-});
-console.log(result.success, result.allowed);
-for (const policy of result.policies ?? []) {
-  console.log(policy.policy_index, policy.policy, policy.allowed, policy.result);
-}
-```
-
-Upload required secrets per Policy address and client before simulation. `newt_simulatePolicy` runs optional WASM and Rego in-process, with no BLS signatures. Use `newt_simulateTask` only with precomputed outputs; both resolve the current set rather than replaying a historical snapshot.
-
-## Deployment and validation
-
-Use [Deploying with CLI](/developers/guides/deploying-with-cli) for pinned artifacts, factory deployment, and owner configuration. Existing dashboard or pack catalogs may still describe legacy PolicyData deployments; confirm their release before treating an address as a policy-set entry.
-
-Run the [policy-set truth table and stale-attestation checks](/developers/guides/testing-policies#policy-set-validation-checklist). An identical replacement or reorder advances the revision and invalidates old attestations, even on the same client.
+The updated guide is now [Composing Policy Sets](/developers/guides/composing-policy-sets). This page remains as a compatibility link for older documentation references.
