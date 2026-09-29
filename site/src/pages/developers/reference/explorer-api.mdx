@@ -314,7 +314,7 @@ curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
 ```
 
 - `error` or `operator_errors` set: the evaluation failed. Check the oracle with [`newt_simulatePolicyData`](/developers/reference/rpc-api#newt_simulatepolicydata) and the policy with [`newt_simulatePolicy`](/developers/reference/rpc-api#newt_simulatepolicy).
-- `policy_task_data` shows exactly what your Rego policy was evaluated against. Replay it with [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask).
+- `policy_task_data` contains the original evaluation evidence. Preserve the task’s frozen policy set and revision for reproduction. [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask) resolves the current set and is not historical replay.
 
 ### Recent tasks for your PolicyClient's policy
 
@@ -389,3 +389,8 @@ export async function getTask(taskId: `0x${string}`, network: Network = 'testnet
 <Card icon="activity" to="/developers/resources/newton-explorer" title="Newton Explorer">
   Field definitions and the task lifecycle
 </Card>
+
+
+## Policy-set gateway distinction
+
+Explorer’s indexed `evaluation_result` field is an Explorer API schema, not the gateway TaskResponse ABI. Policy-set gateway responses use boolean `allowed` and ordered `policy_task_data` entries. Do not decode an attestation using Explorer’s legacy result shape or assume the indexer has migrated because the gateway has.

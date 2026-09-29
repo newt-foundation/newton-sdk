@@ -31,7 +31,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     Confirm the output matches your policy's `data.wasm` expectations.
   
 ### Gateway simulation succeeds
-    Run `newt_simulateTask` with realistic intent parameters and verify the response includes a valid attestation.
+    Run `newt_simulatePolicy` with realistic intent parameters, and verify aggregate and per-policy results. Simulation returns no attestation. Separately obtain live signatures and verify an allowed application transaction.
   
 ### Edge cases tested
     - Zero-value transactions
@@ -48,52 +48,17 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 ### Mainnet policy allowlisting confirmed
     Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
   
-### PolicyData contract deployed
-    ```bash
-    newton-cli --chain-id 11155111 policy-data deploy \
-      --wasm-cid bafyrei... \
-      --secrets-schema-cid bafyrei...
-    ```
-    Record the deployed `PolicyData` address.
-  
-### Policy contract deployed
-    ```bash
-    newton-cli --chain-id 11155111 policy deploy \
-      --rego-cid bafyrei... \
-      --policy-data-address 0x...
-    ```
-    Record the deployed `Policy` address.
-  
-### PolicyClient contract deployed
-    Deploy your contract that inherits `NewtonPolicyClient`. Verify it compiles with Solidity ^0.8.x and the correct foundry remappings.
-  
-### PolicyClient registered
-    ```bash
-    newton-cli --chain-id 11155111 policy-client register \
-      --policy-client-address 0x...
-    ```
-  
-### Policy set on PolicyClient
-    ```bash
-    newton-cli --chain-id 11155111 policy-client set-policy \
-      --policy-client-address 0x... \
-      --policy-address 0x...
-    ```
-  
-### Policy parameters configured
-    ```bash
-    newton-cli --chain-id 11155111 policy-client set-policy-params \
-      --policy-client-address 0x... \
-      --params '{"max_amount":"10000","allowed_tokens":["0x..."]}'
-    ```
-  
-### Verify registration status
-    ```bash
-    newton-cli --chain-id 11155111 policy-client status \
-      --policy-client-address 0x...
-    ```
-    Confirm `active: true` and policy reference is correct.
-  
+### Independent policies deployed
+    Each policy has Rego, schema, metadata, code hash, and optional WASM/secrets-schema CIDs. Pure-Rego needs no PolicyData contract. Require a successful receipt, nonempty code, and registration with the TaskManager's factory.
+
+### PolicyClient configured
+    Deploy using the [pinned contract dependency](/developers/guides/smart-contract-integration), then configure the complete ordered set with owner `setPolicies`. Read `getPolicySetSnapshot()` and check ID, revision, params, order, and nonzero expirations.
+
+### Ownership and registry verified
+    Verify `getOwner()` matches the intended owner. Register for identity flows where required by the target deployment; a registry owner record is separate from the client's owner authority.
+
+
+
 ::::
 
 ## API & Secrets
@@ -106,7 +71,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/encrypting-secrets).
   
 ### Secrets match schema
-    Confirm your uploaded secrets match the `secretsSchemaCid` defined on your PolicyData contract. Schema mismatches produce validation errors.
+    Confirm your uploaded secrets match the `secretsSchemaCid` defined on your Policy contract. Schema mismatches produce validation errors.
   
 ::::
 
@@ -148,33 +113,43 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 ## Pre-Launch Verification
 
 ```bash
-# Verify CLI version
-newton-cli version info
-
-# Check compatibility
-newton-cli version check-compatibility
-
-# Run a final simulation
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulateTask",
-    "params": {
-      "policy_client": "0xYourPolicyClientAddress",
-      "intent": {
-        "from": "0xCallerAddress",
-        "to": "0xTargetAddress",
-        "value": "0x0",
-        "data": "0x",
-        "chain_id": "0xaa36a7",
-        "function_signature": "0x"
-      }
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
+newtup
+newton-cli --version
+newton-cli doctor
 ```
+
+Record the exact [compatibility combination](/developers/reference/contract-addresses#policy-set-compatibility). Version labels alone are insufficient. Require a gateway task ID, aggregate verdict, and—on allow—a successful application transaction hash and state readback. Verify denial and replay leave state unchanged.
+
+## Policy-set validation checklist
+
+Use two independent deterministic test policies, each with allow and deny fixtures. Keep the same client and record its ordered set before each run.
+
+| Policy 0 | Policy 1 | Aggregate | Application state |
+|---|---|---|---|
+| Allow | Allow | Allow | Changes only after successful attested transaction |
+| Allow | Deny | Deny | Unchanged |
+| Deny | Allow | Deny | Unchanged |
+| Deny | Deny | Deny | Unchanged |
+
+- Check every input and result maps to its policy-set position; preserve repeated entries.
+- Replace with a reordered set, then an identical set. Each successful replacement advances the revision and changes the ID. Old attestations must fail.
+- Reject empty sets, more than 8 entries, unregistered policies, zero expiry, oversized params, and unauthorized updates on the pinned contract.
+- Reject reused attestations and changes to sender, target, chain, value, calldata, or protected arguments. Verify expired responses and mismatched task snapshots fail.
+- Read state before and after denial and failed validation. An API denial alone does not prove the contract rejects a deny attestation.
+
+Record evidence separately:
+
+| Level | Evidence |
+|---|---|
+| Local policy tests | Inputs, expected and actual Rego verdicts |
+| Local contract tests | Configuration, intent binding, deny, stale response, and replay assertions |
+| Gateway simulation | Endpoint, current set ID, per-policy results, aggregate verdict; no signatures |
+| Live operator evaluation | Gateway task ID, frozen task, aggregate `allowed`, signed response |
+| On-chain validation | Successful BLS validation or expected revert |
+| Application execution | Transaction hash, receipt, and resulting application state |
+
+Do not use wall-clock conditions for a deterministic tutorial. An allow decision applies to evaluation time; block-based expiration is not a promise that external conditions remain true until execution.
+
 
 ## Next Steps
 

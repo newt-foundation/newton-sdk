@@ -47,7 +47,7 @@ An [Intent](/developers/reference/glossary#intent) describes the transaction a u
 
 ```solidity
 struct Intent {
-    address from;              // Transaction initiator (tx.origin equivalent)
+    address from;              // Signer; checked against msg.sender
     address to;                // Target contract
     uint256 value;             // ETH value
     bytes data;                // ABI-encoded calldata
@@ -108,7 +108,7 @@ flowchart LR
 mkdir newton-policy-wallet && cd newton-policy-wallet
 forge init --no-git
 git init
-forge install newt-foundation/newton-contracts
+forge install newt-foundation/newton-prover-avs@190444581d44604e5da1da83d279acdd22841a37
 ```
 
 ### Write the contract
@@ -134,7 +134,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
-        return interfaceId == 0xdbdcaa9c || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 
     function validateAndExecuteDirect(
@@ -150,6 +150,10 @@ contract NewtonPolicyWallet is NewtonPolicyClient {
             InvalidAttestation()
         );
 
+        // Bind every executed field to the signed intent.
+        require(to == taskResponse.intent.to, "Target mismatch");
+        require(value == taskResponse.intent.value, "Value mismatch");
+        require(keccak256(data) == keccak256(taskResponse.intent.data), "Calldata mismatch");
         (bool success, bytes memory result) = to.call{value: value}(data);
         if (!success) revert ExecutionFailed();
 
@@ -180,7 +184,11 @@ optimizer = true
 optimizer_runs = 200
 
 remappings = [
-    "newton-contracts/=lib/newton-contracts/",
+    "newton-contracts/=lib/newton-prover-avs/contracts/",
+    "@openzeppelin/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts/",
+    "@openzeppelin-upgrades/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/",
+    "@eigenlayer/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/",
+    "@eigenlayer-middleware/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/",
     "forge-std/=lib/forge-std/src/"
 ]
 
@@ -222,8 +230,7 @@ contract MyExistingVaultV2 is OwnableUpgradeable, NewtonPolicyClient {
         _newtonPolicyClientInitialized = true;
     }
 
-    // setPolicyAddress(address policy) is inherited from NewtonPolicyClient.
-    // The policyClientOwner can call it once a policy contract is deployed.
+    // The owner calls inherited setPolicies(specs) after deploying the policies.
 
     /// @notice Add policy-protected functionality
     function protectedWithdraw(
@@ -250,7 +257,7 @@ When adding `NewtonPolicyClient` to an existing upgradeable contract:
 Install the dependency:
 
 ```bash
-forge install newt-foundation/newton-contracts
+forge install newt-foundation/newton-prover-avs@190444581d44604e5da1da83d279acdd22841a37
 ```
 
   </Tab>
@@ -300,44 +307,36 @@ Direct validation is recommended for most use cases as it avoids waiting for the
 
 ## API Reference
 
-### INewtonPolicyClient Interface
+### Policy-set interface
 
 ```solidity
-interface INewtonPolicyClient is IERC165 {
-    function getPolicyId() external view returns (bytes32);
-    function getPolicyAddress() external view returns (address);
-    function getNewtonPolicyTaskManager() external view returns (address);
-    function getOwner() external view returns (address);
+struct PolicySpec {
+    address policy;
+    INewtonPolicy.PolicyConfig config;
 }
+
+function setPolicies(PolicySpec[] calldata policies) external returns (bytes32);
+function getPolicies() external view returns (PolicySpec[] memory);
+function getPolicyId() external view returns (bytes32);
+function policyRevision() external view returns (uint64);
+function getPolicySetSnapshot() external view returns (bytes32, uint64, PolicySpec[] memory);
+function getNewtonPolicyTaskManager() external view returns (address);
+function getOwner() external view returns (address);
 ```
 
-### NewtonPolicyClient Mixin
+`setPolicies` is owner-only and atomically replaces the complete ordered set. Each entry has its own `policyParams` bytes and nonzero `expireAfter` in blocks. Repeated addresses remain separate entries: never sort or deduplicate the set.
 
-#### Initialization
+Use `getPolicySetSnapshot()` to read the ID, revision, and specs together. Separate reads can straddle an owner update. The getter is `getPolicyId()`, not `policyId()`.
 
-| Function | Visibility | Description |
-|----------|------------|-------------|
-| `_initNewtonPolicyClient(policyTaskManager, owner)` | `internal` | Initialize the policy client with TaskManager and owner |
-| `_setPolicyAddress(policy)` | `internal` | Set policy address (no version check, for constructors) |
-| `setPolicyAddress(policy)` | `public` | Set policy address (owner-only, with version compatibility check) |
+| Mixin function | Purpose |
+|---|---|
+| `_initNewtonPolicyClient(taskManager, owner)` | Initialize TaskManager and owner |
+| `_initPolicies(specs)` | Initial configuration; an empty list defers configuration |
+| `_setPolicies(specs)` | Internal complete-set replacement; protect any custom wrapper |
+| `_policies()` / `_policyId()` | Internal reads of configured specs / set ID |
+| `setPolicyClientOwner(newOwner)` | Owner-only authority transfer |
 
-#### Policy Management
-
-| Function | Visibility | Description |
-|----------|------------|-------------|
-| `_setPolicy(policyConfig)` | `internal` | Set or update policy configuration, returns `policyId` |
-| `setPolicy(policyConfig)` | `external` | Owner-only wrapper for `_setPolicy` |
-| `setPolicyClientOwner(newOwner)` | `public` | Transfer policy client ownership |
-
-#### Getters
-
-| Function | Visibility | Description |
-|----------|------------|-------------|
-| `_getPolicyId()` | `internal view` | Current policy ID |
-| `_getPolicyAddress()` | `internal view` | Policy contract address |
-| `_getPolicyConfig()` | `internal view` | Current `PolicyConfig` (params + expireAfter) |
-| `_getNewtonPolicyTaskManager()` | `internal view` | TaskManager address |
-| `_getOwner()` | `internal view` | Policy client owner address |
+An unconfigured client is not ready to authorize actions. The pinned mixin rejects an empty replacement, more than 8 policies, unregistered policies, zero expiration, and policy parameters over 65,536 bytes. It checks `isPolicy(address)` on the TaskManager's configured factory. It does **not** perform the old factory semantic-version comparison in `_setPolicies`.
 
 ## Deployment
 
@@ -369,60 +368,36 @@ contract DeployScript is Script {
 The Task Manager address **must** be `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address — using any other causes `InvalidAttestation`.
 :::
 
-### Initialization Gotchas
+### Configure the policy set
 
-**`_setPolicyAddress()` vs `setPolicy()`**: `_setPolicyAddress()` stores the policy address but does NOT register with the Policy contract and does NOT return a `policyId`. You must call `setPolicy()` (or `_setPolicy()`) in a separate transaction after deployment to get a `policyId`. If you forget this step, `policyId == 0` and all attestation validations silently fail with no helpful error message.
-
-**`expireAfter` must be non-zero**: `NewtonPolicyData.initialize()` reverts with `InvalidExpireAfter()` if `expireAfter == 0`. A zero value creates attestations where `expiration == reference_block`, making on-chain execution impossible — every call reverts with `AttestationExpired` because `block.number >= expiration` is always true by the time the tx mines. Use at least 150 blocks (~5 minutes on Base) for testnets.
-
-Deploy:
-
-```bash
-forge script script/Deploy.s.sol:DeployScript --rpc-url $RPC_URL --broadcast
-```
-
-Provide `PRIVATE_KEY` and `RPC_URL` through the current process environment or `~/.newton/.env`. Do not commit or source a project-local `.env` containing deployment credentials.
-
-## Set Policy
-
-After deployment, configure the policy on your contract. Create `script/SetPolicy.s.sol`:
+Deploy two independent policies, then have the client owner submit one configuration transaction. This example uses empty JSON parameters; replace them with each policy's schema-valid configuration.
 
 ```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
-
-import {Script, console} from "forge-std/Script.sol";
-import {NewtonPolicyWallet} from "../src/NewtonPolicyWallet.sol";
+import {INewtonPolicyClient} from "newton-contracts/src/interfaces/INewtonPolicyClient.sol";
 import {INewtonPolicy} from "newton-contracts/src/interfaces/INewtonPolicy.sol";
 
-contract SetPolicyScript is Script {
-    function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address walletAddress = vm.envAddress("WALLET_ADDRESS");
-        uint32 expireAfter = uint32(vm.envUint("EXPIRE_AFTER"));
-        string memory paramsJson = vm.readFile("policy_params.json");
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        NewtonPolicyWallet wallet = NewtonPolicyWallet(payable(walletAddress));
-        bytes32 newPolicyId = wallet.setPolicy(
-            INewtonPolicy.PolicyConfig({
-                policyParams: bytes(paramsJson),
-                expireAfter: expireAfter
-            })
-        );
-
-        console.log("Policy set with ID:");
-        console.logBytes32(newPolicyId);
-        vm.stopBroadcast();
-    }
-}
+// Inside the owner's Foundry broadcast script:
+INewtonPolicyClient.PolicySpec[] memory specs = new INewtonPolicyClient.PolicySpec[](2);
+specs[0] = INewtonPolicyClient.PolicySpec({
+    policy: firstPolicy,
+    config: INewtonPolicy.PolicyConfig({policyParams: bytes("{}"), expireAfter: 25})
+});
+specs[1] = INewtonPolicyClient.PolicySpec({
+    policy: secondPolicy,
+    config: INewtonPolicy.PolicyConfig({policyParams: bytes("{}"), expireAfter: 25})
+});
+bytes32 newPolicyId = client.setPolicies(specs);
 ```
 
-```bash
-WALLET_ADDRESS=0x... EXPIRE_AFTER=31536000 \
-forge script script/SetPolicy.s.sol:SetPolicyScript --rpc-url $RPC_URL --broadcast
-```
+Choose each expiration for your application's block-time and authorization window; 25 is illustrative. For exact `cast` configuration and readback commands, see [Deploying with CLI](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters).
+
+### Replace a set on the same client
+
+Call `setPolicies` again with the entire desired list, including unchanged entries. Every successful replacement increments the revision, even an identical replacement. The ID commits to a domain separator, chain, client address, revision, and ordered specs. Reordering also changes the ID.
+
+Old attestations become unusable when their ID no longer matches the client's ID. Refresh application configuration and request a new evaluation after replacement. Changing policies on a policy-set-capable client does not require deploying another client; upgrading a legacy client implementation is a separate migration.
+
+The Task freezes `policies`, `policyRevision`, and `policyId` at admission. Preserve that snapshot and the signed response unchanged when submitting direct validation.
 
 ## PolicyClientRegistry
 
@@ -502,68 +477,11 @@ Deployment lifecycle:
 
 ## Version Compatibility
 
-When you call `setPolicyAddress()`, the policy's factory version is validated against the TaskManager's runtime minimum. This ensures protocol upgrades do not break existing clients.
+This guide targets the policy-set contracts at [commit `1904445`](https://github.com/newt-foundation/newton-prover-avs/tree/190444581d44604e5da1da83d279acdd22841a37). Use the pinned dependency above and the [deployment compatibility record](/developers/reference/contract-addresses#policy-set-compatibility).
 
-### How It Works
+Check the client interface, TaskManager, configured policy factory, gateway schema, and SDK together. A CLI version or an on-chain `version()` string alone does not prove ABI compatibility. An unpinned install can select a different interface.
 
-```mermaid
-flowchart TD
-    A[setPolicyAddress] --> B{TaskManager configured?}
-    B -->|No| F[Set policy address]
-    B -->|Yes| C[Read factory version from policy]
-    C --> D{minCompatiblePolicyVersion set?}
-    D -->|Empty| F
-    D -->|Set| E{factoryVersion >= TM minimum?}
-    E -->|No| G[Revert IncompatiblePolicyVersion]
-    E -->|Yes| F
-```
-
-There is no compile-time gate — policy clients never need to be redeployed for version upgrades. Owners call `setPolicyAddress(newPolicy)` to point their client to a policy from a newer factory. The policy client address never changes, so identity links and user consent remain intact.
-
-### Migration with newton-cli
-
-The `newton-cli version migrate` command automates the full upgrade workflow:
-
-1. Checks compatibility of current policy and policy data factories
-2. Deploys new policy data contracts if any are incompatible
-3. Deploys a new policy via the latest factory
-4. Calls `setPolicyAddress(newPolicy)` on the existing client (no redeployment)
-5. Verifies the migration succeeded
-
-```bash
-newton-cli version migrate \
-  --policy-client 0x... \
-  --private-key $OWNER_KEY \
-  --chain-id 11155111
-```
-
-### Remediation for IncompatiblePolicyVersion
-
-If `setPolicyAddress()` or `createNewTask()` reverts with `IncompatiblePolicyVersion`:
-
-1. Check the TaskManager's current minimum:
-   ```solidity
-   string memory minVersion = taskManager.minCompatiblePolicyVersion();
-   ```
-
-2. Check your policy's factory version:
-   ```solidity
-   address factory = INewtonPolicy(policy).factory();
-   string memory factoryVersion = ISemVerMixin(factory).version();
-   ```
-
-3. Deploy a new policy through the current `NewtonPolicyFactory`:
-   ```solidity
-   address newPolicy = policyFactory.deployPolicy(
-       entrypoint, policyCid, schemaCid, policyDataAddresses, metadataCid, owner
-   );
-   ```
-
-4. Update your client: `setPolicyAddress(newPolicy)`
-
-5. Reconfigure: `setPolicy(policyConfig)` with the same policy parameters
-
-Your existing policy data addresses and Rego CIDs can be reused — only the policy contract (and its factory reference) needs to change.
+The owner can replace policies only with policies registered by the TaskManager's configured factory. Verify provenance with `isPolicy(policy)`. Preserve the inherited `supportsInterface` implementation instead of hardcoding the old single-policy interface ID. Legacy clients need an implementation upgrade or replacement before they expose `setPolicies`; do not send this call to a single-policy client.
 
 ## Common Patterns
 
@@ -670,7 +588,7 @@ The `NewtonPolicyClient` mixin automatically enforces:
 - Always verify function selectors match expectations when decoding intent data
 - Set appropriate `expireAfter` values — too short and users cannot execute; too long and the security window increases
 - Protect the `policyClientOwner` key with a multisig or timelock
-- Use `supportsInterface` to return `0xdbdcaa9c` (required by the Newton Policy contract)
+- Preserve the inherited `supportsInterface` implementation for the pinned interface
 - Fund the contract with ETH if it needs to execute value transfers
 
 ## Troubleshooting
@@ -679,9 +597,9 @@ The `NewtonPolicyClient` mixin automatically enforces:
 |-------|-------|------------|
 | `InvalidAttestation()` | Wrong Task Manager address, expired attestation, or policy mismatch | Verify Task Manager address matches [Sepolia deployment](/developers/reference/contract-addresses) |
 | `ExecutionFailed()` | The target call reverted | Debug the target transaction independently |
-| `IncompatiblePolicyVersion` | Policy factory version below TaskManager minimum | See [Version Compatibility](#version-compatibility) remediation steps |
+| `PolicyNotRegistered` | Policy is not registered with the configured factory | Verify `policyFactory()` and `isPolicy(policy)` |
 | `PolicyClientNotRegistered` | Client not registered in `PolicyClientRegistry` | Register via `registerClient()` or CLI `newton-cli policy-client register` |
-| `Policy ID does not match` | Attestation's policy ID differs from configured policy | Verify `_setPolicy()` was called with correct configuration |
+| `Policy ID does not match` | Attestation's policy ID differs from configured policy | Read `getPolicySetSnapshot()` and request a fresh attestation after replacement |
 | `Not authorized intent sender` | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent calls the function |
 | `Chain ID does not match` | Attestation created for a different chain | Ensure the intent specifies the correct `chainId` |
 | `Attestation expired` | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` |

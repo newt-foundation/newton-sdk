@@ -57,9 +57,16 @@ This page documents all error codes and messages you may encounter when interact
 |-------|----------|-------|------------|
 | `InvalidAttestation()` | PolicyClient | BLS signature verification failed | Verify Task Manager address, check attestation expiration |
 | `ExecutionFailed()` | PolicyClient | Inner transaction call reverted | Debug the target transaction independently |
-| `IncompatiblePolicyVersion` | NewtonPolicy | Policy factory version below TaskManager's `minCompatiblePolicyVersion` | Deploy new policy via latest factory, call `setPolicyAddress(newPolicy)`. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility) |
+| `IncompatiblePolicyVersion` | NewtonPolicy | Policy factory version below TaskManager's `minCompatiblePolicyVersion` | Legacy version-gated deployment only. For policy sets, verify factory registration and replace the full set with `setPolicies`. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility) |
 | `PolicyClientNotRegistered` | PolicyClientRegistry | Client not registered or has been deactivated | Register via `registerClient()` or CLI: `newton-cli policy-client register`. See [PolicyClientRegistry](/developers/guides/smart-contract-integration#policyclientregistry) |
-| `PolicyNotSet` | PolicyClient | `_setPolicy()` called before policy address is set | Call `_setPolicyAddress()` or `setPolicyAddress()` first |
+| `EmptyPolicySet` | PolicyClient | Empty replacement | Supply at least one spec |
+| `TooManyPolicies` | PolicyClient | More than 8 policies in pinned release | Reduce the set size |
+| `PolicyNotRegistered` | PolicyClient | Address not registered by configured factory | Verify TaskManager `policyFactory()` and factory `isPolicy` |
+| `PolicyFactoryNotSet` | PolicyClient | Missing TaskManager or factory | Configure the correct deployment |
+| `ZeroExpireAfter` | PolicyClient | A spec has zero expiry | Set a nonzero block window |
+| `PolicyParamsTooLarge` | PolicyClient | Params exceed 65,536 bytes | Reduce encoded params |
+| `OnlyPolicyClientOwner` | PolicyClient | Unauthorized replacement | Submit through the current owner |
+| `PolicyDenied` | TaskManager | Aggregate decision is false | Inspect per-policy simulation results; do not execute |
 | `Not authorized intent sender` | PolicyClient | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent is the transaction sender |
 | `Chain ID does not match` | PolicyClient | Attestation was created for a different chain | Verify the intent specifies the correct `chainId` |
 | `Attestation expired` | TaskManager | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` in policy config |
@@ -68,7 +75,9 @@ This page documents all error codes and messages you may encounter when interact
 
 ### On-Chain Error Selectors
 
-When `_validateAttestationDirect()` reverts, the error originates from Newton's TaskManager or AttestationValidator contracts, not your PolicyClient. Standard ABI decoders (including viem) may show "Unable to decode signature" because these selectors are not in your contract's ABI.
+The table includes legacy deployment errors. Decode against the ABI of your pinned release; an error name here does not imply the policy-set mixin emits it.
+
+When `_validateAttestationDirect()` reverts, the error can originate from the PolicyClient, TaskManager, or AttestationValidator. Standard ABI decoders (including viem) may show "Unable to decode signature" because these selectors are not in your contract's ABI.
 
 | Selector | Error | Meaning |
 |----------|-------|---------|

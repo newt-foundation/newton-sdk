@@ -41,127 +41,24 @@ The CLI runs your WASM component in a sandboxed environment with the Newton HTTP
 
 ## Gateway Simulation
 
-Simulate a full policy evaluation via the Gateway RPC without any on-chain interaction:
+The policy-set endpoints resolve a configured client on the specified chain. Use `policy_client`, numeric `chain_id`, `intent`, and positional `wasm_args` arrays. SDK `simulatePolicy` supports this schema in v1.2.2; its `simulateTask` wrapper does not.
 
-### Simulate a Task
+| Endpoint | Executes WASM? | Input | Result |
+|---|---|---|---|
+| `newt_simulatePolicyData` | Yes, one policy's module | Policy address, chain, scalar args, optional inline secrets | Oracle output |
+| `newt_simulatePolicyDataWithClient` | Yes, one policy's module | Policy address, chain, client, scalar args; stored secrets | Oracle output |
+| `newt_simulatePolicy` | Yes, each policy's optional module | Current client set and ordered oracle inputs | Per-policy verdicts and aggregate `allowed` |
+| `newt_simulateTask` | No | Current client set and ordered precomputed oracle outputs | Per-policy verdicts and aggregate `allowed` |
 
-Tests the complete evaluation pipeline (data oracle + policy) for a specific PolicyClient:
+At the [pinned protocol revision](/developers/reference/contract-addresses#policy-set-compatibility), these simulations run in-process on the gateway. They do not produce BLS quorum signatures or execute application transactions. `newt_createTask` / `newt_sendTask` exercise live operator evaluation.
 
-```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your_api_key>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulateTask",
-    "params": {
-      "policy_client": "0xYourPolicyClientAddress",
-      "intent": {
-        "from": "0xCallerAddress",
-        "to": "0xTargetAddress",
-        "value": "0x0",
-        "data": "0x",
-        "chain_id": "0xaa36a7",
-        "function_signature": "0x"
-      }
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
-```
+A completed denial has `success: true, allowed: false`; a simulation error has `success: false, allowed: null`. Inspect `policies[i].policy_index`, `policy`, `allowed`, and `result` to find the denying rule. See [RPC examples](/developers/reference/rpc-api#newt_simulatepolicy).
 
-### Simulate Policy Only
+### Historical task investigation
 
-Test full Rego policy evaluation, running each referenced oracle and merging its output into `data.wasm`. Pass the Rego source, one entry per oracle in `policy_data`, and `policy_params`:
+Inspect the original task's frozen `policies`, `policyRevision`, `policyId`, ordered evidence, and aggregate verdict. Neither simulation endpoint replays the original snapshot: both resolve the client's current set. After reconfiguration, the same inputs can produce a different verdict. Reproduce a historical evaluation using its captured snapshot and matching evaluator revision in a local test.
 
-```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your_api_key>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulatePolicy",
-    "params": {
-      "policy_client": "0xYourPolicyClient",
-      "policy": "package trading\n\ndefault allow := false\n...",
-      "entrypoint": "trading.allow",
-      "intent": { "from": "0x...", "to": "0x...", "value": "0x0", "data": "0x", "chain_id": "0xaa36a7", "function_signature": "0x" },
-      "policy_data": [ { "policy_data_address": "0xYourPolicyData" } ],
-      "policy_params": { "max_price": 50000 }
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
-```
-
-### Simulate PolicyData Only
-
-Test a WASM oracle execution via the Gateway:
-
-<Tabs>
-  <Tab title="With inline secrets">
-    ```bash
-    curl -X POST https://gateway.testnet.newton.xyz/rpc \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer <your_api_key>" \
-      -d '{
-        "jsonrpc": "2.0",
-        "method": "newt_simulatePolicyData",
-        "params": {
-          "policy_data_address": "0xYourPolicyData",
-          "wasm_args": "0x7b2261646472657373223a22307830227d",
-          "chain_id": 11155111
-        },
-        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-      }'
-    ```
-:::note
-Pass encrypted secrets via the optional `secrets` field (base64-encoded ciphertext) to test with credentials. See the [RPC API](/developers/reference/rpc-api#newt-simulatepolicydata).
-:::
-  </Tab>
-  <Tab title="With stored secrets">
-    ```bash
-    curl -X POST https://gateway.testnet.newton.xyz/rpc \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer <your_api_key>" \
-      -d '{
-        "jsonrpc": "2.0",
-        "method": "newt_simulatePolicyDataWithClient",
-        "params": {
-          "policy_data_address": "0xYourPolicyData",
-          "policy_client": "0xYourPolicyClientAddress",
-          "wasm_args": "0x7b2261646472657373223a22307830227d"
-        },
-        "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-      }'
-    ```
-:::note
-Requires ownership of the PolicyClient. The Gateway reads secrets stored via `newt_storeEncryptedSecrets`.
-:::
-  </Tab>
-</Tabs>
-
-## Simulation Endpoints Comparison
-
-Newton provides four distinct simulation endpoints for different phases of policy development:
-
-| Endpoint | Purpose | Data Source | Operators | Use Case |
-|----------|---------|-------------|-----------|----------|
-| `newt_simulatePolicyData` | Test WASM plugin execution | Caller provides secrets directly | Yes (delegation) | Iterate WASM before uploading secrets |
-| `newt_simulatePolicyDataWithClient` | Verify stored secrets work | Reads secrets from gateway DB | Yes (delegation) | Verify uploaded secrets |
-| `newt_simulatePolicy` | Full Rego + WASM evaluation | Delegates to operators for full pipeline | Yes (full pipeline) | Final testing before deployment |
-| `newt_simulateTask` | Replay with pre-assembled data | Uses provided PolicyTaskData directly | No (local only) | Replay historical tasks, debugging |
-
-`simulatePolicy` delegates to an operator via `broadcast_first_success` — it runs the full data pipeline (fetches WASM from IPFS, decrypts stored secrets, executes each PolicyData plugin, merges outputs, evaluates Rego). `simulateTask` takes pre-assembled `PolicyTaskData` and evaluates Rego against it locally — the data pipeline is skipped because data is already assembled.
-
-**Recommended development workflow:**
-
-1. Deploy PolicyData contracts
-2. Test WASM locally with `newt_simulatePolicyData`
-3. Upload secrets via `newt_storeEncryptedSecrets`
-4. Verify stored secrets with `newt_simulatePolicyDataWithClient`
-5. Test full policy end-to-end with `newt_simulatePolicy`
-6. Deploy Policy on-chain
-7. Submit production tasks with `newt_createTask` / `newt_sendTask`
-8. Debug/replay tasks with `newt_simulateTask`
+Follow the [policy-set validation checklist](/developers/guides/testing-policies#policy-set-validation-checklist) before claiming end-to-end success.
 
 ## Newton Explorer
 
@@ -182,7 +79,7 @@ curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
   | jq '{evaluation_result, error, operator_errors, policy_task_data}'
 ```
 
-`policy_task_data` is the exact oracle output the policy saw. Pass it to `newt_simulateTask` to replay the evaluation locally.
+`policy_task_data` contains ordered evidence from the original evaluation. Preserve the original snapshot for historical reproduction; `newt_simulateTask` resolves the current set and is not a replay endpoint.
 
 ## BLS Diagnostics
 

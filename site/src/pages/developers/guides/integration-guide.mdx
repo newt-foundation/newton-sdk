@@ -103,14 +103,14 @@ Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates
 
 ## Step 3: Deploy with CLI (~15 min)
 
-Upload your policy files to IPFS and register [PolicyData](/developers/overview/core-concepts#policydata) and [Policy](/developers/overview/core-concepts#policy) contracts on-chain.
+Upload each policy’s Rego, schema, metadata, and optional WASM artifacts, then deploy independent [Policy](/developers/overview/core-concepts#policy) contracts. Configure the client’s ordered set with owner `setPolicies`.
 
 :::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
 
 <Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
-  Generate CIDs, deploy PolicyData, deploy Policy, register PolicyClient
+  Generate artifacts, deploy policies, configure the client set, and verify ownership
 </Card>
 
 ## Step 4: Smart Contract Integration (~30 min)
@@ -201,7 +201,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```
 
   - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy-data simulate`.
-  - `policy_task_data` shows the oracle output the policy evaluated. Replay it with `newt_simulateTask` to see which rule rejected the intent.
+  - `policy_task_data` preserves ordered evidence. Inspect it alongside the task’s frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
 :::
 ## Factory Pattern
 

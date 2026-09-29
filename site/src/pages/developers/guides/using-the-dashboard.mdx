@@ -14,6 +14,10 @@ import { Card,Cards } from 'vocs'
 
 # Using the Dashboard [Build, simulate, and deploy Newton policies from the browser — no CLI required. Sign in, generate an API key, add data oracles, configure secrets and params, simulate, and deploy a policy bound to your PolicyClient.]
 
+:::note
+The PolicyData addresses and dashboard/CLI flows on this page describe the legacy deployment model. They are not policy-set configuration instructions. The pinned policy-set protocol stores optional WASM and secrets-schema CIDs on each Policy, and composes independent policies with `setPolicies`. Verify your pack or dashboard release before reusing these addresses. Use [Composing Policies and Oracles](/developers/guides/chaining-data-oracles) and [Deploying with CLI](/developers/guides/deploying-with-cli) for the policy-set workflow.
+:::
+
 The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for building on Newton. It lets you generate an API key, author a Rego policy in the browser, attach one or more data oracles, configure their parameters and secrets, simulate against sample intents, and deploy the policy on-chain — all from a web UI. Everything in this guide can also be done with [`newton-cli`](/developers/reference/command-line-tool) and the [SDK](/developers/reference/sdk-reference); the dashboard packages the same operations into a guided flow.
 
 ## Sign in

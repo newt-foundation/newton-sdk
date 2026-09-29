@@ -48,7 +48,7 @@ Two-phase consensus (Prepare-Commit) takes approximately **4 seconds**. See [Con
 :::
 
 :::details[Can I test policies without deploying on-chain?]
-Yes. Use `newt_simulateTask` via the SDK or Gateway RPC to simulate a full policy evaluation without any on-chain interaction. You can also test individual components:
+Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set’s optional WASM and Rego without an application transaction or BLS attestation. SDK v1.2.2’s `simulateTask` wrapper still uses the old schema. You can also test individual components:
 - `newt_simulatePolicy` — test Rego policy logic with provided inputs
 - `newt_simulatePolicyData` — test a WASM data oracle
 - `newton-cli regorus eval` — evaluate Rego locally with Newton crypto extensions

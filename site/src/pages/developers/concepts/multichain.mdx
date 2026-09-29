@@ -112,6 +112,8 @@ When creating a task for a destination chain:
 ```typescript
 const { result } = await walletClient.evaluateIntentDirect({
   policyClient: '0x...', // PolicyClient on destination chain
+  wasmArgs: ['0x'], // One pure-Rego policy; align with the actual set
+  timeout: 30,
   intent: {
     from: '0x...',
     to: '0x...',

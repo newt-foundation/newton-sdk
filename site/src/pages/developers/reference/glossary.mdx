@@ -49,6 +49,9 @@ An EigenLayer node registered with the Newton AVS that independently evaluates t
 ### Policy
 A Rego program that defines the conditions an Intent must meet to be approved. Policies are stored on IPFS and referenced by CID. They access `data.params` (configuration) and `data.wasm` (runtime oracle data). See also: [Writing Policies](/developers/guides/writing-policies).
 
+### Policy set
+An ordered list of deployed policies and per-policy configurations owned by a PolicyClient. Every policy must allow. Replacement advances the revision and changes the set ID, invalidating old attestations. Tasks freeze the set at admission.
+
 ### PolicyClient
 A smart contract that validates Newton attestations before executing transactions. Created by inheriting the `NewtonPolicyClient` Solidity mixin. See also: [Smart Contract Integration](/developers/guides/smart-contract-integration).
 
@@ -63,7 +66,7 @@ The policy language used by Newton Protocol (originally from Open Policy Agent).
 ## T
 
 ### Task
-The atomic evaluation unit in Newton — pairs an Intent with its Policy and configuration. Each Task is either compliant or non-compliant. See also: [Core Concepts](/developers/overview/core-concepts).
+The atomic evaluation unit in Newton — pairs an Intent with a frozen ordered policy set, ID, and revision. Each Task is either compliant or non-compliant. See also: [Core Concepts](/developers/overview/core-concepts).
 
 ## W
 

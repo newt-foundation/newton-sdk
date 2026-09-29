@@ -8,7 +8,7 @@ import { Card } from 'vocs'
 
 # Deploying with CLI [Build, simulate, and deploy Newton policies with newton-cli, then wire a tested PolicyClient with Foundry and cast]
 
-This guide starts from a scaffolded Newton policy, proves its allow and deny behavior locally, deploys PolicyData and Policy contracts, and then wires an existing PolicyClient.
+This guide starts from a scaffolded Newton policy, proves its allow and deny behavior locally, deploys independent Policy contracts, and then wires an existing PolicyClient.
 
 :::warning
 Deployment uploads artifacts and sends transactions. Finish local simulation first, review the target chain and transactions, and use a funded testnet signer before broadcasting.
@@ -25,6 +25,7 @@ Deployment uploads artifacts and sends transactions. Finish local simulation fir
 Run the toolchain check before building:
 
 ```bash
+newtup
 newton-cli --version
 newton-cli doctor
 ```
@@ -43,7 +44,7 @@ export PRIVATE_KEY=0xYourDeploymentKey
 
 Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent.
 
-`newton-cli policy deploy` uses the Newton upload proxy by default. Direct Pinata upload is optional and requires both `PINATA_JWT` and `PINATA_GATEWAY` in the same protected environment.
+`newton-cli policy deploy` uses the Newton upload proxy by default. In the CLI 0.7.2 integration test, upload required `API_KEY` in the process environment even after dashboard login. Inject it through your secret manager or protected shell environment; do not print it or place it in browser code. Gateway SDK examples use `NEWTON_API_KEY`, a separate application environment-variable name. Direct Pinata upload is optional and requires both `PINATA_JWT` and `PINATA_GATEWAY` in the same protected environment.
 
 ## Step 1 — Build the policy
 
@@ -95,24 +96,61 @@ policies/transfer-limit/
     policy.rego
 ```
 
-## Step 4 — Deploy PolicyData and Policy
+## Step 4 — Deploy each policy
 
-The orchestrated deploy generates CIDs, uploads policy artifacts, deploys PolicyData, and deploys the Policy bound to it:
+Deploy each independent policy and record its artifact CIDs, code hash, address, receipt, and deployed bytecode. See the [compatibility record](/developers/reference/contract-addresses#policy-set-compatibility) before using a CLI deployment command against a policy-set factory.
 
 ```bash
 newton-cli policy deploy -p policies/transfer-limit
 ```
 
-Record:
+A zero exit status or uploaded CIDs alone is not proof of deployment. CLI 0.7.2 was observed uploading artifacts without reporting an address, then returning `Create2Failed` on a retry. The cause is unconfirmed. Check the deterministic address and existing code before retrying.
 
-- `dist/policy_cids.json`
-- PolicyData address or addresses, in order
-- Policy address
-- Chain ID and expiration configuration
+### Pure-Rego artifacts
 
-If the policy has `secrets_schema.json`, the CLI includes it automatically. Confirm `secretsSchemaCid` is present in `dist/policy_cids.json` before uploading secrets.
+A pure-Rego policy needs no dummy WASM or separately deployed PolicyData contract. The pinned factory takes these fields:
 
-Useful reuse options include `--skip-cids` and `--skip-data --policy-data-address 0x...`. Preserve PolicyData address order for composite policies because evaluation is positional.
+| Field | Value |
+|---|---|
+| `entrypoint` | The policy's Rego entrypoint |
+| `policyCid` | CID of the exact Rego bytes |
+| `schemaCid` | Policy parameter schema CID |
+| `wasmCid` | Empty string for pure-Rego |
+| `secretsSchemaCid` | Empty string for pure-Rego |
+| `metadataCid` | Policy metadata CID |
+| `owner` | Policy owner address |
+| `policyCodeHash` | Keccak-256 of the exact Rego bytes |
+
+For an oracle-backed policy, `wasmCid` and optional `secretsSchemaCid` belong to that Policy contract. Each policy owns at most one WASM module.
+
+### Direct factory fallback
+
+Direct factory deployment succeeded for the unchanged artifacts in the Sepolia integration. This is a fallback for the pinned ABI, not a diagnosed CLI fix. Set the variables below from your reviewed artifacts and deployment record. Empty WASM and secrets CIDs select pure-Rego.
+
+```bash
+# Hash exact bytes, including trailing newlines.
+POLICY_CODE_HASH=$(xxd -p policies/transfer-limit/dist/policy.rego | tr -d '\n' | sed 's/^/0x/' | cast keccak)
+PREDICTED=$(cast call "$POLICY_FACTORY" \
+  'computePolicyAddress(string,string,string,string,string,string,address,bytes32)(address)' \
+  "$ENTRYPOINT" "$POLICY_CID" "$SCHEMA_CID" "" "" "$METADATA_CID" "$POLICY_OWNER" "$POLICY_CODE_HASH" \
+  --rpc-url "$RPC_URL")
+cast code "$PREDICTED" --rpc-url "$RPC_URL"
+```
+
+If code already exists, verify its artifacts, owner, code hash, and factory registration and reuse it only if they match. If the address is empty, deploy with the same arguments:
+
+```bash
+cast send "$POLICY_FACTORY" \
+  'deployPolicy(string,string,string,string,string,string,address,bytes32)' \
+  "$ENTRYPOINT" "$POLICY_CID" "$SCHEMA_CID" "" "" "$METADATA_CID" "$POLICY_OWNER" "$POLICY_CODE_HASH" \
+  --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+cast code "$PREDICTED" --rpc-url "$RPC_URL"
+cast call "$POLICY_FACTORY" 'isPolicy(address)(bool)' "$PREDICTED" --rpc-url "$RPC_URL"
+```
+
+Require a successful transaction receipt, nonempty code, and `isPolicy == true` before continuing. Repeating a deterministic deployment can itself cause `Create2Failed`.
+
+
 
 :::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
@@ -138,27 +176,21 @@ newton-cli --chain-id "$CHAIN_ID" deployments show
 
 ## Step 6 — Bind policy and parameters
 
-While the local deployer still owns the PolicyClient, set its Policy address:
+While the local deployer owns the client, replace its complete policy set with one call. Set `POLICY_0`, `POLICY_1`, and the client address to reviewed deployments. Each params file must match its policy schema.
 
 ```bash
-cast send 0xPOLICY_CLIENT \
-  "setPolicyAddress(address)" 0xPOLICY \
-  --rpc-url "$RPC_URL" \
-  --private-key "$PRIVATE_KEY"
+PARAMS_0=$(cast from-utf8 "$(cat policies/first/configs/params.json)")
+PARAMS_1=$(cast from-utf8 "$(cat policies/second/configs/params.json)")
+cast send "$POLICY_CLIENT" \
+  'setPolicies((address,(bytes,uint32))[])' \
+  "[($POLICY_0,($PARAMS_0,25)),($POLICY_1,($PARAMS_1,25))]" \
+  --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+cast call "$POLICY_CLIENT" \
+  'getPolicySetSnapshot()(bytes32,uint64,(address,(bytes,uint32))[])' \
+  --rpc-url "$RPC_URL"
 ```
 
-If the Rego policy reads `data.params.*`, serialize the flat JSON that matches `params_schema.json` and call `setPolicy` with a non-zero expiration:
-
-```bash
-PARAMS_HEX=$(cast --from-utf8 "$(cat policies/transfer-limit/configs/params.json)")
-
-cast send 0xPOLICY_CLIENT \
-  "setPolicy((bytes,uint32))" "($PARAMS_HEX,1000)" \
-  --rpc-url "$RPC_URL" \
-  --private-key "$PRIVATE_KEY"
-```
-
-Choose `expireAfter` for the target chain and application. Calling `setPolicy` produces a new `policyId`; verify it immediately and update any recorded handoff or application configuration.
+The expiry of 25 blocks is illustrative. Choose an application-appropriate window. Record the returned ID, revision, and ordered specs together. Every replacement, including an identical one, advances the revision and invalidates old attestations.
 
 ## Step 7 — Transfer ownership for dashboard operations
 
@@ -174,7 +206,7 @@ cast send 0xPOLICY_CLIENT \
 Verify `getOwner()` on-chain. `PolicyClientRegistry.setClientOwner` changes the registry record; it is not a substitute for `setPolicyClientOwner` on the contract.
 
 :::warning
-After ownership transfer, the local deployer can no longer call owner-only `setPolicy` or `setPolicyAddress`. Plan policy and parameter updates before transfer. If the application treats clients as replaceable, deploy and wire a new client for later changes.
+After ownership transfer, only the new owner can call `setPolicies`. That owner can replace the complete set and its parameters on the same client; a new client is not required for routine configuration changes.
 :::
 
 ## Step 8 — Register with the dashboard user (coming soon)
@@ -185,29 +217,17 @@ PolicyClient registration is temporarily omitted from this guide. After [newt-fo
 
 ## Step 9 — Upload secrets when used
 
-Only upload secrets after:
+For oracle-backed policies, verify the Policy contract's `secretsSchemaCid`, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client. Use [the gateway secrets API](/developers/reference/rpc-api#newt_storeencryptedsecrets) for the selected policy-set release. Do not reuse legacy CLI flags that target separate PolicyData contracts without checking compatibility.
 
-- PolicyData has the intended secrets schema CID
-- The PolicyClient address is final
-- `getOwner()` matches the dashboard identity behind the API key
-- The secrets JSON matches the schema
-
-```bash
-newton-cli --chain-id "$CHAIN_ID" secrets upload \
-  --secrets-file /secure/secrets/transfer-limit.json \
-  --policy-client 0xPOLICY_CLIENT \
-  --policy-data-address 0xPOLICY_DATA
-```
-
-Keep the secrets file outside tracked source. Do not print the file or API key while diagnosing upload problems.
+Pure-Rego policies skip this step. Keep secrets outside tracked source and never print them while diagnosing uploads.
 
 ## Step 10 — Verify before live evaluation
 
 Check these values on-chain:
 
 - PolicyClient TaskManager matches the target Newton deployment
-- Policy address and `policyId` are non-zero and current
-- Params and `expireAfter` are correct
+- `getPolicySetSnapshot()` returns the expected nonzero ID, revision, and ordered policies
+- Each policy has the intended params and nonzero `expireAfter`
 - `getOwner()` is the expected wallet
 - Registry record matches the dashboard user when registration is available and required
 - Client-scoped secrets exist when the WASM provider requires them

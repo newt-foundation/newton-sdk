@@ -26,7 +26,7 @@ You write rules (policies) that define when a transaction should be allowed. Whe
 ```mermaid
 flowchart LR
     A[User submits Intent] --> B[Newton Gateway]
-    B --> C[AVS Operators evaluate Policy]
+    B --> C[AVS Operators evaluate policy set]
     C --> D[BLS Attestation returned]
     D --> E[Smart contract verifies proof]
     E --> F[Transaction executes]
@@ -44,6 +44,14 @@ Policies can reference two data sources:
 
 You write policies in [Step 2 of the integration guide](/developers/guides/writing-policies). See the [Rego syntax guide](/developers/advanced/rego-syntax-guide) for language reference.
 
+### Policy set
+
+A client owns an ordered list of policy specs. Each spec contains a deployed Policy address and `{ policyParams, expireAfter }`. Every policy must allow for the aggregate `allowed` result to be true. Order and repeated entries matter.
+
+Owner `setPolicies` atomically replaces the entire list. Every successful replacement increments the revision, including identical replacements. The set ID commits to chain, client, revision, and ordered configuration, so reconfiguration invalidates previous attestations. Read `getPolicySetSnapshot()` for a consistent view.
+
+Each Policy carries at most one optional WASM module. Pure-Rego policies use no WASM; they still need an empty `wasmArgs` slot. Outputs are not merged across policies.
+
 ### Intent
 
 An **Intent** is a proposed transaction submitted for policy evaluation. It contains standard EVM fields:
@@ -57,11 +65,11 @@ An **Intent** is a proposed transaction submitted for policy evaluation. It cont
 | `chain_id` | Target chain ID |
 | `function_signature` | ABI-encoded function signature |
 
-You construct Intents when calling [`simulateTask`](/developers/reference/sdk-reference) or [`submitEvaluationRequest`](/developers/reference/sdk-reference) in the SDK.
+You construct Intents when calling [`simulatePolicy`](/developers/reference/sdk-reference) or [`submitEvaluationRequest`](/developers/reference/sdk-reference) in the SDK.
 
 ### Task
 
-A **Task** pairs an Intent with its Policy for evaluation. Tasks are the atomic unit of evaluation in Newton — each Task is either **compliant** or **non-compliant**. You can track task status via the [RPC API](/developers/reference/rpc-api), [Newton Explorer](/developers/resources/newton-explorer), or programmatically with the [Explorer API](/developers/reference/explorer-api).
+A **Task** pairs an Intent with a frozen ordered policy set, its ID, and its revision for evaluation. Tasks are the atomic unit of evaluation in Newton — each Task is either **compliant** or **non-compliant**. You can track task status via the [RPC API](/developers/reference/rpc-api), [Newton Explorer](/developers/resources/newton-explorer), or programmatically with the [Explorer API](/developers/reference/explorer-api).
 
 ### Attestation
 
@@ -95,10 +103,10 @@ flowchart TD
 
 ::::steps
 ### Developer deploys a Policy
-    Publish a reusable policy to the Newton registry with Rego logic, schema, and optional PolicyData dependencies. The policy is stored on IPFS and referenced by CID. See [Deploying with CLI](/developers/guides/deploying-with-cli).
+    Publish each reusable Policy with Rego, schema, metadata, and optional WASM and secrets-schema CIDs. The policy is stored on IPFS and referenced by CID. See [Deploying with CLI](/developers/guides/deploying-with-cli).
   
 ### User configures a PolicyClient
-    Deploy a PolicyClient smart contract with a chosen policy, configuration parameters (thresholds, allowlists), and expiration settings. See [Smart Contract Integration](/developers/guides/smart-contract-integration).
+    Configure a PolicyClient with `setPolicies`: an ordered list of independently deployed policies, each with its own parameters and expiration. See [Smart Contract Integration](/developers/guides/smart-contract-integration).
   
 ### Caller submits a Task
     An Intent is paired with the PolicyClient and sent to the Newton Gateway via the [SDK](/developers/reference/sdk-reference) or [RPC API](/developers/reference/rpc-api).
@@ -125,8 +133,8 @@ When your smart contract receives an attestation, you validate it using one of t
 
 | Method | Function | Trade-off |
 |--------|----------|-----------|
-| **Standard** | `_validateAttestation(attestation, proof)` | Uses PolicyClientRegistry lookup — more gas but automatically resolves contract configuration. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
-| **Direct** | `_validateAttestationDirect(attestation, proof)` | Bypasses registry — less gas but requires the contract to manage its own policy reference. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
+| **Standard** | `_validateAttestation(attestation, proof)` | Checks an attestation already committed by the aggregator. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
+| **Direct** | `_validateAttestationDirect(attestation, proof)` | Verifies the task, response, and BLS signatures directly on-chain. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
 
 ## Supported Chains
 

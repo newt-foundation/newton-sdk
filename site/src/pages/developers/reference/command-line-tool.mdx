@@ -265,6 +265,10 @@ newton-cli --chain-id 84532 policy-client register \
 
 #### `set-policy`
 
+:::warning
+Legacy single-policy command. For policy-set clients, use owner `setPolicies(PolicySpec[])` via [Foundry or cast](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters). Do not assume CLI 0.7.2 can configure the new ABI.
+:::
+
 Sets or updates the policy on a PolicyClient contract (owner-only). Returns a `policyId`.
 
 **Parameters**
@@ -285,6 +289,8 @@ newton-cli --chain-id 84532 policy-client set-policy \
 ```
 
 #### `set-policy-params`
+
+This command describes the legacy interface. A policy-set parameter update replaces the complete ordered set with `setPolicies`, advancing its revision even if values are identical.
 
 Sets policy parameters for a policy client contract, including expiration settings.
 
@@ -708,7 +714,7 @@ A typical local-first workflow for integrating a new smart contract with Newton:
 | 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy PolicyData + Policy after approval |
 | 5 | `forge build && forge test` | Build and adversarially test the application PolicyClient |
 | 6 | `forge script ... --broadcast` | Deploy the tested PolicyClient after approval |
-| 7 | `cast send ... setPolicyAddress/setPolicy` | Bind policy and params while the local deployer is owner |
+| 7 | `cast send ... setPolicies` | Configure ordered policies and params while the local deployer is owner |
 | 8 | `cast send ... registerClient` | Register only when the application requires it |
 | 9 | `cast send ... setPolicyClientOwner` | Transfer ownership to the dashboard login wallet when required |
 | 10 | `newton-cli secrets upload` | Upload client-scoped secrets after owner and schema checks |
@@ -764,3 +770,10 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
 <Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
   Interact with the Gateway directly via JSON-RPC
 </Card>
+
+
+## Policy-set release notes
+
+See the [compatibility record](/developers/reference/contract-addresses#policy-set-compatibility) before using legacy PolicyData deployment or migration commands. The pinned protocol stores optional WASM and secrets-schema CIDs on each Policy.
+
+In the reported CLI 0.7.2 test, uploads needed process `API_KEY` despite dashboard login. Help output could render sensitive environment values, so redact diagnostics and do not publish raw help output from that release. Credential rendering and incomplete deploy success reporting are CLI defects, not fixed by these docs. Require an address, successful receipt, and deployed code; see the [verified factory fallback](/developers/guides/deploying-with-cli#direct-factory-fallback).
