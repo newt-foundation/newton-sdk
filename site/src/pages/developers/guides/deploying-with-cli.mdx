@@ -104,8 +104,6 @@ Deploy each independent policy and record its artifact CIDs, code hash, address,
 newton-cli policy deploy -p policies/transfer-limit
 ```
 
-A zero exit status or uploaded CIDs alone is not proof of deployment. CLI 0.7.2 was observed uploading artifacts without reporting an address, then returning `Create2Failed` on a retry. The cause is unconfirmed. Check the deterministic address and existing code before retrying.
-
 ### Pure-Rego artifacts
 
 A pure-Rego policy needs no dummy WASM or separately deployed PolicyData contract. The pinned factory takes these fields:
