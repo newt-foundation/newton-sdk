@@ -44,7 +44,7 @@ export PRIVATE_KEY=0xYourDeploymentKey
 
 Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent.
 
-`newton-cli policy deploy` uses the Newton upload proxy by default. In the CLI 0.7.2 integration test, upload required `API_KEY` in the process environment even after dashboard login. Inject it through your secret manager or protected shell environment; do not print it or place it in browser code. Gateway SDK examples use `NEWTON_API_KEY`, a separate application environment-variable name. Direct Pinata upload is optional and requires both `PINATA_JWT` and `PINATA_GATEWAY` in the same protected environment.
+Provide any CLI upload credentials through your secret manager or protected shell environment. Gateway SDK examples use `NEWTON_API_KEY`, a separate application environment-variable name.
 
 ## Step 1 — Build the policy
 
