@@ -1,0 +1,259 @@
+---
+title: "Xerberus Portfolio What-If"
+description: "Use Xerberus portfolio simulations in Newton policies to deny trades that concentrate the book or make it harder to exit."
+keywords:
+  - xerberus
+  - portfolio simulation
+  - concentration
+  - hhi
+  - newton vault policies
+showAskAi: false
+---
+
+# Xerberus Portfolio What-If [Use Xerberus portfolio simulations in Newton policies to deny trades that concentrate the book or make it harder to exit.]
+
+This policy catches transactions that look fine in isolation but make the **portfolio** riskier. Using [Xerberus](https://xerberus.io), it simulates the managed book before and after a proposed change and denies one that:
+
+- pushes the largest position past a concentration limit while growing it,
+- raises the token Herfindahl-Hirschman index (HHI) too far,
+- shrinks the share of the book that can be exited within 30 days, or
+- lengthens the portfolio's slowest exit.
+
+Xerberus returns deterministic exposure and liquidity deltas here. It does not rerun a systemic rating or a tail-risk model.
+
+## Deployment
+
+| Field | Value |
+| --- | --- |
+| Pack id | `xerberus_what_if` |
+| Rego package | `xerberus_portfolio_what_if` (the `--entrypoint` is `xerberus_portfolio_what_if.allow`) |
+| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
+
+:::note
+This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+:::
+
+### Secret
+
+| Secret | Required? | Where to get it |
+| --- | --- | --- |
+| `XERBERUS_API_KEY` | Required | [xerberus.io](https://xerberus.io) |
+
+Sent by the oracle as the `x-api-key` request header.
+
+## Data Inputs
+
+One MCP `tools/call` of the `what_if` tool against `https://mcp.xerberus.io/enterprise/mcp`, using the same transport as [Xerberus Liquidity Exit](/developers/vaults/policies/xerberus-liquidity-exit#data-inputs).
+
+Position shares are derived from `usd / book_usd`, so the unit never depends on whether Xerberus reports `pct` as a fraction or a percentage. Deltas come from Xerberus's `delta` block and fall back to `after − before`.
+
+| Field | What it means | Why the policy uses it |
+| --- | --- | --- |
+| `wallets` / `add` / `remove` | Echoed from `wasmArgs`. Addresses are lowercased | Gated by `require_intent_party_in_wallets` |
+| `is_risk_reducing` | `true` for a pure removal with no additions | The staleness exemption |
+| `book_usd_before` / `book_usd_after` | Portfolio value either side of the change | Reviewer context |
+| `post_largest_token` / `post_largest_token_pct` | Largest position after the change, and its share of the book in percent | Gated by `max_post_token_share_pct` |
+| `pre_largest_token_pct` | That token's share before the change (0 if outside the reported top positions) | Concentration only denies when it grows |
+| `hhi_before` / `hhi_after` / `hhi_delta` | Token HHI (0–1 scale) and its change | Gated by `max_hhi_delta` |
+| `ladder_30d_before_pct` / `ladder_30d_after_pct` / `ladder_30d_delta_pp` | Share of the book exitable within 30 days, and its change in percentage points | Gated by `min_ladder_30d_delta_pp` |
+| `slowest_exit_days_before` / `slowest_exit_days_after` / `slowest_exit_delta_days` | Slowest token exit and its change | Gated by `max_slowest_exit_delta_days` |
+| `issues` / `issues_count` | Simulation issues, flattened to strings (first 10), and their count | Gated by `deny_on_issues` |
+| `requested_window` / `data_window` / `window_honored` / `is_stale` / `data_age_seconds` | Freshness, as in [Liquidity Exit](/developers/vaults/policies/xerberus-liquidity-exit#data-inputs) | Freshness rules |
+
+## Per-call wasmArgs
+
+This pack ships **no `prepareQuery`**: the change being simulated comes from the action, which the SDK can't price, so the curator supplies it per call.
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| `wallets` | Required | 1–10 wallet addresses that make up the managed portfolio |
+| `add` | Optional | Up to 10 `{ token, usd }` additions. At least one of `add` or `remove` must be non-empty |
+| `remove` | Optional | Up to 10 `{ token, usd }` removals. Removals with no additions count as risk-reducing |
+| `impact_pct` | Optional | Market-impact assumption, in percent |
+| `chain` | Optional | `ethereum` only today. Defaults to `ethereum` |
+| `window` | Optional | Xerberus data-window timestamp (ISO-8601). Pass the same value to every Xerberus pack |
+
+From the SDK:
+
+```typescript
+await shield.morpho.submitCap(vault, marketParams, newCap, {
+  wasmArgs: {
+    xerberus_what_if: {
+      wallets: [vault],
+      add: [{ token: '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0', usd: 1_000_000 }],
+      window,
+    },
+  },
+})
+```
+
+`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+
+## Policy Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `max_post_token_share_pct` | `number` | Concentration ceiling, in percent. The Xerberus reference design uses 50 |
+| `max_hhi_delta` | `number` | Largest tolerated HHI increase. Reference: 0.01 |
+| `min_ladder_30d_delta_pp` | `number` | Largest tolerated drop in the 30-day exitable share, in percentage points (negative). Reference: −3 |
+| `max_slowest_exit_delta_days` | `number` | Largest tolerated increase in the slowest exit, in days. Reference: 3 |
+| `deny_on_issues` | `boolean` | Deny on any simulation issue, such as an unpriced token |
+| `deny_on_stale` | `boolean` | Deny when Xerberus flags its data window as stale |
+| `max_data_age_seconds` | `number` | Oldest data window accepted |
+| `require_intent_party_in_wallets` | `boolean` | Deny unless the intent's sender or target is one of the simulated wallets |
+| `allow_stale_when_risk_reducing` | `boolean` | Let pure removals through on stale or old data |
+
+## Rego Checks
+
+| Deny reason | Condition | What it catches |
+| --- | --- | --- |
+| `oracle_error` / `malformed_oracle_output` | Oracle error, or a field the rules read is missing | Failures that must not read as "no issues" |
+| `stale_data` | `deny_on_stale` and `is_stale`, unless exempt | Decisions made on stale data |
+| `data_too_old` | `data_age_seconds > max_data_age_seconds`, unless exempt | Data older than you accept |
+| `window_not_honored` | A window was pinned and Xerberus answered from another | Results that can't be lined up with the other Xerberus packs |
+| `concentration_limit` | Largest post-trade share over the limit **and** grown | A trade that concentrates the book |
+| `hhi_delta_limit` | `hhi_delta > max_hhi_delta` | A jump in overall token concentration |
+| `liquidity_30d_deterioration` | `ladder_30d_delta_pp < min_ladder_30d_delta_pp` | A trade that makes the book harder to exit within a month |
+| `slowest_exit_limit` | `slowest_exit_delta_days > max_slowest_exit_delta_days` | A trade that lengthens the worst-case exit |
+| `simulation_issues` | `deny_on_issues` and `issues_count > 0` | A simulation Xerberus couldn't fully run |
+| `wallets_not_bound_to_intent` | `require_intent_party_in_wallets` and neither sender nor target is a simulated wallet | A simulation of one portfolio authorizing a trade on another |
+
+### Concentration
+
+Only a change that pushes the largest position past the limit **and** grows its share denies, so a trade that trims an already-concentrated book isn't blocked by the level it's reducing.
+
+```rego
+deny contains "concentration_limit" if {
+    v.post_largest_token_pct > t.max_post_token_share_pct
+    v.post_largest_token_pct > v.pre_largest_token_pct
+}
+```
+
+### Risk-Reducing Exemption
+
+With `allow_stale_when_risk_reducing` on, a pure removal is exempt from the staleness rules, so unavailable data never stops an agent reducing exposure. The delta checks still apply, and the exemption never covers additions.
+
+```rego
+stale_exempt if {
+    t.allow_stale_when_risk_reducing
+    v.is_risk_reducing == true
+}
+
+deny contains "stale_data" if {
+    t.deny_on_stale
+    v.is_stale == true
+    not stale_exempt
+}
+```
+
+### Final Allow Rule
+
+```rego
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+## Complete Policy
+
+```rego
+package xerberus_portfolio_what_if
+
+import future.keywords
+
+default allow := false
+
+t := data.params.xerberus_what_if
+v := data.wasm.xerberus_what_if
+
+well_formed if {
+    is_array(v.wallets)
+    is_boolean(v.is_risk_reducing)
+    is_number(v.post_largest_token_pct)
+    is_number(v.pre_largest_token_pct)
+    is_number(v.hhi_delta)
+    is_number(v.ladder_30d_delta_pp)
+    is_number(v.slowest_exit_delta_days)
+    is_number(v.issues_count)
+    is_boolean(v.is_stale)
+    is_number(v.data_age_seconds)
+}
+
+stale_exempt if {
+    t.allow_stale_when_risk_reducing
+    v.is_risk_reducing == true
+}
+
+wallets_bound_to_intent if {
+    some w in v.wallets
+    w == lower(input.from)
+}
+
+wallets_bound_to_intent if {
+    some w in v.wallets
+    w == lower(input.to)
+}
+
+deny contains "oracle_error" if v.error
+
+deny contains "malformed_oracle_output" if {
+    not v.error
+    not well_formed
+}
+
+deny contains "stale_data" if {
+    t.deny_on_stale
+    v.is_stale == true
+    not stale_exempt
+}
+
+deny contains "data_too_old" if {
+    v.data_age_seconds > t.max_data_age_seconds
+    not stale_exempt
+}
+
+deny contains "window_not_honored" if v.window_honored == false
+
+deny contains "concentration_limit" if {
+    v.post_largest_token_pct > t.max_post_token_share_pct
+    v.post_largest_token_pct > v.pre_largest_token_pct
+}
+
+deny contains "hhi_delta_limit" if v.hhi_delta > t.max_hhi_delta
+
+deny contains "liquidity_30d_deterioration" if {
+    is_number(v.ladder_30d_delta_pp)
+    v.ladder_30d_delta_pp < t.min_ladder_30d_delta_pp
+}
+
+deny contains "slowest_exit_limit" if v.slowest_exit_delta_days > t.max_slowest_exit_delta_days
+
+deny contains "simulation_issues" if {
+    t.deny_on_issues
+    v.issues_count > 0
+}
+
+deny contains "wallets_not_bound_to_intent" if {
+    t.require_intent_party_in_wallets
+    is_array(v.wallets)
+    not wallets_bound_to_intent
+}
+
+allow if {
+    not v.error
+    well_formed
+    count(deny) == 0
+}
+```
+
+Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.xerberus_what_if`. See [Policies](/developers/vaults/sdk/policies).
+
+## Notes
+
+- **The reference scenario denies.** Acquiring $1M of wstETH on a $17.8M treasury moves wstETH from 50.9% to 53.5% of the book, raises HHI by 0.0128, cuts the 30-day exitable share by 4.32 pp and lengthens the slowest exit by 5.26 days. That trips every portfolio limit at the reference thresholds, even though the standalone [exit quote](/developers/vaults/policies/xerberus-liquidity-exit) is under a week.
+- **The change is caller-supplied.** `add` and `remove` describe the trade; your intent builder is responsible for passing the real one.
+- **Pin the window when composing** with the other Xerberus packs, so all results come from one snapshot.
+- A token outside the reported top positions counts as a 0% share before the change. That can only make a trade look more concentrating, never less.

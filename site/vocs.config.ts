@@ -148,6 +148,15 @@ export default defineConfig({
             text: 'Pharos: Redemption',
             link: '/developers/vaults/policies/pharos-redemption',
           },
+          {
+            text: 'Xerberus: Liquidity Exit',
+            link: '/developers/vaults/policies/xerberus-liquidity-exit',
+          },
+          { text: 'Xerberus: What-If', link: '/developers/vaults/policies/xerberus-what-if' },
+          {
+            text: 'Xerberus: Common Cause',
+            link: '/developers/vaults/policies/xerberus-common-cause',
+          },
         ],
       },
       {
