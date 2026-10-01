@@ -122,87 +122,20 @@ newton-cli policy-files generate-cids \
 
 ---
 
-### Policy Data
-
-#### `deploy`
-
-Deploys a policy data contract with the specified policy CIDs.
-
-**Parameters**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--policy-cids` | Yes | Path to the policy CIDs JSON file |
-| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
-| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
-
-**Usage**
-
-```bash
-newton-cli policy-data deploy --policy-cids policy-files/policy_cids.json
-```
-
-#### `simulate`
-
-Simulates WASM execution without deploying. Supports both local and gateway-based simulation.
-
-**Local simulation:**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--wasm-file` | Yes | Path to the compiled policy WASM file |
-| `--input-json` | Yes | JSON input for the simulation |
-
-```bash
-newton-cli --chain-id 84532 policy-data simulate \
-  --wasm-file policy-files/policy.wasm \
-  --input-json "{}"
-```
-
-**Gateway simulation:**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--policy-data-address` | Yes | Deployed PolicyData contract address |
-| `--wasm-args` | Yes | JSON arguments for the WASM provider |
-| `--gateway-url` | Yes | Gateway RPC URL |
-| `--api-key` | Yes | Newton API key |
-
-```bash
-newton-cli --chain-id 84532 policy-data simulate \
-  --policy-data-address 0x... \
-  --wasm-args '{"base_symbol":"BTC"}' \
-  --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
-```
-
----
-
 ### Policy
 
 #### `deploy`
 
-Deploys a policy contract with the specified policy CIDs and policy data address.
+Builds and deploys a policy project, including an optional WASM module.
 
 :::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
 
-**Parameters**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--policy-cids` | Yes | Path to the policy CIDs JSON file |
-| `--policy-data-address` | Yes | Address of the deployed policy data contract |
-| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
-| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
-
 **Usage**
 
 ```bash
-newton-cli policy deploy \
-  --policy-cids policy-files/policy_cids.json \
-  --policy-data-address "0xab23A45365F0BF660887B54b42787fA5519eb574"
+newton-cli policy deploy -p policies/my-policy
 ```
 
 #### `simulate`
@@ -233,14 +166,14 @@ newton-cli --chain-id 84532 policy simulate \
 ```
 
 :::note
-`policy simulate` and `policy-data simulate` (gateway mode) delegate to operators for the full data pipeline. Use them to debug Rego logic before going live.
+`policy simulate` evaluates the policy's Rego and optional WASM module. Use it to debug policy logic before going live.
 :::
 
 ---
 
 ### Policy Client
 
-Most `policy-client` subcommands require `--registry` (the `PolicyClientRegistry` contract address) and `--client` (the `PolicyClient` contract address). The exception is `set-policy-params`, which uses `--policy-client` directly.
+Most `policy-client` subcommands require `--registry` (the `PolicyClientRegistry` contract address) and `--client` (the `PolicyClient` contract address).
 
 #### `register`
 
@@ -261,60 +194,6 @@ Registers a PolicyClient contract with the PolicyClientRegistry. Required for id
 newton-cli --chain-id 84532 policy-client register \
   --registry 0x... \
   --client 0x...
-```
-
-#### `set-policy`
-
-:::warning
-Legacy single-policy command. For policy-set clients, use owner `setPolicies(PolicySpec[])` via [Foundry or cast](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters). Do not assume CLI 0.7.2 can configure the new ABI.
-:::
-
-Sets or updates the policy on a PolicyClient contract (owner-only). Returns a `policyId`.
-
-**Parameters**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--client` | Yes | Address of the policy client contract |
-| `--policy` | Yes | Address of the deployed policy contract |
-| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
-| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
-
-**Usage**
-
-```bash
-newton-cli --chain-id 84532 policy-client set-policy \
-  --client 0x... \
-  --policy 0x...
-```
-
-#### `set-policy-params`
-
-This command describes the legacy interface. A policy-set parameter update replaces the complete ordered set with `setPolicies`, advancing its revision even if values are identical.
-
-Sets policy parameters for a policy client contract, including expiration settings.
-
-:::warning
-Calling `set-policy-params` internally calls `setPolicy(PolicyConfig)` which re-registers with the Policy contract and returns a **new** `policyId`. Any previously recorded `policyId` becomes stale.
-:::
-
-**Parameters**
-
-| Flag | Required | Description |
-| --- | --- | --- |
-| `--policy-client` | Yes | Address of the policy client contract |
-| `--policy-params` | Yes | Path to the policy params data JSON file |
-| `--expire-after` | Yes | Number of blocks after which the policy params expire |
-| `--private-key` | No | Deployer private key (falls back to `PRIVATE_KEY` env var) |
-| `--rpc-url` | No | RPC endpoint URL (falls back to `RPC_URL` env var) |
-
-**Usage**
-
-```bash
-newton-cli --chain-id 84532 policy-client set-policy-params \
-  --policy-client 0x... \
-  --policy-params policy-files/policy_params_data.json \
-  --expire-after 1000
 ```
 
 #### `status`
@@ -756,9 +635,6 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
 :::details[HPKE private key not configured]
   The `secrets upload` command encrypts client-side. The gateway's HPKE public key is fetched automatically via `newt_getSecretsPublicKey` — no local key configuration is needed.
 :::
-:::details[IncompatiblePolicyVersion]
-  Your policy was deployed with an older factory. Deploy a new policy via the latest factory, then follow the [deployment guide](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters) to bind it while an available signer still owns the PolicyClient. See [Version Compatibility](/developers/guides/smart-contract-integration#version-compatibility).
-:::
 ## Next Steps
 
 <Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploy with CLI">
@@ -770,10 +646,3 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
 <Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
   Interact with the Gateway directly via JSON-RPC
 </Card>
-
-
-## Policy-set release notes
-
-See the [compatibility record](/developers/reference/contract-addresses#policy-set-compatibility) before using legacy PolicyData deployment or migration commands. The pinned protocol stores optional WASM and secrets-schema CIDs on each Policy.
-
-In the reported CLI 0.7.2 test, uploads needed process `API_KEY` despite dashboard login. Help output could render sensitive environment values, so redact diagnostics and do not publish raw help output from that release. Credential rendering and incomplete deploy success reporting are CLI defects, not fixed by these docs. Require an address, successful receipt, and deployed code; see the [verified factory fallback](/developers/guides/deploying-with-cli#direct-factory-fallback).

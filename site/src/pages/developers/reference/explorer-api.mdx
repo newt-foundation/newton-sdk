@@ -389,8 +389,3 @@ export async function getTask(taskId: `0x${string}`, network: Network = 'testnet
 <Card icon="activity" to="/developers/resources/newton-explorer" title="Newton Explorer">
   Field definitions and the task lifecycle
 </Card>
-
-
-## Policy-set gateway distinction
-
-Explorer’s indexed `evaluation_result` field is an Explorer API schema, not the gateway TaskResponse ABI. Policy-set gateway responses use boolean `allowed` and ordered `policy_task_data` entries. Do not decode an attestation using Explorer’s legacy result shape or assume the indexer has migrated because the gateway has.

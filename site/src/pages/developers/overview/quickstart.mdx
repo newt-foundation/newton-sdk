@@ -87,4 +87,26 @@ sequenceDiagram
 
 Simulation produces no BLS signatures and sends no application transaction. For live authorization, sign the exact intent, call `evaluateIntentDirect`, and validate the returned task and attestation in your contract before executing. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
-SDK v1.2.2's `simulateTask` wrapper still targets the old gateway schema; use `simulatePolicy` as shown here. See [RPC API](/developers/reference/rpc-api#newt_simulatetask) for the provided-output alternative.
+Use `simulatePolicy` as shown here rather than the older `simulateTask` wrapper, which still targets the old gateway schema. See [RPC API](/developers/reference/rpc-api#newt_simulatetask) for the provided-output alternative.
+
+## Next steps
+
+<Card icon="book" to="/developers/guides/integration-guide" title="Integration Guide">
+  Build and deploy a full Newton integration — policy, contract, and frontend
+</Card>
+
+<Card icon="terminal" to="/developers/overview/agent-quickstart" title="Build with an Agent">
+  Turn a product brief into a locally tested policy, PolicyClient, and optional Next.js demo
+</Card>
+
+<Card icon="lightbulb" to="/developers/overview/core-concepts" title="Core Concepts">
+  Understand policies, intents, tasks, and attestations
+</Card>
+
+<Card icon="code" to="/developers/reference/sdk-reference" title="SDK Reference">
+  Full TypeScript SDK documentation
+</Card>
+
+<Card icon="play" to="https://demo.newton.xyz/" title="Try the demo">
+  See a live sanctions-checked transfer app built with the Newton SDK
+</Card>

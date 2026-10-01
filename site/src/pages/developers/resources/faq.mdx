@@ -48,7 +48,7 @@ Two-phase consensus (Prepare-Commit) takes approximately **4 seconds**. See [Con
 :::
 
 :::details[Can I test policies without deploying on-chain?]
-Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set’s optional WASM and Rego without an application transaction or BLS attestation. SDK v1.2.2’s `simulateTask` wrapper still uses the old schema. You can also test individual components:
+Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set’s optional WASM and Rego without an application transaction or BLS attestation. You can also test individual components:
 - `newt_simulatePolicy` — test Rego policy logic with provided inputs
 - `newt_simulatePolicyData` — test a WASM data oracle
 - `newton-cli regorus eval` — evaluate Rego locally with Newton crypto extensions
@@ -95,12 +95,6 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 - Ensure your `Authorization: Bearer <key>` header is present
 - Check that your key has the required permission level (`rpc_read` for simulations, `rpc_write` for secret storage)
 - Verify the key has not been revoked
-:::
-
-:::details[IncompatiblePolicyVersion — version mismatch]
-**Cause:** Your PolicyClient contract was deployed with an older SDK version that is incompatible with the current protocol.
-
-**Fix:** Run `newton-cli version check-compatibility` to identify the issue, then `newton-cli version migrate` for automated migration.
 :::
 
 :::details[WASM oracle returns empty or unexpected data]

@@ -88,22 +88,3 @@ Ethereum mainnet contracts are deployed but require coordination before producti
 <Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
   Interact with the Gateway directly
 </Card>
-
-
-## Policy-set compatibility
-
-Treat compatibility as a combination of client contracts, TaskManager, factory, gateway, and SDK. Matching version strings alone does not establish ABI support.
-
-| Component | Reviewed baseline | Evidence / limitation |
-|---|---|---|
-| Solidity source | [`190444581d44604e5da1da83d279acdd22841a37`](https://github.com/newt-foundation/newton-prover-avs/tree/190444581d44604e5da1da83d279acdd22841a37) | Source defines `setPolicies`, set snapshots, and ordered task/response ABIs |
-| SDK | `@newton-xyz/sdk@1.2.2` | Task methods and `simulatePolicy` support sets; `simulateTask` wrapper retains the old schema |
-| CLI | `0.7.2` in the September 29, 2026 integration report | Upload needed process `API_KEY`; deployment reporting was incomplete; direct factory deployment used as fallback |
-| Chain | Sepolia, `11155111` | Reported live allow transaction, mixed denial, deny validation, and replay rejection |
-| TaskManager | `0xecb741f4875770f9a5f060cb30f6c9eb5966ed13` | Reported `0.7.0` label but accepted policy-set ABI |
-| Policy factory | `0x528e0c97C6b4BEe3A46b5465d0F362411B01AbE4` | Reported `0.7.0` label but deployed policies used by this flow |
-| Gateway | Sepolia policy-set deployment used by that integration | Exact deployed build was not recorded; RPC documentation is source-pinned, not a claim that every gateway has that build |
-
-The integration report demonstrated all-allow execution and one mixed denial through live operators; the full truth table and configuration edge cases were local tests. It does not establish policy-set support on every network listed above. Before another deployment, record the resolved CLI version, contract commit, chain, TaskManager, configured factory, and gateway build. Verify the interface and run a live allow/deny integration against that combination.
-
-An unpinned `forge install` is not a compatibility pin. Use the [pinned Solidity setup](/developers/guides/smart-contract-integration#quick-start), verify `policyFactory()` on the TaskManager and `isPolicy(policy)` on that factory, and preserve the returned task snapshot when validating signatures.

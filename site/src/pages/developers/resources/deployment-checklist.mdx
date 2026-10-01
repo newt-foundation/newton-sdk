@@ -24,11 +24,9 @@ Use this checklist to verify your Newton Protocol integration before going to pr
   
 ### Data oracle returns valid JSON
     ```bash
-    newton-cli --chain-id 11155111 policy-data simulate \
-      --wasm-file policy.wasm \
-      --input-json '{...}'
+    newton-cli policy simulate -p policies/my-oracle
     ```
-    Confirm the output matches your policy's `data.wasm` expectations.
+    Set the oracle's input in `configs/wasm_args.json`, then confirm the output matches your policy's `data.wasm` expectations.
   
 ### Gateway simulation succeeds
     Run `newt_simulatePolicy` with realistic intent parameters, and verify aggregate and per-policy results. Simulation returns no attestation. Separately obtain live signatures and verify an allowed application transaction.
@@ -49,10 +47,19 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
   
 ### Independent policies deployed
-    Each policy has Rego, schema, metadata, code hash, and optional WASM/secrets-schema CIDs. Pure-Rego needs no PolicyData contract. Require a successful receipt, nonempty code, and registration with the TaskManager's factory.
+    ```bash
+    newton-cli policy deploy -p policies/my-policy
+    ```
+    Each policy has Rego, schema, metadata, code hash, and optional WASM/secrets-schema CIDs. Pure-Rego needs no WASM module. Require a successful receipt, nonempty code, and registration with the TaskManager's factory.
 
 ### PolicyClient configured
-    Deploy using the [pinned contract dependency](/developers/guides/smart-contract-integration), then configure the complete ordered set with owner `setPolicies`. Read `getPolicySetSnapshot()` and check ID, revision, params, order, and nonzero expirations.
+    ```bash
+    cast send "$POLICY_CLIENT" \
+      'setPolicies((address,(bytes,uint32))[])' \
+      "[(\"$POLICY_0\",(\"$PARAMS_0\",25))]" \
+      --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+    ```
+    Deploy using the [contract integration guide](/developers/guides/smart-contract-integration), then configure the complete ordered set with owner `setPolicies`. Read `getPolicySetSnapshot()` and check ID, revision, params, order, and nonzero expirations.
 
 ### Ownership and registry verified
     Verify `getOwner()` matches the intended owner. Register for identity flows where required by the target deployment; a registry owner record is separate from the client's owner authority.
@@ -118,7 +125,7 @@ newton-cli --version
 newton-cli doctor
 ```
 
-Record the exact [compatibility combination](/developers/reference/contract-addresses#policy-set-compatibility). Version labels alone are insufficient. Require a gateway task ID, aggregate verdict, and—on allow—a successful application transaction hash and state readback. Verify denial and replay leave state unchanged.
+Record the chain, TaskManager, configured factory, and gateway deployment. Require a gateway task ID, aggregate verdict, and—on allow—a successful application transaction hash and state readback. Verify denial and replay leave state unchanged.
 
 ## Policy-set validation checklist
 

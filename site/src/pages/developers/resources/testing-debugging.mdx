@@ -50,7 +50,7 @@ The policy-set endpoints resolve a configured client on the specified chain. Use
 | `newt_simulatePolicy` | Yes, each policy's optional module | Current client set and ordered oracle inputs | Per-policy verdicts and aggregate `allowed` |
 | `newt_simulateTask` | No | Current client set and ordered precomputed oracle outputs | Per-policy verdicts and aggregate `allowed` |
 
-At the [pinned protocol revision](/developers/reference/contract-addresses#policy-set-compatibility), these simulations run in-process on the gateway. They do not produce BLS quorum signatures or execute application transactions. `newt_createTask` / `newt_sendTask` exercise live operator evaluation.
+These simulations run in-process on the gateway. They do not produce BLS quorum signatures or execute application transactions. `newt_createTask` / `newt_sendTask` exercise live operator evaluation.
 
 A completed denial has `success: true, allowed: false`; a simulation error has `success: false, allowed: null`. Inspect `policies[i].policy_index`, `policy`, `allowed`, and `result` to find the denying rule. See [RPC examples](/developers/reference/rpc-api#newt_simulatepolicy).
 
