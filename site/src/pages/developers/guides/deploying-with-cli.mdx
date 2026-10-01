@@ -121,35 +121,6 @@ A pure-Rego policy needs no dummy WASM or separately deployed PolicyData contrac
 
 For an oracle-backed policy, `wasmCid` and optional `secretsSchemaCid` belong to that Policy contract. Each policy owns at most one WASM module.
 
-### Direct factory fallback
-
-Direct factory deployment succeeded for the unchanged artifacts in the Sepolia integration. This is a fallback for the pinned ABI, not a diagnosed CLI fix. Set the variables below from your reviewed artifacts and deployment record. Empty WASM and secrets CIDs select pure-Rego.
-
-```bash
-# Hash exact bytes, including trailing newlines.
-POLICY_CODE_HASH=$(xxd -p policies/transfer-limit/dist/policy.rego | tr -d '\n' | sed 's/^/0x/' | cast keccak)
-PREDICTED=$(cast call "$POLICY_FACTORY" \
-  'computePolicyAddress(string,string,string,string,string,string,address,bytes32)(address)' \
-  "$ENTRYPOINT" "$POLICY_CID" "$SCHEMA_CID" "" "" "$METADATA_CID" "$POLICY_OWNER" "$POLICY_CODE_HASH" \
-  --rpc-url "$RPC_URL")
-cast code "$PREDICTED" --rpc-url "$RPC_URL"
-```
-
-If code already exists, verify its artifacts, owner, code hash, and factory registration and reuse it only if they match. If the address is empty, deploy with the same arguments:
-
-```bash
-cast send "$POLICY_FACTORY" \
-  'deployPolicy(string,string,string,string,string,string,address,bytes32)' \
-  "$ENTRYPOINT" "$POLICY_CID" "$SCHEMA_CID" "" "" "$METADATA_CID" "$POLICY_OWNER" "$POLICY_CODE_HASH" \
-  --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
-cast code "$PREDICTED" --rpc-url "$RPC_URL"
-cast call "$POLICY_FACTORY" 'isPolicy(address)(bool)' "$PREDICTED" --rpc-url "$RPC_URL"
-```
-
-Require a successful transaction receipt, nonempty code, and `isPolicy == true` before continuing. Repeating a deterministic deployment can itself cause `Create2Failed`.
-
-
-
 :::warning
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
