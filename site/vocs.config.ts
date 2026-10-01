@@ -199,7 +199,6 @@ export default defineConfig({
           { text: 'Integration Guide', link: '/developers/guides/integration-guide' },
           { text: 'Writing Data Oracles', link: '/developers/guides/writing-data-oracles' },
           { text: 'Writing Policies', link: '/developers/guides/writing-policies' },
-          { text: 'Secrets in Oracles', link: '/developers/guides/secrets-in-oracles' },
           { text: 'Composing Policy Sets', link: '/developers/guides/composing-policy-sets' },
           { text: 'Policy Packs', link: '/developers/guides/policy-packs' },
           { text: 'Deploying with CLI', link: '/developers/guides/deploying-with-cli' },

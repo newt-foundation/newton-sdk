@@ -74,7 +74,7 @@ To use an oracle-backed Policy in an application:
 
 1. Choose or deploy the Policy whose WASM oracle supplies the signal you need.
 2. Configure that Policy as an entry in the PolicyClient's ordered set with `setPolicies`. Each entry has its own parameter bytes and expiration window. See [Smart Contract Integration](/developers/guides/smart-contract-integration#configure-the-policy-set).
-3. Upload any required API credentials as PolicyClient-scoped secrets. See [Secrets in Oracles](/developers/guides/secrets-in-oracles).
+3. Upload any required API credentials as PolicyClient-scoped secrets. See [Deploying with CLI](/developers/guides/deploying-with-cli).
 4. Pass the oracle input in the Policy's positional `wasmArgs` entry when simulating or evaluating an intent.
 5. Read the oracle output in that Policy's Rego through `data.wasm`:
 

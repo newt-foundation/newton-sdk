@@ -182,7 +182,7 @@ An oracle ships up to three schemas, each describing a distinct input:
 | Schema file | Describes | Read in Rego as |
 |-------------|-----------|-----------------|
 | `wasm_args_schema.json` | Per-call inputs passed to the oracle's `run(input)` (the `wasm_args` on each task) | — (consumed by the WASM, not Rego) |
-| `secrets_schema.json` | Scoped credentials the oracle reads via the secrets host interface (see [Secrets in Oracles](/developers/guides/secrets-in-oracles)) | — (read inside the WASM) |
+| `secrets_schema.json` | Scoped credentials the oracle reads via the secrets host interface (see [Deploying with CLI](/developers/guides/deploying-with-cli)) | — (read inside the WASM) |
 | `params_schema.json` | Policy thresholds the contract owner configures | `data.params.*` |
 
 Callers pass `wasm_args` as hex-encoded JSON on `newt_createTask` / `newt_simulatePolicyData`. Validating against this schema before submission catches malformed inputs early.

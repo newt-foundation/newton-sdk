@@ -23,7 +23,6 @@ Docs: https://docs.newton.xyz
 - [Integration Guide](https://docs.newton.xyz/developers/guides/integration-guide): End-to-end walkthrough of integrating Newton into your project.
 - [Writing Data Oracles](https://docs.newton.xyz/developers/guides/writing-data-oracles): Build WASM PolicyData oracles in JavaScript, Python, or Rust.
 - [Writing Policies](https://docs.newton.xyz/developers/guides/writing-policies): Write Rego policies for transaction authorization.
-- [Uploading & Accessing Secrets in Oracles](https://docs.newton.xyz/developers/guides/secrets-in-oracles): Declare, upload, and read API keys inside PolicyData oracles via the newton:provider/secrets host interface.
 - [Chaining Multiple Data Oracles](https://docs.newton.xyz/developers/guides/chaining-data-oracles): Compose more than one oracle under one policy — output namespacing, multi-oracle Rego, and simulation.
 - [Policy Packs](https://docs.newton.xyz/developers/guides/policy-packs): Prebuilt, deployed oracles (vaults.fyi, Webacy, RedStone, Chainalysis) and how to combine them.
 - [Deploying with CLI](https://docs.newton.xyz/developers/guides/deploying-with-cli): Deploy policies, schemas, and WASM oracles using newton-cli.

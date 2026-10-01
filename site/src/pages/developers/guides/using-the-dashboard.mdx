@@ -40,7 +40,7 @@ The policy editor is a three-pane workspace:
 - **Oracle sidebar** — add or remove data oracles. Adding more than one produces a [multi-oracle policy](/developers/guides/chaining-data-oracles); each oracle's output is namespaced under its pack id, so reference it in Rego as `data.wasm.<pack-id>.*`.
 - **Configuration** — per oracle, set:
   - **Parameters** — the thresholds your Rego reads from `data.params.<pack-id>.*` (e.g. `risk_score_floor`).
-  - **Secrets** — the API key(s) the oracle needs (e.g. `VAULTS_FYI_API_KEY`). The dashboard encrypts these client-side and uploads them per PolicyData address, exactly like [`newton-cli secrets upload`](/developers/guides/secrets-in-oracles).
+  - **Secrets** — the API key(s) the oracle needs (e.g. `VAULTS_FYI_API_KEY`). The dashboard encrypts these client-side and uploads them per PolicyData address, exactly like [`newton-cli secrets upload`](/developers/guides/deploying-with-cli).
 
 ## Simulate
 
