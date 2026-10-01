@@ -473,9 +473,9 @@ Deployment lifecycle:
 
 ## Version Compatibility
 
-This guide targets the policy-set contracts at [commit `1904445`](https://github.com/newt-foundation/newton-prover-avs/tree/190444581d44604e5da1da83d279acdd22841a37). Use the pinned dependency above and the [deployment compatibility record](/developers/reference/contract-addresses#policy-set-compatibility).
+This guide targets the policy-set contracts in the [deployment compatibility record](/developers/reference/contract-addresses#policy-set-compatibility). Use the documented dependency above with that record.
 
-Check the client interface, TaskManager, configured policy factory, gateway schema, and SDK together. A CLI version or an on-chain `version()` string alone does not prove ABI compatibility. An unpinned install can select a different interface.
+Check the client interface, TaskManager, configured policy factory, gateway schema, and SDK together. A CLI version or an on-chain `version()` string alone does not prove ABI compatibility.
 
 The owner can replace policies only with policies registered by the TaskManager's configured factory. Verify provenance with `isPolicy(policy)`. Preserve the inherited `supportsInterface` implementation instead of hardcoding the old single-policy interface ID. Legacy clients need an implementation upgrade or replacement before they expose `setPolicies`; do not send this call to a single-policy client.
 
