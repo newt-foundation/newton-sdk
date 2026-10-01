@@ -186,7 +186,7 @@ PolicyClient registration is temporarily omitted from this guide. After [newt-fo
 
 ## Step 9 — Upload secrets when used
 
-For oracle-backed policies, verify the Policy contract's `secretsSchemaCid`, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client. Use [the gateway secrets API](/developers/reference/rpc-api#newt_storeencryptedsecrets) for the selected policy-set release. Do not reuse legacy CLI flags that target separate PolicyData contracts without checking compatibility.
+For oracle-backed policies, verify the Policy contract's `secretsSchemaCid`, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client. Use [the gateway secrets API](/developers/reference/rpc-api#newt_storeencryptedsecrets) for the selected policy-set release.
 
 Pure-Rego policies skip this step. Keep secrets outside tracked source and never print them while diagnosing uploads.
 
