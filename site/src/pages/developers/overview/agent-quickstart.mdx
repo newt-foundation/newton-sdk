@@ -69,8 +69,6 @@ newton-cli doctor
 
 Record the CLI release, contract source pin, chain, TaskManager, configured factory, and gateway deployment before live work. Use the [policy-set compatibility record](/developers/reference/contract-addresses#policy-set-compatibility); version strings alone do not prove compatibility. For multiple policies, preserve their order and per-policy params, expiry, and WASM input slots in the handoff files, along with the set ID and revision.
 
-CLI 0.7.2 artifact upload required an explicit process `API_KEY` in the reported integration, even after login. Keep it server-side. Avoid sharing raw CLI help output from affected releases: environment-value annotations may expose credentials.
-
 Local scaffold, build, and policy simulation do not require dashboard login, a wallet, or deployment credentials.
 
 ## Step 2 — Write a brief
