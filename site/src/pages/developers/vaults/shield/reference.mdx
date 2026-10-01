@@ -128,7 +128,9 @@ The SDK surfaces many of these through `ShieldExecutionError.cause`.
 
 ## Inherited Policy Client Methods
 
-The Shield inherits Newton policy-client owner controls:
+The following controls describe the legacy Shield interface. Verify the deployed Shield ABI before using them. A policy-set-capable Shield instead inherits `setPolicies(PolicySpec[])`, `getPolicies()`, `policyRevision()`, `getPolicyId()`, and `getPolicySetSnapshot()`; see [Smart Contract Integration](/developers/guides/smart-contract-integration#api-reference). Upgrading the protocol does not automatically upgrade an existing Shield.
+
+Legacy owner controls:
 
 ```solidity
 function setPolicy(INewtonPolicy.PolicyConfig memory policyConfig)

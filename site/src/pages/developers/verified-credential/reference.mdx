@@ -175,7 +175,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
-        return interfaceId == 0xdbdcaa9c || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 
     function validateAndExecuteDirect(
@@ -191,6 +191,9 @@ contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
             InvalidAttestation()
         );
 
+        require(to == taskResponse.intent.to, "Target mismatch");
+        require(value == taskResponse.intent.value, "Value mismatch");
+        require(keccak256(data) == keccak256(taskResponse.intent.data), "Calldata mismatch");
         (bool success, bytes memory result) = to.call{value: value}(data);
         if (!success) revert ExecutionFailed();
 

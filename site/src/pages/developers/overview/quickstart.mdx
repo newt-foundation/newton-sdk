@@ -1,174 +1,93 @@
 ---
 title: "Quickstart"
-description: "Simulate your first Newton Protocol policy evaluation in 5 minutes using the TypeScript SDK. OFAC sanctions screening example with step-by-step setup."
+description: "Simulate a configured Newton policy set with the TypeScript SDK."
 keywords: ["newton protocol quickstart", "policy evaluation tutorial", "eigenlayer avs sdk", "typescript blockchain sdk", "ofac sanctions screening"]
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Quickstart [Simulate your first Newton Protocol policy evaluation in 5 minutes using the TypeScript SDK. OFAC sanctions screening example with step-by-step setup.]
+# Quickstart [Simulate a configured Newton policy set with the TypeScript SDK.]
 
-Simulate a policy evaluation in under 5 minutes. The example policy performs **OFAC sanctions screening** — checking a transaction sender against a sanctions list before allowing it to proceed. No smart contract deployment required.
+Evaluate a configured policy set and inspect the aggregate decision and each policy result. This example uses two pure-Rego policies; no funded signer is needed for simulation.
 
 ## Prerequisites
 
-| Requirement        | How to get it                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| **Node.js \>= 20** | [nodejs.org](https://nodejs.org/)                                                                                       |
-| **Newton API key** | [Dashboard](/developers/overview/dashboard-api-keys) or email [support@newton.xyz](mailto:support@newton.xyz) |
+- Node.js 20 or later and a Newton API key associated with the configured client’s owner (or explicitly authorized for the gateway’s read-only admin bypass).
+- A policy-set-capable client configured with two pure-Rego policies on Sepolia. Obtain a test client from your team or follow [Smart Contract Integration](/developers/guides/smart-contract-integration).
+- An intent fixture accepted by those policies. The sample below is a zero-value, empty-calldata intent; use the exact function encoding for your application.
 
-:::note
-This quickstart uses `simulateTask` — a dry run that does not submit anything on-chain. No Sepolia ETH or wallet needed.
-:::
+## Install
 
-## Step 1 — Install
-
-:::code-group
-```bash [pnpm (recommended)]
-mkdir newton-quickstart && cd newton-quickstart
-pnpm init
-pnpm add @newton-xyz/sdk viem
-```
-
-
-```bash [npm]
-mkdir newton-quickstart && cd newton-quickstart
-npm init -y
+```bash
 npm install @newton-xyz/sdk viem
+npm install --save-dev tsx
 ```
 
+## Simulate
 
-```bash [yarn]
-mkdir newton-quickstart && cd newton-quickstart
-yarn init -y
-yarn add @newton-xyz/sdk viem
-```
-:::
+Save as `quickstart.ts`. Supply `NEWTON_API_KEY` and `POLICY_CLIENT` in your process environment; keep the API key on the server or in this local script.
 
-## Step 2 — Run a simulation
-
-Create `quickstart.ts` and paste:
-
-```ts twoslash
-import { createPublicClient, createWalletClient, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts'
+```typescript
+import { createWalletClient, http, isAddress } from 'viem';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
-import {
-  newtonPublicClientActions,
-  newtonWalletClientActions,
-} from '@newton-xyz/sdk';
-declare const process: { env: { NEWTON_API_KEY?: string } };
-// ---cut---
-const API_KEY = process.env.NEWTON_API_KEY;
-if (!API_KEY) throw new Error('NEWTON_API_KEY is required');
-const RPC_URL = 'https://eth-sepolia.g.alchemy.com/v2/demo';
+import { newtonWalletClientActions } from '@newton-xyz/sdk';
 
-// Public client — read-only operations (poll for task responses, read policy state)
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(RPC_URL),
-}).extend(newtonPublicClientActions());
-
-// Wallet client — write operations (submit tasks, run simulations)
-const walletClient = createWalletClient({
-  account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
-  chain: sepolia,
-  transport: http(RPC_URL),
-}).extend(
-  newtonWalletClientActions({
-    apiKey: API_KEY,
-  })
-);
-
-async function main() {
-  // Simulate OFAC sanctions screening on a transaction.
-  // No on-chain transaction occurs — this is a dry run.
-  const result = await walletClient.simulateTask({
-    intent: {
-      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',   // sender to check against sanctions list
-      to: '0xb1aD5f82407bC0f19f42b2614fb9083035a36b69',     // downstream target evaluated by the policy
-      value: '0x0',                                           // no ETH value
-      data: '0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001' as `0x${string}`,  // transfer(recipient, 1)
-      chainId: 11155111,                                      // Sepolia
-      functionSignature: '0x66756e6374696f6e207472616e73666572286164647265737320726563697069656e742c2075696e7432353620616d6f756e7429' as `0x${string}`, // function transfer(address recipient, uint256 amount)
-    },
-    policyTaskData: {
-      // Pre-deployed OFAC sanctions policy — you can use this for testing
-      policyId: '0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626' as `0x${string}`,
-      policyAddress: '0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae',
-      policy: '0x',
-      policyData: [
-        {
-          wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d' as `0x${string}`, // {"base_symbol":"BTC"}
-          data: '0x',
-          expireBlock: 0,
-        },
-      ],
-    },
-  });
-
-  console.log('Simulation result:', {
-    success: result.success,
-    allowed: result.result?.allow,
-    reason: result.result?.reason,
-    error: result.error,
-  });
+const apiKey = process.env.NEWTON_API_KEY;
+const policyClient = process.env.POLICY_CLIENT;
+if (!apiKey || !policyClient || !isAddress(policyClient)) {
+  throw new Error('Set NEWTON_API_KEY and a valid POLICY_CLIENT');
 }
 
+// Simulation only: this account is never funded and sends no transaction.
+const account = privateKeyToAccount(generatePrivateKey());
+const client = createWalletClient({ account, chain: sepolia, transport: http() })
+  .extend(newtonWalletClientActions({ apiKey }));
+
+async function main() {
+  const result = await client.simulatePolicy({
+    policyClient: policyClient as `0x${string}`,
+    chainId: sepolia.id,
+    intent: {
+      from: account.address,
+      to: policyClient as `0x${string}`,
+      value: '0x0', data: '0x',
+      chainId: sepolia.id, functionSignature: '0x',
+    },
+    wasmArgs: ['0x', '0x'],
+  });
+  if (!result.success) throw new Error(result.error ?? 'Simulation failed');
+  console.log('Policy set:', result.policy_id, 'Allowed:', result.allowed);
+  for (const policy of result.policies ?? []) {
+    console.log(policy.policy_index, policy.policy, policy.allowed, policy.result);
+  }
+}
 main().catch(console.error);
 ```
 
-Run it:
-
 ```bash
-NEWTON_API_KEY=your_key_here npx tsx quickstart.ts
+npx tsx quickstart.ts
 ```
 
-## Step 3 — Understand the response
+## Understand the result
 
-The simulation returns a `SimulateTaskResult`:
-
-| Field           | Type      | Description                                     |
-| --------------- | --------- | ----------------------------------------------- |
-| `success`       | `boolean` | Whether the evaluation completed without errors |
-| `result.allow`  | `boolean` | Whether the policy approved the intent          |
-| `result.reason` | `string`  | Human-readable explanation                      |
-| `error`         | `string`  | Error message if evaluation failed              |
-
-A successful response:
-
-```json
-{
-  "success": true,
-  "result": {
-    "allow": true,
-    "reason": "Policy conditions met"
-  },
-  "error": null
-}
-```
-
-## Step 4 — What just happened?
+`success` reports whether simulation completed. `allowed` is true only when every policy allows. `policies` retains set order and exposes each policy's index, address, result, verdict, and expiration window. A denial is a completed evaluation, not a transport error.
 
 ```mermaid
 sequenceDiagram
-    participant You as Your Script
-    participant GW as Newton Gateway
-    participant Op as AVS Operators
-    participant Pol as Rego Policy
-
-    You->>GW: simulateTask(intent, policy)
-    GW->>Op: Forward to available operator
-    Op->>Pol: Run OFAC sanctions policy
-    Pol-->>Op: allow: true/false
-    Op-->>GW: Signed result
-    GW-->>You: SimulateTaskResult
+    participant Script
+    participant Gateway
+    participant Chain
+    Script->>Gateway: simulatePolicy(client, intent, wasmArgs[])
+    Gateway->>Chain: Resolve current policy-set snapshot
+    Gateway->>Gateway: Run optional WASM and evaluate each Rego policy
+    Gateway-->>Script: Aggregate allowed and ordered policy results
 ```
 
-Your script submitted an [Intent](/developers/overview/core-concepts#intent) to the Newton [Gateway](/developers/overview/core-concepts#gateway), where an [Operator](/developers/overview/core-concepts#operator) ran the OFAC sanctions [Rego policy](/developers/overview/core-concepts#policy) with a [PolicyData](/developers/overview/core-concepts#policydata) oracle and returned an allow/deny result. This was a **simulation** — no on-chain transaction occurred.
+Simulation produces no BLS signatures and sends no application transaction. For live authorization, sign the exact intent, call `evaluateIntentDirect`, and validate the returned task and attestation in your contract before executing. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
-In production, the same flow produces a [**BLS attestation**](/developers/overview/core-concepts#attestation) that your smart contract verifies on-chain before executing the transaction.
+Use `simulatePolicy` as shown here rather than the older `simulateTask` wrapper, which still targets the old gateway schema. See [RPC API](/developers/reference/rpc-api#newt_simulatetask) for the provided-output alternative.
 
 ## Next steps
 

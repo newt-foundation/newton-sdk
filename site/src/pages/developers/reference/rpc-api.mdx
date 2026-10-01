@@ -10,6 +10,10 @@ The Newton Gateway provides a JSON-RPC 2.0 interface for submitting policy evalu
 
 For client-side helpers that wrap these RPC calls, see the [SDK Reference](/developers/reference/sdk-reference). For a step-by-step walkthrough of building on Newton, see the [Integration Guide](/developers/guides/integration-guide).
 
+## API version scope
+
+Policy-set request schemas below apply to the current gateway API. Use an SDK release that supports task submission and `simulatePolicy`.
+
 ## Base URLs
 
 | Network | Environment | URL |
@@ -92,14 +96,14 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 Some endpoints require **ownership verification** of a `policy_client` address. This mechanism protects access to stored secrets and ensures only authorized users can manage secrets for a given PolicyClient.
 
 :::note
-As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.getOwner()` method on the PolicyClient contract. Ownership is transferable using `setOwner()` or `transferOwnership()` on the contract. The Gateway reads on-chain state for every ownership check.
+As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.getOwner()` method on the PolicyClient contract. PolicyClient ownership transfers through `setPolicyClientOwner()` on the contract. The Gateway reads on-chain state for every ownership check.
 :::
 
 **How Ownership Works:**
 
 1. **Ownership is read from the chain** — the Gateway calls `getOwner()` on the `policy_client` contract to determine the current owner.
 2. **Ownership is verified** when calling endpoints that require it. The Gateway checks that the caller's API key is associated with the on-chain owner of the `policy_client`.
-3. **Ownership is transferable** — transfer ownership on-chain via `setOwner()` or `transferOwnership()`, and the Gateway will recognize the new owner on the next request.
+3. **Ownership is transferable** — call `setPolicyClientOwner()` as the current owner; the Gateway reads the new on-chain owner on its next check.
 
 **Endpoints Requiring Ownership Verification:**
 
@@ -107,12 +111,11 @@ As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.
 |-----|-----|
 | `newt_simulatePolicyData` | No (caller provides secrets directly) |
 | `newt_simulatePolicyDataWithClient` | Yes (fetches stored secrets) |
-| `newt_simulatePolicy` | Conditional (only if PolicyData requires secrets) |
+| `newt_simulatePolicy` | Yes; explicitly authorized read-only admin keys can bypass |
 | `newt_storeEncryptedSecrets` | Yes (verifies on-chain owner) |
 
-:::warning
-**Conditional Ownership for `newt_simulatePolicy`:**
-The `newt_simulatePolicy` endpoint only requires ownership verification when at least one PolicyData contract has a `secretsSchemaCid` (indicating stored secrets are required). If all PolicyData contracts in your request have empty `secretsSchemaCid` values (no secrets needed), ownership verification is skipped. This allows testing simple policies without requiring secrets to be uploaded first.
+:::note
+The pinned `newt_simulatePolicy` handler checks client ownership for every set, including pure-Rego sets. An explicitly authorized admin API key can bypass this check on read endpoints only, after its permission is revalidated.
 :::
 
 **Error Responses:**
@@ -156,22 +159,17 @@ Following Ethereum JSON-RPC conventions:
 
 ### WASM Arguments
 
-`wasm_args` values are hex-encoded UTF-8 JSON strings.
+Task submission and policy-set simulation use an ordered array with one hex-encoded entry per policy. Preserve repeated policies and their positions. For two pure-Rego policies use `["0x", "0x"]`, not a scalar or an empty array.
 
-| Method | `wasm_args` format |
+| Method | Argument shape and meaning |
 |---|---|
-| SDK `evaluateIntentDirect` | `0x`-prefixed hex string; the SDK normalizes the value before sending it to the Gateway |
-| `newt_createTask` RPC | Hex string accepted by the Gateway; examples use the canonical `0x` prefix |
-| `newt_simulatePolicy` RPC | `0x`-prefixed hex string in each `policy_data[].wasm_args` entry |
-| `newt_simulatePolicyData` RPC | `0x`-prefixed hex string |
-| `newt_simulatePolicyDataWithClient` RPC | `0x`-prefixed hex string |
+| SDK task methods and `simulatePolicy` | `wasmArgs: Hex[]`; SDK removes the `0x` prefix from each entry on the wire |
+| `newt_createTask` / `newt_sendTask` | `wasm_args: string[]`; input to each policy's optional WASM |
+| `newt_simulatePolicy` | `wasm_args: string[]`; input to each policy's optional WASM |
+| `newt_simulateTask` | `wasm_args: string[]`; **precomputed oracle outputs**, not WASM execution inputs |
+| `newt_simulatePolicyData` / `newt_simulatePolicyDataWithClient` | Scalar `wasm_args`; input to one policy's WASM |
 
-```typescript
-const wasmArgs = `0x${Buffer.from(
-  JSON.stringify({ timezone: "Etc/UTC" }),
-  "utf8",
-).toString("hex")}`;
-```
+Encode JSON inputs with `stringToHex(JSON.stringify(input))` from viem. Use the canonical `0x` prefix in raw requests. An empty `0x` entry represents no data for a pure-Rego policy.
 
 ### Address Format
 
@@ -222,23 +220,11 @@ Represents a transaction intent to be evaluated against a policy.
 | Native ETH transfer | `"0x"` | `"0x"` |
 | Contract call | ABI-encoded calldata | Hex-encoded signature, for example `transfer(address,uint256)` |
 
-### PolicyDataInput
+### Policy-set snapshot
 
-Specifies a PolicyData contract and optional WASM arguments for policy simulation.
+A Task contains `policyId`, `policyRevision`, and an ordered `policies` array frozen at admission. Each entry is `{ policy, config: { policyParams, expireAfter } }`. `wasmArgs[i]` belongs to `policies[i]`.
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `policy_data_address` | `Address` | Yes | Deployed PolicyData contract address |
-| `wasm_args` | `Data` | No | Hex-encoded WASM arguments for this data source |
-
-:::details[PolicyDataInput Example]
-```json
-{
-  "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
-}
-```
-:::
+The response's `policy_task_data[i]` retains the same position and carries `policyId`, `policyAddress`, resolved `policy` bytes, and `policyData` evidence entries (`wasmArgs`, `data`, `expireBlock`). The response has one aggregate `allowed` boolean. Do not expect an individual verdict on each evidence entry; use simulation's `policies[i].allowed` for per-policy diagnostics. Never reorder, flatten, or deduplicate signed evidence.
 
 ### TaskStatus
 
@@ -271,7 +257,7 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 | `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Optional in the base schema, but required by policies and identity flows that consume `input.intent_signature` |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes, e.g., `"00"` for quorum 0) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
-| `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
+| `wasm_args` | `Array<Data>` | Yes | One entry per policy, in set order; `"0x"` for pure-Rego |
 | `timeout` | `Number` | No | Timeout in seconds (default: 30) |
 | `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 | `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
@@ -399,6 +385,7 @@ To look the task up later — its evaluation result, operator errors, and the po
       "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
     },
     "intent_signature": "0x...",
+    "wasm_args": ["0x", "0x"],
     "timeout": 30
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -418,26 +405,31 @@ To look the task up later — its evaluation result, operator errors, and the po
     "task": {
       "taskId": "0x1234...",
       "policyClient": "0x1234567890123456789012345678901234567890",
-      "nonce": 0,
+      "policyId": "0x...",
+      "policyRevision": 1,
+      "initializationTimestamp": "0x...",
+      "policies": [
+        { "policy": "0x...", "config": { "policyParams": "0x7b7d", "expireAfter": 25 } },
+        { "policy": "0x...", "config": { "policyParams": "0x7b7d", "expireAfter": 25 } }
+      ],
       "taskCreatedBlock": 12345678,
       "quorumThresholdPercentage": 67,
       "intent": { },
       "intentSignature": "0x...",
-      "wasmArgs": "0x...",
+      "wasmArgs": ["0x", "0x"],
       "quorumNumbers": "0x00"
     },
     "task_response": {
       "task_id": "0x1234...",
       "policy_client": "0x...",
       "policy_id": "0x...",
-      "policy_address": "0x...",
       "intent": { },
       "intent_signature": "0x...",
-      "evaluation_result": [1],
-      "policy_task_data": { },
-      "policy_config": {
-        "expireAfter": 100
-      }
+      "allowed": true,
+      "policy_task_data": [
+        { "policyId": "0x...", "policyAddress": "0x...", "policy": "0x...", "policyData": [] },
+        { "policyId": "0x...", "policyAddress": "0x...", "policy": "0x...", "policyData": [] }
+      ]
     },
     "reference_block": 12345700,
     "expiration": 12345800,
@@ -480,7 +472,7 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 | `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
-| `wasm_args` | `Data` | No | Hex-encoded WASM plugin arguments |
+| `wasm_args` | `Array<Data>` | Yes | One entry per policy, in set order; `"0x"` for pure-Rego |
 | `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
 
 #### Returns
@@ -566,115 +558,61 @@ Updates are received in the following format:
 
 ### newt_simulateTask
 
-Forwards a policy simulation request to an available operator and returns the result. This endpoint tests the full operator evaluation flow without executing on-chain. Requires at least one registered operator to be available.
+Evaluates Rego locally on the gateway using provided oracle **outputs**. It resolves the client's current policy set; it does not execute WASM, contact an operator quorum, produce BLS signatures, or create an on-chain task. Reconfiguration changes what this endpoint evaluates: it is not historical replay of a task's frozen set.
 
-**Permission:** `RpcRead`
+**Permission:** `RpcRead`.
 
-#### Parameters
-
-| Field | Type | Required | Description |
+| Parameter | Type | Required | Meaning |
 |---|---|---|---|
-| `intent` | `TaskIntent` | Yes | Transaction intent to simulate |
-| `policy_task_data` | `PolicyTaskData` | Yes | Policy task data for evaluation |
+| `policy_client` | `Address` | Yes | Configured PolicyClient |
+| `chain_id` | `number` | Yes | Deployment chain ID |
+| `intent` | `TaskIntent` | Yes | Intent to evaluate |
+| `wasm_args` | `Array<Data>` | Yes | Preassembled oracle outputs, positionally aligned; `"0x"` for pure-Rego |
 
-**PolicyTaskData Structure:**
-
-| Field | Type | Description |
-|---|---|---|
-| `policyId` | `bytes32` | Policy identifier (32-byte hex string) |
-| `policyAddress` | `address` | Policy contract address |
-| `policy` | `bytes` | Policy bytecode (hex string, can be `"0x"`) |
-| `policyData` | `PolicyData[]` | Array of policy data sources for evaluation |
-
-**PolicyData Structure:**
-
-| Field | Type | Description |
-|---|---|---|
-| `wasmArgs` | `bytes` | WASM plugin arguments (hex-encoded) |
-| `data` | `bytes` | Pre-fetched data (hex string) |
-| `attestation` | `bytes` | Data attestation signature (hex string) |
-| `policyDataAddress` | `address` | PolicyData contract address |
-| `expireBlock` | `uint32` | Block number when data expires |
-
-#### Returns
-
-| Field | Type | Description |
-|---|---|---|
-| `success` | `Boolean` | Whether evaluation succeeded |
-| `result` | `Object` | Evaluation result (if successful) |
-| `error` | `String` | Error message (if failed) |
-| `details` | `Object` | Execution details |
-
-#### Example
-
-:::details[Request]
 ```json
 {
   "jsonrpc": "2.0",
   "method": "newt_simulateTask",
   "params": {
+    "policy_client": "0x3333333333333333333333333333333333333333",
+    "chain_id": 11155111,
     "intent": {
-      "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
+      "from": "0x1111111111111111111111111111111111111111",
+      "to": "0x2222222222222222222222222222222222222222",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
-      "chain_id": "31337",
-      "function_signature": "0x62757928616464726573732c75696e743235362c75696e74333229"
+      "data": "0x",
+      "chain_id": "0xaa36a7",
+      "function_signature": "0x"
     },
-    "policy_task_data": {
-      "policyId": "0x27b7c88f256114a1fc9924953fbbad4d6db50f141978fd7b5766d456eecd1626",
-      "policyAddress": "0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae",
-      "policy": "0x",
-      "policyData": [
-        {
-          "wasmArgs": "0x7b22626173655f73796d626f6c223a22425443227d",
-          "data": "0x",
-          "attestation": "0x",
-          "policyDataAddress": "0x30E545603d6205B6887BAb0C1a630aa383d71e07",
-          "expireBlock": 0
-        }
-      ]
-    }
+    "wasm_args": [
+      "0x",
+      "0x"
+    ]
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
-:::
-
-:::code-group
-```json [Response (Success)]
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": true,
-    "result": {
-      "allow": true,
-      "reason": "Policy conditions met"
-    },
-    "error": null,
-    "details": null
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": "policy-set-example"
 }
 ```
 
-```json [Response (Error - No Operators)]
-{
-  "jsonrpc": "2.0",
-  "result": null,
-  "error": {
-    "ServiceUnavailable": "No operators available"
-  },
-  "id": null
-}
-```
+| Field | Type | Meaning |
+|---|---|---|
+| `success` | `boolean` | Evaluation completed without an error |
+| `allowed` | `boolean \| null` | AND of every policy verdict; null on error |
+| `policy_id` | `string \| null` | ID of the set evaluated |
+| `policies` | `array \| null` | Ordered results: `policy_index`, `policy` address, `result`, `allowed`, `expire_after` |
+| `error` | `string \| null` | Evaluation failure details |
+| `parsed_intent` | `object \| null` | Decoded intent |
+
+A completed denial is `success: true, allowed: false`. A simulation failure is `success: false, allowed: null`. Neither response carries a BLS attestation.
+
+:::warning
+SDK v1.2.2's `simulateTask` wrapper still sends the old `policy_task_data` request. Use raw RPC for this endpoint, or SDK `simulatePolicy` for WASM + Rego simulation.
 :::
 
 ---
 
 ### newt_storeEncryptedSecrets
 
-Uploads encrypted secrets for a PolicyData contract. Secrets are validated against the on-chain schema and stored for use during task evaluation.
+Uploads encrypted secrets for a Policy contract. Secrets are validated against the on-chain schema and stored for use during task evaluation.
 
 **Permission:** `RpcWrite`
 
@@ -683,7 +621,8 @@ Uploads encrypted secrets for a PolicyData contract. Secrets are validated again
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `policy_client` | `Address` | Yes | Policy client contract address |
-| `policy_data_address` | `Address` | Yes | PolicyData contract address |
+| `policy_address` | `Address` | Yes | Policy contract address |
+| `chain_id` | `Number` | Yes | Deployment chain ID |
 | `envelope` | `String` | Yes | JSON-serialized HPKE SecureEnvelope (produced by `storeEncryptedSecrets` in the SDK) |
 
 #### Returns
@@ -722,7 +661,8 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
   "method": "newt_storeEncryptedSecrets",
   "params": {
     "policy_client": "0x1234567890123456789012345678901234567890",
-    "policy_data_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    "policy_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    "chain_id": 11155111,
     "envelope": "<json-serialized-hpke-secure-envelope>"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -787,11 +727,11 @@ Simulates PolicyData WASM execution with caller-provided secrets. Use this endpo
 
 - **Iterating on PolicyData WASM** before uploading production secrets
 - **Testing WASM execution** with different secret configurations
-- **PolicyData contracts that don't require secrets** (secrets field is optional)
+- **Policies whose WASM does not require secrets** (secrets field is optional)
 
 #### Workflow
 
-1. Deploy PolicyData contract with `wasmCid` and optional `secretsSchemaCid`
+1. Deploy a Policy contract with `wasmCid` and optional `secretsSchemaCid`
 2. Call `newt_simulatePolicyData` with optional encrypted secrets to test
 3. Once satisfied, upload production secrets via `newt_storeEncryptedSecrets`
 4. Test full policy via `newt_simulatePolicy` or `newt_simulatePolicyDataWithClient`
@@ -800,8 +740,8 @@ Simulates PolicyData WASM execution with caller-provided secrets. Use this endpo
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `policy_data_address` | `Address` | Yes | PolicyData contract address |
-| `secrets` | `String` | No | Base64-encoded encrypted ciphertext (for testing) |
+| `policy_address` | `Address` | Yes | Policy contract address |
+| `secrets` | `Object` | No | HPKE SecureEnvelope JSON object; not base64 |
 | `wasm_args` | `Data` | No | Hex-encoded WASM arguments |
 | `chain_id` | `Number` | Yes | Chain ID for RPC provider resolution |
 
@@ -829,8 +769,15 @@ The `policy_data` object contains:
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyData",
   "params": {
-    "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "secrets": "<base64-encoded-encrypted-secrets>",
+    "policy_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chain_id": 11155111,
+    "secrets": {
+      "enc": "<hex-encapsulated-key>",
+      "ciphertext": "<hex-ciphertext>",
+      "policy_client": "0x3333333333333333333333333333333333333333",
+      "chain_id": 11155111,
+      "recipient_pubkey": "<hex-recipient-public-key>"
+    },
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -842,7 +789,8 @@ The `policy_data` object contains:
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyData",
   "params": {
-    "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "policy_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chain_id": 11155111,
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -890,7 +838,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 **Permission:** `RpcRead`
 
-**Authorization:** Ownership verification required. The caller's API key must belong to the user who owns the `policy_client` address. Ownership is established when secrets are first uploaded via `newt_storeEncryptedSecrets`.
+**Authorization:** Ownership verification required. The caller's API key must belong to the user who owns the `policy_client` address. Ownership is checked against the client; uploading secrets does not transfer ownership.
 
 #### When to Use
 
@@ -900,15 +848,16 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 #### Prerequisites
 
-1. Deploy PolicyData contract with `wasmCid` and optional `secretsSchemaCid`
-2. Upload secrets via `newt_storeEncryptedSecrets` (establishes ownership)
+1. Deploy a Policy contract with `wasmCid` and optional `secretsSchemaCid`
+2. Upload secrets via `newt_storeEncryptedSecrets` as the authorized owner
 3. Call this endpoint to test with stored secrets
 
 #### Parameters
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `policy_data_address` | `Address` | Yes | PolicyData contract address |
+| `policy_address` | `Address` | Yes | Policy contract address |
+| `chain_id` | `Number` | Yes | Deployment chain ID |
 | `policy_client` | `Address` | Yes | Policy client address (for ownership check + secrets lookup) |
 | `wasm_args` | `Data` | No | Hex-encoded WASM arguments |
 
@@ -928,7 +877,8 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicyDataWithClient",
   "params": {
-    "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "policy_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chain_id": 11155111,
     "policy_client": "0x1234567890123456789012345678901234567890",
     "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
   },
@@ -984,212 +934,54 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 
 ### newt_simulatePolicy
 
-Simulates full Rego policy evaluation locally. This is the final testing step before deploying a policy on-chain. To simulate a multi-oracle policy, pass one entry per oracle in `policy_data` — each oracle's output is merged into `data.wasm` under its namespace. See [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles).
+Runs the configured policy set's optional WASM oracles and then Rego in the gateway's in-process evaluator. Unlike `newt_simulateTask`, `wasm_args` contains oracle **inputs**. Policies and the client must already be deployed and configured. Parameters come from the client's set; this endpoint no longer accepts inline Rego, `policy_data`, `policy_params`, or an `entrypoint` override.
 
-**Permission:** `RpcRead`
+**Permission:** `RpcRead`; on-chain client ownership is checked, with the controlled read-only admin-key exception described above. The in-process evaluator must be configured. This endpoint does not produce quorum signatures or execute an application transaction.
 
-**Authorization:** Conditional ownership verification. Ownership is only required when at least one PolicyData contract has a `secretsSchemaCid` (requires stored secrets). If no PolicyData contracts require secrets, the endpoint can be called without ownership verification. When required, the caller's API key must belong to the user who owns the `policy_client` address. Ownership is established when secrets are first uploaded via `newt_storeEncryptedSecrets`.
-
-#### When to Use
-
-- **Final policy testing** before on-chain deployment
-- **Iterating on Rego policy logic** with real PolicyData outputs
-- **Validating end-to-end policy behavior** with sample intents
-
-#### Prerequisites
-
-Before using this endpoint:
-
-1. Deploy PolicyData contracts with WASM plugins
-2. Test each PolicyData via `newt_simulatePolicyData` (iterate on WASM logic)
-3. Upload secrets via `newt_storeEncryptedSecrets` for each PolicyData that requires secrets
-4. (Optional) Test individual PolicyData with stored secrets via `newt_simulatePolicyDataWithClient`
-
-#### Parameters
-
-| Field | Type | Required | Description |
+| Parameter | Type | Required | Meaning |
 |---|---|---|---|
-| `policy_client` | `Address` | Yes | Policy client address (for ownership check + secrets lookup) |
-| `policy` | `String` | Yes | Rego policy source code |
-| `intent` | `TaskIntent` | Yes | Sample intent to evaluate |
-| `entrypoint` | `String` | No | Rego rule path (default: `"policy.allow"`) |
-| `policy_data` | `Array<PolicyDataInput>` | Yes | PolicyData sources with optional wasm_args |
-| `policy_params` | `Object` | No | Policy parameters JSON (default: `{}`) |
-| `intent_signature` | `Data` | No | Hex-encoded EIP-712 signature of the exact intent. Required by policies and identity flows that consume `input.intent_signature` |
+| `policy_client` | `Address` | Yes | Configured PolicyClient |
+| `chain_id` | `number` | Yes | Deployment chain ID |
+| `intent` | `TaskIntent` | Yes | Intent to evaluate |
+| `wasm_args` | `Array<Data>` | Yes | One oracle input per policy; `"0x"` for pure-Rego |
+| `intent_signature` | `Data` | No | Accepted request field; simulation does not prove live signature authorization |
 
-#### Returns
-
-| Field | Type | Description |
-|---|---|---|
-| `success` | `Boolean` | Whether simulation succeeded |
-| `evaluation_result` | `Object` | Evaluation result (on success) |
-| `error` | `String` | Error message (on failure) |
-| `error_details` | `Object` | Structured error details (when secrets are missing) |
-
-The `evaluation_result` object contains:
-
-| Field | Type | Description |
-|---|---|---|
-| `policy` | `String` | Evaluated policy source |
-| `parsed_intent` | `Object` | Parsed and decoded intent |
-| `policy_params_and_data` | `Object` | Combined `{ params, wasm }` context — `params` is your configured parameters, `wasm` is the merged oracle output |
-| `entrypoint` | `String` | Evaluated Rego entrypoint |
-| `result` | `Any` | Rego evaluation result (`true`, `false`, or complex value) |
-| `expire_after` | `Number` | Expiration time (0 for simulation) |
-
-The `error_details` object (when secrets are missing) contains:
-
-| Field | Type | Description |
-|---|---|---|
-| `missing_secrets` | `Array<Object>` | List of PolicyData contracts with missing secrets |
-| `suggested_actions` | `Array<String>` | Actions to resolve the issue |
-
-Each entry in `missing_secrets`:
-
-| Field | Type | Description |
-|---|---|---|
-| `policy_data_address` | `Address` | PolicyData contract address requiring secrets |
-| `has_secrets_schema` | `Boolean` | Whether this PolicyData has a `secretsSchemaCid` |
-
-#### Example
-
-:::details[Request]
 ```json
 {
   "jsonrpc": "2.0",
   "method": "newt_simulatePolicy",
   "params": {
-    "policy_client": "0x1234567890123456789012345678901234567890",
-    "policy": "package trading\n\ndefault allow := false\n\nallow if {\n    input.value == 0\n    data.wasm.price < data.params.max_price\n}",
+    "policy_client": "0x3333333333333333333333333333333333333333",
+    "chain_id": 11155111,
     "intent": {
-      "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
+      "from": "0x1111111111111111111111111111111111111111",
+      "to": "0x2222222222222222222222222222222222222222",
       "value": "0x0",
-      "data": "0xa9059cbb000000000000000000000000e42e3458283032c669c98e0d8f883a92fc64fe220000000000000000000000000000000000000000000000000000000000000001",
+      "data": "0x",
       "chain_id": "0xaa36a7",
-      "function_signature": "0x7472616e7366657228616464726573732c75696e7432353629"
+      "function_signature": "0x"
     },
-    "entrypoint": "trading.allow",
-    "policy_data": [
-      {
-        "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
-      }
-    ],
-    "policy_params": {
-      "max_price": 50000
-    }
+    "wasm_args": [
+      "0x",
+      "0x"
+    ]
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
-:::
-
-:::code-group
-```json [Response (Success - Policy Allows)]
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": true,
-    "evaluation_result": {
-      "policy": "package trading\n\ndefault allow := false\n\nallow if {...}",
-      "parsed_intent": {
-        "from": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-        "to": "0xb1ad5f82407bc0f19f42b2614fb9083035a36b69",
-        "value": 0,
-        "function": {
-          "name": "buy",
-          "arguments": []
-        },
-        "chain_id": 11155111
-      },
-      "policy_params_and_data": {
-        "params": { "max_price": 50000 },
-        "wasm": { "price": 42000.50, "base_symbol": "BTC" }
-      },
-      "entrypoint": "trading.allow",
-      "result": true,
-      "expire_after": 0
-    },
-    "error": null
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": "policy-set-example"
 }
 ```
 
-```json [Response (Success - Policy Denies)]
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": true,
-    "evaluation_result": {
-      "policy": "...",
-      "parsed_intent": {},
-      "policy_params_and_data": {},
-      "entrypoint": "trading.allow",
-      "result": false,
-      "expire_after": 0
-    },
-    "error": null
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
+| Field | Type | Meaning |
+|---|---|---|
+| `success` | `boolean` | Evaluation completed without an error |
+| `allowed` | `boolean \| null` | AND of every policy verdict; null on error |
+| `policy_id` | `string \| null` | ID of the set evaluated |
+| `policies` | `array \| null` | Ordered results: `policy_index`, `policy` address, `result`, `allowed`, `expire_after` |
+| `error` | `string \| null` | Evaluation failure details |
+| `parsed_intent` | `object \| null` | Decoded intent |
 
-```json [Response (Error - Rego Evaluation Failed)]
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": false,
-    "evaluation_result": null,
-    "error": "Rego evaluation failed: undefined rule 'trading.allow'",
-    "error_details": null
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
+A completed denial is `success: true, allowed: false`. A simulation failure is `success: false, allowed: null`. Neither response carries a BLS attestation.
 
-```json [Response (Error - Unauthorized)]
-{
-  "jsonrpc": "2.0",
-  "error": {
-    "code": -32002,
-    "message": "Authorization failed: policy client 0x1234... is owned by another user"
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
-:::
-
-:::details[Response (Error - Missing Secrets)]
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": false,
-    "evaluation_result": null,
-    "error": "Missing secrets for 2 PolicyData contract(s)",
-    "error_details": {
-      "missing_secrets": [
-        {
-          "policy_data_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "has_secrets_schema": true
-        },
-        {
-          "policy_data_address": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "has_secrets_schema": true
-        }
-      ],
-      "suggested_actions": [
-        "Upload secrets via newt_storeEncryptedSecrets for each missing PolicyData",
-        "Or use newt_simulatePolicyData to test individual PolicyData with directly provided secrets"
-      ]
-    }
-  },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-}
-```
-:::
+Use `policies[i].policy_index` and `policies[i].policy` to map each verdict back to the configured order. For production evaluation and signatures, use `newt_createTask` or `newt_sendTask` and subsequently validate the attestation on-chain.
 
 ---
 
@@ -1361,48 +1153,15 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 
 ### Policy Development Lifecycle
 
-```mermaid
-flowchart TD
-    A[Deploy PolicyData Contracts] --> B[Test PolicyData WASM]
-    B --> C[Store Secrets]
-    C --> D[Verify Stored Secrets]
-    D --> E[Test Full Policy]
-    E --> F[Deploy Policy On-Chain]
-    F --> G[Submit Production Tasks]
-```
+1. Test Rego and optional WASM locally.
+2. Deploy independent policies and configure the ordered set on the client.
+3. Upload policy-scoped secrets when needed; test individual WASM modules with scalar-argument simulation endpoints.
+4. Run `newt_simulatePolicy` for WASM + Rego, or `newt_simulateTask` with precomputed outputs. Neither produces signatures.
+5. Sign the exact intent and submit `newt_createTask` or `newt_sendTask` for live operator evaluation.
+6. Check aggregate `allowed` and validate the signed response on-chain before application execution.
+7. Preserve task snapshots for historical investigation. Current-set simulation is not historical replay.
 
-| Step | RPC Method | Details |
-|------|-----------|---------|
-| 1. Deploy PolicyData | — | Deploy contracts with `wasmCid` and `secretsSchemaCid` |
-| 2. Test WASM | `newt_simulatePolicyData` | Test with sample `wasm_args`, validate output structure |
-| 3. Store Secrets | `newt_storeEncryptedSecrets` | Encrypt via Privacy Layer, upload, verify schema |
-| 3b. Verify Secrets | `newt_simulatePolicyDataWithClient` | Test with stored secrets (requires ownership) |
-| 4. Test Policy | `newt_simulatePolicy` | Write entrypoint rule, test intents, verify allow/deny |
-| 5. Deploy On-Chain | — | Deploy `NewtonPolicy` with `policyCid`, `policyData[]`, `entrypoint` |
-| 6. Production Tasks | `newt_createTask` / `newt_sendTask` | Tasks evaluated by operator network, BLS aggregated |
-
-### Integration Checklist
-
-1. **Obtain API Key**
-   - Request API key with appropriate permissions
-   - `RpcRead` for task submission and simulation
-   - `RpcWrite` for secrets management
-
-2. **Set Up PolicyData**
-   - Deploy PolicyData contracts
-   - Test WASM execution with `newt_simulatePolicyData`
-   - Upload secrets with `newt_storeEncryptedSecrets`
-
-3. **Develop Policy**
-   - Write Rego policy code
-   - Test with `newt_simulatePolicy`
-   - Deploy policy contract on-chain
-
-4. **Integrate Task Submission**
-   - Use `newt_createTask` for synchronous flow
-   - Use `newt_sendTask` + WebSocket for async flow
-
----
+For required cases and evidence, see [Testing Policies](/developers/guides/testing-policies#policy-set-validation-checklist).
 
 ## Error Codes
 

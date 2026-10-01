@@ -6,7 +6,7 @@ keywords:
   - webassembly blockchain oracle
   - web3 data oracle
   - componentize js wasm
-  - newton policy data
+  - newton policy wasm
 showAskAi: false
 ---
 import { Card } from 'vocs'
@@ -14,13 +14,17 @@ import { Card } from 'vocs'
 
 # Writing Data Oracles [Build WebAssembly data oracles that fetch external data for Newton Protocol policy evaluation. JavaScript, Rust, and Python examples with the WIT component model.]
 
+:::note
+Attach an oracle's WASM module and optional secrets schema directly to its Policy. A policy set passes `wasm_args` as an ordered array, with one input for each Policy; individual WASM simulation uses one scalar input. See [Deploying with CLI](/developers/guides/deploying-with-cli) and the [RPC API](/developers/reference/rpc-api) for deployment and simulation.
+:::
+
 Data oracles are WebAssembly (WASM) components that fetch or compute external data at evaluation time. The Newton network executes your WASM, and the output is fed into your Rego policy as `data.wasm`.
 
 ## What is a Data Oracle?
 
 A data oracle is a JavaScript (or Rust/Python) program compiled to WASM that:
 
-1. Receives input arguments (`wasm_args`) as a JSON string
+1. Receives its Policy's `wasm_args` entry as a JSON string
 2. Optionally fetches external data via HTTP
 3. Returns a JSON string that becomes available to your Rego policy as `data.wasm`
 
@@ -53,7 +57,7 @@ interface http {
 interface secrets {
     record secret-response {
         // Raw bytes of the decrypted secrets JSON object.
-        // The scope (policy_client, policy_data) is bound by the host execution context.
+        // The scope (policy client and Policy) is bound by the host execution context.
         value: list<u8>,
     }
 
@@ -178,10 +182,10 @@ An oracle ships up to three schemas, each describing a distinct input:
 | Schema file | Describes | Read in Rego as |
 |-------------|-----------|-----------------|
 | `wasm_args_schema.json` | Per-call inputs passed to the oracle's `run(input)` (the `wasm_args` on each task) | — (consumed by the WASM, not Rego) |
-| `secrets_schema.json` | Scoped credentials the oracle reads via the secrets host interface (see [Secrets in Oracles](/developers/guides/secrets-in-oracles)) | — (read inside the WASM) |
+| `secrets_schema.json` | Scoped credentials the oracle reads via the secrets host interface (see [Deploying with CLI](/developers/guides/deploying-with-cli)) | — (read inside the WASM) |
 | `params_schema.json` | Policy thresholds the contract owner configures | `data.params.*` |
 
-Callers pass `wasm_args` as hex-encoded JSON on `newt_createTask` / `newt_simulatePolicyData`. Validating against this schema before submission catches malformed inputs early.
+For task creation and full-policy simulation, callers pass this oracle's hex-encoded JSON input in its position in the `wasm_args` array. Individual WASM simulation accepts the same value as a scalar. Validating against this schema before submission catches malformed inputs early.
 
 ## Build WASM
 
@@ -207,13 +211,11 @@ If you installed `jco` locally (without `-g`), run it via `npx jco componentize 
 Test your WASM oracle before deploying:
 
 ```bash
-# Simulate with empty args
-newton-cli policy-data simulate --wasm-file policy.wasm --input-json '{}'
+# Simulate the policy that contains this WASM module
+newton-cli policy simulate -p policies/my-oracle
 
-# Simulate with specific args
-newton-cli policy-data simulate \
-  --wasm-file policy.wasm \
-  --input-json '{"base_symbol": "BTC"}'
+# Change configs/wasm_args.json to exercise specific oracle input,
+# then run the same command again.
 ```
 
 You can also test via the Gateway RPC:
@@ -226,7 +228,8 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "jsonrpc": "2.0",
     "method": "newt_simulatePolicyData",
     "params": {
-      "policy_data_address": "0x...",
+      "policy_address": "0x...",
+      "chain_id": 11155111,
       "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
@@ -248,5 +251,5 @@ All languages compile to the same WIT interface and produce interchangeable WASM
   Write a Rego policy that uses your oracle's output
 </Card>
 <Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
-  Deploy your oracle and policy to IPFS and on-chain
+  Build, simulate, and deploy a Policy with an optional WASM module
 </Card>

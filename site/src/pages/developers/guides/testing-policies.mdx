@@ -114,7 +114,7 @@ Recommended coverage:
 - **Param toggles** — a deny flag set to `false` does not deny.
 - **Edge values** — `null`, empty, and out-of-range fields behave as intended.
 - **No fail-open under multiple failures** — two deny conditions at once still denies.
-- **Multi-oracle** — for chained oracles, wrap each fixture under its own pack id (`{"vaultsfyi": {...}, "webacy": {...}}`) and assert deny rules from each namespace fire independently.
+- **Multiple policies** — test each policy with its own params and oracle fixture, then test the aggregate decision. There is no cross-policy `data.wasm` merge.
 
 ### Quick local checks with the CLI
 
@@ -164,56 +164,72 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
     "jsonrpc": "2.0",
     "method": "newt_simulatePolicyData",
     "params": {
-      "policy_data_address": "0xYourPolicyData",
+      "policy_address": "0xYourPolicy",
+      "chain_id": 11155111,
       "wasm_args": "0x7b226e6574776f726b223a226d61696e6e6574227d"
     },
     "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
   }'
 ```
 
-See [Uploading & Accessing Secrets in Oracles](/developers/guides/secrets-in-oracles) for the secrets lifecycle.
+See [Deploying with CLI](/developers/guides/deploying-with-cli) for the current secrets workflow.
 
-## Simulate the full policy
+## Simulate the full policy set
 
-The final step before deploying: evaluate the complete policy (Rego + every oracle + merged data) against a sample intent with `newt_simulatePolicy`. Pass one entry per oracle in `policy_data` and namespaced `policy_params`:
+After deploying policies and configuring `setPolicies`, call SDK `simulatePolicy` with `policyClient`, `chainId`, `intent`, and an ordered `wasmArgs` array. The gateway runs each policy's optional WASM and then Rego in-process. It reads params and entrypoints from the configured set; do not send inline Rego or `policy_data` lists.
 
-```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulatePolicy",
-    "params": {
-      "policy_client": "0xYourPolicyClient",
-      "policy": "package vault_risk_rating\n...",
-      "entrypoint": "vault_risk_rating.allow",
-      "intent": {
-        "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "to": "0xb1aD5f82407bC0f19f42b2614fb9083035a36b69",
-        "value": "0x0",
-        "data": "0x",
-        "chain_id": "0xaa36a7",
-        "function_signature": "0x"
-      },
-      "policy_data": [
-        { "policy_data_address": "0xYourPolicyData" }
-      ],
-      "policy_params": { "vaultsfyi": { "apy_z_max": 4, "risk_score_floor": 60 } }
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
+```typescript
+const simulation = await client.simulatePolicy({
+  policyClient,
+  chainId: 11155111,
+  intent,
+  wasmArgs: ['0x', '0x'], // Two pure-Rego policies
+});
+if (!simulation.success) throw new Error(simulation.error ?? 'Simulation failed');
+console.log(simulation.policy_id, simulation.allowed);
+console.table(simulation.policies);
 ```
 
-Inspect `evaluation_result.policy_params_and_data` in the response to confirm the merged `data.wasm` shape, and `evaluation_result.result` for the allow/deny decision. For multi-oracle policies, see [Chaining Multiple Data Oracles](/developers/guides/chaining-data-oracles#simulating-a-multi-oracle-policy).
+For oracle-backed policies, replace each empty slot with that policy's hex-encoded oracle input. Use `newt_simulateTask` via raw RPC only when you already have oracle outputs; it skips WASM and resolves the current set, so it is not historical replay. See [RPC API](/developers/reference/rpc-api#newt_simulatetask).
+
+## Policy-set validation checklist
+
+Use two independent deterministic test policies, each with allow and deny fixtures. Keep the same client and record its ordered set before each run.
+
+| Policy 0 | Policy 1 | Aggregate | Application state |
+|---|---|---|---|
+| Allow | Allow | Allow | Changes only after successful attested transaction |
+| Allow | Deny | Deny | Unchanged |
+| Deny | Allow | Deny | Unchanged |
+| Deny | Deny | Deny | Unchanged |
+
+- Check every input and result maps to its policy-set position; preserve repeated entries.
+- Replace with a reordered set, then an identical set. Each successful replacement advances the revision and changes the ID. Old attestations must fail.
+- Reject empty sets, more than 8 entries, unregistered policies, zero expiry, oversized params, and unauthorized updates on the pinned contract.
+- Reject reused attestations and changes to sender, target, chain, value, calldata, or protected arguments. Verify expired responses and mismatched task snapshots fail.
+- Read state before and after denial and failed validation. An API denial alone does not prove the contract rejects a deny attestation.
+
+Record evidence separately:
+
+| Level | Evidence |
+|---|---|
+| Local policy tests | Inputs, expected and actual Rego verdicts |
+| Local contract tests | Configuration, intent binding, deny, stale response, and replay assertions |
+| Gateway simulation | Endpoint, current set ID, per-policy results, aggregate verdict; no signatures |
+| Live operator evaluation | Gateway task ID, frozen task, aggregate `allowed`, signed response |
+| On-chain validation | Successful BLS validation or expected revert |
+| Application execution | Transaction hash, receipt, and resulting application state |
+
+Do not use wall-clock conditions for a deterministic tutorial. An allow decision applies to evaluation time; block-based expiration is not a promise that external conditions remain true until execution.
 
 ## Recommended workflow
 
-1. `opa test` your Rego rules.
-2. `policy-data simulate` each oracle locally.
-3. Upload secrets, then `newt_simulatePolicyDataWithClient` to verify they resolve.
-4. `newt_simulatePolicy` for the full end-to-end decision.
-5. Deploy, then submit production tasks.
+1. Test each Rego policy locally with OPA and Newton Regorus.
+2. Test optional WASM locally, then deploy each policy with its artifacts.
+3. Configure the client's ordered set and upload required policy-scoped secrets.
+4. Simulate with `newt_simulatePolicy` and cover every truth-table case.
+5. Evaluate through live operators, then validate and execute an allowed transaction on-chain.
+6. Verify denial, stale attestations, and replay cannot change application state.
 
 ## Next Steps
 
@@ -221,7 +237,7 @@ Inspect `evaluation_result.policy_params_and_data` in the response to confirm th
 <Card icon="bug" to="/developers/resources/testing-debugging" title="Testing & Debugging">
   Diagnose failures after deployment
 </Card>
-<Card icon="link" to="/developers/guides/chaining-data-oracles" title="Chaining Data Oracles">
+<Card icon="link" to="/developers/guides/composing-policy-sets" title="Composing Policy Sets">
   Simulate and test multi-oracle policies
 </Card>
 <Card icon="list-check" to="/developers/resources/deployment-checklist" title="Deployment Checklist">

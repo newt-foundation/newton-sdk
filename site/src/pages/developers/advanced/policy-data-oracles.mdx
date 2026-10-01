@@ -6,7 +6,7 @@ showAskAi: false
 
 # Policy Data Oracles [With Newton Protocol, you can integrate data from other sources into your policy]
 
-See below for reference implementations for third party policy data oracles that can be integrated into your Newton Protocol policy, from KYC to sanctions screening to historical APY. These reference implementations can be forked to meet the needs of your application — check out their docs to learn more. You can incorporate data from multiple sources to create a policy that suits the needs of your application.
+These providers offer external signals that can be evaluated by a Newton Policy, from KYC and sanctions screening to historical APY. A deployed Policy contains its Rego logic, parameters, and optionally a WASM oracle that fetches or computes the signal at evaluation time.
 
 ## Identity
 
@@ -14,14 +14,12 @@ See below for reference implementations for third party policy data oracles that
 
 Veriff enables developers to build policies that use KYC data — specifically a user's country of residence.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/veriff-id-verification/policy-files)
 - [Example use cases](https://blog.newton.xyz/newton-protocol-launches-veriff-data-oracle-to-bring-kyc-and-identity-verification-onchain/)
 
 ### Persona
 
 Persona is another service that can assist with applications that require KYC. In addition to country of residence, data such as a bot score and state of residence can be used as part of a policy.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/persona-kyc-demo)
 - [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-persona-to-enable-real-time-identity-and-jurisdictional-compliance/)
 
 ## Sanctions & Wallet Screening
@@ -30,14 +28,12 @@ Persona is another service that can assist with applications that require KYC. I
 
 The security signals data policy provides a risk score for transacting with an address. This leverages onchain signals to determine how likely an address is to be malicious.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/security-signals)
 - [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-magic-labs-wallet-risk-data-to-enforce-pre-transaction-compliance/)
 
 ### Chainalysis
 
 Chainalysis provides useful insights into whether an address is sanctioned or not. This is valuable when complying with US OFAC sanctions regulations.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/chainalysis)
 
 ### [Human.tech](https://human.tech)
 
@@ -52,20 +48,17 @@ Human Passport (part of the broader [human.tech](https://human.tech) suite of pr
 
 Vaults is a powerful service that returns data around yield and assets for particular vaults. This is useful for building AI agents that are seeking to optimize yield.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/vaults-fyi)
 - [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-vaults-fyi-data-to-power-ai-trading-guardrails/)
 
 ### [Massive](https://massive.com/)
 
 Massive (fka Polygon.io) is a sevice that provides a wealth of macroeconomic data. This policy data gives insights into US Treasury yields, useful if building an application that is protected against interest rate movement.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/investment-guardrails)
 
 ### Etherscan
 
 Gas price data can be retrieved from Etherscan and used as part of a policy. This is useful as a final check against expensive gas prices for transaction automation senarios.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/max-gas-price)
 - [Example use cases](https://blog.newton.xyz/newton-protocol-integrates-etherscan-data-to-power-real-time-transaction-guardrails/)
 
 ## Social
@@ -74,28 +67,22 @@ Gas price data can be retrieved from Etherscan and used as part of a policy. Thi
 
 Neynar is a data provider for Farcaster, a decentralized social media protocol. Their data is useful when building an agent that uses a user's social score to make purchase decisions. For example, data like a bot score or follower count can be used as part of a policy.
 
-- [Reference implementation](https://github.com/newt-foundation/developer-policy-cli/tree/main/policy-examples/farcaster-user-data)
 
-## How to Use These Oracles
+## Use a Deployed Oracle
 
-To integrate a reference oracle into your project:
+To use an oracle-backed Policy in an application:
 
-1. **Fork the reference implementation** — clone the repo and copy the oracle's directory into your project
-2. **Configure secrets** — add your API keys via [Encrypting Secrets](/developers/advanced/encrypting-secrets) or pass them inline during simulation
-3. **Build the WASM component** — follow the language-specific guide ([JavaScript](/developers/advanced/javascript-wasm-guide), [Python](/developers/advanced/python-wasm-guide), [Rust](/developers/advanced/rust-wasm-guide))
-4. **Test locally** — simulate the oracle with the Newton CLI:
-
-   ```bash
-   newton-cli --chain-id 11155111 policy-data simulate \
-     --wasm-file policy.wasm \
-     --input-json '{"address": "0x..."}'
-   ```
-5. **Deploy on-chain** — use the CLI to upload your WASM to IPFS and deploy a PolicyData contract. See [Deploying with CLI](/developers/guides/deploying-with-cli).
-6. **Reference in your policy** — access the oracle output in your Rego policy via `data.wasm`:
+1. Choose or deploy the Policy whose WASM oracle supplies the signal you need.
+2. Configure that Policy as an entry in the PolicyClient's ordered set with `setPolicies`. Each entry has its own parameter bytes and expiration window. See [Smart Contract Integration](/developers/guides/smart-contract-integration#configure-the-policy-set).
+3. Upload any required API credentials as PolicyClient-scoped secrets. See [Deploying with CLI](/developers/guides/deploying-with-cli).
+4. Pass the oracle input in the Policy's positional `wasmArgs` entry when simulating or evaluating an intent.
+5. Read the oracle output in that Policy's Rego through `data.wasm`:
 
    ```rego
    risk_score := data.wasm.risk_score
    allow if risk_score < 50
    ```
+
+Use `newt_simulatePolicy` to inspect the Policy's result before live evaluation. For multiple independent checks, configure each Policy in the set and preserve their input order; every Policy must allow for the aggregate result to allow. See [Composing Policy Sets](/developers/guides/composing-policy-sets).
 
 For a full end-to-end walkthrough, see the [Integration Guide](/developers/guides/integration-guide).

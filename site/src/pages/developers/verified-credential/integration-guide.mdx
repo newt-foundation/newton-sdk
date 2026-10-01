@@ -117,8 +117,7 @@ Key requirements:
 
 **After registering**, call the following on your deployed policy client contract:
 
-1. `setPolicyAddress(policyContractAddress)` — point it to the policy deployed in Step 1
-2. `setPolicy(params)` — set the policy params, including your identity domain:
+Call owner `setPolicies` with the identity policy address and its configuration. Encode the following JSON into that entry’s `policyParams`, and set a nonzero `expireAfter`. Include every other desired policy in the same ordered replacement. See the [configuration example](/developers/guides/smart-contract-integration#configure-the-policy-set):
 
 ```json
 {
@@ -243,14 +242,15 @@ const intentSignature = await walletClient.signTypedData({
 **3. Submit for evaluation**
 
 ```typescript
-const result = await newtonWalletClient.evaluateIntentDirect({
+const { result } = await newtonWalletClient.evaluateIntentDirect({
   policyClient: yourPolicyClientAddress,
   intent,
   intentSignature,
   timeout: 60,
   identityDomain: IDENTITY_DOMAIN,
+  wasmArgs: ['0x'], // One pure-Rego identity policy; align with your actual set
 })
-// result.evaluationResult — true if the policy passed
+// result.allowed — true if the policy passed
 // result.task, result.taskResponse, result.blsSignature — needed for Step 7
 ```
 
@@ -259,6 +259,7 @@ const result = await newtonWalletClient.evaluateIntentDirect({
 Use the attestation returned in Step 6 to execute the transaction on-chain through your policy client.
 
 ```typescript
+if (result.allowed !== true) throw new Error("Policy set denied the intent");
 const { task, taskResponse, blsSignature } = result
 
 await walletClient.writeContract({

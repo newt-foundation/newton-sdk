@@ -79,3 +79,8 @@ A Newton policy pins a policy template and a `PolicyConfig`. The config includes
 ## Fail-Closed Behavior
 
 If Newton operators deny the task, quorum is not reached, the attestation expires, or the Shield validation fails, the vault action is not forwarded. This fail-closed property is the core operating assumption for VaultKit.
+
+
+## Policy-set clients
+
+For policy-set-capable deployments, a Task freezes the ordered specs, set ID, and revision. The response retains ordered per-policy evidence and aggregate `allowed`; all policies must allow. Preserve order and repeats when forwarding signed responses. Verify the Shield and Vault SDK release before adopting the core SDK schema.

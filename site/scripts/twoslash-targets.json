@@ -36,12 +36,6 @@
     "status": "tagged"
   },
   {
-    "file": "src/pages/developers/guides/secrets-in-oracles.mdx",
-    "openLine": 74,
-    "lang": "ts twoslash",
-    "status": "tagged"
-  },
-  {
     "file": "src/pages/developers/guides/frontend-sdk-integration.mdx",
     "openLine": 79,
     "lang": "ts twoslash",

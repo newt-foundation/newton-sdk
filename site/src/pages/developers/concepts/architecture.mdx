@@ -66,7 +66,7 @@ The Policy Layer defines what rules exist and how they are configured.
 Developers publish policies to the registry by:
 1. Writing a Rego policy and WASM oracle
 2. Uploading to IPFS via `newton-cli`
-3. Deploying PolicyData and Policy contracts on-chain
+3. Deploying independent Policy contracts with optional WASM CIDs
 
 Users configure policies by deploying a PolicyClient contract with specific parameters (thresholds, allowlists, expiration).
 
@@ -115,7 +115,7 @@ See [Contract Addresses](/developers/reference/contract-addresses) for deployed 
 ```mermaid
 flowchart LR
     Factory[NewtonPolicyFactory] -->|creates| Policy[NewtonPolicy]
-    Policy -->|stores| PD[PolicyData]
+    Policy -->|optional WASM CID| PD[Oracle]
     PC[PolicyClient] -->|references| Policy
     PC -->|validates via| AV[AttestationValidator]
     AV -->|reads| TM[TaskManager]
@@ -144,3 +144,8 @@ A complete evaluation cycle:
 <Card icon="shield" to="/developers/concepts/consensus-security" title="Consensus & Security">
   BLS aggregation, quorum thresholds, and the security model
 </Card>
+
+
+## Policy-set evaluation
+
+The client configures an ordered set with `setPolicies`. Task admission freezes its ID, revision, and specs. Operators evaluate every policy with its own params and optional oracle; the aggregate allows only when all policies allow. Input and response positions retain set order, including repeated policies. Owner replacement invalidates attestations for the previous set ID. See [Core Concepts](/developers/overview/core-concepts#policy-set).

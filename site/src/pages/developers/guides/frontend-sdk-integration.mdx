@@ -134,7 +134,7 @@ type EvaluateBody = {
     functionSignature: Hex;
   };
   intentSignature: Hex;
-  wasmArgs?: Hex;
+  wasmArgs: Hex[];
 };
 
 export async function POST(request: Request) {
@@ -152,6 +152,9 @@ export async function POST(request: Request) {
     !body.policyClient ||
     !body.intent ||
     !body.intentSignature ||
+    !Array.isArray(body.wasmArgs) ||
+    body.wasmArgs.length === 0 ||
+    !body.wasmArgs.every((arg) => typeof arg === "string" && /^0x(?:[0-9a-fA-F]{2})*$/.test(arg)) ||
     body.intent.chainId !== sepolia.id
   ) {
     return NextResponse.json({ error: "Invalid evaluation request" }, { status: 400 });
@@ -171,17 +174,21 @@ export async function POST(request: Request) {
       policyClient: body.policyClient,
       intent: body.intent,
       intentSignature: body.intentSignature,
-      ...(body.wasmArgs ? { wasmArgs: body.wasmArgs } : {}),
+      wasmArgs: body.wasmArgs,
       timeout: 30, // seconds
     });
 
-    return NextResponse.json(result);
+    return new Response(JSON.stringify(result, (_, value) =>
+      typeof value === "bigint" ? `0x${value.toString(16)}` : value
+    ), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Evaluation failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
 ```
+
+Read `getPolicySetSnapshot()` to confirm the expected set and argument count. Keep each argument at its policy index, even for repeated policies. Reconfiguration requires a fresh evaluation; never rewrite the returned task or signed response.
 
 For production, validate `policyClient`, `intent.to`, chain, calldata, and request size against server-owned configuration before calling the gateway. Add authentication and rate limiting appropriate to your application.
 
@@ -201,13 +208,14 @@ const response = await fetch("/api/evaluate", {
       chainId: Number(intent.chainId),
     },
     intentSignature,
+    wasmArgs: ["0x", "0x"], // Example: two pure-Rego policies, in set order
   }),
 });
 
 const evaluation = await response.json();
 if (!response.ok) throw new Error(evaluation.error ?? "Evaluation failed");
 
-if (!evaluation.evaluationResult) {
+if (evaluation.allowed !== true) {
   // A deny is a completed policy decision, not a transport failure.
   showDeniedState();
   return;
@@ -230,7 +238,7 @@ await walletClient.writeContract({
 The protected function name and arguments depend on your PolicyClient. Bind every executed value to the attested intent in Solidity; never accept extra, unchecked execution arguments.
 
 :::note
-`status: "success"` from the gateway means evaluation and aggregation completed. The policy decision is `evaluationResult`. Never submit the application transaction when it is false.
+`status: "success"` from the gateway means evaluation and aggregation completed. The policy decision is `allowed`. Never submit the application transaction when it is false.
 :::
 
 ## Raw gateway responses

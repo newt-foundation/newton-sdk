@@ -199,7 +199,9 @@ For data that should only exist for a single task evaluation — no upload step,
 
 ### How It Works
 
-The client places HPKE-encrypted data in a reserved `_newton` namespace inside `wasm_args`:
+The following JSON illustrates one decoded oracle argument blob, not the top-level task request. In policy-set requests, encode each blob and retain its policy position in the `wasm_args` array. Verify ephemeral-envelope handling against the selected gateway release before using this legacy privacy convention.
+
+The client places HPKE-encrypted data in a reserved `_newton` namespace:
 
 ```json
 {

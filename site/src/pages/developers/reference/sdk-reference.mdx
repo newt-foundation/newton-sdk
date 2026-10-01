@@ -20,6 +20,17 @@ The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and 
 
 ---
 
+## Policy-set requests
+
+This reference targets SDK **1.2.2**. `submitEvaluationRequest`, `evaluateIntentDirect`, `submitIntentAndSubscribe`, and `simulatePolicy` require `wasmArgs: Hex[]`, positionally aligned with the client's ordered set. Pass `['0x']` for one pure-Rego policy and `['0x', '0x']` for two. A scalar or omitted value is not supported by these SDK methods.
+
+```ts
+interface PolicyConfig { policyParams: Hex; expireAfter: number }
+interface PolicySpec { policy: Address; config: PolicyConfig }
+```
+
+Read `getPolicySetSnapshot()` through the exported `NewtonPolicyClientAbi` with viem `readContract` when you need identity, revision, and specs together. There is no SDK action with that name in v1.2.2. Preserve order and repeated entries in both tasks and responses. Individual oracle simulation methods still use scalar `wasmArgs`.
+
 ## Installation
 
 :::code-group
@@ -202,6 +213,7 @@ const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequ
     chainId: '0xaa36a7', // Ethereum Sepolia (11155111)
     functionSignature: '0x...',
   },
+  wasmArgs: ['0x'], // One pure-Rego policy
   timeout: 60,
 });
 
@@ -288,10 +300,11 @@ const { result } = await walletClient.evaluateIntentDirect({
   policyClient,
   intent,
   intentSignature,
+  wasmArgs: ['0x', '0x'], // Two pure-Rego policies, in set order
   timeout: 30,
 });
 
-console.log(result.evaluationResult); // boolean
+console.log(result.allowed); // boolean
 console.log(result.task);             // Task object
 console.log(result.taskResponse);     // Raw task response
 console.log(result.blsSignature);     // BLS signature data
@@ -304,9 +317,9 @@ evaluateIntentDirect(
   args: SubmitEvaluationRequestParams
 ): Promise<{
   result: {
-    evaluationResult: boolean;
+    allowed: boolean;
     task: Task;
-    taskResponse: unknown;
+    taskResponse: TaskResponse;
     blsSignature: unknown;
   };
 }>
@@ -319,11 +332,11 @@ evaluateIntentDirect(
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
 | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
 | `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
-| `timeout`      | `number`           | No       | Request timeout in seconds                                                                         |
+| `timeout`      | `number`           | Yes       | Request timeout in seconds                                                                         |
 
 **Returns:**
 
-- `result.evaluationResult` (`boolean`) -- Whether the intent was allowed by the policy
+- `result.allowed` (`boolean`) -- Whether the intent was allowed by the policy
 - `result.task` (`Task`) -- The full task object
 - `result.taskResponse` -- The raw task response from the operator
 - `result.blsSignature` -- The BLS aggregate signature
@@ -398,6 +411,7 @@ const { result, ws } = await walletClient.submitIntentAndSubscribe({
     chainId: 11155111,
     functionSignature: '0x...',
   },
+  wasmArgs: ['0x', '0x'], // Two pure-Rego policies, in set order
   timeout: 30,
 });
 
@@ -428,7 +442,7 @@ submitIntentAndSubscribe(
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
 | `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
-| `timeout`      | `number`           | No       | Request timeout in seconds                                                                         |
+| `timeout`      | `number`           | Yes       | Request timeout in seconds                                                                         |
 
 **Returns:**
 
@@ -457,7 +471,9 @@ Use `submitIntentAndSubscribe` when you need on-chain task verification via `New
 
 ### simulateTask
 
-Simulates task evaluation (`newt_simulateTask`). Forwards the task to an operator and returns an allow/deny result without executing on-chain. See the [RPC API Reference](/developers/reference/rpc-api) for the underlying JSON-RPC method.
+:::warning
+SDK v1.2.2's `simulateTask` wrapper still sends the legacy `policy_task_data` schema shown below. It is not compatible with the policy-set gateway at the pinned revision. Use `simulatePolicy` for full WASM + Rego simulation, or call [newt_simulateTask](/developers/reference/rpc-api#newt_simulatetask) directly with the new schema for provided-output evaluation. Neither simulation returns a BLS attestation.
+:::
 
 ```ts
 const result = await walletClient.simulateTask({
@@ -477,8 +493,6 @@ const result = await walletClient.simulateTask({
       {
         wasmArgs: '0x',
         data: '0x...',
-        attestation: '0x...',
-        policyDataAddress: '0x...',
         expireBlock: 999999,
       },
     ],
@@ -501,48 +515,39 @@ simulateTask(args: SimulateTaskParams): Promise<SimulateTaskResult>
 
 ### simulatePolicy
 
-Simulates full Rego policy evaluation (`newt_simulatePolicy`). Tests a policy with a sample intent and policy data. May require ownership if `PolicyData` uses stored secrets.
+Simulates the configured policy set (`newt_simulatePolicy`). The gateway runs each policy's optional WASM and evaluates its Rego, returning per-policy results and an aggregate verdict. It requires deployed policies and a configured client. The pinned gateway checks client ownership, including pure-Rego sets; explicitly authorized admin keys have a read-only bypass.
 
 ```ts
 const result = await walletClient.simulatePolicy({
   policyClient: '0x...',
-  policy: '<rego-policy-string>',
+  chainId: 11155111,
   intent: {
-    from: '0x...',
-    to: '0x...',
-    value: '0x0',
-    data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
-    functionSignature: '0x...',
+    from: '0x...', to: '0x...', value: '0x0', data: '0x...',
+    chainId: 11155111, functionSignature: '0x...',
   },
-  policyData: [
-    { policyDataAddress: '0x...' },
-  ],
-  policyParams: { max_amount: 1000 },
-  entrypoint: 'newton/policy/allow',
+  wasmArgs: ['0x', '0x'], // One slot per policy, including pure-Rego entries
 });
-
-console.log(result.success);
-console.log(result.evaluation_result);
-console.log(result.error);
+console.log(result.success, result.allowed, result.policy_id);
+for (const policy of result.policies ?? []) {
+  console.log(policy.policy_index, policy.policy, policy.allowed, policy.result);
+}
 ```
-
-**Signature:**
 
 ```ts
 simulatePolicy(args: SimulatePolicyParams): Promise<SimulatePolicyResult>
 ```
 
+`success` means evaluation completed; `allowed` means every policy allowed. Errors have `allowed: null`. This is an unsigned simulation, not an operator quorum or application transaction.
+
 ---
 
 ### simulatePolicyData
 
-Simulates PolicyData WASM execution (`newt_simulatePolicyData`) with caller-provided secrets. No ownership verification is required.
+Simulates one Policy’s WASM. No ownership verification is required for caller-supplied secrets. In v1.2.2 the SDK types `secrets` as a string and forwards it unchanged, while the pinned gateway expects a SecureEnvelope JSON object. Use raw RPC for encrypted inline secrets until the wrapper matches; the no-secrets example can omit that field.
 
 ```ts
 const result = await walletClient.simulatePolicyData({
-  policyDataAddress: '0x...',
-  secrets: '<secrets-json-string>',
+  policyAddress: '0x...',
   wasmArgs: '0x...',
   chainId: 11155111, // required
 });
@@ -564,11 +569,11 @@ simulatePolicyData(
 
 ### simulatePolicyDataWithClient
 
-Simulates PolicyData WASM execution (`newt_simulatePolicyDataWithClient`) using stored secrets for a policy client. Requires ownership of the policy client.
+Simulates one Policy’s WASM with stored secrets. Requires client ownership. SDK v1.2.2’s wrapper omits the required top-level `chain_id`; use [raw RPC](/developers/reference/rpc-api#newt_simulatepolicydatawithclient) with the deployment chain for the pinned gateway. The signature below documents the wrapper, not a compatible request.
 
 ```ts
 const result = await walletClient.simulatePolicyDataWithClient({
-  policyDataAddress: '0x...',
+  policyAddress: '0x...',
   policyClient: '0x...',
   wasmArgs: '0x...',
 });
@@ -955,12 +960,12 @@ This is a **synchronous** method. Keys are generated locally and never sent to a
 
 #### storeEncryptedSecrets
 
-Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's PolicyData oracle. The gateway's X25519 public key is fetched automatically if not provided.
+Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the gateway for a PolicyClient's Policy oracle. The gateway's X25519 public key is fetched automatically if not provided.
 
 ```ts
 const { success } = await walletClient.storeEncryptedSecrets({
   policyClient: '0x...',
-  policyDataAddress: '0x...',
+  policyAddress: '0x...',
   plaintext: { API_KEY: 'sk-...', ENDPOINT: 'https://api.example.com' },
   chainId: 11155111,
 });
@@ -1275,7 +1280,7 @@ const result = await publicClient.waitForTaskResponded({
   timeoutMs: 120000,
 });
 
-console.log(result.taskResponse.evaluationResult);
+console.log(result.taskResponse.allowed);
 console.log(result.attestation.expiration);
 ```
 
@@ -2052,73 +2057,105 @@ unlinkIdentityAsUser(
 :::
 
 :::details[Task]
-  ```ts
-  interface Task {
-    taskId: TaskId;
-    intent: NormalizedIntent;
-    policyId: Hex;
-    taskCreatedBlock: number;
-    // Additional operator-specific fields
+```ts
+interface Task {
+  initializationTimestamp: Hex
+  intent: {
+    chainId: Hex
+    data: Hex
+    from: Address
+    functionSignature: Hex
+    to: Address
+    value: Hex
   }
-  ```
-
-  The full task object returned by evaluation methods.
+  intentSignature: Hex
+  policyClient: Address
+  policyId: Hex
+  policyRevision: number
+  /** Frozen at admission. Order and repeats are significant. */
+  policies: PolicySpec[]
+  wasmArgs: Hex[]
+  quorumNumbers: Hex
+  quorumThresholdPercentage: number
+  taskCreatedBlock: number
+  taskId: Hex
+}
+```
 :::
 
 :::details[TaskResponse]
-  ```ts
-  interface TaskResponse {
-    evaluationResult: boolean;
-    referenceTaskId: TaskId;
-    // Additional response metadata
-  }
-  ```
+```ts
+interface PolicyDataEntry {
+  wasmArgs: Hex
+  data: Hex
+  expireBlock: number
+}
 
-  The operator's response to a task evaluation.
+interface PolicyTaskData {
+  policyId: Hex
+  policyAddress: Address
+  policy: Hex
+  policyData: PolicyDataEntry[]
+}
+
+interface TaskResponse {
+  taskId: Hex
+  policyClient: Address
+  policyId: Hex
+  intent: NormalizedIntent
+  intentSignature: Hex
+  /** True only when every policy allows. */
+  allowed: boolean
+  policyTaskData: PolicyTaskData[]
+}
+```
 :::
 
 :::details[TaskResponseResult]
-  ```ts
-  interface TaskResponseResult {
-    taskResponse: TaskResponse;
-    attestation: {
-      expiration: number;
-      // Additional attestation fields
-    };
+```ts
+interface TaskResponseResult {
+  taskResponse: TaskResponse
+  responseCertificate: ResponseCertificate
+  attestation: {
+    taskId: Hex
+    policyId: Hex
+    policyClient: Address
+    intent: NormalizedIntent
+    intentSignature: Hex
+    expiration: number
   }
-  ```
-
-  The combined result returned by `waitForTaskResponded`.
+}
+```
 :::
 
 :::details[SubmitEvaluationRequestParams]
-  ```ts
-  interface SubmitEvaluationRequestParams {
-    policyClient: Address;
-    intent: IntentFromParams;
-    timeout: number;
-    proofCid?: string;
-    includeValidateCalldata?: boolean;
-    encryptedDataRefs?: string[];
-    userSignature?: string;
-    appSignature?: string;
-    userPublicKey?: string;
-    appPublicKey?: string;
-  }
-  ```
-
-  | Field                      | Type               | Required | Description                                                              |
-  | -------------------------- | ------------------ | -------- | ------------------------------------------------------------------------ |
-  | `policyClient`             | `Address`          | Yes      | The policy client contract address                                       |
-  | `intent`                   | `IntentFromParams` | Yes      | The intent to evaluate                                                   |
-  | `timeout`                  | `number`           | Yes      | Request timeout in seconds                                               |
-  | `proofCid`                 | `string`           | No       | IPFS CID of a TLSNotary presentation proof for zkTLS-backed evaluation   |
-  | `includeValidateCalldata`  | `boolean`          | No       | Include ABI-encoded `validateAttestationDirect` calldata in the response |
-  | `encryptedDataRefs`        | `string[]`         | No       | Encrypted data reference UUIDs for privacy-preserving evaluation         |
-  | `userSignature`            | `string`           | No       | User Ed25519 signature for privacy authorization (hex-encoded)           |
-  | `appSignature`             | `string`           | No       | Application Ed25519 signature for privacy authorization (hex-encoded)    |
-  | `userPublicKey`            | `string`           | No       | User Ed25519 public key (hex-encoded, 32 bytes)                          |
-  | `appPublicKey`             | `string`           | No       | Application Ed25519 public key (hex-encoded, 32 bytes)                   |
+```ts
+interface SubmitEvaluationRequestParams {
+  policyClient: Address
+  intent: IntentFromParams
+  intentSignature?: Hex
+  quorumNumber?: Hex
+  quorumThresholdPercentage?: number
+  /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
+  wasmArgs: Hex[]
+  timeout: number // in seconds
+  identityDomain?: Hex
+  /** Encrypted data reference UUIDs for privacy-preserving evaluation */
+  encryptedDataRefs?: string[]
+  /** User Ed25519 signature for privacy authorization (hex-encoded) */
+  userSignature?: string
+  /** Application Ed25519 signature for privacy authorization (hex-encoded) */
+  appSignature?: string
+  /** User Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  userPublicKey?: string
+  /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  appPublicKey?: string
+  /** IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation */
+  proofCid?: string
+  /** Include ABI-encoded validateAttestationDirect calldata in the response */
+  includeValidateCalldata?: boolean
+}
+```
 :::
 
 ---
@@ -2126,66 +2163,68 @@ unlinkIdentityAsUser(
 ### Simulation Types
 
 :::details[SimulateTaskParams & SimulateTaskResult]
-  ```ts
-  interface SimulateTaskParams {
-    intent: IntentFromParams;
-    policyTaskData: SimulateTaskPolicyTaskData;
-  }
-  
-  interface SimulateTaskPolicyTaskData {
-    policyId: Hex;
-    policyAddress: Address;
-    policy: Hex;
-    policyData: SimulateTaskPolicyData[];
-  }
-  
-  interface SimulateTaskPolicyData {
-    wasmArgs: Hex;
-    data: Hex;
-    attestation: Hex;
-    policyDataAddress: Address;
-    expireBlock: number;
-  }
-  
-  interface SimulateTaskResult {
-    success: boolean;
-    result?: {
-      allow: boolean;
-      reason?: string;
-    };
-    error?: string;
-  }
-  ```
+```ts
+interface SimulateTaskParams {
+  intent: IntentFromParams
+  policyTaskData: SimulateTaskPolicyTaskData
+}
+
+interface SimulateTaskPolicyTaskData {
+  policyId: Hex
+  policyAddress: Address
+  policy: Hex
+  policyData: SimulateTaskPolicyData[]
+}
+
+interface SimulateTaskPolicyData {
+  wasmArgs: Hex
+  data: Hex
+  expireBlock: number
+}
+
+interface SimulateTaskResult {
+  success: boolean
+  result: { allow?: boolean; reason?: string } | null
+  error: string | null
+  details: unknown
+}
+```
 :::
 
 :::details[SimulatePolicyParams & SimulatePolicyResult]
-  ```ts
-  interface SimulatePolicyParams {
-    policyClient: Address;
-    policy: string;
-    intent: IntentFromParams;
-    policyData: Array<{ policyDataAddress: Address }>;
-    policyParams?: Record<string, any>;
-    entrypoint?: string;
-  }
-  
-  interface SimulatePolicyResult {
-    success: boolean;
-    evaluation_result?: SimulatePolicyEvaluationResult;
-    error?: string;
-  }
-  
-  interface SimulatePolicyEvaluationResult {
-    allow: boolean;
-    reason?: string;
-  }
-  ```
+```ts
+interface SimulatePolicyParams {
+  policyClient: Address
+  chainId: number
+  intent: IntentFromParams
+  /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
+  wasmArgs: Hex[]
+  intentSignature?: Hex
+}
+
+interface PolicySimulationResult {
+  policy_index: number
+  policy: Address
+  result: unknown
+  allowed: boolean
+  expire_after: number
+}
+
+interface SimulatePolicyResult {
+  success: boolean
+  allowed: boolean | null
+  policy_id: string | null
+  policies: PolicySimulationResult[] | null
+  error: string | null
+  parsed_intent: unknown | null
+}
+```
 :::
 
 :::details[SimulatePolicyDataParams & SimulatePolicyDataResult]
   ```ts
   interface SimulatePolicyDataParams {
-    policyDataAddress: Address;
+    policyAddress: Address;
     secrets?: string;
     wasmArgs?: Hex;
     chainId: number; // required
@@ -2206,7 +2245,7 @@ unlinkIdentityAsUser(
 :::details[SimulatePolicyDataWithClientParams & SimulatePolicyDataWithClientResult]
   ```ts
   interface SimulatePolicyDataWithClientParams {
-    policyDataAddress: Address;
+    policyAddress: Address;
     policyClient: Address;
     wasmArgs?: Hex;
   }
@@ -2271,7 +2310,7 @@ unlinkIdentityAsUser(
   }
   
   interface PolicyDataInput {
-    policyDataAddress: Address;
+    policyAddress: Address;
   }
   ```
 :::
@@ -2281,45 +2320,70 @@ unlinkIdentityAsUser(
 ### Gateway Types
 
 :::details[GatewayCreateTaskResult & AggregationResponse]
-  ```ts
-  interface GatewayCreateTaskResult {
-    task_id: Hex;
-    task: Task;
-    task_response: unknown;
-    aggregation_response: AggregationResponse;
-    status: 'success' | 'failed';
-    error: string | null;
-    expiration: number;
-    reference_block: number;
-    signature_data: Hex;
-    timestamp: number;
-    /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
-    validate_calldata?: string;
-    /** Per-operator error details when quorum fails */
-    operator_errors?: OperatorError[];
+```ts
+interface GatewayCreateTaskResult {
+  aggregation_response: AggregationResponse
+  error: string | null
+  expiration: number
+  reference_block: number
+  status: 'success' | 'failed'
+  task: Task
+  task_id: Hex
+  task_response: {
+    allowed: boolean
+    initialization_timestamp: Hex
+    intent: {
+      chainId: Hex
+      data: Hex
+      from: Address
+      functionSignature: Hex
+      to: Address
+      value: Hex
+    }
+    intent_signature: Hex
+    policy_client: Address
+    policy_id: Hex
+    policy_task_data: Array<{
+      policy: Hex
+      policyAddress: Address
+      policyData: Array<{
+        data: Hex
+        expireBlock: number
+        wasmArgs: Hex
+      }>
+      policyId: Hex
+    }>
+    task_id: Hex
   }
-  
-  interface AggregationResponse {
-    non_signer_quorum_bitmap_indices: number[];
-    non_signer_stake_indices: number[][];
-    non_signers_pub_keys_g1: number[][];
-    quorum_apk_indices: number[];
-    quorum_apks_g1: number[][];
-    signers_agg_sig_g1: { g1_point: number[] };
-    signers_apk_g2: number[];
-    total_stake_indices: number[];
-    task_created_block: number;
-  }
+  signature_data: Hex
+  /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
+  validate_calldata?: string
+  /** Per-operator error details when quorum fails */
+  operator_errors?: OperatorError[]
+  timestamp: number
+}
 
-  interface OperatorError {
-    operator_address: Address;
-    operator_id: Hex;
-    error_code: number;
-    message: string;
-    timestamp: string;
-    retryable: boolean;
-  }
-  ```
+interface AggregationResponse {
+  non_signer_quorum_bitmap_indices: number[]
+  non_signer_stake_indices: number[][]
+  non_signers_pub_keys_g1: number[][]
+  quorum_apk_indices: number[]
+  quorum_apks_g1: number[][]
+  signers_agg_sig_g1: { g1_point: number[] }
+  signers_apk_g2: number[]
+  total_stake_indices: number[]
+  task_created_block: number
+}
+
+interface OperatorError {
+  operator_address: Address
+  operator_id: Hex
+  error_code: number
+  message: string
+  timestamp: string
+  retryable: boolean
+}
+```
 :::
 
 ---
@@ -2458,7 +2522,7 @@ unlinkIdentityAsUser(
   ```ts
   interface StoreEncryptedSecretsParams {
     policyClient: Address;
-    policyDataAddress: Address;
+    policyAddress: Address;
     /** Plaintext secrets as a JSON object (e.g., { "API_KEY": "...", "ENDPOINT": "..." }) */
     plaintext: Record<string, unknown>;
     chainId: number;
