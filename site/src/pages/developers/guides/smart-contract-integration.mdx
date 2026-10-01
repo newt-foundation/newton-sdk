@@ -108,7 +108,7 @@ flowchart LR
 mkdir newton-policy-wallet && cd newton-policy-wallet
 forge init --no-git
 git init
-forge install newt-foundation/newton-prover-avs@190444581d44604e5da1da83d279acdd22841a37
+forge install newt-foundation/newton-contracts
 ```
 
 ### Write the contract
@@ -184,11 +184,7 @@ optimizer = true
 optimizer_runs = 200
 
 remappings = [
-    "newton-contracts/=lib/newton-prover-avs/contracts/",
-    "@openzeppelin/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts/",
-    "@openzeppelin-upgrades/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/",
-    "@eigenlayer/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/lib/eigenlayer-contracts/src/",
-    "@eigenlayer-middleware/=lib/newton-prover-avs/contracts/lib/eigenlayer-middleware/",
+    "newton-contracts/=lib/newton-contracts/",
     "forge-std/=lib/forge-std/src/"
 ]
 
@@ -257,7 +253,7 @@ When adding `NewtonPolicyClient` to an existing upgradeable contract:
 Install the dependency:
 
 ```bash
-forge install newt-foundation/newton-prover-avs@190444581d44604e5da1da83d279acdd22841a37
+forge install newt-foundation/newton-contracts
 ```
 
   </Tab>
