@@ -6,3 +6,7 @@ cache/
 
 # Vocs-generated route manifest (emitted on build)
 src/pages.gen.ts
+
+# Suisse Int'l is proprietary (Swiss Typefaces, licensed to Newton).
+# Self-host for local/docs deploys; do not commit the font files.
+public/fonts/*.woff2

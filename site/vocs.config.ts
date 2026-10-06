@@ -93,12 +93,12 @@ export default defineConfig({
     { text: 'VaultKit', link: '/developers/vaults/overview', match: '/developers/vaults' },
     { text: 'Whitepaper', link: '/whitepaper/introduction', match: '/whitepaper' },
     { text: 'Protocol', link: '/protocol/overview/project-and-protocol', match: '/protocol' },
-    { text: 'Blog', link: 'https://blog.newton.xyz' },
+    { text: 'Blog', link: 'https://newton.xyz/blog' },
   ],
   redirects: [
-    // Note: the home redirect (/ -> /developers/overview/about) lives in vercel.json,
-    // not here. Vocs generates a root route that shadows a config `/` redirect in
-    // dev/preview, so the root redirect only fires reliably at the Vercel edge.
+    // Production also redirects `/` in vercel.json. Keep it here so `vocs dev`
+    // and preview send `/` to the about page instead of the generated 404.
+    { source: '/', destination: '/developers/overview/about' },
     { source: '/newton-protocol/overview', destination: '/protocol/overview/project-and-protocol' },
     { source: '/newton-protocol/:path*', destination: '/protocol/overview/:path*' },
     { source: '/foundation/foundation-structure-and-key-contributors', destination: '/protocol/foundation/structure-and-key-contributors' },

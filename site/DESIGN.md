@@ -38,15 +38,20 @@ Newton's brand uses near-black ink (`#19191a`) for light mode, ensuring high con
 
 ### Type Scale
 
-Vocs provides a built-in responsive type scale. No custom overrides applied — the default scale is calibrated for technical documentation and aligns with maple's proportions.
+Same reading scale as the landing page. Weights are 400 and 500 only.
+
+| Role | Size | Weight | Line height | Tracking |
+|------|------|--------|-------------|----------|
+| Page title | 28px, 40px from 768px | 500 | 1.2 | -0.02em |
+| Section heading | 28px | 500 | 1.2 | -0.01em |
+| Subsection | 22px | 500 | 1.2 | -0.01em |
+| Minor heading | 18px | 500 | 1.2 | -0.01em |
+| Body | 16px | 400 | 1.5 | 0.16px |
 
 ### Font Stack
 
-Vocs defaults to system fonts with fallbacks:
-- **Sans-serif:** System UI stack (San Francisco on macOS, Segoe UI on Windows, Roboto on Android)
-- **Monospace:** Inherits from Vocs code block styling
-
-No custom font declarations — system fonts ensure instant loading and native OS harmony.
+- **Sans-serif:** Suisse Int'l, then system-ui. Self-hosted from `public/fonts/` with the original filenames. The `.woff2` files are licensed to Newton and gitignored.
+- **Monospace:** Vocs code face, unchanged.
 
 ## Component Stylings
 
