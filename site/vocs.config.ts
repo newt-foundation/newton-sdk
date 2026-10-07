@@ -86,6 +86,10 @@ export default defineConfig({
         textContent:
           "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JFG7Z812VK');",
       },
+      {
+        // Vocs hardcodes the header logo to `/`. Send it to the marketing site.
+        textContent: `document.addEventListener('click',function(event){var link=event.target&&event.target.closest&&event.target.closest('a');if(!link)return;var isLogo=link.hasAttribute('data-v-logo-link')||!!link.querySelector('[data-v-logo]');if(!isLogo)return;var url='https://newton.xyz/';link.href=url;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();event.stopPropagation();window.location.assign(url);},true);`,
+      },
     ],
   },
   topNav: [
