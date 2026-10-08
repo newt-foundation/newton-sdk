@@ -126,8 +126,7 @@ No custom shadow overrides applied — Vocs provides subtle elevation for naviga
 
 ## Logo Usage
 
-**Light mode:** `/logo/light.svg` (dark Newton wordmark on transparent)
-**Dark mode:** `/logo/dark.svg` (light Newton wordmark on transparent)
+**Light and dark mode:** `/logo/light.svg` (blue Newton wordmark on transparent)
 
 Configured via `logoUrl: { light, dark }` in `vocs.config.ts`.
 

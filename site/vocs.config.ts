@@ -39,7 +39,7 @@ export default defineConfig({
   description:
     'Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.',
   baseUrl: resolveBaseUrl(),
-  logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
+  logoUrl: { light: '/logo/light.svg', dark: '/logo/light.svg' },
   iconUrl: '/favicon.svg',
   titleTemplate: '%s · Newton',
   accentColor: 'light-dark(#19191a, #ffffff)',
