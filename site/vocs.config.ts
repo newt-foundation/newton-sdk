@@ -39,7 +39,7 @@ export default defineConfig({
   description:
     'Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS.',
   baseUrl: resolveBaseUrl(),
-  logoUrl: { light: '/logo/light.svg', dark: '/logo/dark.svg' },
+  logoUrl: { light: '/logo/light.svg', dark: '/logo/light.svg' },
   iconUrl: '/favicon.svg',
   titleTemplate: '%s · Newton',
   accentColor: 'light-dark(#19191a, #ffffff)',
@@ -86,6 +86,10 @@ export default defineConfig({
         textContent:
           "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JFG7Z812VK');",
       },
+      {
+        // Vocs hardcodes the header logo to `/`. Send it to the marketing site.
+        textContent: `document.addEventListener('click',function(event){var link=event.target&&event.target.closest&&event.target.closest('a');if(!link)return;var isLogo=link.hasAttribute('data-v-logo-link')||!!link.querySelector('[data-v-logo]');if(!isLogo)return;var url='https://newton.xyz/';link.href=url;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();event.stopPropagation();window.location.assign(url);},true);`,
+      },
     ],
   },
   topNav: [
@@ -93,12 +97,12 @@ export default defineConfig({
     { text: 'VaultKit', link: '/developers/vaults/overview', match: '/developers/vaults' },
     { text: 'Whitepaper', link: '/whitepaper/introduction', match: '/whitepaper' },
     { text: 'Protocol', link: '/protocol/overview/project-and-protocol', match: '/protocol' },
-    { text: 'Blog', link: 'https://blog.newton.xyz' },
+    { text: 'Blog', link: 'https://newton.xyz/blog' },
   ],
   redirects: [
-    // Note: the home redirect (/ -> /developers/overview/about) lives in vercel.json,
-    // not here. Vocs generates a root route that shadows a config `/` redirect in
-    // dev/preview, so the root redirect only fires reliably at the Vercel edge.
+    // Production also redirects `/` in vercel.json. Keep it here so `vocs dev`
+    // and preview send `/` to the about page instead of the generated 404.
+    { source: '/', destination: '/developers/overview/about' },
     { source: '/newton-protocol/overview', destination: '/protocol/overview/project-and-protocol' },
     { source: '/newton-protocol/:path*', destination: '/protocol/overview/:path*' },
     { source: '/foundation/foundation-structure-and-key-contributors', destination: '/protocol/foundation/structure-and-key-contributors' },

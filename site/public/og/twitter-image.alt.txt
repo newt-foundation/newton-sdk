@@ -1,1 +1,1 @@
-Magic Newton
+Newton Labs. The authorization layer for onchain transactions.
