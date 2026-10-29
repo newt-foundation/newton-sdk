@@ -39,9 +39,10 @@ Sent by the oracle as the `x-api-key` request header.
 
 ## Data Inputs
 
-One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to `https://mcp.xerberus.io/enterprise/mcp`. Xerberus exposes its risk functions as MCP tools rather than REST paths, so all three Xerberus packs share one transport:
+One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to `https://mcp.xerberus.io/mcp`. Xerberus exposes its risk functions as MCP tools rather than REST paths, so all three Xerberus packs share one transport:
 
-- Non-2xx HTTP, a JSON-RPC `error`, or a tool result with `isError` all fail the oracle, and the policy fails closed.
+- Non-2xx HTTP, a JSON-RPC `error`, a tool result with `isError`, or a payload whose `status` is anything but `scored` all fail the oracle, and the policy fails closed. Xerberus returns refusals such as `bad_request`, `retired` and `not_covered` as ordinary results with a `status` field.
+- Freshness is read from the payload's `freshness` block (`window`, `latest_window`, `is_stale`).
 - The response may be plain JSON or a single-shot `text/event-stream`. Either way the oracle reads the JSON-RPC message carrying its request id.
 - `structuredContent` is preferred; otherwise the JSON in the tool's text content is parsed.
 
@@ -52,10 +53,12 @@ One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to
 | `notional_usd` | Position size quoted | Audit |
 | `impact_band_pct` | Impact band the quote was modeled at | Gated by `max_impact_band_pct` |
 | `max_sale_per_day_usd` | Most that can be sold per day inside the band | `no_exit_liquidity` |
-| `days_to_exit` | Estimated days to fully exit | Gated by `max_days_to_exit` |
-| `classification` | Xerberus's label, e.g. moderate, under one week | Reviewer context |
+| `days_to_exit` | Days to exit on the on-chain DEX floor inside the band | Gated by `max_days_to_exit` |
+| `exit_horizon` | Xerberus's bucket for `days_to_exit`, e.g. `1-7d` | Reviewer context |
+| `fastest_route` / `fastest_days_to_exit` | The quickest measured route, e.g. `native_redemption`, and its clock | Reviewer context |
+| `redemption_route_status` / `redemption_days_to_exit` | Whether a protocol-native redemption route exists (`present`, `inherited`, `not_modelled`, `not_applicable`) and its clock | Reviewer context |
 | `cex_status` | Whether a centralized spot market was found | Reviewer context |
-| `requested_window` / `data_window` | The window asked for, and the window Xerberus answered from | Audit |
+| `requested_window` / `data_window` / `latest_window` | The window asked for, the window Xerberus answered from, and the newest window it has | Audit |
 | `window_honored` | `true` or `false` when a window was pinned, `null` otherwise | `window_not_honored` |
 | `is_stale` | Xerberus's own freshness flag | Gated by `deny_on_stale` |
 | `data_age_seconds` | Age of `data_window` at evaluation time | Gated by `max_data_age_seconds` |
@@ -69,7 +72,7 @@ This pack ships **no `prepareQuery`**: the token and notional of the position be
 | `token` | Required | Token contract address. Symbols work but are ambiguous and can't be bound to the intent |
 | `usd_notional` | Required | Proposed position size in USD |
 | `impact_pct` | Optional | Maximum acceptable market impact, in percent. Use 0.5 for stablecoins |
-| `chain` | Optional | `ethereum`, the only chain Xerberus scores today. Defaults to `ethereum` |
+| `chain` | Optional | `ethereum` only. Echoed in the output; Xerberus no longer takes a chain argument |
 | `window` | Optional | Xerberus data-window timestamp (ISO-8601). Pass the same value to every Xerberus pack |
 
 From the CLI or dashboard this goes in the simulate payload's `wasm_args`. From the SDK it goes in `sendCall`'s `wasmArgs` bag:
@@ -220,4 +223,5 @@ Composing this pack into a VaultKit composite changes only where params live: th
 - **Pin the window when composing.** Pass one `window` to all three Xerberus packs so their results come from the same Xerberus snapshot. Never combine a fresh exit quote with an older portfolio or common-cause result.
 - **Use token addresses.** A symbol can't be matched against the intent, so `require_token_in_intent` only works with an address.
 - **The notional is caller-supplied.** The pack can't price calldata itself, so your intent builder is responsible for passing the real USD size.
-- **Exit time is asset-level.** In Xerberus's reference scenario, a $1M wstETH position exits in about 5.3 days and passes a 7-day limit, yet the same trade makes the portfolio more concentrated and less liquid. Only [Portfolio What-If](/developers/vaults/policies/xerberus-what-if) catches that.
+- **The DEX floor is what's gated.** A native route, such as a Lido withdrawal or a vault redeem, can be faster, but it depends on the issuer's queue staying open. `days_to_exit` is the exit that needs nobody's cooperation; the faster routes are reported beside it.
+- **Exit time is asset-level.** On the 2026-10-29 12:00 UTC window, a $1M wstETH position exits in 2.24 days on DEXs (about 1 day through Lido redemption) and passes a 7-day limit, yet adding it to the reference treasury makes the portfolio more concentrated. Only [Portfolio What-If](/developers/vaults/policies/xerberus-what-if) catches that.
