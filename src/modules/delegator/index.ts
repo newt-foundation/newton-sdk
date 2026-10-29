@@ -233,7 +233,10 @@ const sleep = (ms: number, abortSignal?: AbortSignal) =>
  * not by Newton, and its API has no authentication of its own.
  */
 function createDelegatorClient(config: DelegatorClientConfig) {
-  const baseUrl = config.url.replace(/\/+$/, '')
+  // trim trailing slashes without a regex (CodeQL js/polynomial-redos)
+  let end = config.url.length
+  while (end > 0 && config.url[end - 1] === '/') end--
+  const baseUrl = config.url.slice(0, end)
   const doFetch: typeof fetch = config.fetch ?? ((input, init) => fetch(input, init))
 
   const request = async <T>(path: string, init?: RequestInit): Promise<{ status: number; body: T }> => {

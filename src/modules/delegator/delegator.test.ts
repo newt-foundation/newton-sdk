@@ -202,6 +202,13 @@ describe('createDelegatorClient', () => {
     })
   })
 
+  it('trims trailing slashes from the base URL', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => json(200, intentView('accepted')))
+    const client = createDelegatorClient({ url: 'https://delegator.example.com///', fetch: fetchMock })
+    await client.getIntent('id')
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://delegator.example.com/v1/intents/id')
+  })
+
   it('reports a replayed intent as not created', async () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('attested')) })
     const result = await client.submitIntent({ intent, signature: '0xdead' })
