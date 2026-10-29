@@ -27,6 +27,7 @@ import {
   type Hex,
   type PublicClient,
   type WalletClient,
+  bytesToHex,
   hashTypedData,
   isAddressEqual,
   publicActions,
@@ -300,7 +301,10 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     return { intents: body.intents.map(toDelegatedIntent), nextCursor: body.next_cursor ?? null }
   }
 
-  /** The attestation for `intentId`, or `null` while there is none yet (or the policy denied it). */
+  /**
+   * The attestation for `intentId`, or `null` while the intent has none yet (or the policy denied it).
+   * Throws `DelegatorError` with code `not_found` for an unknown intent.
+   */
   const getAttestation = async (intentId: string): Promise<DelegatorAttestation | null> => {
     try {
       const { body } = await request<{
@@ -310,8 +314,11 @@ function createDelegatorClient(config: DelegatorClientConfig) {
       }>(`/v1/intents/${encodeURIComponent(intentId)}/attestation`)
       return { task: body.task, taskResponse: body.task_response, signatureData: body.signature_data }
     } catch (error) {
-      if (error instanceof DelegatorError && error.status === 404) return null
-      throw error
+      if (!(error instanceof DelegatorError && error.status === 404)) throw error
+      // the delegator answers 404 both for an unknown intent and for one not attested yet;
+      // the intent itself tells them apart (getIntent throws not_found for the first)
+      await getIntent(intentId)
+      return null
     }
   }
 
@@ -394,8 +401,6 @@ async function submitDelegatedIntent(
   }
 }
 
-const hex = (bytes: ArrayBuffer) => Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('')
-
 /**
  * Check a delegator webhook delivery: `X-Newton-Signature` is `sha256=<hex HMAC-SHA256(secret, body)>`
  * over the raw request body. Pass the body exactly as received, before any JSON parsing.
@@ -415,7 +420,8 @@ async function verifyDelegatorWebhook(args: {
     ['sign'],
   )
   const body = typeof args.body === 'string' ? encoder.encode(args.body) : args.body
-  const expected = `sha256=${hex(await globalThis.crypto.subtle.sign('HMAC', key, body))}`
+  const mac = await globalThis.crypto.subtle.sign('HMAC', key, body)
+  const expected = `sha256=${bytesToHex(new Uint8Array(mac)).slice(2)}`
   const received = args.signature.toLowerCase()
   if (received.length !== expected.length) return false
   let diff = 0
@@ -477,55 +483,80 @@ const delegatorReadFunctions = {
     }),
 }
 
-const writeDelegation = async <
-  F extends 'approveDelegator' | 'removeDelegator' | 'setDelegatorRequired' | 'resignDelegator',
->(
-  walletClient: WalletClient,
-  policyClient: Address,
-  functionName: F,
-  args: readonly unknown[],
-): Promise<Hex> => {
-  const account = await resolveAccount(walletClient)
-  return walletClient.writeContract({
-    address: policyClient,
-    abi: NewtonPolicyClientDelegationAbi,
-    functionName,
-    args,
-    chain: walletClient.chain,
-    account,
-  } as Parameters<WalletClient['writeContract']>[0])
-}
-
 const delegatorWriteFunctions = {
   /** Owner only. Adds `delegator`, which signed `signDelegatorApproval` for this client. */
-  approveDelegator: ({
+  approveDelegator: async ({
     walletClient,
     policyClient,
     delegator,
     deadline,
     signature,
-  }: { walletClient: WalletClient; policyClient: Address; delegator: Address; deadline: bigint; signature: Hex }) =>
-    writeDelegation(walletClient, policyClient, 'approveDelegator', [delegator, deadline, signature]),
+  }: {
+    walletClient: WalletClient
+    policyClient: Address
+    delegator: Address
+    deadline: bigint
+    signature: Hex
+  }): Promise<Hex> => {
+    const account = await resolveAccount(walletClient)
+    return walletClient.writeContract({
+      address: policyClient,
+      abi: NewtonPolicyClientDelegationAbi,
+      functionName: 'approveDelegator',
+      args: [delegator, deadline, signature],
+      chain: walletClient.chain,
+      account,
+    })
+  },
 
   /** Owner only. */
-  removeDelegator: ({
+  removeDelegator: async ({
     walletClient,
     policyClient,
     delegator,
-  }: { walletClient: WalletClient; policyClient: Address; delegator: Address }) =>
-    writeDelegation(walletClient, policyClient, 'removeDelegator', [delegator]),
+  }: { walletClient: WalletClient; policyClient: Address; delegator: Address }): Promise<Hex> => {
+    const account = await resolveAccount(walletClient)
+    return walletClient.writeContract({
+      address: policyClient,
+      abi: NewtonPolicyClientDelegationAbi,
+      functionName: 'removeDelegator',
+      args: [delegator],
+      chain: walletClient.chain,
+      account,
+    })
+  },
 
   /** Owner only. When `required`, `intent.from` can no longer submit its own attestation. */
-  setDelegatorRequired: ({
+  setDelegatorRequired: async ({
     walletClient,
     policyClient,
     required,
-  }: { walletClient: WalletClient; policyClient: Address; required: boolean }) =>
-    writeDelegation(walletClient, policyClient, 'setDelegatorRequired', [required]),
+  }: { walletClient: WalletClient; policyClient: Address; required: boolean }): Promise<Hex> => {
+    const account = await resolveAccount(walletClient)
+    return walletClient.writeContract({
+      address: policyClient,
+      abi: NewtonPolicyClientDelegationAbi,
+      functionName: 'setDelegatorRequired',
+      args: [required],
+      chain: walletClient.chain,
+      account,
+    })
+  },
 
   /** Called by a delegator to remove itself; also voids its unused approvals. */
-  resignDelegator: ({ walletClient, policyClient }: { walletClient: WalletClient; policyClient: Address }) =>
-    writeDelegation(walletClient, policyClient, 'resignDelegator', []),
+  resignDelegator: async ({
+    walletClient,
+    policyClient,
+  }: { walletClient: WalletClient; policyClient: Address }): Promise<Hex> => {
+    const account = await resolveAccount(walletClient)
+    return walletClient.writeContract({
+      address: policyClient,
+      abi: NewtonPolicyClientDelegationAbi,
+      functionName: 'resignDelegator',
+      chain: walletClient.chain,
+      account,
+    })
+  },
 }
 
 export {

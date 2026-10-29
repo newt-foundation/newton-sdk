@@ -136,6 +136,8 @@ export interface DelegatorTaskResponse {
   intentSignature: Hex
   allowed: boolean
   policyTaskData: PolicyTaskData[]
+  /** uint256, as hex. */
+  initializationTimestamp: Hex
 }
 
 /**

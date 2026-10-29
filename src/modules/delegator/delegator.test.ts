@@ -276,12 +276,23 @@ describe('createDelegatorClient', () => {
     expect(page.events[0]).toMatchObject({ fromState: 'accepted', toState: 'denied', detail: 'denied' })
   })
 
-  it('returns null for an attestation that does not exist yet', async () => {
+  it('returns null for a known intent that is not attested yet', async () => {
+    const client = createDelegatorClient({
+      url: 'http://x',
+      fetch: async input =>
+        String(input).endsWith('/attestation')
+          ? json(404, { code: 'not_found', error: 'resource not found' })
+          : json(200, intentView('accepted')),
+    })
+    expect(await client.getAttestation('id')).toBeNull()
+  })
+
+  it('throws not_found for an attestation of an unknown intent', async () => {
     const client = createDelegatorClient({
       url: 'http://x',
       fetch: async () => json(404, { code: 'not_found', error: 'resource not found' }),
     })
-    expect(await client.getAttestation('id')).toBeNull()
+    await expect(client.getAttestation('id')).rejects.toMatchObject({ status: 404, code: 'not_found' })
   })
 
   it('waits for a terminal state', async () => {

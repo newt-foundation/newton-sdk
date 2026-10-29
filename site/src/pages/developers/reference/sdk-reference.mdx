@@ -2046,7 +2046,7 @@ const delegator = createDelegatorClient({ url: 'https://delegator.your-app.com' 
 | `submitIntent({ intent, signature, wasmArgs? })` | `POST /v1/intents` | `{ intent: DelegatedIntent; created: boolean }` |
 | `getIntent(intentId)` | `GET /v1/intents/{id}` | `DelegatedIntent` |
 | `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
-| `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` |
+| `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; `not_found` for an unknown intent) |
 | `getEvents({ after?, limit?, waitMs?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
 | `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it reaches `until` (default: `finalized`, `denied` or `failed`) |
 | `isLive()` | `GET /live` | `boolean` |

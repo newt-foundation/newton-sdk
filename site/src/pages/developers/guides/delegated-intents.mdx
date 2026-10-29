@@ -14,8 +14,6 @@ user wallet ── signs EIP-712 intent ──▶ newton-delegator ──▶ New
                                               └── sends entrypoint(task, taskResponse, signatureData) ──▶ PolicyClient
 ```
 
-You run the delegator, usually next to your own backend. Newton does not host it. Its HTTP API has no authentication, so keep it on a private network or behind a proxy that authenticates callers.
-
 ## How the PolicyClient checks a delegated call
 
 An attestation can be spent by `intent.from` itself, or by an **approved delegator** that carries `intent.from`'s EIP-712 signature over the intent:
@@ -24,14 +22,14 @@ An attestation can be spent by `intent.from` itself, or by an **approved delegat
 - An approved delegator: `intent.from`'s signature over `intentDigest(intent)` must be valid, and the digest must not have been spent yet. A successful call marks the digest spent and emits `IntentSpent`.
 - Anyone else: the call reverts.
 
-The intent signature sits inside the BLS-signed task response, so a delegator cannot swap it without failing verification. Put a nonce in `intent.data` if your entrypoint needs replay protection beyond single use (the `RestrictedToken` example does this).
+The intent signature sits inside the BLS-signed task response, so a delegator cannot swap it without failing verification. Put a nonce in `intent.data` if your entrypoint needs replay protection beyond single use.
 
 The PolicyClient owner decides who may act as a delegator, and the delegator has to agree to it. With `setDelegatorRequired(true)`, every call must come through a delegator.
 
 ## Prerequisites
 
 - A PolicyClient that inherits the delegation-capable `NewtonPolicyClient` mixin, with an entrypoint that takes `validateAttestationDirect`'s parameters `(task, taskResponse, signatureData)` (see [Smart Contract Integration](/developers/guides/smart-contract-integration))
-- A running `newton-delegator` configured for that PolicyClient
+- The URL of a delegator that serves that PolicyClient
 - `@newton-xyz/sdk` and `viem`
 
 ## Step 1 — Approve the delegator
@@ -70,8 +68,6 @@ await ownerWallet.approveDelegator({
   signature: approval.signature,
 })
 ```
-
-The `newton-delegator sign-approval` command produces the same signature if the delegator key lives with the service.
 
 Check the result with the public client actions:
 
@@ -193,7 +189,7 @@ export async function POST(request: Request) {
 
 ## Submitting the call yourself
 
-The user can always submit the attested call themselves instead of waiting on the delegator's transaction. `getAttestation` returns the entrypoint arguments once the intent is attested, and `null` before that:
+The user can always submit the attested call themselves instead of waiting on the delegator's transaction. `getAttestation` returns the entrypoint arguments once the intent is attested, and `null` before that. It throws `not_found` for an intent the delegator does not know:
 
 ```ts
 const attestation = await delegator.getAttestation(intentId)
