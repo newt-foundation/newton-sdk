@@ -1,0 +1,280 @@
+---
+title: "Delegated Intents"
+description: "Let users sign an intent offline while a delegator gets it attested and pays the gas for the PolicyClient call"
+showAskAi: false
+---
+
+# Delegated Intents [Let users sign an intent offline while a delegator gets it attested and pays the gas for the PolicyClient call]
+
+In the usual flow, the user who signs an intent also submits the attested PolicyClient call. With a **delegator**, the user only signs. A `newton-delegator` service receives the signed intent, gets an attestation from the Newton gateway, and sends the PolicyClient transaction from its own key, so it pays the gas.
+
+```
+user wallet ── signs EIP-712 intent ──▶ newton-delegator ──▶ Newton gateway (attestation)
+                                              │
+                                              └── sends entrypoint(task, taskResponse, signatureData) ──▶ PolicyClient
+```
+
+## How the PolicyClient checks a delegated call
+
+An attestation can be spent by `intent.from` itself, or by an **approved delegator** that carries `intent.from`'s EIP-712 signature over the intent:
+
+- `msg.sender == intent.from`: no signature check.
+- An approved delegator: `intent.from`'s signature over `intentDigest(intent)` must be valid, and the digest must not have been spent yet. A successful call marks the digest spent and emits `IntentSpent`.
+- Anyone else: the call reverts.
+
+The intent signature sits inside the BLS-signed task response, so a delegator cannot swap it without failing verification. Put a nonce in `intent.data` if your entrypoint needs replay protection beyond single use.
+
+The PolicyClient owner decides who may act as a delegator, and the delegator has to agree to it. With `setDelegatorRequired(true)`, every call must come through a delegator.
+
+## Prerequisites
+
+- A PolicyClient that inherits the delegation-capable `NewtonPolicyClient` mixin, with an entrypoint that takes `validateAttestationDirect`'s parameters `(task, taskResponse, signatureData)` (see [Smart Contract Integration](/developers/guides/smart-contract-integration))
+- The URL of a delegator that serves that PolicyClient
+- `@newton-xyz/sdk` and `viem`
+
+## Step 1 — Approve the delegator
+
+Approval needs signatures from both sides. The delegator key signs a `DelegatorApproval(nonce, deadline)` message under the PolicyClient's EIP-712 domain. The owner then submits it on chain.
+
+```ts
+import { createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { sepolia } from 'viem/chains'
+import { newtonWalletClientActions } from '@newton-xyz/sdk'
+
+const policyClient = '0xYourPolicyClient'
+const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600)
+
+// Delegator key: consent to being added. The nonce is read from the PolicyClient.
+const delegatorWallet = createWalletClient({
+  account: privateKeyToAccount(process.env.DELEGATOR_KEY as `0x${string}`),
+  chain: sepolia,
+  transport: http(process.env.RPC_URL),
+}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }))
+
+const approval = await delegatorWallet.signDelegatorApproval({ policyClient, deadline })
+
+// Owner key: add the delegator.
+const ownerWallet = createWalletClient({
+  account: privateKeyToAccount(process.env.OWNER_KEY as `0x${string}`),
+  chain: sepolia,
+  transport: http(process.env.RPC_URL),
+}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }))
+
+await ownerWallet.approveDelegator({
+  policyClient,
+  delegator: delegatorWallet.account.address,
+  deadline: approval.deadline,
+  signature: approval.signature,
+})
+```
+
+Check the result with the public client actions:
+
+```ts
+await publicClient.isDelegator({ policyClient, account: delegatorAddress }) // true
+await publicClient.delegatorRequired({ policyClient })
+```
+
+`removeDelegator` (owner) and `resignDelegator` (the delegator itself) remove a delegator. `resignDelegator` also invalidates any approvals the delegator signed but nobody submitted.
+
+## Step 2 — Authenticate to the delegator
+
+Every call that reads from the delegator is signed. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and path, the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
+
+```ts
+import { createDelegatorClient } from '@newton-xyz/sdk'
+import { privateKeyToAccount } from 'viem/accounts'
+
+const delegator = createDelegatorClient({
+  url: 'https://delegator.your-app.com',
+  auth: {
+    signer: privateKeyToAccount(process.env.READER_KEY as `0x${string}`),
+    chainId: 84532, // the delegator's chain
+  },
+})
+```
+
+Who signs decides what the caller can see:
+
+| Caller | Sees |
+| --- | --- |
+| An address the delegator operator lists as a reader | Every intent and event |
+| The `getOwner()` of a PolicyClient the delegator serves | That PolicyClient's intents |
+| Anyone else | The intents it signed as `intent.from` |
+
+An intent outside the caller's scope answers `not_found`. Listings and the event feed return only what the caller can see.
+
+`signer` can be a viem local account or a `WalletClient`. In a browser, a wallet would prompt for every call, so create a **session** instead: the user's wallet signs one grant for an ephemeral key held in memory, and that key signs each request until the grant expires. The delegator caps a grant's lifetime, at 7 days by default.
+
+```ts
+import { createNewtonSession } from '@newton-xyz/sdk'
+
+const session = await createNewtonSession(wallet, { expiresInSecs: 3600 }) // one wallet prompt
+const auth = { signer: session.account, session: session.grant, chainId: sepolia.id }
+```
+
+The caller is still the grantor: the user's own intents, or everything their role allows. `signNewtonRequest` and `signSessionGrant` are exported for signing requests yourself.
+
+`isLive` and `isReady` are not signed.
+
+## Step 3 — Sign and submit an intent
+
+The user signs the intent with their own wallet; local accounts and browser wallets both work. These functions take a plain viem `WalletClient` and need no Newton API key. They are also available as `newtonWalletClientActions` methods. `submitDelegatedIntent` signs and POSTs the intent to the delegator in one call:
+
+```ts
+import { createWalletClient, custom, stringToHex } from 'viem'
+import { sepolia } from 'viem/chains'
+import { submitDelegatedIntent } from '@newton-xyz/sdk'
+
+const wallet = createWalletClient({ chain: sepolia, transport: custom(window.ethereum) })
+const [from] = await wallet.getAddresses()
+
+const pending = await submitDelegatedIntent(wallet, {
+  delegatorUrl: 'https://delegator.your-app.com',
+  auth, // from Step 2; waitForIntent needs it to read the intent
+  intent: {
+    from,
+    to: policyClient,
+    value: 0n,
+    data: cosignedTransferCalldata, // the logical call your entrypoint decodes
+    chainId: sepolia.id,
+    functionSignature: stringToHex('cosignedTransfer(address,uint256,uint256,uint256)'),
+  },
+  wasmArgs: ['0x'], // one per policy in the client's policy set
+})
+
+pending.created // false if the delegator already had this exact signed intent
+const final = await pending.waitForIntent({ timeoutMs: 120_000 })
+```
+
+To sign in one place and submit from another, for example sign in the browser and submit from your backend, split the two steps:
+
+```ts
+import { createDelegatorClient, signDelegatedIntent } from '@newton-xyz/sdk'
+
+// Browser
+const signature = await signDelegatedIntent(wallet, { intent })
+
+// Backend
+const delegator = createDelegatorClient({
+  url: process.env.DELEGATOR_URL!,
+  auth: { signer: backendAccount, chainId: 84532 },
+})
+const { intent: accepted } = await delegator.submitIntent({ intent, signature, wasmArgs: ['0x'] })
+```
+
+The intent signature is what authorizes a submission, so by default a delegator accepts an intent with no `X-Newton-Auth` header. When the client has `auth`, it signs submissions too. The signer must then be a reader, the PolicyClient's owner, or `intent.from`, otherwise the delegator answers `forbidden`. An operator can also require submissions to come from a reader or the owner. Then an unsigned submission is `unauthorized`.
+
+Submitting the same signed intent twice is safe. The delegator identifies it by `keccak256(intent.from ‖ intentDigest(intent))` and returns the existing record.
+
+## Step 4 — Track the intent
+
+An intent moves through these states:
+
+| State | Meaning |
+| --- | --- |
+| `accepted` | Stored by the delegator; no attestation yet |
+| `attested` | The gateway returned an approving attestation |
+| `tasked` | Queued for broadcast |
+| `broadcast` | The PolicyClient transaction was sent |
+| `included` | The transaction has a receipt |
+| `finalized` | Final, and its effect verified (terminal) |
+| `denied` | The policy denied the intent; nothing went on chain (terminal) |
+| `failed` | The intent cannot complete (terminal) |
+
+`attested`, `tasked`, `broadcast` and `included` can fall back to `accepted` if the attestation expires before the call lands. The delegator then requests a new attestation.
+
+```ts
+const status = await delegator.getIntent(intentId)
+status.state          // 'denied'
+status.denialReasons  // why the policy said no
+status.terminalError  // why it failed, for 'failed'
+
+// Newest first, filtered and paged
+const page = await delegator.listIntents({ sender: from, states: ['denied', 'failed'], limit: 50 })
+const next = await delegator.listIntents({ sender: from, cursor: page.nextCursor ?? undefined })
+```
+
+### Event feed
+
+For bookkeeping, read the event feed instead of polling each intent. Events arrive in cursor order, and the request can long-poll for up to 30 seconds:
+
+```ts
+let after = 0
+for (;;) {
+  const page = await delegator.getEvents({ after, waitMs: 30_000, policyClient })
+  for (const event of page.events) {
+    // event.intentId, event.fromState → event.toState, event.transactionHash, event.detail
+  }
+  after = page.nextCursor
+}
+```
+
+If `after` falls below the delegator's retention window, the call throws a `DelegatorError` with code `cursor_pruned`. Restart from `retentionFloor`, which every page also reports.
+
+### Webhooks
+
+The delegator can push the same events to webhooks configured on the service. Each delivery has an `X-Idempotency-Key` of `intent:<id>:<cursor>`. When the webhook has a secret, the delivery also has an `X-Newton-Signature` header. Verify it against the raw request body:
+
+```ts
+import { verifyDelegatorWebhook } from '@newton-xyz/sdk'
+
+export async function POST(request: Request) {
+  const body = await request.text()
+  const ok = await verifyDelegatorWebhook({
+    body,
+    signature: request.headers.get('x-newton-signature'),
+    secret: process.env.DELEGATOR_WEBHOOK_SECRET!,
+  })
+  if (!ok) return new Response('bad signature', { status: 401 })
+  // JSON.parse(body) ...
+  return new Response(null, { status: 204 })
+}
+```
+
+## Submitting the call yourself
+
+The user can always submit the attested call themselves instead of waiting on the delegator's transaction. `getAttestation` returns the entrypoint arguments once the intent is attested, and `null` before that. It throws `not_found` for an intent the delegator does not know:
+
+```ts
+const attestation = await delegator.getAttestation(intentId)
+if (attestation) {
+  // entrypoint(attestation.task, attestation.taskResponse, attestation.signatureData)
+}
+```
+
+This path only works when the PolicyClient does not set `delegatorRequired`.
+
+## Checking whether an intent landed
+
+`getDelegatedIntentDigest(intent)` computes the PolicyClient's `intentDigest(intent)` locally. `isIntentSpent` reads whether a delegator has already landed it:
+
+```ts
+import { getDelegatedIntentDigest } from '@newton-xyz/sdk'
+
+const digest = getDelegatedIntentDigest(intent)
+await publicClient.isIntentSpent({ policyClient, digest })
+```
+
+## Errors
+
+Delegator calls throw `DelegatorError` with the HTTP `status` and the delegator's `code`:
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| 422 | `invalid_intent` | Wrong chain, unknown PolicyClient, wrong selector, or the signature does not recover to `intent.from` |
+| 400 | `invalid_query` | Bad list or event filter |
+| 409 | `idempotency_conflict` | The same signed intent was resubmitted with different `wasmArgs` |
+| 401 | `unauthorized` | The request was not signed, or its signature did not verify; `error.reason` says why (`missing_header`, `wrong_audience`, `stale_timestamp`, `body_hash_mismatch`, `session_expired`, ...) |
+| 403 | `forbidden` | The signer may not submit this intent |
+| 404 | `not_found` | No such intent, or one outside the caller's scope |
+| 410 | `resource_gone` | The intent was pruned after its retention window |
+| 410 | `cursor_pruned` | The event cursor is below the retention floor |
+| 429 | `sender_capacity_exceeded` | `intent.from` already has the maximum number of live intents |
+| 429 | `sender_rate_exceeded` / `submit_rate_exceeded` | Too many submissions this minute, from this sender or in total |
+| 503 | `owner_unavailable` / `verifier_unavailable` | The delegator could not read a PolicyClient owner or check a smart-account signature; retry |
+| 503 | `capacity_exceeded` | The delegator is at capacity |
+| 503 | `event_feed_busy` | Too many concurrent event long-polls |
+
+See the [SDK Reference](/developers/reference/sdk-reference#delegator) for every method signature.

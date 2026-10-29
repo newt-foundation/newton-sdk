@@ -16,6 +16,19 @@ import {
   waitForTaskResponded,
 } from './modules/avs'
 import {
+  type DelegatorClient,
+  createDelegatorClient,
+  delegatedIntentTypedData,
+  delegatorReadFunctions,
+  delegatorWriteFunctions,
+  getDelegatedIntentDigest,
+  signDelegatedIntent,
+  signDelegatorApproval,
+  submitDelegatedIntent,
+  verifyDelegatorWebhook,
+} from './modules/delegator'
+import { createNewtonSession, signNewtonRequest, signSessionGrant } from './modules/delegator/auth'
+import {
   identityDomainHash,
   linkIdentity,
   linkIdentityAsSigner,
@@ -38,6 +51,12 @@ import {
   uploadConfidentialData,
   uploadIdentityEncrypted,
 } from './modules/privacy'
+import type {
+  DelegatorApprovalSignature,
+  PendingDelegatedIntent,
+  SignAndSubmitDelegatedIntentParams,
+  SignDelegatorApprovalParams,
+} from './types/delegator'
 import type {
   LinkIdentityAsSignerAndUserParams,
   LinkIdentityAsSignerParams,
@@ -66,6 +85,7 @@ import type {
   UploadIdentityEncryptedResponse,
 } from './types/privacy'
 import type {
+  IntentFromParams,
   RegisterWebhookParams,
   RegisterWebhookResult,
   SimulatePolicyDataParams,
@@ -357,6 +377,32 @@ const newtonWalletClientActions =
 
       unlinkIdentityAsUser: (args: UnlinkIdentityAsUserParams): Promise<Hex> =>
         unlinkIdentityAsUser(walletClient, args),
+
+      // Delegator: intents submitted through a newton-delegator, and the policy client's delegator set
+      signDelegatedIntent: (args: { intent: IntentFromParams }): Promise<Hex> =>
+        signDelegatedIntent(walletClient, args),
+
+      submitDelegatedIntent: (args: SignAndSubmitDelegatedIntentParams): Promise<PendingDelegatedIntent> =>
+        submitDelegatedIntent(walletClient, args),
+
+      signDelegatorApproval: (args: SignDelegatorApprovalParams): Promise<DelegatorApprovalSignature> =>
+        signDelegatorApproval(walletClient, args),
+
+      approveDelegator: (args: {
+        policyClient: Address
+        delegator: Address
+        deadline: bigint
+        signature: Hex
+      }): Promise<Hex> => delegatorWriteFunctions.approveDelegator({ walletClient, ...args }),
+
+      removeDelegator: (args: { policyClient: Address; delegator: Address }): Promise<Hex> =>
+        delegatorWriteFunctions.removeDelegator({ walletClient, ...args }),
+
+      setDelegatorRequired: (args: { policyClient: Address; required: boolean }): Promise<Hex> =>
+        delegatorWriteFunctions.setDelegatorRequired({ walletClient, ...args }),
+
+      resignDelegator: (args: { policyClient: Address }): Promise<Hex> =>
+        delegatorWriteFunctions.resignDelegator({ walletClient, ...args }),
     }
   }
 
@@ -575,10 +621,37 @@ const newtonPublicClientActions =
         revision: number | bigint
         policies: PolicySpec[]
       }) => policyReadFunctions.precomputePolicyId(args),
+
+      // Delegator reads on a policy client
+      isDelegator: (args: { policyClient: Address; account: Address }): Promise<boolean> =>
+        delegatorReadFunctions.isDelegator({ publicClient, ...args }),
+
+      delegatorRequired: (args: { policyClient: Address }): Promise<boolean> =>
+        delegatorReadFunctions.delegatorRequired({ publicClient, ...args }),
+
+      delegatorNonces: (args: { policyClient: Address; delegator: Address }): Promise<bigint> =>
+        delegatorReadFunctions.delegatorNonces({ publicClient, ...args }),
+
+      isIntentSpent: (
+        args: { policyClient: Address } & ({ intent: IntentFromParams } | { digest: Hex }),
+      ): Promise<boolean> => delegatorReadFunctions.isIntentSpent({ publicClient, ...args }),
     }
   }
 
 export { newtonPublicClientActions, newtonWalletClientActions }
+export {
+  createDelegatorClient,
+  createNewtonSession,
+  delegatedIntentTypedData,
+  getDelegatedIntentDigest,
+  signDelegatedIntent,
+  signDelegatorApproval,
+  signNewtonRequest,
+  signSessionGrant,
+  submitDelegatedIntent,
+  verifyDelegatorWebhook,
+}
+export type { DelegatorClient }
 export {
   identityDomainHash,
   linkIdentity,
@@ -602,5 +675,5 @@ export {
   uploadIdentityEncrypted,
 }
 export { registerWebhook, unregisterWebhook }
-export { SDKError, MagicRPCError } from './sdk-exceptions'
+export { SDKError, MagicRPCError, DelegatorError } from './sdk-exceptions'
 export { SDKErrorCode, RPCErrorCode } from './types/core/exception-types'

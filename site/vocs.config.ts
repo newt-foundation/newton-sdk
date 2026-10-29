@@ -217,6 +217,7 @@ export default defineConfig({
           { text: 'Deploying with CLI', link: '/developers/guides/deploying-with-cli' },
           { text: 'Smart Contract Integration', link: '/developers/guides/smart-contract-integration' },
           { text: 'Frontend SDK Integration', link: '/developers/guides/frontend-sdk-integration' },
+          { text: 'Delegated Intents', link: '/developers/guides/delegated-intents' },
           { text: 'Using the Dashboard', link: '/developers/guides/using-the-dashboard' },
           { text: 'Testing Policies', link: '/developers/guides/testing-policies' },
           { text: 'Privacy Flows', link: '/developers/guides/privacy-flows' },
