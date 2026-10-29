@@ -1,4 +1,4 @@
-import type { Address, Hex } from 'viem'
+import type { Address, Hex, LocalAccount, WalletClient } from 'viem'
 import type { IntentFromParams, PolicyTaskData, Task } from './task'
 
 /**
@@ -160,10 +160,79 @@ export interface WaitForDelegatedIntentParams {
   until?: DelegatedIntentState[]
 }
 
+/** Signs Newton requests: a local account (such as a session key) or a wallet client. */
+export type NewtonAuthSigner = LocalAccount | WalletClient
+
+/** The EIP-712 `NewtonRequest` carried in `X-Newton-Auth`. */
+export interface NewtonRequest {
+  /** Lowercased hostname of the service. */
+  audience: string
+  /** For the delegator, `"<VERB> <path>"` without the query string, e.g. `GET /v1/events`. */
+  method: string
+  /** keccak256 of the exact body bytes. */
+  bodyHash: Hex
+  signer: Address
+  /** Unix milliseconds. */
+  timestamp: number
+  /** Zero, or the digest of the attached session grant. */
+  sessionHash: Hex
+}
+
+/** A grantor's offline delegation to a session key, and the grantor's signature over it. */
+export interface SignedSessionGrant {
+  grant: {
+    grantor: Address
+    sessionKey: Address
+    /** Unix seconds. */
+    expiresAt: number
+  }
+  signature: Hex
+}
+
+/** An ephemeral session key and the grant that lets it sign for the grantor. */
+export interface NewtonSession {
+  account: LocalAccount
+  grant: SignedSessionGrant
+}
+
+export interface SignNewtonRequestParams {
+  audience: string
+  method: string
+  /** The exact body sent; `''` for a request without one. */
+  body: string
+  /** Chain in the EIP-712 domain; omit (or 0) for none. The delegator signs under its own chain. */
+  chainId?: number
+  /** Present when the signer is a session key. */
+  session?: SignedSessionGrant
+  /** Unix milliseconds. Defaults to now. */
+  timestamp?: number
+}
+
+/**
+ * How the delegator client signs its calls. The principal (the signer, or the session grant's
+ * grantor) decides what it can read: a configured reader sees everything, a policy client's owner
+ * sees that client's intents, anyone else sees the intents it signed.
+ */
+export interface DelegatorAuth {
+  /** Signs every request. Pass a session's `account` together with its `grant` to avoid a wallet prompt per call. */
+  signer: NewtonAuthSigner
+  /** The delegator's chain. */
+  chainId: number
+  /** Defaults to the hostname of the delegator URL. */
+  audience?: string
+  /** The grant, when `signer` is a session key. */
+  session?: SignedSessionGrant
+}
+
 export interface DelegatorClientConfig {
   /** Base URL of the delegator, e.g. `https://delegator.example.com`. */
   url: string
-  /** Custom fetch, e.g. to add auth headers for a proxy in front of the delegator. Defaults to global `fetch`. */
+  /**
+   * Signs requests with `X-Newton-Auth`. Required for every read; submissions are signed too
+   * when it is set, and need it when the delegator only accepts intents from owners.
+   */
+  auth?: DelegatorAuth
+  /** Custom fetch, e.g. to add headers for a proxy in front of the delegator. Defaults to global `fetch`. */
   fetch?: typeof fetch
 }
 
@@ -178,11 +247,19 @@ export type DelegatorErrorCode =
   | 'sender_capacity_exceeded'
   | 'capacity_exceeded'
   | 'event_feed_busy'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'sender_rate_exceeded'
+  | 'submit_rate_exceeded'
+  | 'owner_unavailable'
+  | 'verifier_unavailable'
   | 'internal_error'
 
 export interface SignAndSubmitDelegatedIntentParams extends Omit<SubmitDelegatedIntentParams, 'signature'> {
   /** Base URL of the delegator. */
   delegatorUrl: string
+  /** Needed for the returned `waitForIntent`, which reads the intent. */
+  auth?: DelegatorAuth
   fetch?: typeof fetch
 }
 

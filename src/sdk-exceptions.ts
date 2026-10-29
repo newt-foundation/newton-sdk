@@ -50,6 +50,9 @@ export function createRpcError(code: RPCErrorCode, message: string, data?: unkno
 
 /** A non-2xx answer from a newton-delegator. `code` is the delegator's error code (see `DelegatorErrorCode`). */
 export class DelegatorError extends Error {
+  /** For `unauthorized`, why the request did not authenticate, e.g. `stale_timestamp` or `wrong_audience`. */
+  public reason?: string
+
   constructor(
     public status: number,
     public code: string,
@@ -57,6 +60,8 @@ export class DelegatorError extends Error {
     public details?: unknown,
   ) {
     super(`Newton SDK: delegator returned ${status} [${code}] ${rawMessage}`)
+    const reason = (details as { reason?: unknown } | undefined)?.reason
+    if (typeof reason === 'string') this.reason = reason
     this.name = 'DelegatorError'
     Object.setPrototypeOf(this, DelegatorError.prototype)
   }

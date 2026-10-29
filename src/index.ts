@@ -27,6 +27,7 @@ import {
   submitDelegatedIntent,
   verifyDelegatorWebhook,
 } from './modules/delegator'
+import { createNewtonSession, signNewtonRequest, signSessionGrant } from './modules/delegator/auth'
 import {
   identityDomainHash,
   linkIdentity,
@@ -640,10 +641,13 @@ const newtonPublicClientActions =
 export { newtonPublicClientActions, newtonWalletClientActions }
 export {
   createDelegatorClient,
+  createNewtonSession,
   delegatedIntentTypedData,
   getDelegatedIntentDigest,
   signDelegatedIntent,
   signDelegatorApproval,
+  signNewtonRequest,
+  signSessionGrant,
   submitDelegatedIntent,
   verifyDelegatorWebhook,
 }

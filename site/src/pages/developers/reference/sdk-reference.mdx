@@ -2003,14 +2003,14 @@ Sign `intent` and POST it to the delegator.
 ```ts
 submitDelegatedIntent(
   walletClient: WalletClient,
-  args: { delegatorUrl: string; intent: IntentFromParams; wasmArgs?: Hex[]; fetch?: typeof fetch },
+  args: { delegatorUrl: string; intent: IntentFromParams; wasmArgs?: Hex[]; auth?: DelegatorAuth; fetch?: typeof fetch },
 ): Promise<PendingDelegatedIntent>
 
 interface PendingDelegatedIntent {
   intent: DelegatedIntent
   created: boolean // false when the delegator already held this signed intent
   signature: Hex
-  waitForIntent(params?: WaitForDelegatedIntentParams): Promise<DelegatedIntent>
+  waitForIntent(params?: WaitForDelegatedIntentParams): Promise<DelegatedIntent> // needs auth
 }
 ```
 
@@ -2035,10 +2035,18 @@ getDelegatedIntentDigest(intent: IntentFromParams): Hex
 
 ### `createDelegatorClient`
 
-HTTP client for one delegator. Pass `fetch` to add headers for a proxy in front of it.
+HTTP client for one delegator. Every `/v1/*` read needs `auth`, which signs each call with an `X-Newton-Auth` header. When `auth` is set, submissions are signed too. Pass `fetch` to add headers for a proxy in front of the delegator.
 
 ```ts
-const delegator = createDelegatorClient({ url: 'https://delegator.your-app.com' })
+const delegator = createDelegatorClient({
+  url: 'https://delegator.your-app.com',
+  auth: {
+    signer: account,          // LocalAccount | WalletClient; a session's account for no wallet prompts
+    chainId: 84532,           // the delegator's chain
+    session: grant,           // optional: the SignedSessionGrant when signer is a session key
+    audience: 'acme.example', // optional: defaults to the URL's hostname
+  },
+})
 ```
 
 | Method | HTTP | Returns |
@@ -2069,6 +2077,26 @@ interface DelegatedIntent {
   updatedAtMs: number
   completedAtMs: number | null
 }
+```
+
+### `createNewtonSession` / `signSessionGrant`
+
+`createNewtonSession(grantor, { expiresInSecs })` makes an ephemeral session key, and the grantor signs one grant for it (one wallet prompt). It returns `{ account, grant }`; pass both as `auth.signer` and `auth.session`. `signSessionGrant(grantor, { sessionKey, expiresAt })` signs a grant for a key you already have. `expiresAt` is in unix seconds.
+
+```ts
+createNewtonSession(grantor: LocalAccount | WalletClient, args: { expiresInSecs: number }): Promise<NewtonSession>
+signSessionGrant(grantor: LocalAccount | WalletClient, args: { sessionKey: Address; expiresAt: number }): Promise<SignedSessionGrant>
+```
+
+### `signNewtonRequest`
+
+Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` without the query string, and `body` is the exact bytes sent (`''` for a GET).
+
+```ts
+signNewtonRequest(
+  signer: LocalAccount | WalletClient,
+  params: { audience: string; method: string; body: string; chainId?: number; session?: SignedSessionGrant; timestamp?: number },
+): Promise<string>
 ```
 
 ### `verifyDelegatorWebhook`
@@ -2859,6 +2887,7 @@ class DelegatorError extends Error {
   status: number;
   code: string;
   rawMessage: string;
+  reason?: string; // for 401 unauthorized: why, e.g. 'stale_timestamp'
   details?: unknown;
 }
 ```

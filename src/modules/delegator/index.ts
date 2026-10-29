@@ -33,6 +33,7 @@ import {
   publicActions,
   toHex,
 } from 'viem'
+import { NEWTON_AUTH_HEADER, audienceFromUrl, signNewtonRequest } from './auth'
 
 // EIP-712, as NewtonPolicyClient defines it: one domain per client proxy.
 const POLICY_CLIENT_DOMAIN_NAME = 'NewtonPolicyClient'
@@ -230,8 +231,8 @@ const sleep = (ms: number, abortSignal?: AbortSignal) =>
   })
 
 /**
- * HTTP client for a newton-delegator. The delegator is deployed by the policy client's operator,
- * not by Newton, and its API has no authentication of its own.
+ * HTTP client for a newton-delegator. Every `/v1/*` read must be signed (see `DelegatorAuth`);
+ * `isLive` and `isReady` are not.
  */
 function createDelegatorClient(config: DelegatorClientConfig) {
   // trim trailing slashes without a regex (CodeQL js/polynomial-redos)
@@ -240,11 +241,24 @@ function createDelegatorClient(config: DelegatorClientConfig) {
   const baseUrl = config.url.slice(0, end)
   const doFetch: typeof fetch = config.fetch ?? ((input, init) => fetch(input, init))
 
+  const auth = config.auth
+  const audience = auth?.audience ?? (auth ? audienceFromUrl(baseUrl) : undefined)
+
   const request = async <T>(path: string, init?: RequestInit): Promise<{ status: number; body: T }> => {
-    const response = await doFetch(`${baseUrl}${path}`, {
-      ...init,
-      headers: { Accept: 'application/json', ...(init?.body ? { 'Content-Type': 'application/json' } : {}) },
-    })
+    const url = `${baseUrl}${path}`
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (init?.body) headers['Content-Type'] = 'application/json'
+    if (auth && audience) {
+      headers[NEWTON_AUTH_HEADER] = await signNewtonRequest(auth.signer, {
+        audience,
+        // signed without the query string, as the delegator checks it
+        method: `${init?.method ?? 'GET'} ${new URL(url).pathname}`,
+        body: typeof init?.body === 'string' ? init.body : '',
+        chainId: auth.chainId,
+        session: auth.session,
+      })
+    }
+    const response = await doFetch(url, { ...init, headers })
     const text = await response.text()
     let body: unknown = null
     try {
@@ -392,7 +406,7 @@ async function submitDelegatedIntent(
   args: SignAndSubmitDelegatedIntentParams,
 ): Promise<PendingDelegatedIntent> {
   const signature = await signDelegatedIntent(walletClient, { intent: args.intent })
-  const client = createDelegatorClient({ url: args.delegatorUrl, fetch: args.fetch })
+  const client = createDelegatorClient({ url: args.delegatorUrl, auth: args.auth, fetch: args.fetch })
   const result = await client.submitIntent({ intent: args.intent, signature, wasmArgs: args.wasmArgs })
   return {
     ...result,
