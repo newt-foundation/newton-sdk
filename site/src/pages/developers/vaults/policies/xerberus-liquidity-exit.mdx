@@ -41,7 +41,7 @@ Sent by the oracle as the `x-api-key` request header.
 
 One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to `https://mcp.xerberus.io/mcp`. Xerberus exposes its risk functions as MCP tools rather than REST paths, so all three Xerberus packs share one transport:
 
-- Non-2xx HTTP, a JSON-RPC `error`, a tool result with `isError`, or a payload whose `status` is anything but `scored` all fail the oracle, and the policy fails closed. Xerberus returns refusals such as `bad_request`, `retired` and `not_covered` as ordinary results with a `status` field.
+- Non-2xx HTTP, a JSON-RPC `error`, a tool result with `isError`, or a payload whose `status` isn't an object with a `value` of `scored` or `ok` all fail the oracle, and the policy fails closed. Xerberus returns refusals such as `bad_request`, `retired` and `not_covered` as ordinary results with a `status` field. A payload with no `status` is read as data.
 - Freshness is read from the payload's `freshness` block (`window`, `latest_window`, `is_stale`).
 - The response may be plain JSON or a single-shot `text/event-stream`. Either way the oracle reads the JSON-RPC message carrying its request id.
 - `structuredContent` is preferred; otherwise the JSON in the tool's text content is parsed.

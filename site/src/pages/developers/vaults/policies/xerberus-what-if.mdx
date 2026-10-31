@@ -48,7 +48,7 @@ Up to three MCP tools against `https://mcp.xerberus.io/mcp`, using the same tran
 
 1. **`what_if`** over the wallets and the legs: the book before and after, with exposure by token, token HHI and per-pool health factors.
 2. **`portfolio_ladder`** for the same wallets, pinned to the window `what_if` answered from: each held token's `max_sale_per_day_usd`. A different window fails the oracle.
-3. **`liquidity_exit_quote`** for any token the legs bring in that the ladder doesn't cover, at the same window.
+3. **`liquidity_exit_quote`** for any token the legs bring in that the ladder doesn't cover, at the same window. A different window fails the oracle. More than 8 such tokens fail it before any quote is made, since the enclave allows 10 HTTP calls per run.
 
 `what_if` no longer reports exit clocks, so the pack computes them the way Xerberus's own ladder does. Tokens sell in parallel, each at its per-day capacity: the 30-day ladder is `Σ min(usd, 30 × capacity) / book` and the slowest exit is `max(usd / capacity)`.
 
@@ -57,7 +57,7 @@ Position shares are exposure by token over the book's assets, in percent. `hhi_d
 | Field | What it means | Why the policy uses it |
 | --- | --- | --- |
 | `wallets` / `legs` | Echoed from `wasmArgs`. Addresses and market ids are lowercased | `wallets` is gated by `require_intent_party_in_wallets` |
-| `is_risk_reducing` | `true` when every leg is a removal, debt doesn't grow, and no levered pool's health factor falls | The staleness exemption |
+| `is_risk_reducing` | `true` when every leg is a removal, debt doesn't grow, and no levered pool's health factor falls; `false` when the debt or pool data to show it is missing | The staleness exemption |
 | `book_usd_before` / `book_usd_after` | Portfolio value either side of the change | Reviewer context |
 | `post_largest_token` / `post_largest_token_pct` | Largest position after the change, and its share of the book in percent | Gated by `max_post_token_share_pct` |
 | `pre_largest_token_pct` | That token's share before the change (0 if not held) | Concentration only denies when it grows |

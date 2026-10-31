@@ -64,7 +64,7 @@ This pack ships **no `prepareQuery`**, so the curator supplies the wallets per c
 
 | Field | Required? | Notes |
 | --- | --- | --- |
-| `wallets` | Required | 1–10 wallet addresses whose positions make up the book. At least two venues are needed for a meaningful result |
+| `wallets` | Required | 1–9 wallet addresses whose positions make up the book. At least two venues are needed for a meaningful result |
 | `chain` | Optional | `ethereum` only. Echoed in the output; Xerberus no longer takes a chain argument |
 | `relations` | Optional | Dependency families to follow, from `wrapper`, `lp_constituent`, `collateral`, `vault_alloc`, `leverage_loop`, `backing`, `liquidity_venue`, `runs_on`, `issuer`, `irm`, `oracle`, `operates`, `governance` and `obligor`. Defaults to all but the two DEX-pool families |
 | `window` | Optional | Xerberus data-window timestamp (ISO-8601). Omit for the latest window. Pass the same value to every Xerberus pack |
