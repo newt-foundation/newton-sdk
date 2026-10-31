@@ -102,14 +102,15 @@ const sessionGrantTypedData = (grant: SignedSessionGrant['grant']) => ({
  */
 async function signNewtonRequest(signer: NewtonAuthSigner, params: SignNewtonRequestParams): Promise<string> {
   const session = params.session
-  if (session && !isAddressEqual(await signerAddress(signer), session.grant.sessionKey)) {
+  const address = await signerAddress(signer)
+  if (session && !isAddressEqual(address, session.grant.sessionKey)) {
     throw new Error('Newton SDK: a session request must be signed by the grant’s session key')
   }
   const request: NewtonRequest = {
     audience: params.audience,
     method: params.method,
     bodyHash: keccak256(stringToBytes(params.body)),
-    signer: await signerAddress(signer),
+    signer: address,
     timestamp: params.timestamp ?? Date.now(),
     sessionHash: session ? keccakSessionHash(session.grant) : zeroHash,
   }
