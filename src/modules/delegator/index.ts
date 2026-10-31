@@ -258,6 +258,8 @@ function createDelegatorClient(config: DelegatorClientConfig) {
   const audience = auth?.audience ?? (auth ? audienceFromUrl(baseUrl) : undefined)
 
   const request = async <T>(path: string, init?: RequestInit): Promise<{ status: number; body: T }> => {
+    // an already-aborted call signs nothing and sends nothing
+    init?.signal?.throwIfAborted()
     const url = `${baseUrl}${path}`
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (init?.body) headers['Content-Type'] = 'application/json'
@@ -318,6 +320,7 @@ function createDelegatorClient(config: DelegatorClientConfig) {
         signature: args.signature,
         wasm_args: args.wasmArgs ?? [],
       }),
+      signal: args.abortSignal,
     })
     return {
       // a 200 replay answers only these two unless the caller can read the intent
@@ -344,6 +347,7 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     const qs = query.toString()
     const { body } = await request<{ intents: RawIntentView[]; next_cursor: string | null }>(
       `/v1/intents${qs ? `?${qs}` : ''}`,
+      { signal: params.abortSignal },
     )
     return { intents: body.intents.map(toDelegatedIntent), nextCursor: body.next_cursor ?? null }
   }
@@ -351,21 +355,24 @@ function createDelegatorClient(config: DelegatorClientConfig) {
   /**
    * The attestation for `intentId`, or `null` while the intent has none yet. A denied intent can return the
    * gateway's denying attestation, with `taskResponse.allowed` false, so check it before submitting.
-   * Throws `DelegatorError` with code `not_found` for an unknown intent.
+   * Throws `DelegatorError` with code `not_found` for an unknown intent. `abortSignal` cancels the read in flight.
    */
-  const getAttestation = async (intentId: string): Promise<DelegatorAttestation | null> => {
+  const getAttestation = async (
+    intentId: string,
+    { abortSignal }: { abortSignal?: AbortSignal } = {},
+  ): Promise<DelegatorAttestation | null> => {
     try {
       const { body } = await request<{
         task: DelegatorAttestation['task']
         task_response: DelegatorAttestation['taskResponse']
         signature_data: Hex
-      }>(`/v1/intents/${encodeURIComponent(intentId)}/attestation`)
+      }>(`/v1/intents/${encodeURIComponent(intentId)}/attestation`, { signal: abortSignal })
       return { task: body.task, taskResponse: body.task_response, signatureData: body.signature_data }
     } catch (error) {
       if (!(error instanceof DelegatorError && error.status === 404)) throw error
       // the delegator answers 404 both for an unknown intent and for one not attested yet;
       // the intent itself tells them apart (getIntent throws not_found for the first)
-      await getIntent(intentId)
+      await getIntent(intentId, { abortSignal })
       return null
     }
   }
@@ -382,7 +389,7 @@ function createDelegatorClient(config: DelegatorClientConfig) {
       next_cursor: number
       latest_cursor: number
       retention_floor: number
-    }>(`/v1/events${qs ? `?${qs}` : ''}`)
+    }>(`/v1/events${qs ? `?${qs}` : ''}`, { signal: params.abortSignal })
     return {
       events: body.events.map(toDelegatorEvent),
       nextCursor: body.next_cursor,
@@ -459,7 +466,12 @@ async function submitDelegatedIntent(
 ): Promise<PendingDelegatedIntent> {
   const signature = await signDelegatedIntent(walletClient, { intent: args.intent })
   const client = createDelegatorClient({ url: args.delegatorUrl, auth: args.auth, fetch: args.fetch })
-  const result = await client.submitIntent({ intent: args.intent, signature, wasmArgs: args.wasmArgs })
+  const result = await client.submitIntent({
+    intent: args.intent,
+    signature,
+    wasmArgs: args.wasmArgs,
+    abortSignal: args.abortSignal,
+  })
   return {
     ...result,
     signature,

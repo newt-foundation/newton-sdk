@@ -375,6 +375,47 @@ describe('createDelegatorClient', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://x/v1/intents/id/attestation')
   })
 
+  const clientWith = (fetch: typeof globalThis.fetch) => createDelegatorClient({ url: 'http://x', fetch })
+
+  it.each<[string, (fetch: typeof globalThis.fetch, abortSignal: AbortSignal) => Promise<unknown>]>([
+    [
+      'submitIntent',
+      (fetch, abortSignal) => clientWith(fetch).submitIntent({ intent, signature: '0xdead', abortSignal }),
+    ],
+    ['getIntent', (fetch, abortSignal) => clientWith(fetch).getIntent('id', { abortSignal })],
+    ['listIntents', (fetch, abortSignal) => clientWith(fetch).listIntents({ abortSignal })],
+    ['getAttestation', (fetch, abortSignal) => clientWith(fetch).getAttestation('id', { abortSignal })],
+    ['getEvents', (fetch, abortSignal) => clientWith(fetch).getEvents({ abortSignal })],
+    [
+      'submitDelegatedIntent',
+      (fetch, abortSignal) => submitDelegatedIntent(wallet, { intent, delegatorUrl: 'http://x', fetch, abortSignal }),
+    ],
+  ])('%s hands abortSignal to fetch and rejects with its reason', async (_method, call) => {
+    const caller = new AbortController()
+    const reason = new Error('caller gave up')
+    const fetchMock = vi.fn<typeof fetch>(async input => {
+      // getAttestation reads the intent after a 404, and that read must carry the signal too
+      if (String(input).endsWith('/attestation')) return json(404, { code: 'not_found', error: 'resource not found' })
+      caller.abort(reason)
+      return json(200, intentView('finalized'))
+    })
+    await expect(call(fetchMock, caller.signal)).rejects.toBe(reason)
+    expect(fetchMock).toHaveBeenCalled()
+    for (const [, init] of fetchMock.mock.calls) expect(init?.signal).toBe(caller.signal)
+  })
+
+  it('sends nothing once the signal is already aborted', async () => {
+    const reason = new Error('caller gave up')
+    const fetchMock = vi.fn<typeof fetch>(async () => json(202, intentView('accepted')))
+    const pending = clientWith(fetchMock).submitIntent({
+      intent,
+      signature: '0xdead',
+      abortSignal: AbortSignal.abort(reason),
+    })
+    await expect(pending).rejects.toBe(reason)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('waits for a terminal state', async () => {
     const states = ['accepted', 'attested', 'broadcast', 'finalized']
     const fetchMock = vi.fn<typeof fetch>(async () => json(200, intentView(states.shift() ?? 'finalized')))

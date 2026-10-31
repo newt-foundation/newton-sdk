@@ -59,6 +59,8 @@ export interface SubmitDelegatedIntentParams {
   signature: Hex
   /** One per policy, positionally aligned with the client's policy set. `'0x'` for a pure-Rego policy. */
   wasmArgs?: Hex[]
+  /** Cancels the request in flight. */
+  abortSignal?: AbortSignal
 }
 
 export interface SubmitDelegatedIntentResult {
@@ -86,6 +88,8 @@ export interface ListDelegatedIntentsParams extends DelegatedIntentFilter {
   cursor?: string
   /** Default 100. */
   limit?: number
+  /** Cancels the request in flight. */
+  abortSignal?: AbortSignal
 }
 
 export interface DelegatedIntentList {
@@ -121,6 +125,8 @@ export interface GetDelegatorEventsParams extends DelegatedIntentFilter {
   limit?: number
   /** Long-poll for up to this many milliseconds when nothing is newer than `after`. Capped at 30000 by the delegator. */
   waitMs?: number
+  /** Cancels the request in flight, such as a long-poll. */
+  abortSignal?: AbortSignal
 }
 
 export interface DelegatorEventPage {

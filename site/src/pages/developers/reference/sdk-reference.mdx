@@ -2003,7 +2003,14 @@ Sign `intent` and POST it to the delegator. With no `auth`, or the user's own, t
 ```ts
 submitDelegatedIntent(
   walletClient: WalletClient,
-  args: { delegatorUrl: string; intent: IntentFromParams; wasmArgs?: Hex[]; auth?: DelegatorAuth; fetch?: typeof fetch },
+  args: {
+    delegatorUrl: string
+    intent: IntentFromParams
+    wasmArgs?: Hex[]
+    auth?: DelegatorAuth
+    fetch?: typeof fetch
+    abortSignal?: AbortSignal // cancels the POST in flight, not the signature prompt
+  },
 ): Promise<PendingDelegatedIntent>
 
 interface PendingDelegatedIntent {
@@ -2057,11 +2064,11 @@ const delegator = createDelegatorClient({
 
 | Method | HTTP | Returns |
 | --- | --- | --- |
-| `submitIntent({ intent, signature, wasmArgs? })` | `POST /v1/intents` | `{ intent: DelegatedIntent \| DelegatedIntentRef; created: boolean }` (see `submitDelegatedIntent`) |
+| `submitIntent({ intent, signature, wasmArgs?, abortSignal? })` | `POST /v1/intents` | `{ intent: DelegatedIntent \| DelegatedIntentRef; created: boolean }` (see `submitDelegatedIntent`) |
 | `getIntent(intentId, { abortSignal? })` | `GET /v1/intents/{id}` | `DelegatedIntent` |
-| `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
-| `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; a denied intent can return its denying attestation, so check `taskResponse.allowed`; `not_found` for an unknown intent) |
-| `getEvents({ after?, limit?, waitMs?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
+| `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit?, abortSignal? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
+| `getAttestation(intentId, { abortSignal? })` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; a denied intent can return its denying attestation, so check `taskResponse.allowed`; `not_found` for an unknown intent) |
+| `getEvents({ after?, limit?, waitMs?, abortSignal?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
 | `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it is at or past a state in `until` (default: `finalized`, `denied` or `failed`); `denied` and `failed` match only themselves, and it rejects if the intent ends short of `until` |
 
 ```ts
