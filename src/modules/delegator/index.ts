@@ -273,6 +273,8 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     }
     const response = await doFetch(url, { ...init, headers })
     const text = await response.text()
+    // a fetch that ignores its signal must not resolve after the abort
+    init?.signal?.throwIfAborted()
     let body: unknown = null
     try {
       body = text ? JSON.parse(text) : null
@@ -311,8 +313,13 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     return { intent: toDelegatedIntent(body), created: status === 202 }
   }
 
-  const getIntent = async (intentId: string): Promise<DelegatedIntent> => {
-    const { body } = await request<RawIntentView>(`/v1/intents/${encodeURIComponent(intentId)}`)
+  const getIntent = async (
+    intentId: string,
+    { abortSignal }: { abortSignal?: AbortSignal } = {},
+  ): Promise<DelegatedIntent> => {
+    const { body } = await request<RawIntentView>(`/v1/intents/${encodeURIComponent(intentId)}`, {
+      signal: abortSignal,
+    })
     return toDelegatedIntent(body)
   }
 
@@ -372,28 +379,46 @@ function createDelegatorClient(config: DelegatorClientConfig) {
 
   /**
    * Poll `intentId` until it is at or past one of `until` (default: a terminal state). Rejects once
-   * the intent ends without reaching any of them.
+   * the intent ends without reaching any of them. The deadline and `abortSignal` cancel the read in flight.
    */
   const waitForIntent = async (
     intentId: string,
     { timeoutMs, pollIntervalMs = 2000, abortSignal, until }: WaitForDelegatedIntentParams = {},
   ): Promise<DelegatedIntent> => {
     const targets = until ?? DELEGATED_INTENT_TERMINAL_STATES
-    const deadline = timeoutMs !== undefined ? Date.now() + timeoutMs : undefined
-    for (;;) {
-      if (abortSignal?.aborted) throw new Error('Newton SDK: waitForIntent aborted')
-      const intent = await getIntent(intentId)
-      if (targets.some(target => reached(intent.state, target))) return intent
-      if (DELEGATED_INTENT_TERMINAL_STATES.includes(intent.state)) {
-        throw new Error(
-          `Newton SDK: intent ${intentId} ended in state ${intent.state} without reaching ${targets.join(', ')}`,
-        )
+    let state: DelegatedIntentState | undefined
+    // one signal for the caller's abort and the deadline, so either one cancels the read in flight
+    const controller = new AbortController()
+    const onAbort = () => controller.abort(new Error('Newton SDK: waitForIntent aborted'))
+    if (abortSignal?.aborted) onAbort()
+    abortSignal?.addEventListener('abort', onAbort, { once: true })
+    const timer =
+      timeoutMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            controller.abort(
+              new Error(`Newton SDK: waitForIntent timed out with intent ${intentId} in state ${state ?? 'unknown'}`),
+            )
+          }, timeoutMs)
+    try {
+      for (;;) {
+        controller.signal.throwIfAborted()
+        const intent = await getIntent(intentId, { abortSignal: controller.signal })
+        state = intent.state
+        if (targets.some(target => reached(intent.state, target))) return intent
+        if (DELEGATED_INTENT_TERMINAL_STATES.includes(intent.state)) {
+          throw new Error(
+            `Newton SDK: intent ${intentId} ended in state ${intent.state} without reaching ${targets.join(', ')}`,
+          )
+        }
+        await sleep(pollIntervalMs, controller.signal)
       }
-      const remaining = deadline === undefined ? pollIntervalMs : deadline - Date.now()
-      if (remaining <= 0) {
-        throw new Error(`Newton SDK: waitForIntent timed out with intent ${intentId} in state ${intent.state}`)
-      }
-      await sleep(Math.min(pollIntervalMs, remaining), abortSignal)
+    } catch (error) {
+      // report why the wait stopped, not how the cancelled read failed
+      throw controller.signal.aborted ? controller.signal.reason : error
+    } finally {
+      clearTimeout(timer)
+      abortSignal?.removeEventListener('abort', onAbort)
     }
   }
 

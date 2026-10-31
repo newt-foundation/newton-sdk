@@ -171,6 +171,12 @@ const intentView = (state: string, overrides: Record<string, unknown> = {}) => (
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
+// settles only once its signal aborts, as a fetch honoring the signal does
+const hangingFetch: typeof fetch = (_input, init) =>
+  new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => reject(new Error('fetch cancelled')))
+  })
+
 describe('createDelegatorClient', () => {
   it('posts the intent the way the delegator deserializes it', async () => {
     const fetchMock = vi.fn<typeof fetch>(async () => json(202, intentView('accepted')))
@@ -332,6 +338,56 @@ describe('createDelegatorClient', () => {
   it('times out while the intent is still live', async () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('tasked')) })
     await expect(client.waitForIntent('id', { pollIntervalMs: 5, timeoutMs: 20 })).rejects.toThrow(/timed out/)
+  })
+
+  it('cancels the read in flight when aborted', async () => {
+    const caller = new AbortController()
+    const client = createDelegatorClient({ url: 'http://x', fetch: hangingFetch })
+    const wait = client.waitForIntent('id', { abortSignal: caller.signal })
+    caller.abort()
+    await expect(wait).rejects.toThrow(/waitForIntent aborted/)
+  })
+
+  it('cancels the read in flight at the deadline', async () => {
+    const client = createDelegatorClient({ url: 'http://x', fetch: hangingFetch })
+    await expect(client.waitForIntent('id', { timeoutMs: 5 })).rejects.toThrow(/timed out/)
+  })
+
+  it('drops a response that lands after the abort', async () => {
+    const caller = new AbortController()
+    const client = createDelegatorClient({
+      url: 'http://x',
+      fetch: async () => {
+        caller.abort()
+        return json(200, intentView('finalized'))
+      },
+    })
+    await expect(client.waitForIntent('id', { abortSignal: caller.signal })).rejects.toThrow(/aborted/)
+  })
+
+  it('drops a response that lands after the deadline', async () => {
+    const client = createDelegatorClient({
+      url: 'http://x',
+      fetch: async () => {
+        await new Promise(resolve => setTimeout(resolve, 30))
+        return json(200, intentView('finalized'))
+      },
+    })
+    await expect(client.waitForIntent('id', { timeoutMs: 5 })).rejects.toThrow(/timed out/)
+  })
+
+  it('clears its deadline and abort listener once settled', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const caller = new AbortController()
+      const remove = vi.spyOn(caller.signal, 'removeEventListener')
+      const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('finalized')) })
+      await client.waitForIntent('id', { timeoutMs: 60_000, abortSignal: caller.signal })
+      expect(vi.getTimerCount()).toBe(0)
+      expect(remove).toHaveBeenCalledWith('abort', expect.any(Function))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
