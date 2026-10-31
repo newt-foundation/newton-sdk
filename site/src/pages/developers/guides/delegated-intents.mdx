@@ -85,12 +85,13 @@ Every call that reads from the delegator is signed. The SDK signs an EIP-712 `Ne
 ```ts
 import { createDelegatorClient } from '@newton-xyz/sdk'
 import { privateKeyToAccount } from 'viem/accounts'
+import { sepolia } from 'viem/chains'
 
 const delegator = createDelegatorClient({
   url: 'https://delegator.your-app.com',
   auth: {
     signer: privateKeyToAccount(process.env.READER_KEY as `0x${string}`),
-    chainId: 84532, // the delegator's chain
+    chainId: sepolia.id, // the delegator's chain; it only accepts intents for this chain
   },
 })
 ```
@@ -157,7 +158,7 @@ const signature = await signDelegatedIntent(wallet, { intent })
 // Backend
 const delegator = createDelegatorClient({
   url: process.env.DELEGATOR_URL!,
-  auth: { signer: backendAccount, chainId: 84532 },
+  auth: { signer: backendAccount, chainId: sepolia.id },
 })
 const { intent: accepted } = await delegator.submitIntent({ intent, signature, wasmArgs: ['0x'] })
 ```
