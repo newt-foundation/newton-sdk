@@ -166,6 +166,8 @@ The intent signature is what authorizes a submission, so by default a delegator 
 
 Submitting the same signed intent twice is safe. The delegator identifies it by `keccak256(intent.from ‖ intentDigest(intent))` and returns the existing record.
 
+A repeat submission returns the full record only to a caller that can read the intent. Anyone else, including an unsigned caller, gets back just `intentId` and `state`.
+
 ## Step 4 — Track the intent
 
 An intent moves through these states:

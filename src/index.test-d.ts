@@ -1,7 +1,7 @@
 import type { Address, Hex } from 'viem'
 import { describe, expectTypeOf, it } from 'vitest'
 import type { createDelegatorClient, newtonPublicClientActions, newtonWalletClientActions } from './index'
-import type { DelegatedIntent } from './types/delegator'
+import type { DelegatedIntent, DelegatedIntentRef } from './types/delegator'
 import type { SimulatePolicyResult, SimulateTaskResult, TaskResponseResult, TaskStatus } from './types/task'
 
 // Simulate the shape returned by client.extend()
@@ -77,10 +77,10 @@ describe('delegator type tests', () => {
     expectTypeOf<WalletActions['signDelegatedIntent']>().returns.resolves.toEqualTypeOf<Hex>()
   })
 
-  it('submitDelegatedIntent returns the delegated intent', () => {
-    expectTypeOf<
-      Awaited<ReturnType<WalletActions['submitDelegatedIntent']>>['intent']
-    >().toEqualTypeOf<DelegatedIntent>()
+  it('submitDelegatedIntent returns the delegated intent, or only its id and state', () => {
+    expectTypeOf<Awaited<ReturnType<WalletActions['submitDelegatedIntent']>>['intent']>().toEqualTypeOf<
+      DelegatedIntent | DelegatedIntentRef
+    >()
   })
 
   it('approveDelegator returns transaction hash', () => {

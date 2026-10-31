@@ -47,6 +47,12 @@ export interface DelegatedIntent {
   completedAtMs: number | null
 }
 
+/** What a resubmission tells a caller that cannot read the intent (see `DelegatorAuth`). */
+export interface DelegatedIntentRef {
+  intentId: string
+  state: DelegatedIntentState
+}
+
 export interface SubmitDelegatedIntentParams {
   intent: IntentFromParams
   /** `intent.from`'s EIP-712 signature over the policy client's intent digest. See `signDelegatedIntent`. */
@@ -56,7 +62,8 @@ export interface SubmitDelegatedIntentParams {
 }
 
 export interface SubmitDelegatedIntentResult {
-  intent: DelegatedIntent
+  /** Only `intentId` and `state` when a resubmission comes from a caller that cannot read the intent. */
+  intent: DelegatedIntent | DelegatedIntentRef
   /** `false` when the delegator already held this signed intent (HTTP 200 rather than 202). */
   created: boolean
 }

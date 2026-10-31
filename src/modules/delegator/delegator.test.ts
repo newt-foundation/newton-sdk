@@ -20,6 +20,7 @@ import {
   getDelegatedIntentDigest,
   signDelegatedIntent,
   signDelegatorApproval,
+  submitDelegatedIntent,
   verifyDelegatorWebhook,
 } from './index'
 
@@ -219,6 +220,17 @@ describe('createDelegatorClient', () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('attested')) })
     const result = await client.submitIntent({ intent, signature: '0xdead' })
     expect(result.created).toBe(false)
+  })
+
+  it('keeps only the id and state of a resubmission the caller cannot read, and waits on it', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (_input, init) =>
+      init?.method === 'POST' ? json(200, { intent_id: 'id', state: 'tasked' }) : json(200, intentView('finalized')),
+    )
+    const pending = await submitDelegatedIntent(wallet, { intent, delegatorUrl: 'http://x', fetch: fetchMock })
+    expect(pending.intent).toEqual({ intentId: 'id', state: 'tasked' })
+    expect(pending.created).toBe(false)
+    expect((await pending.waitForIntent()).state).toBe('finalized')
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('http://x/v1/intents/id')
   })
 
   it.each([

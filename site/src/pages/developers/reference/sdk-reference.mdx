@@ -2007,10 +2007,16 @@ submitDelegatedIntent(
 ): Promise<PendingDelegatedIntent>
 
 interface PendingDelegatedIntent {
-  intent: DelegatedIntent
+  intent: DelegatedIntent | DelegatedIntentRef
   created: boolean // false when the delegator already held this signed intent
   signature: Hex
   waitForIntent(params?: WaitForDelegatedIntentParams): Promise<DelegatedIntent> // needs auth
+}
+
+// what a resubmission tells a caller that cannot read the intent
+interface DelegatedIntentRef {
+  intentId: string
+  state: DelegatedIntentState
 }
 ```
 
@@ -2051,7 +2057,7 @@ const delegator = createDelegatorClient({
 
 | Method | HTTP | Returns |
 | --- | --- | --- |
-| `submitIntent({ intent, signature, wasmArgs? })` | `POST /v1/intents` | `{ intent: DelegatedIntent; created: boolean }` |
+| `submitIntent({ intent, signature, wasmArgs? })` | `POST /v1/intents` | `{ intent: DelegatedIntent \| DelegatedIntentRef; created: boolean }` (see `submitDelegatedIntent`) |
 | `getIntent(intentId, { abortSignal? })` | `GET /v1/intents/{id}` | `DelegatedIntent` |
 | `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
 | `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; `not_found` for an unknown intent) |

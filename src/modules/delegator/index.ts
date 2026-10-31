@@ -295,7 +295,7 @@ function createDelegatorClient(config: DelegatorClientConfig) {
 
   const submitIntent = async (args: SubmitDelegatedIntentParams): Promise<SubmitDelegatedIntentResult> => {
     const intent = normalizeIntent(args.intent)
-    const { status, body } = await request<RawIntentView>('/v1/intents', {
+    const { status, body } = await request<RawIntentView | Pick<RawIntentView, 'intent_id' | 'state'>>('/v1/intents', {
       method: 'POST',
       body: JSON.stringify({
         intent: {
@@ -310,7 +310,11 @@ function createDelegatorClient(config: DelegatorClientConfig) {
         wasm_args: args.wasmArgs ?? [],
       }),
     })
-    return { intent: toDelegatedIntent(body), created: status === 202 }
+    return {
+      // a 200 replay answers only these two unless the caller can read the intent
+      intent: 'policy_client' in body ? toDelegatedIntent(body) : { intentId: body.intent_id, state: body.state },
+      created: status === 202,
+    }
   }
 
   const getIntent = async (
