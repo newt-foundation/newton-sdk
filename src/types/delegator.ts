@@ -164,10 +164,11 @@ export interface DelegatorAttestation {
 }
 
 export interface WaitForDelegatedIntentParams {
-  /** Reject after this long. No timeout by default. */
+  /** Reject with a `DOMException` named `TimeoutError` after this long. No timeout by default. */
   timeoutMs?: number
   /** Delay between status reads. Default 2000. */
   pollIntervalMs?: number
+  /** Rejects with the signal's `reason`: a `DOMException` named `AbortError` unless `abort()` was given one. */
   abortSignal?: AbortSignal
   /**
    * Resolve once the intent is at or past any of these on the happy path; `denied` and `failed`

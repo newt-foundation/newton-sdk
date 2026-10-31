@@ -221,7 +221,7 @@ const sleep = (ms: number, abortSignal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const onAbort = () => {
       clearTimeout(timer)
-      reject(new Error('Newton SDK: waitForIntent aborted'))
+      reject(abortSignal?.reason)
     }
     const timer = setTimeout(() => {
       abortSignal?.removeEventListener('abort', onAbort)
@@ -400,7 +400,8 @@ function createDelegatorClient(config: DelegatorClientConfig) {
 
   /**
    * Poll `intentId` until it is at or past one of `until` (default: a terminal state). Rejects once
-   * the intent ends without reaching any of them. The deadline and `abortSignal` cancel the read in flight.
+   * the intent ends without reaching any of them. The deadline and `abortSignal` cancel the read in flight:
+   * an abort rejects with the signal's `reason`, and the deadline with a `DOMException` named `TimeoutError`.
    */
   const waitForIntent = async (
     intentId: string,
@@ -410,7 +411,7 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     let state: DelegatedIntentState | undefined
     // one signal for the caller's abort and the deadline, so either one cancels the read in flight
     const controller = new AbortController()
-    const onAbort = () => controller.abort(new Error('Newton SDK: waitForIntent aborted'))
+    const onAbort = () => controller.abort(abortSignal?.reason)
     if (abortSignal?.aborted) onAbort()
     abortSignal?.addEventListener('abort', onAbort, { once: true })
     const timer =
@@ -418,7 +419,10 @@ function createDelegatorClient(config: DelegatorClientConfig) {
         ? undefined
         : setTimeout(() => {
             controller.abort(
-              new Error(`Newton SDK: waitForIntent timed out with intent ${intentId} in state ${state ?? 'unknown'}`),
+              new DOMException(
+                `Newton SDK: waitForIntent timed out with intent ${intentId} in state ${state ?? 'unknown'}`,
+                'TimeoutError',
+              ),
             )
           }, timeoutMs)
     try {

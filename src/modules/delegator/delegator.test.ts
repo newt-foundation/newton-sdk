@@ -452,15 +452,19 @@ describe('createDelegatorClient', () => {
 
   it('times out while the intent is still live', async () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('tasked')) })
-    await expect(client.waitForIntent('id', { pollIntervalMs: 5, timeoutMs: 20 })).rejects.toThrow(/timed out/)
+    const error = await client.waitForIntent('stuck-intent', { pollIntervalMs: 5, timeoutMs: 20 }).catch(e => e)
+    expect(error).toBeInstanceOf(DOMException)
+    expect(error.name).toBe('TimeoutError')
+    expect(error.message).toContain('intent stuck-intent in state tasked')
   })
 
-  it('cancels the read in flight when aborted', async () => {
+  it('cancels the read in flight when aborted, and rejects with the abort reason', async () => {
     const caller = new AbortController()
+    const reason = new Error('caller gave up')
     const client = createDelegatorClient({ url: 'http://x', fetch: hangingFetch })
     const wait = client.waitForIntent('id', { abortSignal: caller.signal })
-    caller.abort()
-    await expect(wait).rejects.toThrow(/waitForIntent aborted/)
+    caller.abort(reason)
+    await expect(wait).rejects.toBe(reason)
   })
 
   it('cancels the read in flight at the deadline', async () => {
@@ -477,7 +481,9 @@ describe('createDelegatorClient', () => {
         return json(200, intentView('finalized'))
       },
     })
-    await expect(client.waitForIntent('id', { abortSignal: caller.signal })).rejects.toThrow(/aborted/)
+    const error = await client.waitForIntent('id', { abortSignal: caller.signal }).catch(e => e)
+    expect(error).toBe(caller.signal.reason)
+    expect(error.name).toBe('AbortError')
   })
 
   it('drops a response that lands after the deadline', async () => {

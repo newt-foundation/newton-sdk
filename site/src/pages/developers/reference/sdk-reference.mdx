@@ -2071,6 +2071,8 @@ const delegator = createDelegatorClient({
 | `getEvents({ after?, limit?, waitMs?, abortSignal?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
 | `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it is at or past a state in `until` (default: `finalized`, `denied` or `failed`); `denied` and `failed` match only themselves, and it rejects if the intent ends short of `until` |
 
+`waitForIntent` rejects with a `DOMException` named `TimeoutError` once `timeoutMs` passes, and with the signal's `reason` when `abortSignal` aborts: a `DOMException` named `AbortError` unless `abort()` was given a reason.
+
 ```ts
 interface DelegatedIntent {
   intentId: string

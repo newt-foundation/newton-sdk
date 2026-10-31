@@ -290,4 +290,6 @@ Delegator calls throw `DelegatorError` with the HTTP `status` and the delegator'
 | 503 | `event_feed_busy` | Too many concurrent event long-polls |
 | 2xx | `malformed_response` | The answer was not a JSON object, so the client's `url` probably does not point at a delegator |
 
+`waitForIntent` also rejects without a status: with a `DOMException` named `TimeoutError` once `timeoutMs` passes, with the signal's `reason` when `abortSignal` aborts, and with a plain `Error` when the intent ends short of `until`.
+
 See the [SDK Reference](/developers/reference/sdk-reference#delegator) for every method signature.
