@@ -104,7 +104,7 @@ async function signNewtonRequest(signer: NewtonAuthSigner, params: SignNewtonReq
   const session = params.session
   const address = await signerAddress(signer)
   if (session && !isAddressEqual(address, session.grant.sessionKey)) {
-    throw new Error('Newton SDK: a session request must be signed by the grant’s session key')
+    throw new Error("Newton SDK: a session request must be signed by the grant's session key")
   }
   const request: NewtonRequest = {
     audience: params.audience,
