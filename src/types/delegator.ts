@@ -184,7 +184,10 @@ export type NewtonAuthSigner = LocalAccount | WalletClient
 export interface NewtonRequest {
   /** Lowercased hostname of the service. */
   audience: string
-  /** For the delegator, `"<VERB> <path>"` without the query string, e.g. `GET /v1/events`. */
+  /**
+   * For the delegator, `"<VERB> <path>"` with the path as the delegator receives it: percent-encoded, without
+   * the query string or a prefix that a proxy strips, e.g. `GET /v1/events`.
+   */
   method: string
   /** keccak256 of the exact body bytes. */
   bodyHash: Hex
@@ -242,7 +245,10 @@ export interface DelegatorAuth {
 }
 
 export interface DelegatorClientConfig {
-  /** Base URL of the delegator, e.g. `https://delegator.example.com`. */
+  /**
+   * Base URL of the delegator, e.g. `https://delegator.example.com`. It can include the path prefix a proxy
+   * serves the delegator under, e.g. `https://api.example.com/delegator`; calls are signed over the route after it.
+   */
   url: string
   /**
    * Signs requests with `X-Newton-Auth`. Every read needs it, and by default so does a submission,

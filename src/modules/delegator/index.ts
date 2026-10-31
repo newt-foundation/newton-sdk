@@ -264,10 +264,12 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (init?.body) headers['Content-Type'] = 'application/json'
     if (auth && audience) {
+      // the delegator checks the route path it receives: as sent, without the query, and without the
+      // base URL's own path, a prefix that a proxy in front of it strips ('' for a URL without one)
+      const basePath = new URL(`${baseUrl}/`).pathname.slice(0, -1)
       headers[NEWTON_AUTH_HEADER] = await signNewtonRequest(auth.signer, {
         audience,
-        // signed without the query string, as the delegator checks it
-        method: `${init?.method ?? 'GET'} ${new URL(url).pathname}`,
+        method: `${init?.method ?? 'GET'} ${new URL(url).pathname.slice(basePath.length)}`,
         body: typeof init?.body === 'string' ? init.body : '',
         chainId: auth.chainId,
         session: auth.session,

@@ -80,7 +80,7 @@ await publicClient.delegatorRequired({ policyClient })
 
 ## Step 2 — Authenticate to the delegator
 
-Every call that reads from the delegator is signed, and by default so is every submission. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and path, the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
+Every call that reads from the delegator is signed, and by default so is every submission. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and route path (such as `GET /v1/intents`, without the query string), the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
 
 ```ts
 import { createDelegatorClient } from '@newton-xyz/sdk'
@@ -95,6 +95,8 @@ const delegator = createDelegatorClient({
   },
 })
 ```
+
+If a proxy serves the delegator under a path prefix, such as `https://api.your-app.com/delegator`, include the prefix in `url`. The SDK signs only the route after it, which is the path the delegator receives.
 
 Who signs decides what the caller can see:
 

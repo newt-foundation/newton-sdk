@@ -149,6 +149,28 @@ describe('createDelegatorClient auth', () => {
     expect(recovered).toBe(key(1).address)
   })
 
+  it('signs the route path as sent, without the base URL path or the query', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async input =>
+      String(input).includes('?') ? ok({ intents: [], next_cursor: null }) : ok(view),
+    )
+    // a path prefix that a proxy in front of the delegator strips
+    const client = createDelegatorClient({
+      url: 'http://x/delegator',
+      auth: { signer: key(1), chainId: 84532 },
+      fetch: fetchMock,
+    })
+    await client.getIntent('a b/c')
+    await client.listIntents({ states: ['denied'] })
+    const sent = fetchMock.mock.calls.map(([input, init]) => [
+      String(input),
+      decode((init?.headers as Record<string, string>)['X-Newton-Auth'] as string).request.method,
+    ])
+    expect(sent).toEqual([
+      ['http://x/delegator/v1/intents/a%20b%2Fc', 'GET /v1/intents/a%20b%2Fc'],
+      ['http://x/delegator/v1/intents?state=denied', 'GET /v1/intents'],
+    ])
+  })
+
   it('signs a submission over its exact body', async () => {
     const fetchMock = vi.fn<typeof fetch>(async () => ok(view, 202))
     const client = createDelegatorClient({

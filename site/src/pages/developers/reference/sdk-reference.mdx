@@ -2048,7 +2048,7 @@ getDelegatedIntentDigest(intent: IntentFromParams): Hex
 
 ### `createDelegatorClient`
 
-HTTP client for one delegator. `auth` signs each call with an `X-Newton-Auth` header. Every `/v1/*` read needs it, and by default so does `submitIntent`, from a reader or the PolicyClient's owner. Pass `fetch` to add headers for a proxy in front of the delegator.
+HTTP client for one delegator. `auth` signs each call with an `X-Newton-Auth` header. Every `/v1/*` read needs it, and by default so does `submitIntent`, from a reader or the PolicyClient's owner. Pass `fetch` to add headers for a proxy in front of the delegator. `url` can include the path prefix that a proxy serves the delegator under, such as `https://api.your-app.com/delegator`; calls are signed over the route after it, which is the path the delegator receives.
 
 ```ts
 const delegator = createDelegatorClient({
@@ -2103,7 +2103,7 @@ signSessionGrant(grantor: LocalAccount | WalletClient, args: { sessionKey: Addre
 
 ### `signNewtonRequest`
 
-Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` without the query string, and `body` is the exact bytes sent (`''` for a GET).
+Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` with the path as the delegator receives it (percent-encoded, without the query string or a prefix that a proxy strips), and `body` is the exact bytes sent (`''` for a GET).
 
 ```ts
 signNewtonRequest(
