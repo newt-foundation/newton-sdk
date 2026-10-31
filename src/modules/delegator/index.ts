@@ -438,7 +438,11 @@ function createDelegatorClient(config: DelegatorClientConfig) {
 
 type DelegatorClient = ReturnType<typeof createDelegatorClient>
 
-/** Sign `intent` as `intent.from` and submit it to the delegator at `delegatorUrl`. */
+/**
+ * Sign `intent` as `intent.from` and submit it to the delegator at `delegatorUrl`. By default a
+ * delegator only accepts a submission signed by a reader or the policy client's owner; with no
+ * `auth`, or the user's own, this needs one that accepts sender submissions.
+ */
 async function submitDelegatedIntent(
   walletClient: WalletClient,
   args: SignAndSubmitDelegatedIntentParams,

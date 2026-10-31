@@ -1998,7 +1998,7 @@ signDelegatedIntent(walletClient: WalletClient, args: { intent: IntentFromParams
 
 ### `submitDelegatedIntent`
 
-Sign `intent` and POST it to the delegator.
+Sign `intent` and POST it to the delegator. With no `auth`, or the user's own, this needs a delegator that accepts sender submissions; by default only a reader or the PolicyClient's owner may submit.
 
 ```ts
 submitDelegatedIntent(
@@ -2041,7 +2041,7 @@ getDelegatedIntentDigest(intent: IntentFromParams): Hex
 
 ### `createDelegatorClient`
 
-HTTP client for one delegator. Every `/v1/*` read needs `auth`, which signs each call with an `X-Newton-Auth` header. When `auth` is set, submissions are signed too. Pass `fetch` to add headers for a proxy in front of the delegator.
+HTTP client for one delegator. `auth` signs each call with an `X-Newton-Auth` header. Every `/v1/*` read needs it, and by default so does `submitIntent`, from a reader or the PolicyClient's owner. Pass `fetch` to add headers for a proxy in front of the delegator.
 
 ```ts
 const delegator = createDelegatorClient({

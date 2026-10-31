@@ -80,7 +80,7 @@ await publicClient.delegatorRequired({ policyClient })
 
 ## Step 2 — Authenticate to the delegator
 
-Every call that reads from the delegator is signed. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and path, the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
+Every call that reads from the delegator is signed, and by default so is every submission. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and path, the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
 
 ```ts
 import { createDelegatorClient } from '@newton-xyz/sdk'
@@ -115,59 +115,68 @@ const session = await createNewtonSession(wallet, { expiresInSecs: 3600 }) // on
 const auth = { signer: session.account, session: session.grant, chainId: sepolia.id }
 ```
 
-The caller is still the grantor: the user's own intents, or everything their role allows. `signNewtonRequest` and `signSessionGrant` are exported for signing requests yourself.
+The caller is still the grantor: the user's own intents, or everything their role allows. Submitting works the same way, so a user's session can submit only to a delegator that accepts sender submissions (see Step 3). `signNewtonRequest` and `signSessionGrant` are exported for signing requests yourself.
 
 ## Step 3 — Sign and submit an intent
 
-The user signs the intent with their own wallet; local accounts and browser wallets both work. These functions take a plain viem `WalletClient` and need no Newton API key. They are also available as `newtonWalletClientActions` methods. `submitDelegatedIntent` signs and POSTs the intent to the delegator in one call:
+The user signs the intent in the browser, and your backend submits it with an account the delegator trusts: a reader or the PolicyClient's owner. `signDelegatedIntent` takes a plain viem `WalletClient`, works with local accounts and browser wallets, and needs no Newton API key. It is also a `newtonWalletClientActions` method.
 
 ```ts
+import { createDelegatorClient, signDelegatedIntent } from '@newton-xyz/sdk'
 import { createWalletClient, custom, stringToHex } from 'viem'
 import { sepolia } from 'viem/chains'
-import { submitDelegatedIntent } from '@newton-xyz/sdk'
 
+// Browser: the user signs, then sends intent and signature to your backend
 const wallet = createWalletClient({ chain: sepolia, transport: custom(window.ethereum) })
 const [from] = await wallet.getAddresses()
+const intent = {
+  from,
+  to: policyClient,
+  value: 0n,
+  data: cosignedTransferCalldata, // the logical call your entrypoint decodes
+  chainId: sepolia.id,
+  functionSignature: stringToHex('cosignedTransfer(address,uint256,uint256,uint256)'),
+}
+const signature = await signDelegatedIntent(wallet, { intent })
+
+// Backend
+const delegator = createDelegatorClient({
+  url: 'https://delegator.your-app.com',
+  auth: { signer: backendAccount, chainId: sepolia.id }, // a reader, or the PolicyClient's owner
+})
+const submitted = await delegator.submitIntent({
+  intent,
+  signature,
+  wasmArgs: ['0x'], // one per policy in the client's policy set
+})
+
+submitted.created // false if the delegator already had this exact signed intent
+const final = await delegator.waitForIntent(submitted.intent.intentId, { timeoutMs: 120_000 })
+```
+
+By default a delegator accepts a submission only when a reader or the owner of the intent's PolicyClient signs it. Any other signer, `intent.from` included, gets `forbidden`, and an unsigned submission gets `unauthorized`.
+
+Submitting the same signed intent twice is safe. The delegator identifies it by `keccak256(intent.from ‖ intentDigest(intent))` and returns the existing record.
+
+### Submitting from the user's wallet
+
+A delegator operator can set `submit = "sender"` in the delegator's `[auth]` config, for a deployment where users submit from the browser. That delegator also accepts a submission signed by `intent.from`, or not signed at all, and `submitDelegatedIntent` then signs the intent and POSTs it in one call:
+
+```ts
+import { submitDelegatedIntent } from '@newton-xyz/sdk'
 
 const pending = await submitDelegatedIntent(wallet, {
   delegatorUrl: 'https://delegator.your-app.com',
-  auth, // from Step 2; waitForIntent needs it to read the intent
-  intent: {
-    from,
-    to: policyClient,
-    value: 0n,
-    data: cosignedTransferCalldata, // the logical call your entrypoint decodes
-    chainId: sepolia.id,
-    functionSignature: stringToHex('cosignedTransfer(address,uint256,uint256,uint256)'),
-  },
-  wasmArgs: ['0x'], // one per policy in the client's policy set
+  auth, // the user's session from Step 2; waitForIntent needs it to read the intent
+  intent,
+  wasmArgs: ['0x'],
 })
 
 pending.created // false if the delegator already had this exact signed intent
 const final = await pending.waitForIntent({ timeoutMs: 120_000 })
 ```
 
-To sign in one place and submit from another, for example sign in the browser and submit from your backend, split the two steps:
-
-```ts
-import { createDelegatorClient, signDelegatedIntent } from '@newton-xyz/sdk'
-
-// Browser
-const signature = await signDelegatedIntent(wallet, { intent })
-
-// Backend
-const delegator = createDelegatorClient({
-  url: process.env.DELEGATOR_URL!,
-  auth: { signer: backendAccount, chainId: sepolia.id },
-})
-const { intent: accepted } = await delegator.submitIntent({ intent, signature, wasmArgs: ['0x'] })
-```
-
-The intent signature is what authorizes a submission, so by default a delegator accepts an intent with no `X-Newton-Auth` header. When the client has `auth`, it signs submissions too. The signer must then be a reader, the PolicyClient's owner, or `intent.from`, otherwise the delegator answers `forbidden`. An operator can also require submissions to come from a reader or the owner. Then an unsigned submission is `unauthorized`.
-
-Submitting the same signed intent twice is safe. The delegator identifies it by `keccak256(intent.from ‖ intentDigest(intent))` and returns the existing record.
-
-A repeat submission returns the full record only to a caller that can read the intent. Anyone else, including an unsigned caller, gets back just `intentId` and `state`.
+A repeat submission without `auth` gets back only `intentId` and `state`. The full record goes only to a caller that can read the intent.
 
 ## Step 4 — Track the intent
 

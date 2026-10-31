@@ -238,8 +238,8 @@ export interface DelegatorClientConfig {
   /** Base URL of the delegator, e.g. `https://delegator.example.com`. */
   url: string
   /**
-   * Signs requests with `X-Newton-Auth`. Required for every read; submissions are signed too
-   * when it is set, and need it when the delegator only accepts intents from owners.
+   * Signs requests with `X-Newton-Auth`. Every read needs it, and by default so does a submission,
+   * which a reader or the policy client's owner must sign.
    */
   auth?: DelegatorAuth
   /** Custom fetch, e.g. to add headers for a proxy in front of the delegator. Defaults to global `fetch`. */
@@ -268,7 +268,7 @@ export type DelegatorErrorCode =
 export interface SignAndSubmitDelegatedIntentParams extends Omit<SubmitDelegatedIntentParams, 'signature'> {
   /** Base URL of the delegator. */
   delegatorUrl: string
-  /** Needed for the returned `waitForIntent`, which reads the intent. */
+  /** Needed for the returned `waitForIntent`, and by default for the submission (see `submitDelegatedIntent`). */
   auth?: DelegatorAuth
   fetch?: typeof fetch
 }
