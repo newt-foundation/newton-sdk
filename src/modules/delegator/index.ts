@@ -290,6 +290,15 @@ function createDelegatorClient(config: DelegatorClientConfig) {
         body,
       )
     }
+    // every route this client calls answers a JSON object; anything else is not a delegator, e.g. an SPA fallback page
+    if (!body || typeof body !== 'object') {
+      throw new DelegatorError(
+        response.status,
+        'malformed_response',
+        `expected a JSON object from ${init?.method ?? 'GET'} ${url}`,
+        body,
+      )
+    }
     return { status: response.status, body: body as T }
   }
 

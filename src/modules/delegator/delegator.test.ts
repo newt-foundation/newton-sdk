@@ -247,6 +247,15 @@ describe('createDelegatorClient', () => {
     expect(error).toMatchObject({ status, code, rawMessage: 'nope' })
   })
 
+  it('throws malformed_response for a 2xx body that is not a JSON object', async () => {
+    const page = async () => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } })
+    const client = createDelegatorClient({ url: 'http://x', fetch: page })
+    const error = await client.getIntent('abc').catch(e => e)
+    expect(error).toBeInstanceOf(DelegatorError)
+    expect(error).toMatchObject({ status: 200, code: 'malformed_response' })
+    expect(error.message).toContain('GET http://x/v1/intents/abc')
+  })
+
   it('encodes list filters and maps the page', async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
       json(200, { intents: [intentView('denied')], next_cursor: 'abc' }),

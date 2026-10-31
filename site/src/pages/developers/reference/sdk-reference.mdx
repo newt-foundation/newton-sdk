@@ -2884,7 +2884,7 @@ class MagicRPCError extends Error {
 
 ### DelegatorError
 
-Thrown by delegator calls when the delegator answers with a non-2xx status. `code` is the delegator's error code (`invalid_intent`, `idempotency_conflict`, `sender_capacity_exceeded`, ...; see [Delegated Intents](/developers/guides/delegated-intents#errors)).
+Thrown by delegator calls when the delegator answers with a non-2xx status. `code` is the delegator's error code (`invalid_intent`, `idempotency_conflict`, `sender_capacity_exceeded`, ...; see [Delegated Intents](/developers/guides/delegated-intents#errors)). A 2xx answer that is not a JSON object throws with code `malformed_response`, which usually means the URL does not point at a delegator.
 
 ```ts
 class DelegatorError extends Error {

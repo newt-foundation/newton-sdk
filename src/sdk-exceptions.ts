@@ -48,7 +48,10 @@ export function createRpcError(code: RPCErrorCode, message: string, data?: unkno
   return new MagicRPCError({ code, message, data })
 }
 
-/** A non-2xx answer from a newton-delegator. `code` is the delegator's error code (see `DelegatorErrorCode`). */
+/**
+ * A failed newton-delegator call: a non-2xx answer, where `code` is the delegator's error code (see
+ * `DelegatorErrorCode`), or a 2xx body that is not a JSON object, with code `malformed_response`.
+ */
 export class DelegatorError extends Error {
   /** For `unauthorized`, why the request did not authenticate, e.g. `stale_timestamp` or `wrong_audience`. */
   public reason?: string

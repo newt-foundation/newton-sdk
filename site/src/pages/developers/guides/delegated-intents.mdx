@@ -286,5 +286,6 @@ Delegator calls throw `DelegatorError` with the HTTP `status` and the delegator'
 | 503 | `owner_unavailable` / `verifier_unavailable` | The delegator could not read a PolicyClient owner or check a smart-account signature; retry |
 | 503 | `capacity_exceeded` | The delegator is at capacity |
 | 503 | `event_feed_busy` | Too many concurrent event long-polls |
+| 2xx | `malformed_response` | The answer was not a JSON object, so the client's `url` probably does not point at a delegator |
 
 See the [SDK Reference](/developers/reference/sdk-reference#delegator) for every method signature.
