@@ -1,0 +1,35 @@
+---
+title: "Gateway Privacy Notice"
+description: "How Newton Labs handles Developer account data and the transaction data your application submits through the Newton Gateway."
+showAskAi: false
+---
+
+# Gateway Privacy Notice [How Newton Labs handles Developer account data and the transaction data your application submits through the Newton Gateway.]
+
+## 1. Scope
+
+This notice is addressed to Developers who register for and use API keys to access the Newton Gateway API ("Developers"). Developers are responsible for providing their own end users with appropriate notice regarding how the Developer's application uses Newton Protocol. Newton Labs operates the Gateway API infrastructure, related tooling, and API key issuance. Magic Newton Foundation is the steward of the Newton Protocol. Newton Labs and the Foundation are separate, unaffiliated entities. Your access to and use of the Gateway is governed by the [Developer Terms of Service](/developers/resources/developer-terms-of-service), which are incorporated by reference.
+
+## 2. What data we collect from Developers
+
+Developer account data: name, email, API keys, and related project configuration information.
+
+## 3. What happens to transaction data submitted through your application
+
+When your application submits a transaction Intent for policy evaluation, the Intent includes the sending and receiving wallet addresses, transaction value, calldata, chain identifier, and other related transaction data. Your application sends the Intent to the Gateway over HTTPS, and the Intent is not otherwise encrypted: the Gateway and Operators process it in readable form to create and evaluate the Task. Identity, confidential, and other privacy data submitted through the Newton privacy layer is encrypted on the client side (HPKE) before it reaches the Gateway. The Gateway stores or relays that data without decrypting it. Operators decrypt it only to perform policy evaluation. Operators can run that decryption inside a Trusted Execution Environment (TEE), but the TEE does not yet fully protect decrypted data from a compromised Operator host. Where your application's policy requires external data (for example, sanctions screening or KYC status), Operators independently query data oracle providers as part of evaluation.
+
+## 4. Legal basis for processing
+
+Newton Labs processes Developer account data on the basis of performance of the contract between Newton Labs and the Developer under the relevant Developer Terms of Service. Processing of transaction Intent data submitted through your application is a structural requirement of operating the Newton product you have chosen to integrate; it is necessary for the Gateway to route Intent data and for Operators to perform policy evaluation in order for your application to function as designed.
+
+## 5. Who else may receive transaction data
+
+Operators, as described in Section 3. Operators are geographically distributed, which may include locations outside the European Economic Area. Data oracle providers, where your application's policy requires external verification (for example, KYC or sanctions screening providers).
+
+## 6. Retention
+
+Ephemeral data used only during a single evaluation is not persisted. Identity and confidential data are stored in encrypted form. Identity data that is not confirmed onchain within one hour of upload is deleted; confirmed identity data and confidential data are retained and are not deleted. The Gateway may also store Intent and Task data for indexing. A Task response, including its Intent, is published onchain, where it is publicly visible and cannot be deleted.
+
+## 7. Developer rights
+
+You may exercise access, correction, deletion, and portability rights with respect to your own Developer account data by contacting [legal@newton.xyz](mailto:legal@newton.xyz). This notice does not address rights for your end users. You are responsible for handling any rights requests from your end users with respect to their data.

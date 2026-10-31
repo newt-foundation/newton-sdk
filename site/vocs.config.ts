@@ -271,6 +271,7 @@ export default defineConfig({
           { text: 'Deployment Checklist', link: '/developers/resources/deployment-checklist' },
           { text: 'Newton Explorer', link: '/developers/resources/newton-explorer' },
           { text: 'Developer Terms of Service', link: '/developers/resources/developer-terms-of-service' },
+          { text: 'Gateway Privacy Notice', link: '/developers/resources/gateway-privacy-notice' },
           { text: 'Agent Skills', link: '/developers/reference/context-file' },
         ],
       },
