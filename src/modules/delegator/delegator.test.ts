@@ -1,10 +1,12 @@
+import { NewtonPolicyClientDelegationAbi } from '@core/abis/newtonPolicyAbi'
 import { DelegatorError } from '@core/sdk-exceptions'
-import type { DelegatorAttestation } from '@core/types/delegator'
+import type { DelegatorAttestation, NewtonAuthSigner } from '@core/types/delegator'
 import type { IntentFromParams } from '@core/types/task'
 import {
   http,
   type Hex,
   createWalletClient,
+  custom,
   encodeAbiParameters,
   encodeFunctionData,
   keccak256,
@@ -57,6 +59,19 @@ const intent: IntentFromParams = {
 }
 
 const wallet = createWalletClient({ account: holder, chain: sepolia, transport: http('http://127.0.0.1:1') })
+
+// a browser wallet: viem asks it over JSON-RPC for its accounts, then for each typed-data signature
+const rpcWallet = (accounts: Hex[]) =>
+  createWalletClient({
+    chain: sepolia,
+    transport: custom({
+      request: async ({ method, params }) => {
+        if (method === 'eth_accounts') return accounts
+        if (method === 'eth_signTypedData_v4') return holder.signTypedData(JSON.parse(params[1]))
+        throw new Error(`unexpected ${method}`)
+      },
+    }),
+  })
 
 /** `NewtonPolicyClient._intentDigest`, written out the way the contract computes it. */
 const solidityIntentDigest = (i: IntentFromParams): Hex => {
@@ -150,6 +165,26 @@ describe('signDelegatorApproval', () => {
     })
     expect(recovered).toBe(holder.address)
   })
+
+  it('defaults the nonce to the client delegatorNonces(signer)', async () => {
+    const request = vi.fn(async (_: { method: string; params: unknown }) =>
+      encodeAbiParameters([{ type: 'uint256' }], [7n]),
+    )
+    const delegatorWallet = createWalletClient({ account: holder, chain: sepolia, transport: custom({ request }) })
+    const { signature, nonce } = await signDelegatorApproval(delegatorWallet, { policyClient: TOKEN, deadline: 100n })
+    expect(nonce).toBe(7n)
+    const data = encodeFunctionData({
+      abi: NewtonPolicyClientDelegationAbi,
+      functionName: 'delegatorNonces',
+      args: [holder.address],
+    })
+    expect(request.mock.calls).toEqual([
+      [{ method: 'eth_call', params: [expect.objectContaining({ to: TOKEN, data }), 'latest'] }],
+    ])
+    // signatures are deterministic, so the read nonce signs exactly what passing it would
+    const given = await signDelegatorApproval(wallet, { policyClient: TOKEN, deadline: 100n, nonce: 7n })
+    expect(signature).toBe(given.signature)
+  })
 })
 
 const intentView = (state: string, overrides: Record<string, unknown> = {}) => ({
@@ -215,6 +250,39 @@ describe('createDelegatorClient', () => {
     const client = createDelegatorClient({ url: 'https://delegator.example.com///', fetch: fetchMock })
     await client.getIntent('id')
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://delegator.example.com/v1/intents/id')
+  })
+
+  it('signs the same header with a WalletClient, from a hoisted or a JSON-RPC account', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_800_000_000_000)
+    try {
+      const headerFrom = async (signer: NewtonAuthSigner) => {
+        const fetchMock = vi.fn<typeof fetch>(async () => json(200, intentView('accepted')))
+        await createDelegatorClient({
+          url: 'http://x',
+          auth: { signer, chainId: sepolia.id },
+          fetch: fetchMock,
+        }).getIntent('id')
+        return (fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>)['X-Newton-Auth']
+      }
+      // signatures are deterministic, so one key at one timestamp gives one header
+      const expected = await headerFrom(holder)
+      expect(expected).toBeTypeOf('string')
+      expect(await headerFrom(wallet)).toBe(expected)
+      expect(await headerFrom(rpcWallet([holder.address]))).toBe(expected)
+    } finally {
+      now.mockRestore()
+    }
+  })
+
+  it('refuses to sign with a WalletClient that has no account, and sends nothing', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => json(200, intentView('accepted')))
+    const client = createDelegatorClient({
+      url: 'http://x',
+      auth: { signer: rpcWallet([]), chainId: sepolia.id },
+      fetch: fetchMock,
+    })
+    await expect(client.getIntent('id')).rejects.toThrow(/no account to sign with/)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('reports a replayed intent as not created', async () => {
@@ -528,5 +596,15 @@ describe('verifyDelegatorWebhook', () => {
       false,
     )
     expect(await verifyDelegatorWebhook({ body: 'x', signature: null, secret: 'Jefe' })).toBe(false)
+  })
+
+  it('checks a body passed as bytes', async () => {
+    const bytes = (text: string) => new TextEncoder().encode(text)
+    expect(
+      await verifyDelegatorWebhook({ body: bytes('what do ya want for nothing?'), signature, secret: 'Jefe' }),
+    ).toBe(true)
+    expect(
+      await verifyDelegatorWebhook({ body: bytes('what do ya want for nothing!'), signature, secret: 'Jefe' }),
+    ).toBe(false)
   })
 })
