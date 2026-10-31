@@ -1,4 +1,5 @@
 import { DelegatorError } from '@core/sdk-exceptions'
+import type { DelegatorAttestation } from '@core/types/delegator'
 import type { IntentFromParams } from '@core/types/task'
 import {
   http,
@@ -311,6 +312,58 @@ describe('createDelegatorClient', () => {
       fetch: async () => json(404, { code: 'not_found', error: 'resource not found' }),
     })
     await expect(client.getAttestation('id')).rejects.toMatchObject({ status: 404, code: 'not_found' })
+  })
+
+  it('returns an attestation with its uint256 values still hex', async () => {
+    const taskId: Hex = `0x${'11'.repeat(32)}`
+    const policyId: Hex = `0x${'22'.repeat(32)}`
+    const wireIntent = {
+      chainId: toHex(sepolia.id),
+      data: cosignedTransfer,
+      from: holder.address,
+      functionSignature: intent.functionSignature,
+      to: TOKEN,
+      value: '0x0',
+    } satisfies DelegatorAttestation['task']['intent']
+    const attestation: DelegatorAttestation = {
+      task: {
+        taskId,
+        policyClient: TOKEN,
+        policyId,
+        policyRevision: 1,
+        policies: [],
+        intent: wireIntent,
+        intentSignature: '0x0a',
+        wasmArgs: ['0x'],
+        quorumNumbers: '0x00',
+        quorumThresholdPercentage: 40,
+        taskCreatedBlock: 100,
+        initializationTimestamp: '0x65f1c2a0',
+      },
+      taskResponse: {
+        taskId,
+        policyClient: TOKEN,
+        policyId,
+        intent: wireIntent,
+        intentSignature: '0x0a',
+        allowed: true,
+        policyTaskData: [],
+        initializationTimestamp: '0x65f1c2a0',
+      },
+      signatureData: '0x0909',
+    }
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      json(200, {
+        task: attestation.task,
+        task_response: attestation.taskResponse,
+        signature_data: attestation.signatureData,
+      }),
+    )
+    const client = createDelegatorClient({ url: 'http://x', fetch: fetchMock })
+    const got = await client.getAttestation('id')
+    expect(got).toEqual(attestation)
+    expect(got?.taskResponse.initializationTimestamp).toBe('0x65f1c2a0')
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://x/v1/intents/id/attestation')
   })
 
   it('waits for a terminal state', async () => {
