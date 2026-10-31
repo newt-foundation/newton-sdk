@@ -131,6 +131,8 @@ Collect identity data from your users using a third-party KYC vendor. The data y
 
 ## Step 4: Register and Confirm KYC Data
 
+Before invoking the identity popup, your application must display a notice to the user explaining that their identity data will be encrypted and processed by the Newton Protocol. At minimum this notice should state: "Your identity data is encrypted before leaving your device. It is processed by the Newton Protocol to verify your eligibility." You are responsible for ensuring this disclosure is presented, not buried in your terms of service.
+
 ### 4a. Register KYC Data
 
 Once you have the KYC data from your vendor, call `registerUserData` to register it with Newton, scoped to your identity domain:
@@ -170,6 +172,8 @@ await walletClient.linkApp({
 ```
 
 This creates an association between the user's Newton identity wallet and your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.
+
+A user's registered identity data can be reused across any application sharing the same identity domain, not just yours. Before calling `linkApp`, surface this to the user in plain language: linking grants your app access to the same KYC data other apps may already have, and other apps may gain access to data registered here.
 
 You can find the `IdentityRegistry` contract address in [Contract Addresses](/developers/reference/contract-addresses).
 
@@ -300,6 +304,8 @@ await walletClient.unlinkApp({
   appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
 })
 ```
+
+Unlinking removes the user's identity association with your policy client. Once unlinked, any policy evaluation that depends on this link will fail until the user re-links. Make it easy for users to find and trigger this action in your app; identity links should be as easy to remove as they are to create.
 
 ## Reference Pages
 
