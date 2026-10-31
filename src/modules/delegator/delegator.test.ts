@@ -308,15 +308,6 @@ describe('createDelegatorClient', () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('tasked')) })
     await expect(client.waitForIntent('id', { pollIntervalMs: 5, timeoutMs: 20 })).rejects.toThrow(/timed out/)
   })
-
-  it('probes liveness without throwing', async () => {
-    const client = createDelegatorClient({
-      url: 'http://x',
-      fetch: async input => new Response(null, { status: String(input).endsWith('/live') ? 204 : 503 }),
-    })
-    expect(await client.isLive()).toBe(true)
-    expect(await client.isReady()).toBe(false)
-  })
 })
 
 describe('verifyDelegatorWebhook', () => {

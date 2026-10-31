@@ -2057,8 +2057,6 @@ const delegator = createDelegatorClient({
 | `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; `not_found` for an unknown intent) |
 | `getEvents({ after?, limit?, waitMs?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
 | `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it reaches `until` (default: `finalized`, `denied` or `failed`) |
-| `isLive()` | `GET /live` | `boolean` |
-| `isReady()` | `GET /ready` | `boolean` |
 
 ```ts
 interface DelegatedIntent {

@@ -230,10 +230,7 @@ const sleep = (ms: number, abortSignal?: AbortSignal) =>
     abortSignal?.addEventListener('abort', onAbort, { once: true })
   })
 
-/**
- * HTTP client for a newton-delegator. Every `/v1/*` read must be signed (see `DelegatorAuth`);
- * `isLive` and `isReady` are not.
- */
+/** HTTP client for a newton-delegator. Every `/v1/*` read must be signed (see `DelegatorAuth`). */
 function createDelegatorClient(config: DelegatorClientConfig) {
   // trim trailing slashes without a regex (CodeQL js/polynomial-redos)
   let end = config.url.length
@@ -376,14 +373,6 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     }
   }
 
-  const probe = async (path: string): Promise<boolean> => {
-    try {
-      return (await doFetch(`${baseUrl}${path}`)).ok
-    } catch {
-      return false
-    }
-  }
-
   return {
     submitIntent,
     getIntent,
@@ -391,10 +380,6 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     getAttestation,
     getEvents,
     waitForIntent,
-    /** `true` while every delegator worker is making progress. */
-    isLive: () => probe('/live'),
-    /** `true` when the delegator's store accepts writes. */
-    isReady: () => probe('/ready'),
   }
 }
 

@@ -116,8 +116,6 @@ const auth = { signer: session.account, session: session.grant, chainId: sepolia
 
 The caller is still the grantor: the user's own intents, or everything their role allows. `signNewtonRequest` and `signSessionGrant` are exported for signing requests yourself.
 
-`isLive` and `isReady` are not signed.
-
 ## Step 3 — Sign and submit an intent
 
 The user signs the intent with their own wallet; local accounts and browser wallets both work. These functions take a plain viem `WalletClient` and need no Newton API key. They are also available as `newtonWalletClientActions` methods. `submitDelegatedIntent` signs and POSTs the intent to the delegator in one call:
