@@ -160,7 +160,7 @@ Submitting the same signed intent twice is safe. The delegator identifies it by 
 
 ### Submitting from the user's wallet
 
-A delegator operator can set `submit = "sender"` in the delegator's `[auth]` config, for a deployment where users submit from the browser. That delegator also accepts a submission signed by `intent.from`, or not signed at all, and `submitDelegatedIntent` then signs the intent and POSTs it in one call:
+Some delegator deployments also take a submission signed by `intent.from`, or one not signed at all. With such a delegator, `submitDelegatedIntent` signs the intent and POSTs it in one call:
 
 ```ts
 import { submitDelegatedIntent } from '@newton-xyz/sdk'
