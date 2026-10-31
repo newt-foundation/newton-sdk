@@ -156,7 +156,10 @@ export interface WaitForDelegatedIntentParams {
   /** Delay between status reads. Default 2000. */
   pollIntervalMs?: number
   abortSignal?: AbortSignal
-  /** Resolve once the intent reaches any of these. Default: the terminal states. */
+  /**
+   * Resolve once the intent is at or past any of these on the happy path; `denied` and `failed`
+   * match only themselves. Rejects when the intent ends short of all of them. Default: the terminal states.
+   */
   until?: DelegatedIntentState[]
 }
 

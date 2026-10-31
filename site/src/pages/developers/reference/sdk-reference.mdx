@@ -2056,7 +2056,7 @@ const delegator = createDelegatorClient({
 | `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
 | `getAttestation(intentId)` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; `not_found` for an unknown intent) |
 | `getEvents({ after?, limit?, waitMs?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
-| `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it reaches `until` (default: `finalized`, `denied` or `failed`) |
+| `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it is at or past a state in `until` (default: `finalized`, `denied` or `failed`); `denied` and `failed` match only themselves, and it rejects if the intent ends short of `until` |
 
 ```ts
 interface DelegatedIntent {

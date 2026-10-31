@@ -230,6 +230,22 @@ const sleep = (ms: number, abortSignal?: AbortSignal) =>
     abortSignal?.addEventListener('abort', onAbort, { once: true })
   })
 
+// The happy path in order; `denied` and `failed` are off it.
+const HAPPY_PATH: readonly DelegatedIntentState[] = [
+  'accepted',
+  'attested',
+  'tasked',
+  'broadcast',
+  'included',
+  'finalized',
+]
+
+/** `state` is `target`, or past it on the happy path. */
+const reached = (state: DelegatedIntentState, target: DelegatedIntentState) => {
+  const at = HAPPY_PATH.indexOf(target)
+  return state === target || (at >= 0 && HAPPY_PATH.indexOf(state) >= at)
+}
+
 /** HTTP client for a newton-delegator. Every `/v1/*` read must be signed (see `DelegatorAuth`). */
 function createDelegatorClient(config: DelegatorClientConfig) {
   // trim trailing slashes without a regex (CodeQL js/polynomial-redos)
@@ -354,7 +370,10 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     }
   }
 
-  /** Poll `intentId` until it reaches one of `until` (default: a terminal state). */
+  /**
+   * Poll `intentId` until it is at or past one of `until` (default: a terminal state). Rejects once
+   * the intent ends without reaching any of them.
+   */
   const waitForIntent = async (
     intentId: string,
     { timeoutMs, pollIntervalMs = 2000, abortSignal, until }: WaitForDelegatedIntentParams = {},
@@ -364,7 +383,12 @@ function createDelegatorClient(config: DelegatorClientConfig) {
     for (;;) {
       if (abortSignal?.aborted) throw new Error('Newton SDK: waitForIntent aborted')
       const intent = await getIntent(intentId)
-      if (targets.includes(intent.state)) return intent
+      if (targets.some(target => reached(intent.state, target))) return intent
+      if (DELEGATED_INTENT_TERMINAL_STATES.includes(intent.state)) {
+        throw new Error(
+          `Newton SDK: intent ${intentId} ended in state ${intent.state} without reaching ${targets.join(', ')}`,
+        )
+      }
       const remaining = deadline === undefined ? pollIntervalMs : deadline - Date.now()
       if (remaining <= 0) {
         throw new Error(`Newton SDK: waitForIntent timed out with intent ${intentId} in state ${intent.state}`)

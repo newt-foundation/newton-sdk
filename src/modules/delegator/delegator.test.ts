@@ -304,6 +304,31 @@ describe('createDelegatorClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
+  // `attested` lasts milliseconds, so a poll usually lands past it
+  it('resolves once the intent is past an until state', async () => {
+    const states = ['accepted', 'tasked']
+    const client = createDelegatorClient({
+      url: 'http://x',
+      fetch: async () => json(200, intentView(states.shift() ?? 'failed')),
+    })
+    const done = await client.waitForIntent('id', { pollIntervalMs: 1, until: ['attested'] })
+    expect(done.state).toBe('tasked')
+  })
+
+  it('keeps polling through a fallback to accepted', async () => {
+    const states = ['tasked', 'accepted', 'broadcast']
+    const fetchMock = vi.fn<typeof fetch>(async () => json(200, intentView(states.shift() ?? 'failed')))
+    const client = createDelegatorClient({ url: 'http://x', fetch: fetchMock })
+    const done = await client.waitForIntent('id', { pollIntervalMs: 1, until: ['broadcast'] })
+    expect(done.state).toBe('broadcast')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('rejects when the intent ends short of until', async () => {
+    const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('denied')) })
+    await expect(client.waitForIntent('id', { until: ['broadcast'] })).rejects.toThrow(/ended in state denied/)
+  })
+
   it('times out while the intent is still live', async () => {
     const client = createDelegatorClient({ url: 'http://x', fetch: async () => json(200, intentView('tasked')) })
     await expect(client.waitForIntent('id', { pollIntervalMs: 5, timeoutMs: 20 })).rejects.toThrow(/timed out/)
