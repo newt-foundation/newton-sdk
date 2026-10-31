@@ -221,7 +221,7 @@ for (;;) {
 }
 ```
 
-If `after` falls below the delegator's retention window, the call throws a `DelegatorError` with code `cursor_pruned`. Restart from `retentionFloor`, which every page also reports.
+If `after` falls below the delegator's retention window, the call throws a `DelegatorError` with code `cursor_pruned`. Restart from the retention floor: `retentionFloor` on every page, or `error.details.retention_floor` on the error.
 
 ### Webhooks
 
@@ -242,6 +242,8 @@ export async function POST(request: Request) {
   return new Response(null, { status: 204 })
 }
 ```
+
+The delegator retries a failed delivery until it gets a 2xx, and holds later events back until then. If retention prunes events before they are delivered, the webhook gets one `{"kind":"gap","cursor":...,"floor":...}` body keyed `gap:<cursor>:<floor>` in their place; resync from `listIntents` when one arrives.
 
 ## Submitting the call yourself
 
