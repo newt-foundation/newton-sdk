@@ -245,11 +245,11 @@ export async function POST(request: Request) {
 
 ## Submitting the call yourself
 
-The user can always submit the attested call themselves instead of waiting on the delegator's transaction. `getAttestation` returns the entrypoint arguments once the intent is attested, and `null` before that. It throws `not_found` for an intent the delegator does not know:
+The user can always submit the attested call themselves instead of waiting on the delegator's transaction. `getAttestation` returns the entrypoint arguments once the intent is attested, and `null` before that. A denied intent can also return the gateway's denying attestation, so check `taskResponse.allowed` before submitting it. It throws `not_found` for an intent the delegator does not know:
 
 ```ts
 const attestation = await delegator.getAttestation(intentId)
-if (attestation) {
+if (attestation?.taskResponse.allowed) {
   // entrypoint(attestation.task, attestation.taskResponse, attestation.signatureData)
 }
 ```

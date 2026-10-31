@@ -349,7 +349,8 @@ function createDelegatorClient(config: DelegatorClientConfig) {
   }
 
   /**
-   * The attestation for `intentId`, or `null` while the intent has none yet (or the policy denied it).
+   * The attestation for `intentId`, or `null` while the intent has none yet. A denied intent can return the
+   * gateway's denying attestation, with `taskResponse.allowed` false, so check it before submitting.
    * Throws `DelegatorError` with code `not_found` for an unknown intent.
    */
   const getAttestation = async (intentId: string): Promise<DelegatorAttestation | null> => {
