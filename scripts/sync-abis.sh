@@ -12,7 +12,8 @@ set -euo pipefail
 #
 # This script generates three ABI files consumed by the SDK:
 #   - src/abis/newtonAbi.ts                 (NewtonProverTaskManager, AttestationValidator)
-#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy, NewtonPolicyFactory, INewtonPolicyClient)
+#   - src/abis/newtonPolicyAbi.ts           (NewtonPolicy, NewtonPolicyFactory, INewtonPolicyClient,
+#                                             INewtonPolicyClientDelegation)
 #   - src/abis/newtonIdentityRegistryAbi.ts (IdentityRegistry)
 
 REPO_URL="https://github.com/newt-foundation/newton-contracts.git"
@@ -20,14 +21,16 @@ BRANCH="main"
 OUT_DIR="src/abis"
 
 # Format: "SolidityFileName:ExportName:OutFile"
-# Forge writes artifacts as out/<SolidityFileName>.sol/<SolidityFileName>.json
-# regardless of where the source lives in the repo tree.
+# Forge writes artifacts as out/<SolidityFileName>.sol/<ContractName>.json
+# regardless of where the source lives in the repo tree; a contract declared in
+# another contract's file (INewtonPolicyClientDelegation) is found by name.
 ENTRIES=(
   "NewtonProverTaskManager:NewtonProverTaskManagerAbi:newtonAbi.ts"
   "AttestationValidator:AttestationValidatorAbi:newtonAbi.ts"
   "NewtonPolicy:NewtonPolicyAbi:newtonPolicyAbi.ts"
   "NewtonPolicyFactory:NewtonPolicyFactoryAbi:newtonPolicyAbi.ts"
   "INewtonPolicyClient:NewtonPolicyClientAbi:newtonPolicyAbi.ts"
+  "INewtonPolicyClientDelegation:NewtonPolicyClientDelegationAbi:newtonPolicyAbi.ts"
   "IdentityRegistry:IdentityRegistryAbi:newtonIdentityRegistryAbi.ts"
 )
 
@@ -51,6 +54,7 @@ ART_DIR="$WORKDIR/newton-contracts/out"
 extract_abi() {
   local contract_name="$1"
   local artifact="$ART_DIR/${contract_name}.sol/${contract_name}.json"
+  [[ -f "$artifact" ]] || artifact="$(ls "$ART_DIR"/*/"${contract_name}.json" 2>/dev/null | head -1)"
   [[ -f "$artifact" ]] || { echo "missing artifact: $artifact" >&2; exit 1; }
   node -e "
     const fs = require('fs');

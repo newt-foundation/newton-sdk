@@ -28,6 +28,7 @@ Docs: https://docs.newton.xyz
 - [Deploying with CLI](https://docs.newton.xyz/developers/guides/deploying-with-cli): Deploy policies, schemas, and WASM oracles using newton-cli.
 - [Smart Contract Integration](https://docs.newton.xyz/developers/guides/smart-contract-integration): Inherit NewtonPolicyClient in your Solidity contracts.
 - [Frontend SDK Integration](https://docs.newton.xyz/developers/guides/frontend-sdk-integration): Use the TypeScript SDK with viem to submit and track tasks.
+- [Delegated Intents](https://docs.newton.xyz/developers/guides/delegated-intents): Let users sign an intent offline while a delegator gets it attested and pays the gas for the PolicyClient call.
 - [Using the Dashboard](https://docs.newton.xyz/developers/guides/using-the-dashboard): Build, simulate, and deploy policies from the browser without the CLI.
 - [Testing Policies & Oracles](https://docs.newton.xyz/developers/guides/testing-policies): Unit-test Rego with opa test, test WASM oracles, and run end-to-end simulations.
 - [Privacy Flows](https://docs.newton.xyz/developers/guides/privacy-flows): Three privacy data modes — identity (user), confidential (provider), and ephemeral (per-task inline).

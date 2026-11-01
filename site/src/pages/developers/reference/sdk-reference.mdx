@@ -1982,6 +1982,170 @@ unlinkIdentityAsUser(
 
 ---
 
+## Delegator
+
+Submit intents through a `newton-delegator`, which gets them attested and sends the PolicyClient call from its own key, and manage a PolicyClient's delegator set. See the [Delegated Intents guide](/developers/guides/delegated-intents) for the end-to-end flow.
+
+The signing helpers take a plain viem `WalletClient` and need no API key. They are standalone exports and also `newtonWalletClientActions` methods (without the `walletClient` argument).
+
+### `signDelegatedIntent`
+
+Sign `intent` as `intent.from`: the EIP-712 `Intent(address from,address to,uint256 value,bytes data,uint256 chainId,bytes functionSignature)` struct under the domain `{ name: 'NewtonPolicyClient', version: '1', chainId: intent.chainId, verifyingContract: intent.to }`. Throws if the wallet account is not `intent.from`.
+
+```ts
+signDelegatedIntent(walletClient: WalletClient, args: { intent: IntentFromParams }): Promise<Hex>
+```
+
+### `submitDelegatedIntent`
+
+Sign `intent` and POST it to the delegator. With no `auth`, or the user's own, this needs a delegator that accepts sender submissions; by default only a reader or the PolicyClient's owner may submit.
+
+```ts
+submitDelegatedIntent(
+  walletClient: WalletClient,
+  args: {
+    delegatorUrl: string
+    intent: IntentFromParams
+    wasmArgs?: Hex[]
+    auth?: DelegatorAuth
+    fetch?: typeof fetch
+    abortSignal?: AbortSignal // cancels the POST in flight, not the signature prompt
+  },
+): Promise<PendingDelegatedIntent>
+
+interface PendingDelegatedIntent {
+  intent: DelegatedIntent | DelegatedIntentRef
+  created: boolean // false when the delegator already held this signed intent
+  signature: Hex
+  waitForIntent(params?: WaitForDelegatedIntentParams): Promise<DelegatedIntent> // needs auth
+}
+
+// what a resubmission tells a caller that cannot read the intent
+interface DelegatedIntentRef {
+  intentId: string
+  state: DelegatedIntentState
+}
+```
+
+### `signDelegatorApproval`
+
+Sign, with the delegator key, `DelegatorApproval(uint256 nonce,uint256 deadline)` under the PolicyClient's domain. The owner submits the result with `approveDelegator`. `nonce` defaults to the PolicyClient's current `delegatorNonces(signer)`.
+
+```ts
+signDelegatorApproval(
+  walletClient: WalletClient,
+  args: { policyClient: Address; deadline: bigint; nonce?: bigint },
+): Promise<{ signature: Hex; nonce: bigint; deadline: bigint }>
+```
+
+### `getDelegatedIntentDigest` / `delegatedIntentTypedData`
+
+`getDelegatedIntentDigest(intent)` returns the PolicyClient's `intentDigest(intent)`: the hash `intent.from` signs, and the key the PolicyClient marks spent. `delegatedIntentTypedData(intent)` returns the typed data (`domain`, `types`, `primaryType`, `message`) for signing it some other way.
+
+```ts
+getDelegatedIntentDigest(intent: IntentFromParams): Hex
+```
+
+### `createDelegatorClient`
+
+HTTP client for one delegator. `auth` signs each call with an `X-Newton-Auth` header. Every `/v1/*` read needs it, and by default so does `submitIntent`, from a reader or the PolicyClient's owner. Pass `fetch` to add headers for a proxy in front of the delegator. `url` can include the path prefix that a proxy serves the delegator under, such as `https://api.your-app.com/delegator`; calls are signed over the route after it, which is the path the delegator receives.
+
+```ts
+const delegator = createDelegatorClient({
+  url: 'https://delegator.your-app.com',
+  auth: {
+    signer: account,          // LocalAccount | WalletClient; a session's account for no wallet prompts
+    chainId: 84532,           // the delegator's chain
+    session: grant,           // optional: the SignedSessionGrant when signer is a session key
+    audience: 'acme.example', // optional: defaults to the URL's hostname
+  },
+})
+```
+
+| Method | HTTP | Returns |
+| --- | --- | --- |
+| `submitIntent({ intent, signature, wasmArgs?, abortSignal? })` | `POST /v1/intents` | `{ intent: DelegatedIntent \| DelegatedIntentRef; created: boolean }` (see `submitDelegatedIntent`) |
+| `getIntent(intentId, { abortSignal? })` | `GET /v1/intents/{id}` | `DelegatedIntent` |
+| `listIntents({ policyClient?, sender?, states?, createdAfterMs?, createdBeforeMs?, cursor?, limit?, abortSignal? })` | `GET /v1/intents` | `{ intents: DelegatedIntent[]; nextCursor: string \| null }`, newest first |
+| `getAttestation(intentId, { abortSignal? })` | `GET /v1/intents/{id}/attestation` | `{ task, taskResponse, signatureData } \| null` (`null` until attested; a denied intent can return its denying attestation, so check `taskResponse.allowed`; `not_found` for an unknown intent) |
+| `getEvents({ after?, limit?, waitMs?, abortSignal?, ...filters })` | `GET /v1/events` | `{ events: DelegatorEvent[]; nextCursor; latestCursor; retentionFloor }` |
+| `waitForIntent(intentId, { timeoutMs?, pollIntervalMs?, abortSignal?, until? })` | polls `getIntent` | `DelegatedIntent` once it is at or past a state in `until` (default: `finalized`, `denied` or `failed`); `denied` and `failed` match only themselves, and it rejects if the intent ends short of `until` |
+
+`waitForIntent` rejects with a `DOMException` named `TimeoutError` once `timeoutMs` passes, and with the signal's `reason` when `abortSignal` aborts: a `DOMException` named `AbortError` unless `abort()` was given a reason.
+
+```ts
+interface DelegatedIntent {
+  intentId: string
+  state: 'accepted' | 'attested' | 'tasked' | 'broadcast' | 'included' | 'finalized' | 'denied' | 'failed'
+  chainId: number
+  policyClient: Address
+  from: Address
+  idempotencyKey: Hex
+  taskId: Hex | null
+  executionId: string | null
+  taskAttempts: number
+  denialReasons: string | null
+  terminalError: string | null
+  createdAtMs: number
+  updatedAtMs: number
+  completedAtMs: number | null
+}
+```
+
+### `createNewtonSession` / `signSessionGrant`
+
+`createNewtonSession(grantor, { expiresInSecs })` makes an ephemeral session key, and the grantor signs one grant for it (one wallet prompt). It returns `{ account, grant }`; pass both as `auth.signer` and `auth.session`. `signSessionGrant(grantor, { sessionKey, expiresAt })` signs a grant for a key you already have. `expiresAt` is in unix seconds.
+
+```ts
+createNewtonSession(grantor: LocalAccount | WalletClient, args: { expiresInSecs: number }): Promise<NewtonSession>
+signSessionGrant(grantor: LocalAccount | WalletClient, args: { sessionKey: Address; expiresAt: number }): Promise<SignedSessionGrant>
+```
+
+### `signNewtonRequest`
+
+Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` with the path as the delegator receives it (percent-encoded, without the query string or a prefix that a proxy strips), and `body` is the exact bytes sent (`''` for a GET).
+
+```ts
+signNewtonRequest(
+  signer: LocalAccount | WalletClient,
+  params: { audience: string; method: string; body: string; chainId?: number; session?: SignedSessionGrant; timestamp?: number },
+): Promise<string>
+```
+
+### `verifyDelegatorWebhook`
+
+Check a webhook delivery's `X-Newton-Signature` header (`sha256=<hex HMAC-SHA256(secret, body)>`) against the raw request body.
+
+```ts
+verifyDelegatorWebhook(args: {
+  body: string | Uint8Array
+  signature: string | null | undefined
+  secret: string
+}): Promise<boolean>
+```
+
+### Delegator set (wallet client)
+
+Each method takes the PolicyClient address and sends a transaction.
+
+| Method | Caller | Effect |
+| --- | --- | --- |
+| `approveDelegator({ policyClient, delegator, deadline, signature })` | Owner | Adds `delegator`, given its `signDelegatorApproval` signature |
+| `removeDelegator({ policyClient, delegator })` | Owner | Removes `delegator` |
+| `setDelegatorRequired({ policyClient, required })` | Owner | When `true`, `intent.from` can no longer submit its own attestation |
+| `resignDelegator({ policyClient })` | Delegator | Removes the caller and voids its unused approvals |
+
+### Delegator set (public client)
+
+| Method | Returns |
+| --- | --- |
+| `isDelegator({ policyClient, account })` | `boolean` |
+| `delegatorRequired({ policyClient })` | `boolean` |
+| `delegatorNonces({ policyClient, delegator })` | `bigint` |
+| `isIntentSpent({ policyClient, intent } \| { policyClient, digest })` | `boolean`: whether a delegator already landed the intent |
+
+---
+
 ## Types & Interfaces
 
 ### Intent Types
@@ -2724,6 +2888,20 @@ class MagicRPCError extends Error {
   data: unknown;
 
   constructor(sourceError?: JsonRpcError | null);
+}
+```
+
+### DelegatorError
+
+Thrown by delegator calls when the delegator answers with a non-2xx status. `code` is the delegator's error code (`invalid_intent`, `idempotency_conflict`, `sender_capacity_exceeded`, ...; see [Delegated Intents](/developers/guides/delegated-intents#errors)). A 2xx answer that is not a JSON object throws with code `malformed_response`, which usually means the URL does not point at a delegator.
+
+```ts
+class DelegatorError extends Error {
+  status: number;
+  code: string;
+  rawMessage: string;
+  reason?: string; // for 401 unauthorized: why, e.g. 'stale_timestamp'
+  details?: unknown;
 }
 ```
 

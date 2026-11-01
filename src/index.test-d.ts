@@ -1,6 +1,7 @@
 import type { Address, Hex } from 'viem'
 import { describe, expectTypeOf, it } from 'vitest'
-import type { newtonPublicClientActions, newtonWalletClientActions } from './index'
+import type { createDelegatorClient, newtonPublicClientActions, newtonWalletClientActions } from './index'
+import type { DelegatedIntent, DelegatedIntentRef } from './types/delegator'
 import type { SimulatePolicyResult, SimulateTaskResult, TaskResponseResult, TaskStatus } from './types/task'
 
 // Simulate the shape returned by client.extend()
@@ -68,5 +69,31 @@ describe('newtonWalletClientActions type tests', () => {
 
   it('transferOwnership returns transaction hash', () => {
     expectTypeOf<WalletActions['transferOwnership']>().returns.resolves.toEqualTypeOf<`0x${string}`>()
+  })
+})
+
+describe('delegator type tests', () => {
+  it('signDelegatedIntent returns a signature', () => {
+    expectTypeOf<WalletActions['signDelegatedIntent']>().returns.resolves.toEqualTypeOf<Hex>()
+  })
+
+  it('submitDelegatedIntent returns the delegated intent, or only its id and state', () => {
+    expectTypeOf<Awaited<ReturnType<WalletActions['submitDelegatedIntent']>>['intent']>().toEqualTypeOf<
+      DelegatedIntent | DelegatedIntentRef
+    >()
+  })
+
+  it('approveDelegator returns transaction hash', () => {
+    expectTypeOf<WalletActions['approveDelegator']>().returns.resolves.toEqualTypeOf<Hex>()
+  })
+
+  it('isDelegator returns boolean', () => {
+    expectTypeOf<PublicActions['isDelegator']>().returns.resolves.toEqualTypeOf<boolean>()
+  })
+
+  it('delegator client waitForIntent resolves to DelegatedIntent', () => {
+    expectTypeOf<
+      ReturnType<typeof createDelegatorClient>['waitForIntent']
+    >().returns.resolves.toEqualTypeOf<DelegatedIntent>()
   })
 })
