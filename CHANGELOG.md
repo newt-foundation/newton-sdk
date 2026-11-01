@@ -1,3 +1,15 @@
+# v1.3.1 (Sun Nov 01 2026)
+
+#### 🐛 Bug Fix
+
+- fix: drop Buffer from the policy Bytes type [#199](https://github.com/newt-foundation/newton-sdk/pull/199) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v1.3.0 (Sun Nov 01 2026)
 
 #### 🚀 Enhancement
