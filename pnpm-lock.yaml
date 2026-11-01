@@ -78,9 +78,6 @@ importers:
       rollup-plugin-node-externals:
         specifier: ^8.1.0
         version: 8.1.0(rollup@4.49.0)
-      rollup-plugin-tsc-alias:
-        specifier: ^1.1.4
-        version: 1.1.4(rollup@4.49.0)
       rollup-plugin-typescript2:
         specifier: ^0.36.0
         version: 0.36.0(rollup@4.49.0)(typescript@5.5.4)
@@ -93,6 +90,9 @@ importers:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.5.4)(typescript@5.5.4)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       typescript:
         specifier: ^5.4.5
         version: 5.5.4
@@ -2562,11 +2562,6 @@ packages:
     engines: {node: '>= 21 || ^20.6.0 || ^18.19.0'}
     peerDependencies:
       rollup: ^4.0.0
-
-  rollup-plugin-tsc-alias@1.1.4:
-    resolution: {integrity: sha512-XfoYBpkxV3C8hv1plWbLJC1oXmOFheoOL20KhQ7LMJf5LyvGSxL2xE81ezuYfcZfWuqFTn/SfiORyaiV4qS6+A==}
-    peerDependencies:
-      rollup: '> 2.0'
 
   rollup-plugin-typescript2@0.36.0:
     resolution: {integrity: sha512-NB2CSQDxSe9+Oe2ahZbf+B4bh7pHwjV5L+RSYpCu7Q5ROuN94F9b6ioWwKfz3ueL3KTtmX4o2MUH2cgHDIEUsw==}
@@ -5674,11 +5669,6 @@ snapshots:
   rollup-plugin-node-externals@8.1.0(rollup@4.49.0):
     dependencies:
       rollup: 4.49.0
-
-  rollup-plugin-tsc-alias@1.1.4(rollup@4.49.0):
-    dependencies:
-      rollup: 4.49.0
-      tsc-alias: 1.8.16
 
   rollup-plugin-typescript2@0.36.0(rollup@4.49.0)(typescript@5.5.4):
     dependencies:
