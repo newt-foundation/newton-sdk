@@ -1,3 +1,33 @@
+# v1.3.0 (Sun Nov 01 2026)
+
+#### 🚀 Enhancement
+
+- feat: delegator support in the SDK [#195](https://github.com/newt-foundation/newton-sdk/pull/195) ([@alecsavvy](https://github.com/alecsavvy) [@denniswon](https://github.com/denniswon))
+
+#### 🐛 Bug Fix
+
+- build: resolve declaration aliases before copying .d.mts [#198](https://github.com/newt-foundation/newton-sdk/pull/198) ([@denniswon](https://github.com/denniswon))
+- docs: update the Xerberus pack pages for the /mcp endpoint [#196](https://github.com/newt-foundation/newton-sdk/pull/196) ([@alecsavvy](https://github.com/alecsavvy) [@denniswon](https://github.com/denniswon))
+- docs: port privacy language to Vocs and name Newton Labs as operator [#197](https://github.com/newt-foundation/newton-sdk/pull/197) ([@denniswon](https://github.com/denniswon))
+- fix(docs): correct signingKey type in createSecureEnvelope [#180](https://github.com/newt-foundation/newton-sdk/pull/180) ([@CryptAm](https://github.com/CryptAm))
+- docs: match the favicon to the landing page [#192](https://github.com/newt-foundation/newton-sdk/pull/192) ([@alisonhu-magic](https://github.com/alisonhu-magic))
+- docs: fix storeEncryptedSecrets sample (policyAddress) [#194](https://github.com/newt-foundation/newton-sdk/pull/194) ([@drlnewton](https://github.com/drlnewton))
+- docs: add Q3 2026 transparency report [#193](https://github.com/newt-foundation/newton-sdk/pull/193) ([@drlnewton](https://github.com/drlnewton))
+- docs: align the docs site with the landing-page brand [#191](https://github.com/newt-foundation/newton-sdk/pull/191) ([@alisonhu-magic](https://github.com/alisonhu-magic))
+- docs: document ordered policy sets [#190](https://github.com/newt-foundation/newton-sdk/pull/190) ([@vmathur](https://github.com/vmathur))
+- docs: add the three Xerberus policy pack pages [#189](https://github.com/newt-foundation/newton-sdk/pull/189) ([@alecsavvy](https://github.com/alecsavvy))
+
+#### Authors: 6
+
+- [@alecsavvy](https://github.com/alecsavvy)
+- [@drlnewton](https://github.com/drlnewton)
+- Alison Hu ([@alisonhu-magic](https://github.com/alisonhu-magic))
+- cryptam ([@CryptAm](https://github.com/CryptAm))
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+- Vishal Mathur ([@vmathur](https://github.com/vmathur))
+
+---
+
 # v1.2.2 (Fri Sep 25 2026)
 
 #### 🐛 Bug Fix
