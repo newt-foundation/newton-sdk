@@ -29,7 +29,7 @@ interface PolicyConfig { policyParams: Hex; expireAfter: number }
 interface PolicySpec { policy: Address; config: PolicyConfig }
 ```
 
-Read `getPolicySetSnapshot()` through the exported `NewtonPolicyClientAbi` with viem `readContract` when you need identity, revision, and specs together. There is no SDK action with that name in v1.2.2. Preserve order and repeated entries in both tasks and responses. Individual oracle simulation methods still use scalar `wasmArgs`.
+Call `publicClient.getPolicySetSnapshot({ policyClientAddress })` when you need identity, revision, and specs together. It returns `{ policyId, revision, policies }` from one read. Preserve order and repeated entries in both tasks and responses. Individual oracle simulation methods still use scalar `wasmArgs`.
 
 ## Installation
 
@@ -1484,39 +1484,30 @@ isPolicyVerified(): Promise<boolean>
 
 #### precomputePolicyId
 
-Synchronously computes a policy ID from its constituent parts without making an on-chain call.
+Synchronously computes a client's policy set ID without making an on-chain call. It matches the ID `NewtonPolicyClient` assigns in `setPolicies`, so order and repeated entries in `policies` change the result.
 
 ```ts
+const revision = await publicClient.policyRevision({ policyClientAddress: '0x...' });
+
 const policyId = publicClient.precomputePolicyId({
-  policyContract: '0x...',
-  policyData: ['0x...'],
-  params: {
-    admin: '0x...',
-    allowed_actions: {},
-    token_whitelist: {},
-  },
+  chainId: 11155111,
   client: '0x...',
-  policyUri: 'ipfs://...',
-  schemaUri: 'ipfs://...',
-  entrypoint: 'newton/policy/allow',
-  expireAfter: 3600,
+  revision: revision + 1n,
+  policies: [{ policy: '0x...', config: { policyParams: '0x', expireAfter: 300 } }],
 });
 ```
+
+`revision` is the revision the set will carry. To predict the ID of a pending `setPolicies`, pass the client's current `policyRevision()` plus one.
 
 **Signature:**
 
 ```ts
 precomputePolicyId(args: {
-  policyContract: Address;
-  policyData: Address[];
-  params: Record<string, any>;
+  chainId: number | bigint;
   client: Address;
-  policyUri: string;
-  schemaUri: string;
-  entrypoint: string;
-  expireAfter?: number;
-  blockTimestamp?: bigint;
-}): `0x${string}`
+  revision: number | bigint;
+  policies: PolicySpec[];
+}): PolicyId
 ```
 
 :::note
@@ -2430,51 +2421,21 @@ interface SimulatePolicyResult {
 
 ### Policy Types
 
-:::details[PolicyId, PolicyInfo, PolicyCodeInfo, PolicyDataInfo]
+:::details[PolicyId, PolicyConfig, PolicySpec]
   ```ts
-  type PolicyId = `0x${string}`;
-  
-  interface PolicyInfo {
-    policyId: PolicyId;
-    policyParams: string | object;
-    policyParamsHex: `0x${string}`;
-    expireAfter: number;
-  }
-  
-  interface PolicyCodeInfo {
-    policyCid: string;
-    schemaCid: string;
-    metadataCid: string;
-    entrypoint: string;
-  }
-  
-  interface PolicyDataInfo {
-    addresses: Address[];
-  }
-  ```
-:::
+  /** bytes32 policy set ID. getPolicyId, clientToPolicyId, and getPolicySetSnapshot type it as Hex. */
+  type PolicyId = string;
 
-:::details[PolicyParamsJson, SetPolicyInput, SetPolicyResult, PolicyDataInput]
-  ```ts
-  type PolicyParamsJson = Record<string, any>;
-  
-  interface SetPolicyInput {
-    client: Address;
-    policyUri: string;
-    schemaUri: string;
-    entrypoint: string;
-    params: PolicyParamsJson;
-    policyData: Address[];
+  interface PolicyConfig {
+    policyParams: Hex;
+    /** Attestation lifetime in blocks. Must be non-zero. */
     expireAfter: number;
   }
-  
-  interface SetPolicyResult {
-    txHash: `0x${string}`;
-    policyId: PolicyId;
-  }
-  
-  interface PolicyDataInput {
-    policyAddress: Address;
+
+  /** One entry in a client's ordered policy set. Order is significant and repeats are legal. */
+  interface PolicySpec {
+    policy: Address;
+    config: PolicyConfig;
   }
   ```
 :::
