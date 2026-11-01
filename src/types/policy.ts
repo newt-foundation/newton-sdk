@@ -41,7 +41,8 @@ export interface PolicyInfo {
   paramsJson?: PolicyParamsJson // optional decode if schema known
 }
 
-type Bytes = Uint8Array | Buffer | `0x${string}`
+// Not `Buffer`: it subclasses Uint8Array, so Node callers can still pass one, and naming it needs @types/node.
+type Bytes = Uint8Array | `0x${string}`
 
 export interface PolicyDataInfo {
   wasmUri: string // e.g., IPFS/HTTPS
