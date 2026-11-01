@@ -273,7 +273,6 @@ export type DelegatorErrorCode =
   | 'unauthorized'
   | 'forbidden'
   | 'sender_rate_exceeded'
-  | 'submit_rate_exceeded'
   | 'owner_unavailable'
   | 'verifier_unavailable'
   | 'internal_error'

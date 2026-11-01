@@ -286,7 +286,7 @@ Delegator calls throw `DelegatorError` with the HTTP `status` and the delegator'
 | 410 | `resource_gone` | The intent was pruned after its retention window |
 | 410 | `cursor_pruned` | The event cursor is below the retention floor |
 | 429 | `sender_capacity_exceeded` | `intent.from` already has the maximum number of live intents |
-| 429 | `sender_rate_exceeded` / `submit_rate_exceeded` | Too many submissions this minute, from this sender or in total |
+| 429 | `sender_rate_exceeded` | Too many new intents this minute from this sender, rejected ones included; a replay doesn't count |
 | 503 | `owner_unavailable` / `verifier_unavailable` | The delegator could not read a PolicyClient owner or check a smart-account signature; retry |
 | 503 | `capacity_exceeded` | The delegator is at capacity |
 | 503 | `event_feed_busy` | Too many concurrent event long-polls |
