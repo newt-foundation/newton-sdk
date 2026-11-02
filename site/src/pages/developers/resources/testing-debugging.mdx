@@ -41,7 +41,7 @@ The CLI runs your WASM component in a sandboxed environment with the Newton HTTP
 
 ## Gateway Simulation
 
-The policy-set endpoints resolve a configured client on the specified chain. Use `policy_client`, numeric `chain_id`, `intent`, and positional `wasm_args` arrays. SDK `simulatePolicy` supports this schema in v1.2.2; its `simulateTask` wrapper does not.
+The policy-set endpoints resolve a configured client on the specified chain. Use `policy_client`, numeric `chain_id`, `intent`, and positional `wasm_args` arrays. SDK `simulatePolicy` sends this schema. SDK `simulateTask` sends it in releases after 1.3.1; 1.3.1 and earlier send the old `policy_task_data` request, which the gateway does not accept.
 
 | Endpoint | Executes WASM? | Input | Result |
 |---|---|---|---|
@@ -96,7 +96,7 @@ If an attestation fails on-chain verification, check:
 
 | Symptom | Likely Cause | Diagnostic Step |
 |---------|-------------|-----------------|
-| `newt_simulateTask` returns `non-compliant` | Policy logic rejects the intent | Run `newt_simulatePolicy` with the same inputs to isolate the Rego evaluation |
+| `newt_simulateTask` returns `allowed: false` | Policy logic rejects the intent | Inspect `policies[i].allowed` and `policies[i].result` to find the denying policy |
 | Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy-data simulate` |
 | Attestation expires before on-chain submission | Too much time between evaluation and transaction | Reduce latency or increase the `expiry_offset` parameter |
 | On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
@@ -106,22 +106,26 @@ If an attestation fails on-chain verification, check:
 
 ## SDK Debugging
 
-Enable verbose logging in the Newton SDK:
+The SDK has no logging option. Simulate the intent first and print the full result, including each policy's verdict:
 
 ```typescript
-import { createPublicClient, http } from 'viem';
+import { createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
-import { newtonPublicClientActions } from '@newton-xyz/sdk';
+import { newtonWalletClientActions } from '@newton-xyz/sdk';
 
-const client = createPublicClient({
+const client = createWalletClient({
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
   chain: sepolia,
   transport: http(),
-}).extend(newtonPublicClientActions());
+}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }));
 
 // Simulate first to debug
-const simulation = await client.simulateTask({
+const simulation = await client.simulatePolicy({
   policyClient: '0xYourPolicyClientAddress',
+  chainId: sepolia.id,
   intent: { /* ... */ },
+  wasmArgs: ['0x'], // One slot per policy
 });
 
 console.log('Simulation result:', JSON.stringify(simulation, null, 2));

@@ -29,7 +29,7 @@ Policy-set request schemas below apply to the current gateway API. Use an SDK re
 Gateway JSON-RPC requests must be sent to the `/rpc` endpoint. Requests to the host root, such as `https://gateway.testnet.newton.xyz`, return a 404 response instead of a JSON-RPC response.
 :::
 
-Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON-RPC 2.0 specification, but the Newton Gateway expects request IDs as strings.
+Send the JSON-RPC `id` as a UUID string, or leave it out. The gateway parses `id` as a UUID, so a numeric `id` or any other string fails the request with an HTTP 422 plain-text response before the method runs. The gateway does not echo your `id`. A success response, and the 401 for a request without an API key, carry a new server-generated UUID; every other JSON-RPC error carries `"id": null`.
 
 :::code-group
 ```json [Request Format]
@@ -45,21 +45,22 @@ Use a UUID string for the JSON-RPC `id` field. Numeric IDs are valid in the JSON
 {
   "jsonrpc": "2.0",
   "result": { ... },
-  "id": "<request_id>"
+  "error": null,
+  "id": "<server-generated UUID>"
 }
 ```
 
 ```json [Error Response]
 {
   "jsonrpc": "2.0",
-  "error": {
-    "code": -32600,
-    "message": "Invalid request"
-  },
-  "id": "<request_id>"
+  "result": null,
+  "error": { "InvalidRequest": "Unknown Newton RPC method: newt_getTask" },
+  "id": null
 }
 ```
 :::
+
+An error response has no numeric `code`. The `error` value is the gateway error variant, and the HTTP status matches it. See [Error Codes](#error-codes).
 
 ---
 
@@ -72,15 +73,21 @@ All API requests require authentication via API key. Include the key in the `Aut
 Authorization: Bearer <your_api_key>
 ```
 
-API keys are issued with specific permissions. See [Getting an API Key](/developers/overview/dashboard-api-keys) to get yours.
+The gateway also accepts the key in an `X-API-Key` header. API keys are issued with specific permissions. See [Getting an API Key](/developers/overview/dashboard-api-keys) to get yours.
 :::
+
+A request without a key gets HTTP 401 with `{"AuthenticationFailed":"missing or invalid API key"}`. An unknown or revoked key gets HTTP 401 with an empty body. For WebSocket authentication, see [WebSocket Updates](#websocket-updates).
 
 ### Permission Levels
 
-| Permission | Description |
-|------------|---------------------------------------------------|
-| `RpcRead` | Read-only operations: task submission, simulation |
-| `RpcWrite` | Write operations: secrets management |
+| Permission | Grants |
+|------------|--------|
+| `RpcWrite` | Task submission and writes: `newt_createTask`, `newt_sendTask`, `newt_registerWebhook`, `newt_unregisterWebhook`, `newt_storeEncryptedSecrets`, `newt_uploadIdentityEncrypted`, `newt_uploadConfidentialData` |
+| `RpcRead` | Simulation and reads: `newt_simulateTask`, `newt_simulatePolicy`, `newt_simulatePolicyData`, `newt_simulatePolicyDataWithClient`, `newt_getIdentityEncrypted`, `newt_getConfidentialData` |
+| `Rpc` | Both `RpcRead` and `RpcWrite` |
+| `Admin` | `RpcRead`, plus the ownership bypass on read endpoints described below. It does not grant `RpcWrite`. |
+
+`newt_getPrivacyPublicKey` and `newt_getSecretsPublicKey` accept any valid API key. A key without the required permission gets HTTP 403, for example `{"AuthorizationFailed":"RpcWrite permission required"}`.
 
 ### Example
 
@@ -109,6 +116,9 @@ As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.
 
 | Endpoint | Ownership Required |
 |-----|-----|
+| `newt_createTask` | Yes |
+| `newt_sendTask` | Yes |
+| `newt_simulateTask` | No |
 | `newt_simulatePolicyData` | No (caller provides secrets directly) |
 | `newt_simulatePolicyDataWithClient` | Yes (fetches stored secrets) |
 | `newt_simulatePolicy` | Yes; explicitly authorized read-only admin keys can bypass |
@@ -120,10 +130,10 @@ The pinned `newt_simulatePolicy` handler checks client ownership for every set, 
 
 **Error Responses:**
 
-If ownership verification fails, you will receive one of these errors:
+If ownership verification fails, the gateway returns HTTP 403 with one of these errors:
 
-- `"policy_client is owned by another user"` -- The `policy_client` is owned by a different address on-chain.
-- `"policy client has no owner"` -- The contract returned a zero address for `getOwner()`.
+- `{"AuthorizationFailed":"policy client 0x... is owned by 0x..., not by caller 0x..."}` - the wallet address on your API key is not the onchain owner. A contract whose `getOwner()` returns the zero address shows up as owned by `0x0000000000000000000000000000000000000000`.
+- `{"AuthorizationFailed":"API key has no configured wallet address; cannot verify policy client ownership"}` - your API key has no wallet address on file.
 
 ---
 
@@ -246,7 +256,7 @@ Enumeration of task processing states.
 
 Creates a task and waits synchronously for the BLS aggregation result. Use this for simple integrations where blocking is acceptable.
 
-**Permission:** `RpcRead`
+**Permission:** `RpcWrite`
 
 #### Parameters
 
@@ -258,8 +268,8 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes, e.g., `"00"` for quorum 0) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Array<Data>` | Yes | One entry per policy, in set order; `"0x"` for pure-Rego |
-| `timeout` | `Number` | No | Timeout in seconds (default: 30) |
-| `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
+| `timeout` | `Number` | No | Accepted but not applied. The gateway ends any HTTP request that runs past its server request timeout (30 seconds in the default configuration) with an empty HTTP 408 |
+| `proof_cid` | `String` | No | Unsupported. Any value fails the request with `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}` |
 | `include_validate_calldata` | `Boolean` | No | Include ABI-encoded `validateAttestationDirect` calldata in the response (default: false) |
 
 :::warning
@@ -350,19 +360,20 @@ For manual fallback, the typed-data domain must match the policy client's Solidi
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | `Data` | 32-byte task identifier |
-| `status` | `TaskStatus` | Final task status |
-| `aggregation_response` | `Object` | BLS aggregation result (if successful) |
-| `task` | `Object` | Full Task struct for `validateAttestationDirect` (if success) |
+| `status` | `TaskStatus` | Final task status: `pending`, `processing`, `success`, `failed`, or `timeout` |
+| `bls_aggregation_result` | `Object` | BLS aggregation result: `task_response_digest`, signer count, non-signer keys and indices (if successful) |
+| `signature_data` | `Data` | ABI-encoded signature data to pass as `signatureData` to `validateAttestationDirect` (if successful) |
+| `task` | `Object` | Full Task struct for `validateAttestationDirect`. Also present when the task fails |
 | `task_response` | `Object` | Full TaskResponse struct from aggregation (if success) |
 | `reference_block` | `Number` | Block number when response was prepared (if success) |
-| `expiration` | `Number` | Expiration block: `reference_block + policyConfig.expireAfter` |
-| `validate_calldata` | `String` | ABI-encoded calldata for `validateAttestationDirect` (present when `include_validate_calldata` was true) |
-| `operator_errors` | `Array` | Per-operator error details with `retryable` classification (present on quorum failure) |
+| `expiration` | `null` | Always `null`. The onchain expiry anchors at the block of the transaction that settles the task, which the gateway cannot know yet. Read `AttestationValidator.attestationExpirations(taskId)` for the value |
+| `validate_calldata` | `String` | ABI-encoded calldata for `validateAttestationDirect` (`null` unless `include_validate_calldata` was true) |
+| `operator_errors` | `Array` | Not sent by the current gateway. Evaluation runs in-process, so there are no per-operator errors to report |
 | `error` | `String` | Error message (if failed) |
 | `timestamp` | `Number` | Unix timestamp |
 
 :::note
-The `task`, `task_response`, `reference_block`, and `expiration` fields enable clients to call `validateAttestationDirect` optimistically without waiting for on-chain task submission. The `signature_data` field contains pre-built, chain-aware encoded bytes ready to pass directly to the contract.
+The `task`, `task_response`, and `signature_data` fields enable clients to call `validateAttestationDirect` optimistically without waiting for onchain task submission. The `signature_data` field contains pre-built, chain-aware encoded bytes ready to pass directly to the contract, and `validateAttestationDirect` computes its own expiry.
 :::
 
 To look the task up later — its evaluation result, operator errors, and the policy data it was evaluated against — pass `task_id` to the [Explorer API](/developers/reference/explorer-api#get-a-task).
@@ -398,10 +409,13 @@ To look the task up later — its evaluation result, operator errors, and the po
   "result": {
     "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     "status": "success",
-    "aggregation_response": {
+    "bls_aggregation_result": {
+      "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "task_created_block": 12345678,
       "task_response_digest": "0xabcd...",
-      "non_signer_stakes_and_signature": { }
+      "signers_count": 3
     },
+    "signature_data": "0x...",
     "task": {
       "taskId": "0x1234...",
       "policyClient": "0x1234567890123456789012345678901234567890",
@@ -432,11 +446,13 @@ To look the task up later — its evaluation result, operator errors, and the po
       ]
     },
     "reference_block": 12345700,
-    "expiration": 12345800,
+    "expiration": null,
+    "validate_calldata": null,
     "error": null,
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "error": null,
+  "id": "9b2e4f61-0c3d-4a8e-b5f7-2d1c6e8a4b90"
 }
 ```
 
@@ -446,11 +462,18 @@ To look the task up later — its evaluation result, operator errors, and the po
   "result": {
     "task_id": "0x1234567890abcdef...",
     "status": "failed",
-    "aggregation_response": null,
-    "error": "Policy evaluation failed: insufficient permissions",
+    "bls_aggregation_result": null,
+    "signature_data": null,
+    "task": { },
+    "task_response": null,
+    "reference_block": null,
+    "expiration": null,
+    "validate_calldata": null,
+    "error": "in-process commit produced no signed responses",
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "error": null,
+  "id": "9b2e4f61-0c3d-4a8e-b5f7-2d1c6e8a4b90"
 }
 ```
 :::
@@ -461,7 +484,7 @@ To look the task up later — its evaluation result, operator errors, and the po
 
 Submits a task asynchronously and returns immediately with a WebSocket subscription topic for receiving updates.
 
-**Permission:** `RpcRead`
+**Permission:** `RpcWrite`
 
 #### Parameters
 
@@ -473,14 +496,14 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
 | `quorum_number` | `Data` | No | Quorum numbers (hex bytes) |
 | `quorum_threshold_percentage` | `Number` | No | BLS aggregation threshold (0-100) |
 | `wasm_args` | `Array<Data>` | Yes | One entry per policy, in set order; `"0x"` for pure-Rego |
-| `proof_cid` | `String` | No | IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation |
+| `proof_cid` | `String` | No | Unsupported. Any value fails the request with `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}` |
 
 #### Returns
 
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | `Data` | 32-byte task identifier |
-| `subscription_topic` | `String` | WebSocket topic for task updates |
+| `subscription_topic` | `String` | WebSocket topic for task updates: the task ID as hex without the `0x` prefix |
 | `message` | `String` | Confirmation message |
 | `timestamp` | `Number` | Unix timestamp |
 
@@ -512,47 +535,80 @@ Submits a task asynchronously and returns immediately with a WebSocket subscript
   "jsonrpc": "2.0",
   "result": {
     "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    "subscription_topic": "newton.task.0x1234567890abcdef...",
-    "message": "Task submitted for async processing",
+    "subscription_topic": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "message": "Task accepted for asynchronous processing",
     "timestamp": 1705123456
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "error": null,
+  "id": "3f8c2a71-5d4e-4b9a-8c6f-1e2d3c4b5a69"
 }
 ```
 :::
 
 #### WebSocket Updates
 
-Connect to the WebSocket endpoint and subscribe to the returned topic:
+Open a WebSocket on the gateway's `/ws` path, for example `wss://gateway.testnet.newton.xyz/ws` for the testnet gateway at `https://gateway.testnet.newton.xyz/rpc`. The upgrade request takes the same API key as `/rpc`:
+
+- Server clients send an `Authorization: Bearer <key>` or `X-API-Key` header.
+- Browsers cannot set WebSocket headers, so they offer two subprotocols: `newton.v1` and `newton.bearer.<key>`. The gateway reads the key from the second one and answers with `newton.v1`.
+
+```ts
+const ws = new WebSocket('wss://gateway.testnet.newton.xyz/ws', ['newton.v1', `newton.bearer.${apiKey}`])
+```
+
+The gateway ignores an `api_key` query parameter. A rejected upgrade gets HTTP 401 `missing or invalid API key` when it carries no key, HTTP 401 with an empty body for an unknown key, HTTP 503 with an empty body when the key lookup fails, HTTP 429 `per-key connection limit reached`, or HTTP 503 `server connection limit reached`.
+
+Subscribe to the `subscription_topic` from the response:
 
 ```json
 {
   "type": "subscribe",
   "id": "sub-1",
-  "method": "newton.task.0x1234567890abcdef...",
+  "method": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
   "params": null
 }
 ```
 
-Updates are received in the following format:
+The gateway ignores your `id` and confirms with a subscription ID of its own. Use that ID to match updates and to send `{"type":"unsubscribe","id":"<subscription ID>"}`:
+
+```json
+{
+  "type": "subscribed",
+  "id": "c0a8012e-7f3b-4d2a-9e61-5b4f3a2d1c0e"
+}
+```
+
+Each update carries a `TaskUpdateEvent` in `result`. Every event is `status_update`; read `data.status` for the stage. The first update is `processing` at progress 5, and the last in-process update is `success` at progress 90 with the BLS aggregation result:
 
 ```json
 {
   "type": "update",
-  "subscription": "sub-1",
+  "subscription_id": "c0a8012e-7f3b-4d2a-9e61-5b4f3a2d1c0e",
   "result": {
-    "event": "success",
-    "task_id": "0x1234567890abcdef...",
+    "event": "status_update",
+    "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     "timestamp": 1705123460,
     "data": {
       "status": "success",
       "operator_responses": [],
-      "result": { },
-      "progress": 100
+      "result": {
+        "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "task_response_digest": "0xabcd...",
+        "bls_aggregation_result": { }
+      },
+      "error": null,
+      "progress": 90
     }
-  }
+  },
+  "error": null
 }
 ```
+
+If evaluation or aggregation fails, the last update has `data.status` set to `failed` and the reason in `data.error`. After a successful task is submitted onchain, the same topic receives the submission outcome. See [Failure Notifications](#failure-notifications).
+
+:::note
+The gateway delivers updates only to subscriptions that exist when it publishes them. It does not replay earlier updates. To receive every update for tasks you submit, subscribe to `newton.task.*` before you call `newt_sendTask`. That wildcard receives updates for every task submitted with the same API key.
+:::
 
 ---
 
@@ -589,7 +645,7 @@ Evaluates Rego locally on the gateway using provided oracle **outputs**. It reso
       "0x"
     ]
   },
-  "id": "policy-set-example"
+  "id": "5b1e9c3a-2f4d-4e8b-a7c6-0d9f8e7a6b51"
 }
 ```
 
@@ -605,7 +661,7 @@ Evaluates Rego locally on the gateway using provided oracle **outputs**. It reso
 A completed denial is `success: true, allowed: false`. A simulation failure is `success: false, allowed: null`. Neither response carries a BLS attestation.
 
 :::warning
-SDK v1.2.2's `simulateTask` wrapper still sends the old `policy_task_data` request. Use raw RPC for this endpoint, or SDK `simulatePolicy` for WASM + Rego simulation.
+`simulateTask` in SDK 1.3.1 and earlier sends the old `policy_task_data` request, which this endpoint does not accept. Later releases send this shape from `simulateTask({ policyClient, chainId, intent, wasmArgs })`.
 :::
 
 ---
@@ -649,7 +705,7 @@ Secrets are encrypted client-side using HPKE before upload. Use `storeEncryptedS
 #### Ownership Model
 
 :::note
-Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()`) can upload or update secrets. Ownership is transferable on-chain via `setOwner()` or `transferOwnership()`.
+Only the onchain owner of the PolicyClient contract (as returned by `getOwner()`) can upload or update secrets. The current owner transfers ownership onchain with `setPolicyClientOwner(address)`. The gateway compares `getOwner()` with the wallet address configured on your API key. A failed check is a JSON-RPC error with HTTP 403, not a `success: false` result.
 :::
 
 #### Example
@@ -691,12 +747,11 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
 ```json [Response (Error - Ownership Violation)]
 {
   "jsonrpc": "2.0",
-  "result": {
-    "success": false,
-    "schema": null,
-    "error": "policy_client is owned by a different user"
+  "result": null,
+  "error": {
+    "AuthorizationFailed": "policy client 0x1234567890123456789012345678901234567890 is owned by 0x..., not by caller 0x..."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": null
 }
 ```
 
@@ -706,9 +761,10 @@ Only the on-chain owner of the PolicyClient contract (as returned by `getOwner()
   "result": {
     "success": false,
     "schema": null,
-    "error": "Secrets upload validation failed: missing required field 'API_KEY'"
+    "error": "Invalid request: secrets schema validation failed: Schema validation failed: ..."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "error": null,
+  "id": "0d7e3b5a-9c1f-4a2e-8b6d-4f3a2c1e0b97"
 }
 ```
 :::
@@ -721,7 +777,7 @@ Simulates PolicyData WASM execution with caller-provided secrets. Use this endpo
 
 **Permission:** `RpcRead`
 
-**Authorization:** Rate limiting only. Any valid API key can call this endpoint. No ownership verification is performed because secrets are provided directly by the caller.
+**Authorization:** Any API key with `RpcRead`. The gateway does not check ownership, because you pass the secrets in the request.
 
 #### When to Use
 
@@ -750,16 +806,10 @@ Simulates PolicyData WASM execution with caller-provided secrets. Use this endpo
 | Field | Type | Description |
 |---|---|---|
 | `success` | `Boolean` | Whether simulation succeeded |
-| `policy_data` | `Object` | WASM execution result (on success) |
+| `policy_data` | `JSON` | The JSON value your WASM returned, unchanged (on success) |
 | `error` | `String` | Error message (on failure) |
 
-The `policy_data` object contains:
-
-| Field | Type | Description |
-|---|---|---|
-| `specifier` | `String` | WASM source identifier (IPFS CID) |
-| `data` | `Object` | WASM output data |
-| `timestamp` | `Number` | Execution timestamp |
+`policy_data` has no wrapper fields: it is your WASM output parsed as JSON. Output that is not valid JSON fails the simulation with `wasm output is not valid JSON: ...`.
 
 #### Example
 
@@ -803,13 +853,9 @@ The `policy_data` object contains:
   "result": {
     "success": true,
     "policy_data": {
-      "specifier": "bafkreigh2akiscaill...",
-      "data": {
-        "base_symbol": "BTC",
-        "quote_symbol": "USD",
-        "price": 42000.5
-      },
-      "timestamp": 1705123456
+      "base_symbol": "BTC",
+      "quote_symbol": "USD",
+      "price": 42000.5
     },
     "error": null
   },
@@ -823,7 +869,7 @@ The `policy_data` object contains:
   "result": {
     "success": false,
     "policy_data": null,
-    "error": "WASM execution failed: missing required secret 'API_KEY'"
+    "error": "wasm output is not valid JSON: expected value at line 1 column 1"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
@@ -866,7 +912,7 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 | Field | Type | Description |
 |---|---|---|
 | `success` | `Boolean` | Whether simulation succeeded |
-| `policy_data` | `Object` | WASM execution result (on success) |
+| `policy_data` | `JSON` | The JSON value your WASM returned, unchanged (on success) |
 | `error` | `String` | Error message (on failure) |
 
 #### Example
@@ -892,13 +938,9 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
   "result": {
     "success": true,
     "policy_data": {
-      "specifier": "bafkreigh2akiscaill...",
-      "data": {
-        "base_symbol": "BTC",
-        "quote_symbol": "USD",
-        "price": 42000.5
-      },
-      "timestamp": 1705123456
+      "base_symbol": "BTC",
+      "quote_symbol": "USD",
+      "price": 42000.5
     },
     "error": null
   },
@@ -909,11 +951,11 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
 ```json [Response (Error - Unauthorized)]
 {
   "jsonrpc": "2.0",
+  "result": null,
   "error": {
-    "code": -32002,
-    "message": "Authorization failed: policy client 0x1234... is owned by another user"
+    "AuthorizationFailed": "policy client 0x1234567890123456789012345678901234567890 is owned by 0x..., not by caller 0x..."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "id": null
 }
 ```
 
@@ -923,12 +965,15 @@ Simulates PolicyData WASM execution with previously uploaded secrets. Use this e
   "result": {
     "success": false,
     "policy_data": null,
-    "error": "No secrets found for policy_client 0x1234... and policy_data 0xaaaa.... Upload secrets via newt_storeEncryptedSecrets first, or use newt_simulatePolicyData with directly provided secrets."
+    "error": "wasm execution returned error: ..."
   },
-  "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
+  "error": null,
+  "id": "a4c2e8f0-6b1d-4f3a-9e5c-7d8b0a2c4e61"
 }
 ```
 :::
+
+When no secrets are stored for the client and policy, the secrets host call your WASM makes returns the error `no secrets found for policy_client_address '<client>' and policy_address '<policy>'`. What reaches `error` depends on how your WASM handles that error. A component that returns it as its own error produces `wasm execution returned error: ...`. Upload secrets with `newt_storeEncryptedSecrets` first, or pass them directly to `newt_simulatePolicyData`.
 
 ---
 
@@ -966,7 +1011,7 @@ Runs the configured policy set's optional WASM oracles and then Rego in the gate
       "0x"
     ]
   },
-  "id": "policy-set-example"
+  "id": "e2d4c6b8-1a3f-4c5e-9b7d-6f8a0c2e4b13"
 }
 ```
 
@@ -987,17 +1032,21 @@ Use `policies[i].policy_index` and `policies[i].policy` to map each verdict back
 
 ### newt_registerWebhook
 
-Registers a webhook URL to receive failure notifications for tasks created with this API key.
+Registers a webhook URL to receive failure notifications for tasks submitted with this API key. Each API key has one webhook: registering again replaces the previous one.
+
+**Permission:** `RpcWrite`
 
 #### Parameters
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `url` | `string` | Yes | HTTPS URL to receive notifications |
+| `url` | `string` | Yes | HTTPS URL to receive notifications. `http://localhost` URLs are also accepted for testing |
 | `secret` | `string` | No | HMAC secret for payload signing (recommended) |
-| `timeout_seconds` | `number` | No | Request timeout in seconds (default: 10) |
-| `max_retries` | `number` | No | Maximum retry attempts (default: 3) |
-| `failure_types` | `string[]` | No | Failure types to notify about (default: all) |
+| `timeout_seconds` | `number` | No | Timeout for each delivery attempt in seconds (default: 10) |
+| `max_retries` | `number` | No | Maximum delivery attempts, including the first (default: 3) |
+| `failure_types` | `string[]` | No | Failure types to notify about (default: `channel_error`, `timeout`, `quorum_not_reached`, `onchain_submission_failed`) |
+
+Any other URL fails with `{"InvalidRequest":"Webhook URL must use HTTPS (or http://localhost for testing)"}`.
 
 **Failure Types:**
 
@@ -1008,6 +1057,10 @@ Registers a webhook URL to receive failure notifications for tasks created with 
 - `policy_evaluation_failed` -- Policy evaluation error
 - `signature_verification_failed` -- BLS signature verification error
 - `internal_error` -- Unexpected internal error
+
+:::note
+The current gateway sends only `onchain_submission_failed` notifications, for tasks whose onchain submission fails. It reports evaluation and aggregation failures in the `newt_createTask` result or in the `newt_sendTask` WebSocket updates instead.
+:::
 
 #### Example
 
@@ -1043,6 +1096,8 @@ Registers a webhook URL to receive failure notifications for tasks created with 
 
 Removes the webhook configuration for this API key.
 
+**Permission:** `RpcWrite`
+
 **Parameters:** None
 
 #### Example
@@ -1073,7 +1128,10 @@ Removes the webhook configuration for this API key.
 
 ## Failure Notifications
 
-The Newton Gateway provides real-time failure notifications through two channels: WebSocket subscriptions and webhook callbacks. Use WebSocket for real-time UI updates and webhooks for reliable server-to-server notifications.
+The gateway reports a failure in the channel that matches where it happened:
+
+- Evaluation and aggregation failures: the `newt_createTask` result has `status` set to `failed` and the reason in `error`. A `newt_sendTask` task sends a last WebSocket update with `data.status` set to `failed` and the reason in `data.error`.
+- Onchain submission outcome: after the gateway submits a task response onchain, it sends the outcome on the task's WebSocket topic. A failed submission also goes to your webhook.
 
 ### WebSocket Notifications
 
@@ -1083,7 +1141,21 @@ WebSocket notifications are best for:
 - Low-latency notification requirements
 - Clients that maintain persistent connections
 
-When subscribed to a task via WebSocket, failure notifications are delivered as JSON messages containing the full `TaskFailureNotification` payload.
+Subscribe to the task topic as described in [WebSocket Updates](#websocket-updates). The submission outcome arrives in the `result` of an `update` frame. A successful submission sends:
+
+```json
+{
+  "event": "submission_finalized",
+  "notificationId": "submission:7d0c4b9e-2a61-4f38-9c5e-0b1a2d3e4f56:42",
+  "taskId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "submissionId": "7d0c4b9e-2a61-4f38-9c5e-0b1a2d3e4f56",
+  "cursor": 42,
+  "transactionHash": "0x5e3f...",
+  "status": "success"
+}
+```
+
+A failed submission sends the `TaskFailureNotification` payload shown under [Webhook Callbacks](#webhook-callbacks).
 
 ### Webhook Callbacks
 
@@ -1101,28 +1173,30 @@ The gateway sends POST requests to your registered URL with the following struct
 :::details[Webhook Payload]
 ```json
 {
-  "notification_id": "uuid-v4-unique-id",
-  "task_id": "0x1234...",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "failure_type": "quorum_not_reached",
-  "error_message": "Quorum not reached: only 45% stake signed (required: 67%)",
+  "notification_id": "submission:7d0c4b9e-2a61-4f38-9c5e-0b1a2d3e4f56:43",
+  "task_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "timestamp": "2026-01-15T10:30:00.512903116+00:00",
+  "failure_type": "onchain_submission_failed",
+  "error_message": "submission ended in failed",
   "context": {
-    "signed_stake": "45000000000000000000",
-    "required_stake": "67000000000000000000",
-    "operator_count": 3
+    "submissionId": "7d0c4b9e-2a61-4f38-9c5e-0b1a2d3e4f56",
+    "cursor": 43,
+    "state": "failed",
+    "transactionHash": null
   },
-  "is_recoverable": false,
-  "retry_after_seconds": null
+  "is_recoverable": false
 }
 ```
 :::
+
+`error_message` is the submission's recorded error, or `submission ended in <state>` when none was recorded. `context.transactionHash` is `null` when the submission has no transaction. The gateway omits `retry_after_seconds` when it has no retry delay to suggest.
 
 **Security Headers:**
 
 | Header | Description |
 |---|---|
-| `X-Newton-Signature` | HMAC-SHA256 signature (if secret configured) |
-| `X-Idempotency-Key` | Unique notification ID for deduplication |
+| `X-Newton-Signature` | `sha256=<hex>`: the HMAC-SHA256 of the raw request body, keyed with your `secret`. Sent only when you registered a secret |
+| `X-Idempotency-Key` | The `notification_id`, for deduplication |
 | `Content-Type` | `application/json` |
 
 **Signature Verification:**
@@ -1142,10 +1216,9 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 
 **Retry Behavior:**
 
-- Initial retry after 100ms with exponential backoff
-- Maximum 3 retry attempts (configurable)
-- Backoff capped at 10 seconds
-- 4xx client errors (except 429) are not retried
+- Up to `max_retries` attempts in total (default 3), each bounded by `timeout_seconds`
+- 100 ms before the second attempt, doubling after each failed attempt, capped at 10 seconds
+- Transport errors, 5xx and 429 responses are retried; any other 4xx response is final
 
 ---
 
@@ -1165,56 +1238,68 @@ For required cases and evidence, see [Testing Policies](/developers/guides/testi
 
 ## Error Codes
 
-### JSON-RPC Standard Errors
+The gateway does not use numeric JSON-RPC error codes. A failed request returns an HTTP error status and a body whose `error` names the gateway's error variant, with `"result": null` and `"id": null` (the 401 for a request without an API key carries a server-generated UUID instead):
 
-| Code | Message | Description |
+```json
+{
+  "jsonrpc": "2.0",
+  "result": null,
+  "error": { "AuthorizationFailed": "RpcWrite permission required" },
+  "id": null
+}
+```
+
+A variant that carries a value is an object with one key, the variant name. A variant without a value is a bare string, for example `"error": "RateLimitExceeded"`. The SDK raises both as a [`GatewayError`](/developers/reference/error-reference#gatewayerror) whose `code` is the variant name and whose `data` is the value.
+
+### Error Variants
+
+| Variant | HTTP status | Value |
 |---|---|---|
-| -32700 | Parse error | Invalid JSON |
-| -32600 | Invalid request | Invalid JSON-RPC structure |
-| -32601 | Method not found | Unknown RPC method |
-| -32602 | Invalid params | Invalid method parameters |
-| -32603 | Internal error | Server error |
+| `AuthenticationFailed` | 401 | Message, for example `missing or invalid API key` |
+| `AuthorizationFailed` | 403 | Message, for example `RpcWrite permission required` |
+| `InvalidRequest` | 400 | Message, for example `Unknown Newton RPC method: newt_foo` |
+| `RateLimitExceeded` | 429 | None |
+| `Timeout` | 504 | Seconds waited, for example `{"Timeout":10}` |
+| `ServiceUnavailable` | 503 | Message |
+| `ServiceOverloaded` | 503 | Message. The response also has a `retry-after: 2` header |
+| `CircuitBreakerOpen` | 503 | Operator ID |
+| `BadGateway` | 502 | Message |
+| `AllOperatorsFailed` | 502 | Array of operator errors |
+| `IncompatiblePolicyVersion` | 422 | Object with `policy_address`, `policy_version`, `protocol_version`, `min_required` and `upgrade_message` |
+| `OperatorError` | 500 | Object with `operator_address`, `operator_id` and `message` |
+| `OperatorRpcError` | 500 | Object with `operator_address`, `operator_id`, `rpc_code` and `message` |
+| `QuorumNotReached` | 500 | Array of the reason and the operator errors (or `null`). The reason is `"Timeout"`, `"OperatorMajorityErrors"` or `{"InsufficientStake":"..."}` |
+| Any other variant, such as `Internal` or `DatabaseError` | 500 | Message |
 
-### Newton-Specific Error Codes
+### Common Error Messages
 
-| Code | Name | Description |
+| Error | Cause | Resolution |
 |---|---|---|
-| -32615 | PolicyEvaluationError | Policy evaluation failed |
-| -32616 | ContractError | Smart contract interaction error |
-| -32617 | OperatorNotRegistered | Operator is not registered with the AVS |
-| -32618 | IncompatiblePolicyVersion | Policy version mismatch between client/server |
-| -32619 | IncompatiblePolicyDataVersion | Policy data version mismatch |
-| -32620 | DataProviderError | Error fetching policy data from data provider |
+| `{"AuthenticationFailed":"missing or invalid API key"}` | The request has no API key | Send the key in an `Authorization: Bearer` or `X-API-Key` header |
+| `{"AuthorizationFailed":"RpcRead permission required"}` | The key lacks `RpcRead` | Use a key with `RpcRead` |
+| `{"AuthorizationFailed":"RpcWrite permission required"}` | The key lacks `RpcWrite` | Use a key with `RpcWrite` |
+| `{"AuthorizationFailed":"policy client <client> is owned by <owner>, not by caller <caller>"}` | The wallet address on your API key is not the policy client's `getOwner()` | Use the API key whose wallet address owns the policy client |
+| `{"AuthorizationFailed":"API key has no configured wallet address; cannot verify policy client ownership"}` | The key has no wallet address, so the gateway cannot check ownership | Use a key with a configured wallet address |
+| `{"InvalidRequest":"Unknown Newton RPC method: <method>"}` | Invalid method name | Check the method spelling |
+| `{"InvalidRequest":"Invalid request format: <details>"}` | `params` do not match the method's request shape | Review the parameter names and types |
+| `{"InvalidRequest":"wasm_args count (<n>) must match the policy set (<m>); one entry per policy, empty for pure-Rego"}` | `wasm_args` length differs from the policy set | Send one entry per policy, in set order |
+| `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}` | The request has a `proof_cid` | Remove `proof_cid` |
+| `{"Timeout":<seconds>}` | The gateway stopped waiting for the operation | Retry the request |
+| `"RateLimitExceeded"` | Too many requests for this API key | Back off and retry |
 
-### Newton-Specific Error Messages
+### Responses Without a JSON-RPC Body
 
-| Error Message | Cause | Resolution |
-|---|---|---|
-| `"Unknown Newton RPC method: {method}"` | Invalid method name | Check method spelling |
-| `"Invalid request format: {details}"` | Malformed parameters | Review parameter types |
-| `"RpcRead permission required"` | Missing read permission | Use key with RpcRead |
-| `"RpcWrite permission required"` | Missing write permission | Use key with RpcWrite |
-| `"Invalid API key"` | Invalid or expired key | Verify API key |
-| `"policy client {addr} is owned by another user"` | Ownership violation | Use API key that owns the policy_client |
-| `"policy client {addr} has no owner..."` | No ownership established | Upload secrets first via `newt_storeEncryptedSecrets` |
-| `"Missing secrets for N PolicyData contract(s)"` | Secrets not uploaded | Upload secrets via `newt_storeEncryptedSecrets` |
-| `"No secrets found for policy_client ... and policy_data..."` | Secrets not uploaded for pair | Upload secrets or use `newt_simulatePolicyData` instead |
-| `"Secrets upload validation failed: {details}"` | Schema validation failure | Fix secrets format |
-| `"WASM execution failed: {details}"` | WASM runtime error | Check WASM and inputs |
-| `"Rego evaluation failed: {details}"` | Policy syntax/runtime error | Fix Rego code |
-| `"Contract read failed: {details}"` | On-chain read error | Verify contract addresses |
-| `"Task timeout"` | Aggregation timeout | Increase timeout or retry |
+Some requests fail before a method runs. These responses have an empty body or a plain-text body, not a JSON-RPC error:
 
-### HTTP Status Codes
-
-| Status | Description |
+| Status | Cause |
 |---|---|
-| 200 | Success (check JSON-RPC result for errors) |
-| 401 | Unauthorized - Invalid API key |
-| 403 | Forbidden - Insufficient permissions |
-| 429 | Too Many Requests - Rate limited |
-| 500 | Internal Server Error |
-| 502 | Bad Gateway - Service unavailable |
+| 401, empty body | The API key does not match any key |
+| 503, empty body | The gateway could not look up the API key. Retry later |
+| 408 | The request ran past the server request timeout (30 seconds in the default configuration) |
+| 413 | The request body is larger than the gateway's body limit |
+| 400, 415, 422 | The body is not valid JSON, has no `Content-Type: application/json` header, or does not match the JSON-RPC request shape, for example an `id` that is not a UUID |
+
+The SDK raises these as a `GatewayError` with `code` set to `http_error`.
 
 ---
 
@@ -1239,7 +1324,7 @@ This method is under active development and not yet available in production. The
 
 Retrieves the system's threshold HPKE public key for encrypting data. Use this key to create a `SecureEnvelope` for sensitive data that operators threshold-decrypt during task evaluation.
 
-**Permission:** `RpcRead`
+**Permission:** Any valid API key
 
 #### Parameters
 
@@ -1286,7 +1371,7 @@ See [Privacy Layer](/developers/concepts/privacy-layer) for details on HPKE encr
 
 Retrieves the HPKE public key used for encrypting WASM secrets. In threshold DKG mode, this may differ from the privacy public key returned by `newt_getPrivacyPublicKey`.
 
-**Permission:** `RpcRead`
+**Permission:** Any valid API key
 
 #### Parameters
 
@@ -1441,7 +1526,7 @@ Fetches encrypted identity data by its content-hash reference ID. Used to resolv
 
 ### newt_uploadConfidentialData
 
-Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists) for a registered provider. The gateway stores the encrypted envelope and returns a content-hash `data_ref_id`. The provider then publishes the `data_ref_id` on-chain via `ConfidentialDataRegistry.publishData()` and grants access to specific policy clients.
+Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists) for a provider. The gateway stores the encrypted envelope and returns a content-hash `data_ref_id`. The provider then publishes the `data_ref_id` onchain with `ConfidentialDataRegistry.publishData(domain, dataRefId)`. To give a policy client access, the provider calls `proposeGrant(domain, policyClient)` and the policy client's owner calls `acceptGrant(provider, domain, policyClient)`.
 
 **Permission level:** `RpcWrite`
 
@@ -1449,8 +1534,8 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `provider` | `Address` | Yes | Provider address (must be registered on ConfidentialDataRegistry) |
-| `domain` | `Hex (bytes32)` | Yes | Domain identifier (e.g., `keccak256("newton.privacy.blacklist")`) |
+| `provider` | `Address` | Yes | Provider address. It must be a registered provider on `ConfidentialDataRegistry` to publish the data |
+| `domain` | `Hex (bytes32)` | Yes | Domain identifier (e.g., `keccak256("newton.confidential.blacklist")`) |
 | `envelope` | `string` | Yes | Serialized HPKE `SecureEnvelope` JSON |
 | `chain_id` | `number` | Yes | Chain ID the data is scoped to |
 
@@ -1461,7 +1546,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
   "method": "newt_uploadConfidentialData",
   "params": {
     "provider": "0x1234567890abcdef1234567890abcdef12345678",
-    "domain": "0x6f389bcc4114a6f517365d26d1327865d8634fb1e896e1323e904058afbea0e0",
+    "domain": "0xdcd1e65cf8c4991fe5ed1f5f784041f7f8d1093fa81d48c3bf286ea0c78f49be",
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
     "chain_id": 11155111
   },
@@ -1473,9 +1558,7 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
 {
   "jsonrpc": "2.0",
   "result": {
-    "success": true,
-    "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-    "error": null
+    "data_ref_id": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
@@ -1483,6 +1566,8 @@ Upload HPKE-encrypted confidential data (blacklists, allowlists, sanctions lists
 :::
 
 The SDK's `uploadConfidentialData` function handles HPKE encryption and envelope construction automatically.
+
+An `envelope` that is not valid JSON fails with `{"InvalidRequest":"envelope is not valid JSON: <details>"}`.
 
 ---
 
@@ -1515,12 +1600,15 @@ Retrieve encrypted confidential data by its content-hash reference ID. Returns t
   "jsonrpc": "2.0",
   "result": {
     "envelope": "{\"enc\":\"...\",\"ciphertext\":\"...\",\"policy_client\":\"0x...\",\"chain_id\":11155111,\"recipient_pubkey\":\"...\"}",
-    "data_type": "confidential"
+    "domain": "0xdcd1e65cf8c4991fe5ed1f5f784041f7f8d1093fa81d48c3bf286ea0c78f49be",
+    "provider": "0x1234567890AbcdEF1234567890aBcdef12345678"
   },
   "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
 }
 ```
 :::
+
+An unknown `data_ref_id` fails with `{"InvalidRequest":"confidential data ref not found: <data_ref_id>"}`.
 
 ---
 

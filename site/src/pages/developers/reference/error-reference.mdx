@@ -8,46 +8,39 @@ showAskAi: false
 
 This page documents all error codes and messages you may encounter when interacting with the Newton Protocol Gateway, SDK, and smart contracts.
 
-## JSON-RPC Standard Errors
+## Gateway Errors
 
-| Code | Message | Description |
-|------|---------|-------------|
-| -32700 | Parse error | Invalid JSON in request body |
-| -32600 | Invalid request | Request does not conform to JSON-RPC 2.0 |
-| -32601 | Method not found | Unknown RPC method name |
-| -32602 | Invalid params | Missing or invalid method parameters |
-| -32603 | Internal error | Unexpected server-side error |
+The gateway does not return numeric JSON-RPC error codes. A failed call returns an HTTP error status and a JSON-RPC body whose `error` names the gateway's error variant:
 
-## Newton-Specific Error Codes
+```json
+{
+  "jsonrpc": "2.0",
+  "result": null,
+  "error": { "AuthorizationFailed": "RpcWrite permission required" },
+  "id": null
+}
+```
 
-| Code | Name | Description | Resolution |
-|------|------|-------------|------------|
-| -32615 | PolicyEvaluationError | Rego policy evaluation failed | Check Rego syntax, verify `data.wasm` and `data.params` are populated correctly |
-| -32616 | ContractError | Smart contract interaction failed | Verify contract addresses are correct and contracts are deployed |
-| -32617 | OperatorNotRegistered | Calling operator is not registered with the AVS | Ensure operator registration is complete |
-| -32620 | DataProviderError | WASM oracle execution failed | Check WASM binary, verify secrets and `wasm_args` |
+[Error Codes](/developers/reference/rpc-api#error-codes) in the RPC API reference lists every variant with its HTTP status. The SDK raises these errors as a [`GatewayError`](#gatewayerror).
 
-## Gateway Error Messages
+A task that fails evaluation is not a gateway error. `newt_createTask` returns HTTP 200 with `status` set to `failed` and the reason in `error`, and the SDK throws a plain `Error` that names the task and the reason: `newt_createTask failed for task <taskId>: <reason>`.
 
-| Error Message | Cause | Resolution |
-|---------------|-------|------------|
-| `"Unknown Newton RPC method: {method}"` | Typo in method name | Verify method spelling against [RPC API](/developers/reference/rpc-api) |
-| `"Invalid request format: {details}"` | Malformed request parameters | Review parameter types and required fields |
-| `"RpcRead permission required"` | API key lacks read permission | Use key with `rpc_read` or `rpc` permission |
-| `"RpcWrite permission required"` | API key lacks write permission | Use key with `rpc_write` or `rpc` permission |
-| `"Invalid API key"` | API key is invalid or expired | Verify key or create a new one via [Dashboard](/developers/overview/dashboard-api-keys) |
-| `"policy_client is owned by another user"` | On-chain owner does not match API key holder | Use API key associated with the on-chain `getOwner()` address |
-| `"policy client has no owner"` | Contract returned zero address for `getOwner()` | Verify contract is initialized with an owner |
-| `"Missing secrets for N PolicyData contract(s)"` | Secrets not uploaded for PolicyData contracts | Upload secrets via `newt_storeEncryptedSecrets` |
-| `"No secrets found for policy_client ... and policy_data..."` | No secrets stored for this client/data pair | Upload secrets or use `newt_simulatePolicyData` with inline secrets |
-| `"Secrets upload validation failed: {details}"` | Secrets JSON does not match on-chain schema | Fix secrets format to match `secretsSchemaCid` schema |
-| `"WASM execution failed: {details}"` | WASM oracle runtime error | Check WASM binary, inputs, and `wasm_args` |
-| `"Rego evaluation failed: {details}"` | Policy syntax or runtime error | Fix Rego code, test with `newton-cli regorus eval` |
-| `"Contract read failed: {details}"` | On-chain contract read failed | Verify contract addresses and chain connectivity |
-| `"Task timeout"` | BLS aggregation exceeded timeout | Increase timeout parameter or retry |
-| `"No operators available"` | No registered operators online | Retry later; check network status |
-| `"TaskAlreadyExists"` | Duplicate task submission | Use a different nonce or wait for existing task |
-| `"BlockNumberTooRecent"` | Reference block too close to current | Wait a few blocks before submitting |
+### Gateway Error Messages
+
+| Error | Cause | Resolution |
+|---|---|---|
+| `{"InvalidRequest":"Unknown Newton RPC method: <method>"}` | Typo in method name | Verify method spelling against [RPC API](/developers/reference/rpc-api) |
+| `{"InvalidRequest":"Invalid request format: <details>"}` | Malformed request parameters | Review parameter types and required fields |
+| `{"AuthenticationFailed":"missing or invalid API key"}` | The request has no API key | Send the key in an `Authorization: Bearer` or `X-API-Key` header |
+| HTTP 401 with an empty body | The API key does not match any key | Verify the key or create a new one in the [Dashboard](/developers/overview/dashboard-api-keys) |
+| `{"AuthorizationFailed":"RpcRead permission required"}` | API key lacks read permission | Use key with `rpc_read` or `rpc` permission |
+| `{"AuthorizationFailed":"RpcWrite permission required"}` | API key lacks write permission | Use key with `rpc_write` or `rpc` permission |
+| `{"AuthorizationFailed":"policy client <client> is owned by <owner>, not by caller <caller>"}` | The wallet address on your API key is not the policy client's onchain `getOwner()` | Use the API key whose wallet address owns the policy client |
+| `{"AuthorizationFailed":"API key has no configured wallet address; cannot verify policy client ownership"}` | The key has no wallet address, so the gateway cannot check ownership | Use a key with a configured wallet address |
+| `{"InvalidRequest":"wasm_args count (<n>) must match the policy set (<m>); one entry per policy, empty for pure-Rego"}` | `wasm_args` length differs from the policy client's policy set | Send one entry per policy, in set order |
+| `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}` | The request has a `proof_cid` | Remove `proof_cid` |
+| `{"Timeout":<seconds>}` | The gateway stopped waiting for the operation | Retry the request |
+| `"RateLimitExceeded"` | Too many requests for this API key | Back off and retry |
 
 ## On-Chain Errors
 
@@ -64,6 +57,7 @@ This page documents all error codes and messages you may encounter when interact
 | `PolicyParamsTooLarge` | PolicyClient | Params exceed 65,536 bytes | Reduce encoded params |
 | `OnlyPolicyClientOwner` | PolicyClient | Unauthorized replacement | Submit through the current owner |
 | `PolicyDenied` | TaskManager | Aggregate decision is false | Inspect per-policy simulation results; do not execute |
+| `TaskAlreadyExists(bytes32)` | TaskManager | Duplicate task submission | Use a different nonce or wait for existing task |
 | `Not authorized intent sender` | PolicyClient | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent is the transaction sender |
 | `Chain ID does not match` | PolicyClient | Attestation was created for a different chain | Verify the intent specifies the correct `chainId` |
 | `Attestation expired` | TaskManager | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` in policy config |
@@ -86,24 +80,49 @@ When `_validateAttestationDirect()` reverts, the error can originate from the Po
 
 Use `cast sig "ErrorName()"` to compute selectors for new errors.
 
-## SDK Error Codes
+## SDK Errors
 
-| Code | Description |
-|------|-------------|
-| `MISSING_API_KEY` | API key was not provided when initializing wallet client actions |
+The SDK throws these error classes, all exported from `@newton-xyz/sdk`:
+
+| Class | Thrown when |
+|---|---|
+| `GatewayError` | A gateway JSON-RPC call fails. See [GatewayError](#gatewayerror) |
+| `SDKError` | The SDK rejects an argument or a gateway response. `code` is an `SDKErrorCode` |
+| `DelegatorError` | A newton-delegator call fails. See [Delegated Intents](/developers/guides/delegated-intents) |
+| `MagicRPCError` | The Newton Wallet popup returns an error, or the user closes it |
+
+Other failures, such as an unsupported chain, a missing contract address or a task that fails evaluation, throw a plain `Error` whose message names the cause.
+
+### GatewayError
+
+| Property | Type | Description |
+|---|---|---|
+| `method` | `string` | The JSON-RPC method, for example `newt_createTask` |
+| `status` | `number` | HTTP status of the response |
+| `code` | `string` | The gateway's error variant, for example `AuthorizationFailed` or `RateLimitExceeded`. `http_error` for an error status without a JSON-RPC body, such as the empty-body 401 for an unknown API key. `malformed_response` for a success status whose body has no `result` |
+| `rawMessage` | `string` | The variant's message. For `http_error`, the first 4,096 characters of the response body, else the status text, else `empty body` |
+| `data` | `unknown` | The variant's value, for example the seconds waited for `Timeout`. For `malformed_response`, the response body |
+| `retryAfter` | `number \| undefined` | The `Retry-After` header in seconds. The gateway sends it with `ServiceOverloaded` |
+
+### SDKError Codes
+
+| Code | Thrown when |
+|---|---|
+| `MALFORMED_RESPONSE` | `evaluateIntentDirect` gets a `newt_createTask` result without a `task_response` |
+| `INVALID_ARGUMENT` | `simulatePolicyData` gets a `secrets` string that is not JSON, or `submitIntentAndSubscribe` gets an API key that a WebSocket subprotocol cannot carry |
 | `POPUP_ALREADY_EXISTS` | A Newton identity popup is already open |
-| `MALFORMED_RESPONSE` | Gateway returned an unparseable response |
-| `INVALID_ARGUMENT` | Invalid argument passed to an SDK method |
-| `EXTENSION_NOT_INITIALIZED` | Client extension was not properly initialized |
-| `INCOMPATIBLE_EXTENSIONS` | Conflicting client extensions detected |
-| `FAILED_TO_OPEN_POPUP` | Browser blocked or failed to open the Newton popup |
-| `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE` | Could not read native token balance from the chain |
+| `MISSING_CHAIN` | An identity link or unlink function gets a wallet client without a chain |
+| `MISSING_ACCOUNT` | An identity link or unlink function gets a wallet client without an account |
+| `INVALID_ADDRESS` | The SDK has no IdentityRegistry address for the wallet client's chain |
+
+`SDKErrorCode` also defines `MISSING_API_KEY`, `EXTENSION_NOT_INITIALIZED`, `INCOMPATIBLE_EXTENSIONS`, `FAILED_TO_OPEN_POPUP` and `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE`. The SDK does not throw them.
 
 ```ts twoslash
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import {
+  GatewayError,
   newtonWalletClientActions,
   SDKError,
   SDKErrorCode,
@@ -132,15 +151,15 @@ const request = {
 try {
   await walletClient.evaluateIntentDirect(request);
 } catch (error) {
-  if (error instanceof SDKError) {
-    switch (error.code) {
-      case SDKErrorCode.MissingApiKey:
-        // Provide an API key when initializing newtonWalletClientActions
-        break;
-      case SDKErrorCode.MalformedResponse:
-        // Check gateway connectivity and API key validity
-        break;
+  if (error instanceof GatewayError) {
+    // The gateway rejected the call: code is the error variant, status the HTTP status
+    if (error.code === 'RateLimitExceeded') {
+      // Back off and retry
     }
+  } else if (error instanceof SDKError && error.code === SDKErrorCode.MalformedResponse) {
+    // The gateway answered without a task response
+  } else if (error instanceof Error) {
+    // The task failed evaluation: error.message is the gateway's reason
   }
 }
 ```
@@ -149,12 +168,19 @@ try {
 
 | Status | Description |
 |--------|-------------|
-| 200 | Success (check JSON-RPC result for application-level errors) |
-| 401 | Unauthorized — invalid API key |
-| 403 | Forbidden — insufficient permissions |
-| 429 | Too Many Requests — rate limited |
-| 500 | Internal Server Error |
-| 502 | Bad Gateway — service unavailable |
+| 200 | Success. A method can still report a failed evaluation in its result, for example `status: "failed"` from `newt_createTask` or `success: false` from the simulate methods |
+| 400 | `InvalidRequest`, or a body that is not valid JSON |
+| 401 | `AuthenticationFailed`, for example when the request has no API key; an empty body when the key does not match any key |
+| 403 | `AuthorizationFailed`: the key lacks a permission or does not own the policy client |
+| 408 | The request ran past the server request timeout (30 seconds in the default configuration) |
+| 413 | The request body is larger than the gateway's body limit |
+| 415 | The request has no `Content-Type: application/json` header |
+| 422 | `IncompatiblePolicyVersion`, or a body that does not match the JSON-RPC request shape |
+| 429 | `RateLimitExceeded` |
+| 500 | `Internal`, `DatabaseError` and the other server-side variants |
+| 502 | `BadGateway` or `AllOperatorsFailed` |
+| 503 | `ServiceUnavailable`, `ServiceOverloaded` (with a `retry-after` header) or `CircuitBreakerOpen`; an empty body when the gateway could not look up the API key |
+| 504 | `Timeout` |
 
 ## Diagnostic Tools
 

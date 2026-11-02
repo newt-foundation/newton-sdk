@@ -79,21 +79,20 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 **Fix:** Request a fresh attestation and submit it before expiration. Ensure the `chainId` in your intent matches the chain where the PolicyClient is deployed.
 :::
 
-:::details[PolicyNotFound (-32617) — policy not found]
-**Cause:** The Gateway could not find the policy associated with the provided PolicyClient address.
+:::details[InvalidRequest: policy client has an empty policy set]
+**Cause:** `newt_createTask` and `newt_sendTask` read the policy set from the PolicyClient. A PolicyClient with no policies fails with HTTP 400 `{"InvalidRequest":"policy client 0x... has an empty policy set"}`. An address that is not a PolicyClient on the chain you are calling fails the read with HTTP 500 `{"Internal":"failed to read policy set from policy client 0x...: ..."}`.
 
 **Fix:** Verify:
-1. The PolicyClient address is correct and deployed on the expected chain
-2. The PolicyClient has a policy set (use `newton-cli policy-client status`)
-3. The PolicyClient is registered with the PolicyClientRegistry
+1. The PolicyClient address is correct and deployed on the chain you are calling
+2. The PolicyClient has a policy set (use `newton-cli policy-client show`)
 :::
 
-:::details[Unauthorized (-32615) — authentication failed]
-**Cause:** Your API key is missing, invalid, or lacks the required permission.
+:::details[AuthenticationFailed or AuthorizationFailed: API key rejected]
+**Cause:** A request without an API key gets HTTP 401 `{"AuthenticationFailed":"missing or invalid API key"}`. An unknown or revoked key gets HTTP 401 with an empty body. A key without the method's permission gets HTTP 403, for example `{"AuthorizationFailed":"RpcWrite permission required"}`.
 
 **Fix:**
-- Ensure your `Authorization: Bearer <key>` header is present
-- Check that your key has the required permission level (`rpc_read` for simulations, `rpc_write` for secret storage)
+- Send the key in an `Authorization: Bearer <key>` or `X-API-Key` header
+- Check that your key has the permission the method needs (`rpc_read` for simulations and reads, `rpc_write` for task submission and writes, `rpc` for both)
 - Verify the key has not been revoked
 :::
 
