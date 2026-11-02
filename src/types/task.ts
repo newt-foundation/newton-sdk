@@ -1,5 +1,6 @@
 import type { Address, Hex } from 'viem'
 import type { PolicySpec } from './policy'
+import type { SecureEnvelope } from './privacy'
 
 export type TaskId = Hex
 
@@ -15,24 +16,36 @@ export interface IntentFromParams {
 export interface SubmitEvaluationRequestParams {
   policyClient: Address
   intent: IntentFromParams
+  /**
+   * EIP-712 signature of the intent under the policy client's `eip712Domain()`. Identity policies need it: operators
+   * resolve identity for the recovered signer, which must equal `intent.from`, and skip identity data without it.
+   */
   intentSignature?: Hex
   quorumNumber?: Hex
   quorumThresholdPercentage?: number
   /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
   wasmArgs: Hex[]
-  timeout: number // in seconds
+  /**
+   * Sent as `timeout`, but the gateway does not apply it: it ends any HTTP request that runs past its server request
+   * timeout (30 seconds by default) with a 408.
+   */
+  timeout: number
+  /**
+   * @deprecated Not sent: the gateway has no such field. Operators resolve identity from every domain linked to the
+   * intent signer, recovered from `intentSignature`.
+   */
   identityDomain?: Hex
-  /** Encrypted data reference UUIDs for privacy-preserving evaluation */
+  /** @deprecated Not sent: the gateway has no dual-signature privacy path. Ephemeral data goes inline in `wasmArgs`. */
   encryptedDataRefs?: string[]
-  /** User Ed25519 signature for privacy authorization (hex-encoded) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   userSignature?: string
-  /** Application Ed25519 signature for privacy authorization (hex-encoded) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   appSignature?: string
-  /** User Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   userPublicKey?: string
-  /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   appPublicKey?: string
-  /** IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation */
+  /** @deprecated The gateway rejects any value: zkTLS proof verification is unavailable. */
   proofCid?: string
   /** Include ABI-encoded validateAttestationDirect calldata in the response */
   includeValidateCalldata?: boolean
@@ -116,16 +129,21 @@ export enum TaskStatus {
   AttestationExpired = 'AttestationExpired',
 }
 
+/** The gateway's `BlsAggregationServiceResponse`. BN254 points are their uncompressed bytes. */
 export interface AggregationResponse {
   non_signer_quorum_bitmap_indices: number[]
   non_signer_stake_indices: number[][]
+  non_signers_operators_ids: Hex[]
   non_signers_pub_keys_g1: number[][]
   quorum_apk_indices: number[]
   quorum_apks_g1: number[][]
   signers_agg_sig_g1: { g1_point: number[] }
   signers_apk_g2: number[]
-  total_stake_indices: number[]
+  signers_count: number
   task_created_block: number
+  task_id: Hex
+  task_response_digest: Hex
+  total_stake_indices: number[]
 }
 
 export interface Task {
@@ -151,32 +169,16 @@ export interface Task {
   taskId: Hex
 }
 
-/** PolicyData item for newt_simulateTask policy_task_data.policyData */
-export interface SimulateTaskPolicyData {
-  wasmArgs: Hex
-  data: Hex
-  expireBlock: number
-}
-
-/** PolicyTaskData for newt_simulateTask */
-export interface SimulateTaskPolicyTaskData {
-  policyId: Hex
-  policyAddress: Address
-  policy: Hex
-  policyData: SimulateTaskPolicyData[]
-}
-
 export interface SimulateTaskParams {
+  policyClient: Address
+  chainId: number
   intent: IntentFromParams
-  policyTaskData: SimulateTaskPolicyTaskData
+  /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
+  wasmArgs: Hex[]
 }
 
-export interface SimulateTaskResult {
-  success: boolean
-  result: { allow?: boolean; reason?: string } | null
-  error: string | null
-  details: unknown
-}
+/** newt_simulateTask answers in the same shape as newt_simulatePolicy. */
+export type SimulateTaskResult = SimulatePolicyResult
 
 export interface SimulatePolicyParams {
   policyClient: Address
@@ -239,34 +241,30 @@ export interface UnregisterWebhookResult {
 
 export interface SimulatePolicyDataParams {
   policyAddress: Address
-  secrets?: string
+  /** The `envelope` that `createSecureEnvelope` returns, or its JSON string. */
+  secrets?: SecureEnvelope | string
   wasmArgs?: Hex
   chainId: number
 }
 
 export interface SimulatePolicyDataResult {
   success: boolean
-  policy_data: {
-    specifier: string
-    data: unknown
-    timestamp: number
-  } | null
+  /** The PolicyData WASM's JSON output on success, `null` on failure. */
+  policy_data: unknown
   error: string | null
 }
 
 export interface SimulatePolicyDataWithClientParams {
   policyAddress: Address
   policyClient: Address
+  chainId: number
   wasmArgs?: Hex
 }
 
 export interface SimulatePolicyDataWithClientResult {
   success: boolean
-  policy_data: {
-    specifier: string
-    data: unknown
-    timestamp: number
-  } | null
+  /** The PolicyData WASM's JSON output on success, `null` on failure. */
+  policy_data: unknown
   error: string | null
 }
 
@@ -279,11 +277,13 @@ export interface OperatorError {
   retryable: boolean
 }
 
+/** The `newt_createTask` result. A failed task has `status: 'failed'`, `error` set and nulls elsewhere. */
 export interface GatewayCreateTaskResult {
-  aggregation_response: AggregationResponse
+  bls_aggregation_result: AggregationResponse | null
   error: string | null
-  expiration: number
-  reference_block: number
+  /** Always `null`: read `AttestationValidator.attestationExpirations(taskId)` for the onchain expiry. */
+  expiration: null
+  reference_block: number | null
   status: 'success' | 'failed'
   task: Task
   task_id: Hex
@@ -312,11 +312,11 @@ export interface GatewayCreateTaskResult {
       policyId: Hex
     }>
     task_id: Hex
-  }
-  signature_data: Hex
-  /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
-  validate_calldata?: string
-  /** Per-operator error details when quorum fails */
+  } | null
+  signature_data: Hex | null
+  /** ABI-encoded calldata for validateAttestationDirect; `null` unless include_validate_calldata was true */
+  validate_calldata: string | null
+  /** Absent in practice: the gateway leaves it unset on every task response. */
   operator_errors?: OperatorError[]
   timestamp: number
 }

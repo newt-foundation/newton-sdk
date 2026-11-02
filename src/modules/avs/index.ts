@@ -1,5 +1,8 @@
 import { AttestationValidatorAbi, NewtonProverTaskManagerAbi } from '@core/abis/newtonAbi'
 import { GATEWAY_METHODS } from '@core/const'
+import { SDKError } from '@core/sdk-exceptions'
+import { SDKErrorCode } from '@core/types/core/exception-types'
+import type { SecureEnvelope } from '@core/types/privacy'
 import {
   type GatewayCreateTaskResult,
   type RegisterWebhookParams,
@@ -24,7 +27,7 @@ import {
 import { AvsHttpService } from '@core/utils/https'
 import { removeHexPrefix, sanitizeIntentForRequest } from '@core/utils/intent'
 import { convertLogToTaskResponse } from '@core/utils/task'
-import { getTaskEventsWebSocket } from '@core/utils/task-events'
+import { assertWebSocketApiKey, getTaskEventsUrl, getTaskEventsWebSocket } from '@core/utils/task-events'
 import {
   type Address,
   type PublicClient as Client,
@@ -36,15 +39,6 @@ import {
   publicActions,
 } from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
-
-export interface CreateTaskResult {
-  task_id: Hex
-  task_request: unknown
-  status: 'Completed' | 'Failed'
-  aggregation_response: unknown
-  timestamp: number
-  error?: unknown
-}
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId
@@ -210,7 +204,7 @@ async function submitEvaluationRequest(
   taskManagerAddress: Address,
   apiKey: string,
   gatewayApiUrlOverride?: string,
-): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> {
+): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions)
 
   const taskIdRef: TaskIdRef = {
@@ -228,21 +222,14 @@ async function submitEvaluationRequest(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs.map(removeHexPrefix),
     timeout: args.timeout,
-    direct_broadcast: true,
-    encrypted_data_refs: args.encryptedDataRefs ?? null,
-    user_signature: args.userSignature ?? null,
-    app_signature: args.appSignature ?? null,
-    user_pubkey: args.userPublicKey ?? null,
-    app_pubkey: args.appPublicKey ?? null,
     proof_cid: args.proofCid ?? null,
     include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
-  if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new Error(`newt_createTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
-  const createTaskResult = res.result as CreateTaskResult
+  const createTaskResult = res.result as GatewayCreateTaskResult
   taskIdRef.taskId = createTaskResult.task_id
 
   const builder: PendingTaskBuilder = {
@@ -263,7 +250,7 @@ async function submitEvaluationRequest(
   }
 
   return {
-    result: { taskId: res.result.task_id, txHash: res.result.tx_hash },
+    result: { taskId: createTaskResult.task_id },
     ...builder,
   }
 }
@@ -303,37 +290,36 @@ async function evaluateIntentDirect(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs.map(removeHexPrefix),
     timeout: args.timeout,
-    direct_broadcast: true,
-    identity_domain: args.identityDomain ?? null,
-    encrypted_data_refs: args.encryptedDataRefs ?? null,
-    user_signature: args.userSignature ?? null,
-    app_signature: args.appSignature ?? null,
-    user_pubkey: args.userPublicKey ?? null,
-    app_pubkey: args.appPublicKey ?? null,
     proof_cid: args.proofCid ?? null,
     include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
-  if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new Error(`newt_createTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
   const createTaskResult = res.result as GatewayCreateTaskResult
+  const gatewayTaskResponse = createTaskResult.task_response
+  if (!gatewayTaskResponse) {
+    throw new SDKError(
+      SDKErrorCode.MalformedResponse,
+      `newt_createTask returned status ${createTaskResult.status} without task_response for task ${createTaskResult.task_id}`,
+    )
+  }
   // policyTaskData passes through unflattened: the order is what operators signed over.
   const taskResponse = {
-    allowed: createTaskResult.task_response.allowed,
-    intent: createTaskResult.task_response.intent,
-    intentSignature: createTaskResult.task_response.intent_signature,
-    policyClient: createTaskResult.task_response.policy_client,
-    policyId: createTaskResult.task_response.policy_id,
-    policyTaskData: createTaskResult.task_response.policy_task_data,
+    allowed: gatewayTaskResponse.allowed,
+    intent: gatewayTaskResponse.intent,
+    intentSignature: gatewayTaskResponse.intent_signature,
+    policyClient: gatewayTaskResponse.policy_client,
+    policyId: gatewayTaskResponse.policy_id,
+    policyTaskData: gatewayTaskResponse.policy_task_data,
     taskId: createTaskResult.task_id,
-    initializationTimestamp: createTaskResult.task_response.initialization_timestamp,
+    initializationTimestamp: gatewayTaskResponse.initialization_timestamp,
   } as unknown as TaskResponse
 
   return {
     result: {
-      allowed: createTaskResult.task_response.allowed,
+      allowed: gatewayTaskResponse.allowed,
       task: createTaskResult.task,
       taskResponse,
       blsSignature: createTaskResult.signature_data,
@@ -360,6 +346,9 @@ async function submitIntentAndSubscribe(
   const walletWithPublic = walletClient.extend(publicActions)
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
+  const wsUrl = getTaskEventsUrl(avsHttpService.baseUrl)
+  // before newt_sendTask, so an unusable key cannot leave a task created with no subscription
+  assertWebSocketApiKey(apiKey, wsUrl)
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent)
   const requestBody = {
@@ -370,30 +359,23 @@ async function submitIntentAndSubscribe(
     quorum_threshold_percentage: args.quorumThresholdPercentage ?? null,
     wasm_args: args.wasmArgs.map(removeHexPrefix),
     timeout: args.timeout,
-    direct_broadcast: true,
-    encrypted_data_refs: args.encryptedDataRefs ?? null,
-    user_signature: args.userSignature ?? null,
-    app_signature: args.appSignature ?? null,
-    user_pubkey: args.userPublicKey ?? null,
-    app_pubkey: args.appPublicKey ?? null,
     proof_cid: args.proofCid ?? null,
   }
 
   const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)
-  if (res.error) throw res.error
-  if (res.result.error) throw new Error(res.result.error)
+  if (res.result.error) throw new Error(`newt_sendTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
   const submitIntentResult = res.result as SubmitIntentResult
 
-  const WS_URL = `wss://${new URL(avsHttpService.baseUrl).hostname}/ws`
-
-  const ws = getTaskEventsWebSocket(WS_URL, submitIntentResult.subscription_topic, apiKey)
+  const ws = getTaskEventsWebSocket(wsUrl, submitIntentResult.subscription_topic, apiKey)
 
   return { result: submitIntentResult, ws }
 }
 
 /**
- * Simulates task evaluation (newt_simulateTask). Forwards to an operator and returns allow/deny without executing on-chain.
+ * Evaluates the policy client's policy set on the gateway (newt_simulateTask) without creating a task or collecting
+ * operator signatures. The set is read at the current block, so it can differ from the set a past task was admitted
+ * with.
  */
 async function simulateTask(
   walletClient: WalletClient,
@@ -404,20 +386,12 @@ async function simulateTask(
   const walletWithPublic = walletClient.extend(publicActions)
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
+    policy_client: args.policyClient,
+    chain_id: args.chainId,
     intent: sanitizeIntentForRequest(args.intent),
-    policy_task_data: {
-      policyId: args.policyTaskData.policyId,
-      policyAddress: args.policyTaskData.policyAddress,
-      policy: args.policyTaskData.policy,
-      policyData: args.policyTaskData.policyData.map(pd => ({
-        wasmArgs: pd.wasmArgs,
-        data: pd.data,
-        expireBlock: pd.expireBlock,
-      })),
-    },
+    wasm_args: args.wasmArgs.map(removeHexPrefix),
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulateTask, requestBody, apiKey)
-  if (res.error) throw res.error
   return res.result as SimulateTaskResult
 }
 
@@ -440,8 +414,27 @@ async function simulatePolicy(
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : undefined,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, apiKey)
-  if (res.error) throw res.error
   return res.result as SimulatePolicyResult
+}
+
+/** newt_simulatePolicyData takes the envelope as a JSON object; callers of the old `string` type pass its JSON. */
+function parseSecureEnvelope(secrets: string): SecureEnvelope {
+  let envelope: SecureEnvelope
+  try {
+    envelope = JSON.parse(secrets)
+  } catch (error) {
+    throw new SDKError(
+      SDKErrorCode.InvalidArgument,
+      `simulatePolicyData secrets is not SecureEnvelope JSON: ${String(error)}`,
+    )
+  }
+  if (typeof envelope !== 'object' || envelope === null || Array.isArray(envelope)) {
+    throw new SDKError(
+      SDKErrorCode.InvalidArgument,
+      `simulatePolicyData secrets is not SecureEnvelope JSON: it parses to ${Array.isArray(envelope) ? 'an array' : String(envelope)}`,
+    )
+  }
+  return envelope
 }
 
 /**
@@ -457,12 +450,11 @@ async function simulatePolicyData(
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
     policy_address: args.policyAddress,
-    secrets: args.secrets,
+    secrets: typeof args.secrets === 'string' ? parseSecureEnvelope(args.secrets) : args.secrets,
     wasm_args: args.wasmArgs,
     chain_id: args.chainId,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey)
-  if (res.error) throw res.error
   return res.result as SimulatePolicyDataResult
 }
 
@@ -479,11 +471,11 @@ async function simulatePolicyDataWithClient(
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const requestBody = {
     policy_address: args.policyAddress,
+    chain_id: args.chainId,
     policy_client: args.policyClient,
     wasm_args: args.wasmArgs,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyDataWithClient, requestBody, apiKey)
-  if (res.error) throw res.error
   return res.result as SimulatePolicyDataWithClientResult
 }
 
@@ -505,7 +497,6 @@ async function registerWebhook(
     failure_types: params.failureTypes ?? undefined,
   }
   const res = await avsHttpService.Post(GATEWAY_METHODS.registerWebhook, requestBody, apiKey)
-  if (res.error) throw res.error
   return res.result as RegisterWebhookResult
 }
 
@@ -519,7 +510,6 @@ async function unregisterWebhook(
 ): Promise<UnregisterWebhookResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.unregisterWebhook, {}, apiKey)
-  if (res.error) throw res.error
   return res.result as UnregisterWebhookResult
 }
 

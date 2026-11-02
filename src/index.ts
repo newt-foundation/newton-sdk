@@ -157,7 +157,7 @@ const newtonWalletClientActions =
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
+      ): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
 
       evaluateIntentDirect: (
@@ -675,5 +675,5 @@ export {
   uploadIdentityEncrypted,
 }
 export { registerWebhook, unregisterWebhook }
-export { SDKError, MagicRPCError, DelegatorError } from './sdk-exceptions'
+export { SDKError, MagicRPCError, DelegatorError, GatewayError } from './sdk-exceptions'
 export { SDKErrorCode, RPCErrorCode } from './types/core/exception-types'
