@@ -33,10 +33,9 @@ export type {
   SendTaskResponse,
   SimulateTaskRequest,
   SimulateTaskResponse,
-  PolicyDataInput,
+  PolicySimulationResult,
   SimulatePolicyRequest,
   SimulatePolicyResponse,
-  PolicyEvaluationResult,
   SimulatePolicyDataRequest,
   SimulatePolicyDataWithClientRequest,
   SimulatePolicyDataResponse,
@@ -54,8 +53,8 @@ export type {
   GetSecretsPublicKeyResponse,
   RegisterWebhookRequest,
   RegisterWebhookResponse,
-  UnregisterWebhookRequest,
   UnregisterWebhookResponse,
+  WebhookFailureType,
   TaskEventType,
   OperatorResponse,
   TaskUpdateData,
@@ -115,11 +114,13 @@ export interface NewtonSDK {
  * const result = await sdk.task.createTask({
  *   policyClient: "0x1111...",
  *   intent: { from: "0x...", to: "0x...", value: "0x0", data: "0x", chainId: "0xaa36a7", functionSignature: "0x" },
- *   proofCid: "bafybeig...",
  *   wasmArgs: { min_followers: 1000, twitter_username: "newton_protocol" },
- *   useTwoPhase: true,
  * });
+ * console.log(result.task_id, result.status);
  * ```
+ *
+ * `proofCid` is deprecated: the gateway answers any value with InvalidRequest
+ * "proof_cid is unsupported; zkTLS proof verification is unavailable".
  */
 export function createNewtonSDK(config: NewtonSDKConfig): NewtonSDK {
   const gateway = new GatewayClient(config);

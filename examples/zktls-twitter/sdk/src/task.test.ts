@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TaskManager } from "./task.js";
 import type { GatewayClient } from "./gateway.js";
-import type {
-  CreateTaskResponse,
-  JsonRpcResponse,
-  TaskIntent,
-  TaskUpdateEvent,
-} from "./types.js";
+import type { TaskIntent, TaskStatus, TaskUpdateEvent } from "./types.js";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -15,23 +10,35 @@ class MockWebSocket {
   static instances: MockWebSocket[] = [];
 
   readonly url: string;
+  readonly protocols: string | string[] | undefined;
   onopen: ((ev: unknown) => void) | null = null;
   onmessage: ((ev: { data: unknown }) => void) | null = null;
   onerror: ((ev: unknown) => void) | null = null;
   onclose: ((ev: unknown) => void) | null = null;
+  send = vi.fn();
   close = vi.fn(() => {
     this.onclose?.({});
   });
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url;
+    this.protocols = protocols;
     MockWebSocket.instances.push(this);
+  }
+
+  emitOpen(): void {
+    this.onopen?.({});
   }
 
   emitMessage(data: unknown): void {
     this.onmessage?.({
       data: typeof data === "string" ? data : JSON.stringify(data),
     });
+  }
+
+  /** Wraps the event the way the gateway does: an `update` frame whose `result` is the event. */
+  emitUpdate(event: TaskUpdateEvent): void {
+    this.emitMessage({ type: "update", subscription_id: "server-sub-id", result: event, error: null });
   }
 
   emitError(ev: unknown): void {
@@ -60,6 +67,22 @@ const intent: TaskIntent = {
   functionSignature: "0x",
 };
 
+const TOPIC = "ab".repeat(32);
+const TASK_ID = `0x${TOPIC}`;
+
+function taskEvent(status: TaskStatus, extra: Partial<TaskUpdateEvent["data"]> = {}): TaskUpdateEvent {
+  return {
+    event: "status_update",
+    task_id: TASK_ID,
+    timestamp: 123,
+    data: { status, operator_responses: [], progress: 50, ...extra },
+  };
+}
+
+function rpcResult(result: unknown): Response {
+  return new Response(JSON.stringify({ jsonrpc: "2.0", result, error: null, id: null }), { status: 200 });
+}
+
 describe("TaskManager", () => {
   let manager: TaskManager;
 
@@ -73,56 +96,35 @@ describe("TaskManager", () => {
   });
 
   describe("createTask", () => {
-    it("accepts wasmArgs as an object and hex-encodes it", async () => {
-      const successResponse: JsonRpcResponse<CreateTaskResponse> = {
-        jsonrpc: "2.0",
-        id: 1,
-        result: {
-          taskId: 1,
-          status: "success",
-          timestamp: Date.now(),
-        },
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => successResponse,
-      });
+    it("hex-encodes an object wasmArgs into a one-entry wasm_args list", async () => {
+      mockFetch.mockResolvedValueOnce(rpcResult({ task_id: TASK_ID, status: "success", timestamp: 1 }));
 
       await manager.createTask({
         policyClient: "0x1111111111111111111111111111111111111111",
         intent,
         wasmArgs: { min_followers: 1000, twitter_username: "newton_protocol" },
-        useTwoPhase: true,
         proofCid: "bafytest",
       });
 
       const [, fetchInit] = mockFetch.mock.calls[0];
-      const body = JSON.parse(fetchInit.body);
-      const params = body.params;
+      const params = JSON.parse(fetchInit.body).params;
 
-      // wasm_args should be hex-encoded
-      expect(params.wasm_args).toMatch(/^0x[0-9a-f]+$/);
-
-      // Decode and verify
-      const hex = params.wasm_args.slice(2);
+      expect(params.wasm_args).toHaveLength(1);
+      expect(params.wasm_args[0]).toMatch(/^0x[0-9a-f]+$/);
+      const hex = params.wasm_args[0].slice(2);
       const bytes = new Uint8Array(
         hex.match(/.{1,2}/g)!.map((b: string) => parseInt(b, 16)),
       );
       const decoded = JSON.parse(new TextDecoder().decode(bytes));
       expect(decoded.min_followers).toBe(1000);
       expect(decoded.twitter_username).toBe("newton_protocol");
+      // Deprecated, but still sent so the gateway's rejection reaches the caller.
+      expect(params.proof_cid).toBe("bafytest");
+      expect(params).not.toHaveProperty("use_two_phase");
     });
 
-    it("passes string wasmArgs through unchanged", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          jsonrpc: "2.0",
-          id: 1,
-          result: { taskId: 1, status: "success", timestamp: Date.now() },
-        }),
-      });
+    it("sends a string wasmArgs as a one-entry list", async () => {
+      mockFetch.mockResolvedValueOnce(rpcResult({ task_id: TASK_ID, status: "success", timestamp: 1 }));
 
       await manager.createTask({
         policyClient: "0x1111111111111111111111111111111111111111",
@@ -131,19 +133,24 @@ describe("TaskManager", () => {
       });
 
       const [, fetchInit] = mockFetch.mock.calls[0];
-      const body = JSON.parse(fetchInit.body);
-      expect(body.params.wasm_args).toBe("0xdeadbeef");
+      expect(JSON.parse(fetchInit.body).params.wasm_args).toEqual(["0xdeadbeef"]);
+    });
+
+    it("sends one wasm_args entry per policy for an array", async () => {
+      mockFetch.mockResolvedValueOnce(rpcResult({ task_id: TASK_ID, status: "success", timestamp: 1 }));
+
+      await manager.createTask({
+        policyClient: "0x1111111111111111111111111111111111111111",
+        intent,
+        wasmArgs: ["0x", { a: 1 }],
+      });
+
+      const [, fetchInit] = mockFetch.mock.calls[0];
+      expect(JSON.parse(fetchInit.body).params.wasm_args).toEqual(["0x", "0x7b2261223a317d"]);
     });
 
     it("sets default timeout to 60 seconds", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          jsonrpc: "2.0",
-          id: 1,
-          result: { taskId: 1, status: "success", timestamp: Date.now() },
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ task_id: TASK_ID, status: "success", timestamp: 1 }));
 
       await manager.createTask({
         policyClient: "0x0000000000000000000000000000000000000000",
@@ -157,46 +164,100 @@ describe("TaskManager", () => {
   });
 
   describe("trackTask", () => {
-    it("subscribes to updates, forwards callbacks, resolves terminal events, and closes", async () => {
+    it("connects with the API key as a subprotocol and subscribes to the topic on open", () => {
+      manager.setWebSocket(MockWebSocket);
+      void manager.trackTask(TOPIC, undefined, 1_000).catch(() => {});
+      const ws = MockWebSocket.latest();
+
+      expect(ws.url).toBe("ws://localhost:8080/ws");
+      expect(ws.protocols).toEqual(["newton.v1", "newton.bearer.test-key"]);
+      expect(ws.send).not.toHaveBeenCalled();
+
+      ws.emitOpen();
+
+      expect(ws.send).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(ws.send.mock.calls[0][0])).toEqual({
+        type: "subscribe",
+        id: "sub-1",
+        method: TOPIC,
+        params: null,
+      });
+      ws.emitClose({});
+    });
+
+    it.each([
+      ["http://localhost:8080/rpc", "ws://localhost:8080/ws"],
+      ["https://gateway.example.com/base/rpc?x=1#frag", "wss://gateway.example.com/base/ws"],
+      ["https://gateway.example.com/", "wss://gateway.example.com/ws"],
+      ["https://gateway.example.com/jsonrpc", "wss://gateway.example.com/jsonrpc/ws"],
+    ])("derives the /ws URL from %s", (gatewayUrl, expected) => {
+      const custom = new TaskManager({ gatewayUrl, apiKey: "test-key" });
+      custom.setWebSocket(MockWebSocket);
+      void custom.trackTask(TOPIC, undefined, 1_000).catch(() => {});
+
+      expect(MockWebSocket.latest().url).toBe(expected);
+      MockWebSocket.latest().emitClose({});
+    });
+
+    it("unwraps update frames, ignores subscribed frames, resolves on a terminal status, and closes", async () => {
       manager.setWebSocket(MockWebSocket);
       const onUpdate = vi.fn();
-      const pending = manager.trackTask("task/topic", onUpdate, 1_000);
+      const pending = manager.trackTask(TOPIC, onUpdate, 1_000);
       const ws = MockWebSocket.latest();
-      const progress: TaskUpdateEvent = {
-        event: "status_update",
-        taskId: 7,
-        timestamp: 123,
-        data: {
-          status: "processing",
-          operatorResponses: [],
-          progress: 50,
-        },
-      };
-      const success: TaskUpdateEvent = {
-        event: "success",
-        taskId: 7,
-        timestamp: 124,
-        data: {
-          status: "success",
-          operatorResponses: [],
-          progress: 100,
-          result: { allow: true },
-        },
-      };
+      const progress = taskEvent("processing");
+      const success = taskEvent("success", { progress: 90, result: { task_id: TASK_ID } });
 
-      expect(ws.url).toBe("ws://localhost:8080/ws?topic=task%2Ftopic");
-      ws.emitMessage(progress);
-      ws.emitMessage(success);
+      ws.emitOpen();
+      ws.emitMessage({ type: "subscribed", id: "server-sub-id" });
+      ws.emitUpdate(progress);
+      ws.emitUpdate(success);
 
       await expect(pending).resolves.toEqual(success);
+      expect(onUpdate).toHaveBeenCalledTimes(2);
       expect(onUpdate).toHaveBeenNthCalledWith(1, progress);
       expect(onUpdate).toHaveBeenNthCalledWith(2, success);
       expect(ws.close).toHaveBeenCalledTimes(1);
     });
 
+    it("resolves with the failed event", async () => {
+      manager.setWebSocket(MockWebSocket);
+      const pending = manager.trackTask(TOPIC, undefined, 1_000);
+      const failed = taskEvent("failed", { error: "quorum not reached" });
+
+      MockWebSocket.latest().emitUpdate(failed);
+
+      await expect(pending).resolves.toEqual(failed);
+    });
+
+    it("rejects on a gateway error frame", async () => {
+      manager.setWebSocket(MockWebSocket);
+      const pending = manager.trackTask(TOPIC, undefined, 1_000);
+      const ws = MockWebSocket.latest();
+
+      ws.emitMessage({ type: "error", id: null, message: "Rate limit exceeded" });
+
+      await expect(pending).rejects.toThrow(`task ${TOPIC} subscription failed: Rate limit exceeded`);
+      expect(ws.close).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [undefined, "an API key is required"],
+      ["key with spaces", "the API key holds characters a WebSocket subprotocol cannot carry"],
+    ])("rejects without opening a socket when the API key is %s", async (apiKey, reason) => {
+      const custom = new TaskManager({ gatewayUrl: "http://localhost:8080", apiKey });
+      custom.setWebSocket(MockWebSocket);
+
+      const err = await custom.trackTask(TOPIC, undefined, 1_000).catch((e: Error) => e);
+
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toBe(`cannot track task ${TOPIC} at ws://localhost:8080/ws: ${reason}`);
+      if (apiKey) expect((err as Error).message).not.toContain(apiKey);
+      expect(MockWebSocket.instances).toHaveLength(0);
+    });
+
     it("rejects on WebSocket close before terminal event", async () => {
       manager.setWebSocket(MockWebSocket);
-      const pending = manager.trackTask("task/topic", undefined, 1_000);
+      const pending = manager.trackTask(TOPIC, undefined, 1_000);
       const ws = MockWebSocket.latest();
 
       ws.emitClose({ code: 1006, reason: "abnormal closure" });
@@ -207,21 +268,11 @@ describe("TaskManager", () => {
 
     it("ignores WebSocket error after terminal event", async () => {
       manager.setWebSocket(MockWebSocket);
-      const pending = manager.trackTask("task/topic", undefined, 1_000);
+      const pending = manager.trackTask(TOPIC, undefined, 1_000);
       const ws = MockWebSocket.latest();
-      const success: TaskUpdateEvent = {
-        event: "success",
-        taskId: 7,
-        timestamp: 124,
-        data: {
-          status: "success",
-          operatorResponses: [],
-          progress: 100,
-          result: { allow: true },
-        },
-      };
+      const success = taskEvent("success");
 
-      ws.emitMessage(success);
+      ws.emitUpdate(success);
       ws.emitError({ message: "socket failed" });
 
       await expect(pending).resolves.toEqual(success);
@@ -233,14 +284,14 @@ describe("TaskManager", () => {
     it("sends the task and tracks the returned subscription topic", async () => {
       const gateway = {
         sendTask: vi.fn(async () => ({
-          taskId: 9,
-          subscriptionTopic: "task-9",
+          task_id: TASK_ID,
+          subscription_topic: TOPIC,
           message: "queued",
           timestamp: 123,
         })),
       } as unknown as GatewayClient;
       const managerWithGateway = new TaskManager(
-        { gatewayUrl: "http://localhost:8080" },
+        { gatewayUrl: "http://localhost:8080", apiKey: "test-key" },
         gateway,
       );
       managerWithGateway.setWebSocket(MockWebSocket);
@@ -257,27 +308,20 @@ describe("TaskManager", () => {
 
       await vi.waitFor(() => expect(MockWebSocket.instances).toHaveLength(1));
       const ws = MockWebSocket.latest();
-      const success: TaskUpdateEvent = {
-        event: "success",
-        taskId: 9,
-        timestamp: 124,
-        data: {
-          status: "success",
-          operatorResponses: [],
-          progress: 100,
-        },
-      };
+      const success = taskEvent("success");
 
       expect(gateway.sendTask).toHaveBeenCalledWith(
         expect.objectContaining({
           policyClient: "0x1111111111111111111111111111111111111111",
           intent,
-          wasmArgs: "0x7b7d",
+          wasmArgs: ["0x7b7d"],
           timeout: 60,
         }),
       );
-      expect(ws.url).toBe("ws://localhost:8080/ws?topic=task-9");
-      ws.emitMessage(success);
+      expect(ws.url).toBe("ws://localhost:8080/ws");
+      ws.emitOpen();
+      expect(JSON.parse(ws.send.mock.calls[0][0]).method).toBe(TOPIC);
+      ws.emitUpdate(success);
 
       await expect(pending).resolves.toEqual(success);
       expect(onUpdate).toHaveBeenCalledWith(success);

@@ -38,10 +38,9 @@ export function buildTaskPreview(form: TaskFormState, proofCid?: string): TaskPr
   return {
     policyClient: form.policyClient,
     intent: buildIntent(form),
-    wasmArgs: encodeWasmArgs(wasmArgsJson),
+    wasmArgs: [encodeWasmArgs(wasmArgsJson)],
     wasmArgsJson,
     timeout: Number(form.timeout),
-    useTwoPhase: true,
     proofCid,
   };
 }

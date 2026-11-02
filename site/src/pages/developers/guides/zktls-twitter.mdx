@@ -23,6 +23,10 @@ The example flow:
 5. Submits a Newton task with `proofCid`, `wasmArgs`, and a transaction `intent`.
 6. Evaluates whether the account meets the configured follower threshold.
 
+:::warning
+The current Newton gateway does not verify zkTLS proofs, so steps 5 and 6 fail today. It rejects any task that carries `proofCid` (or `proof_cid`) with HTTP 400 and `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}`, which the example SDK throws as `RpcError`. Removing `proofCid` avoids the rejection, but the Twitter/X follower policy still cannot allow the task: it requires `input.data.tlsn_verified` to be true, which needs a verified proof.
+:::
+
 ## Prerequisites
 
 - Node.js 20+
@@ -93,19 +97,20 @@ const result = await sdk.task.createTask({
     chainId: "0xaa36a7",
     functionSignature: "0x",
   },
-  proofCid: "bafy...",
+  proofCid: "bafy...", // rejected by the current gateway, see the warning above
   wasmArgs: encodeWasmArgs({
     min_followers: 1000,
     twitter_username: "newton_protocol",
   }),
   timeout: 60,
-  useTwoPhase: true,
 });
 ```
 
 ## Proof retrieval and integrity
 
 The example proof client retrieves proof bytes by CID and verifies that the returned bytes match the CID multihash before returning them to callers. The same verification runs after `store()`: the SDK re-derives the CID locally from the bytes it sent and rejects any gateway response whose CID does not match. This keeps the client boundary stable while proof storage is still IPFS-backed and prevents a malicious or misconfigured gateway from routing downstream `proofCid` submissions to content the client never authored.
+
+The proof client sends `/v1/proof/store` and `/v1/proof/<cid>` to `attesterUrl`, or to the gateway URL without `/rpc` when `attesterUrl` is unset. The Newton gateway has no `/v1/proof` route, so set `attesterUrl` to the service that stores proofs.
 
 Verification rejects unknown multihash algorithms — only sha2-256 (multicodec `0x12`) is accepted. CIDs using other hash functions throw before any byte comparison runs.
 

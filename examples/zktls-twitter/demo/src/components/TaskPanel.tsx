@@ -23,8 +23,9 @@ export function TaskPanel({ proof, running, result, onSubmitTask }: TaskPanelPro
     <section className="content-card" aria-labelledby="task-title">
       <h2 id="task-title">Task submission</h2>
       <p>
-        Submit the proof CID through <code>newt_createTask</code> using SDK task manager options with
-        <code> useTwoPhase: true</code> and Twitter follower policy WASM args.
+        Submit the proof CID through <code>newt_createTask</code> with the Twitter follower policy WASM
+        args. The current gateway rejects <code>proof_cid</code> with InvalidRequest, so this step reports
+        that error.
       </p>
       <form onSubmit={submit}>
         <button type="submit" disabled={running || !proof}>

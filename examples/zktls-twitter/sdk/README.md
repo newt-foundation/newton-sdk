@@ -47,13 +47,19 @@ const result = await sdk.task.createTask({
     chainId: "0xaa36a7",
     functionSignature: "0x",
   },
-  proofCid: "bafybeig...",
+  proofCid: "bafybeig...", // rejected by the current gateway, see below
   wasmArgs: { min_followers: 1000, twitter_username: "newton_protocol" },
-  useTwoPhase: true,
 });
 
 console.log(result.status); // "success" | "failed"
 ```
+
+> **`proofCid` is rejected today.** The current gateway does not verify zkTLS
+> proofs. It answers any `proofCid` with HTTP 400 `InvalidRequest`
+> `proof_cid is unsupported; zkTLS proof verification is unavailable`, which
+> `createTask` and `sendTask` throw as `RpcError`. The SDK still sends the field
+> so that error reaches you. Without it, the Twitter/X follower policy denies,
+> because it needs a verified proof.
 
 ## API Reference
 
@@ -86,7 +92,7 @@ JSON-RPC client for the Newton gateway (`POST /rpc`). Wraps all `newt_*` methods
 const result = await sdk.gateway.createTask(request);
 
 // Asynchronous — returns subscription topic for WebSocket tracking
-const { taskId, subscriptionTopic } = await sdk.gateway.sendTask(request);
+const { task_id, subscription_topic } = await sdk.gateway.sendTask(request);
 
 // Replay with pre-assembled policy data
 const sim = await sdk.gateway.simulateTask(request);
@@ -99,10 +105,8 @@ const sim = await sdk.gateway.simulateTask(request);
 const result = await sdk.gateway.simulatePolicy({
   policyClient: "0x...",
   chainId: 84532,
-  policy: "package trading\nallow if { ... }",
   intent: { ... },
-  policyData: [{ policyDataAddress: "0x...", wasmArgs: "0x..." }],
-  policyParams: { max_limit: 100000 },
+  wasmArgs: ["0x..."], // one entry per policy in the client's policy set
 });
 
 // Direct WASM execution (caller-provided secrets)
@@ -125,15 +129,16 @@ await sdk.gateway.getConfidentialData({ dataRefId: "..." });
 #### Public Keys
 
 ```typescript
-const { publicKey } = await sdk.gateway.getPrivacyPublicKey();
-const { publicKey } = await sdk.gateway.getSecretsPublicKey();
+const { public_key: privacyKey } = await sdk.gateway.getPrivacyPublicKey();
+const { public_key: secretsKey } = await sdk.gateway.getSecretsPublicKey();
 ```
 
 #### Webhooks
 
 ```typescript
-await sdk.gateway.registerWebhook({ url: "https://...", policyClient: "0x..." });
-await sdk.gateway.unregisterWebhook({ webhookId: "..." });
+// The webhook belongs to the calling API key
+await sdk.gateway.registerWebhook({ url: "https://...", failureTypes: ["quorum_not_reached"] });
+await sdk.gateway.unregisterWebhook();
 ```
 
 ---
@@ -170,8 +175,13 @@ const results = await sdk.attester.reveal(sessionWsUrl, {
 
 IPFS proof storage and retrieval via the attester REST API.
 
-Today the demo stores the TLS proof on IPFS, passes the CID in `proofCid`, and
-lets the task flow resolve that CID during evaluation. The planned
+`ProofClient` calls `/v1/proof/store` and `/v1/proof/<cid>` on `attesterUrl`, or
+on the gateway URL without `/rpc` when `attesterUrl` is unset. The Newton gateway
+has no `/v1/proof` route, so set `attesterUrl` to the service that stores proofs.
+
+Today the demo stores the TLS proof on IPFS and passes the CID in `proofCid`. The
+current gateway rejects `proofCid` (see Quick Start), so no task resolves that
+CID during evaluation. The planned
 identity-integrated flow will allow `newt_uploadIdentityEncrypted` to accept an
 optional TLS proof so the gateway can verify authenticity before persisting
 identity data. Once that lands, `ProofClient` should be optional standalone proof
@@ -197,15 +207,14 @@ const result = await sdk.task.createTask({
   policyClient: "0x...",
   intent: { ... },
   wasmArgs: { min_followers: 1000 },  // Object auto-encoded to hex
-  proofCid: "bafy...",
-  useTwoPhase: true,
   timeout: 60,
 });
 
-// Async send + WebSocket tracking
+// Async send + WebSocket tracking. Tracking needs `apiKey` in the SDK config:
+// /ws takes it as the `newton.bearer.<key>` subprotocol.
 const response = await sdk.task.sendTask(options);
 const finalEvent = await sdk.task.trackTask(
-  response.subscriptionTopic,
+  response.subscription_topic,
   (event) => console.log(`Progress: ${event.data.progress}%`),
 );
 
@@ -213,9 +222,16 @@ const finalEvent = await sdk.task.trackTask(
 const event = await sdk.task.submitAndWait(options, onUpdate, timeoutMs);
 ```
 
-**`wasmArgs`** can be either:
-- A hex string (`"0x7b22..."`) — passed through as-is
-- A plain object (`{ min_followers: 1000 }`) — auto-encoded to hex
+**`wasmArgs`** holds one entry per policy in the client's policy set, in order.
+Each entry is either:
+- A hex string (`"0x7b22..."`), passed through as-is (`"0x"` for a policy without arguments)
+- A plain object (`{ min_followers: 1000 }`), auto-encoded to hex
+
+A single entry can be passed without the array; the SDK sends it as a one-entry
+`wasm_args` list.
+
+`trackTask` resolves on the first `update` whose `data.status` is `success`,
+`failed` or `timeout`, and rejects on a gateway `error` frame.
 
 ---
 
@@ -273,7 +289,8 @@ const sdk = createNewtonSDK({
 const { cid } = await sdk.proof.store(base64ProofData);
 console.log("Proof CID:", cid);
 
-// 2. Submit task with proof CID
+// 2. Submit task with proof CID. The current gateway rejects proofCid, so this
+//    throws RpcError (see Quick Start).
 const result = await sdk.task.createTask({
   policyClient: "0x1111111111111111111111111111111111111111",
   intent: {
@@ -288,21 +305,20 @@ const result = await sdk.task.createTask({
     min_followers: 1000,
     twitter_username: "newton_protocol",
   },
-  useTwoPhase: true,
   proofCid: cid,
   timeout: 60,
 });
 
-// 3. Check result
-if (result.status === "success") {
-  console.log("Verification passed! Task ID:", result.taskId);
-  console.log("Signature data:", result.signatureData);
+// 3. Check result. `status` says the task completed; the policy verdict is
+//    `task_response.allowed`.
+const allowed = (result.task_response as { allowed?: boolean } | undefined)?.allowed;
+if (result.status === "success" && allowed) {
+  console.log("Verification passed! Task ID:", result.task_id);
+  console.log("Signature data:", result.signature_data);
 } else {
-  console.error("Verification failed:", result.error);
-  if (result.operatorErrors) {
-    for (const err of result.operatorErrors) {
-      console.error(`  Operator ${err.operatorAddress}: ${err.error}`);
-    }
+  console.error("Verification failed:", result.error ?? "policy denied");
+  for (const err of result.operator_errors ?? []) {
+    console.error(`  Operator ${err.operator_address}: ${err.message}`);
   }
 }
 ```
@@ -324,6 +340,12 @@ The policy evaluates:
 | `apiKey` | — | API key (`Authorization: Bearer` header for gateway and attester calls) |
 | `timeout` | 30000 | Default request timeout in milliseconds |
 | `chainId` | — | Default chain ID |
+
+`AttesterClient` and `ProofClient` fall back to `gatewayUrl` without `/rpc`, but
+the Newton gateway serves only `/health`, `/objects/:cid`, `/rpc` and `/ws`, so
+set `attesterUrl`. `trackTask` and `submitAndWait` need `apiKey`: the SDK sends it
+to `/ws` as the `newton.bearer.<key>` WebSocket subprotocol. If that upgrade
+fails, see `docs/zktls-twitter/TROUBLESHOOTING.md` section 19.
 
 ## License
 

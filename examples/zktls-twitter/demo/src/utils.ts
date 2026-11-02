@@ -31,11 +31,7 @@ function readSuccessStatus(value: unknown): boolean {
   if (!record) return false;
 
   const status = record.status;
-  if (typeof status === "string" && status.toLowerCase() === "success") {
-    return true;
-  }
-
-  return Boolean(readSuccessStatus(record.taskResponse) || readSuccessStatus(record.aggregationResponse));
+  return typeof status === "string" && status.toLowerCase() === "success";
 }
 
 export function extractPolicyVisualization(
@@ -44,13 +40,7 @@ export function extractPolicyVisualization(
   proof?: ProofGenerationResult,
 ): PolicyVisualization {
   const root = readRecord(response) ?? {};
-  const candidates = [
-    root.result,
-    root.taskResponse,
-    readRecord(root.aggregationResponse)?.result,
-    readRecord(root.taskResponse)?.result,
-    root,
-  ];
+  const candidates = [root.result, root];
 
   for (const candidate of candidates) {
     const record = readRecord(candidate);
@@ -76,10 +66,12 @@ export function extractPolicyVisualization(
 
   if (proof && readSuccessStatus(response)) {
     const followersCount = proof.followerCount;
-    const allow = followersCount >= fallbackThreshold;
+    const meetsThreshold = followersCount >= fallbackThreshold;
+    // The operators' verdict, when the gateway returns one, outranks the local follower count.
+    const verdict = readRecord(root.task_response)?.allowed;
 
     return {
-      allow,
+      allow: typeof verdict === "boolean" ? verdict : meetsThreshold,
       followersCount,
       threshold: fallbackThreshold,
       server: proof.serverName,
@@ -87,7 +79,7 @@ export function extractPolicyVisualization(
         tlsn_proof_valid: true,
         correct_server: true,
         proof_is_fresh: true,
-        meets_follower_threshold: allow,
+        meets_follower_threshold: meetsThreshold,
       },
       raw: response,
     };

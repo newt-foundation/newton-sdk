@@ -16,7 +16,7 @@ function makeSdk(overrides: Partial<NewtonSDK> = {}): NewtonSDK {
       store: vi.fn(async () => ({ cid: "bafyproof", url: "ipfs://bafyproof" })),
     } as unknown as NewtonSDK["proof"],
     task: {
-      createTask: vi.fn(async () => ({ taskId: 7, status: "success", timestamp: 123 })),
+      createTask: vi.fn(async () => ({ task_id: `0x${"07".repeat(32)}`, status: "success", timestamp: 123 })),
     } as unknown as NewtonSDK["task"],
     ...overrides,
   };
@@ -125,7 +125,7 @@ describe("Newton zkTLS Twitter flow services", () => {
     expect(atob(storedProof)).toContain("newton-tlsn-attester-verification-v1");
   });
 
-  it("submits the Twitter followers policy task with proof CID and two-phase evaluation", async () => {
+  it("submits the Twitter followers policy task with the proof CID", async () => {
     const sdk = makeSdk();
 
     await submitTwitterFollowersTask(sdk, {
@@ -142,7 +142,6 @@ describe("Newton zkTLS Twitter flow services", () => {
       expect.objectContaining({
         policyClient: "0x1111111111111111111111111111111111111111",
         proofCid: "bafyproof",
-        useTwoPhase: true,
         intent: expect.objectContaining({
           chainId: "0x7a69",
         }),
