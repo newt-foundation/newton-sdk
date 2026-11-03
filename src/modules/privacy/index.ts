@@ -270,9 +270,9 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
 /**
  * Upload HPKE-encrypted secrets for a policy client's policy.
  *
- * The gateway decrypts the HPKE envelope, validates the plaintext against
- * the policy's secrets schema, and stores the envelope for operator-side decryption
- * during policy evaluation.
+ * The gateway forwards the HPKE envelope to an operator, which decrypts it and
+ * validates the plaintext against the policy's secrets schema. On success the
+ * gateway stores the envelope for operator-side decryption during policy evaluation.
  */
 export async function storeEncryptedSecrets(
   chainId: number,

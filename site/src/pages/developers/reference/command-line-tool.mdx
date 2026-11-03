@@ -1,21 +1,21 @@
 ---
 title: "Command Line Tool"
-description: "Newton CLI reference for deploying policies, managing policy data, uploading secrets, and submitting evaluation requests"
+description: "Newton CLI reference for deploying policies, uploading secrets, and submitting evaluation requests"
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Command Line Tool [Newton CLI reference for deploying policies, managing policy data, uploading secrets, and submitting evaluation requests]
+# Command Line Tool [Newton CLI reference for deploying policies, uploading secrets, and submitting evaluation requests]
 
 ## Overview
 
-The Newton CLI (`newton-cli`) is a command-line interface for interacting with the Newton Policy Protocol AVS. It provides tools for deploying policies, managing policy data, configuring policy clients, uploading encrypted secrets, managing privacy data, and submitting evaluation requests.
+The Newton CLI (`newton-cli`) is a command-line interface for interacting with the Newton Policy Protocol AVS. It provides tools for deploying policies, configuring policy clients, uploading encrypted secrets, managing privacy data, and submitting evaluation requests.
 
 With the Newton CLI you can:
 
 - **Generate CIDs** for policy files and upload them to IPFS via Pinata
-- **Deploy and simulate** policy data contracts and policy contracts
+- **Deploy and simulate** policies and their WASM oracles
 - **Configure policy clients** with parameters, expiration, and lifecycle management
 - **Upload encrypted secrets** for WASM data providers via HPKE
 - **Encrypt and upload privacy data** (identity, confidential, ephemeral)
@@ -281,7 +281,7 @@ newton-cli --chain-id 84532 policy-client transfer-ownership \
 
 ### Secrets
 
-Upload HPKE-encrypted secrets for WASM data providers that call `secrets::get()` at runtime. Secrets are scoped per `policy_data_address` — redeploying PolicyData creates a new contract, so you must re-upload secrets for the new address.
+Upload HPKE-encrypted secrets for WASM data providers that call `secrets::get()` at runtime. Secrets are scoped per chain, policy client and policy address, so a policy redeployed at a new address needs its secrets uploaded again.
 
 #### `upload`
 
@@ -293,15 +293,15 @@ Encrypts secrets client-side via HPKE and uploads the sealed envelope to the gat
 | --- | --- | --- |
 | `--secrets-file` | Yes | Path to JSON file containing key-value secrets |
 | `--policy-client` | Yes | PolicyClient contract address |
-| `--policy-data-address` | Yes | PolicyData contract address |
-| `--api-key` | Yes | Newton API key |
+| `--policy-address` | Yes | NewtonPolicy contract address; the secrets must match the schema its `secretsSchemaCid` points to |
+| `--api-key` | No | Newton API key with `RpcWrite` (falls back to `API_KEY`, then to an `RpcWrite` key of the logged-in dashboard user) |
 | `--chain-id` | Yes | Chain ID |
 | `--gateway-url` | No | Gateway RPC URL (auto-resolved from chain ID if omitted) |
 
 **Usage**
 
 ```bash
-# Create a secrets file matching your PolicyData's schema
+# Create a secrets file matching your policy's secrets schema
 cat > secrets.json << 'EOF'
 {
   "INDEXER_API_KEY": "sk-prod-xxxxxxxxxxxx",
@@ -313,7 +313,7 @@ EOF
 newton-cli --chain-id 84532 secrets upload \
   --secrets-file secrets.json \
   --policy-client 0x... \
-  --policy-data-address 0x... \
+  --policy-address 0x... \
   --api-key $NEWTON_API_KEY
 ```
 
@@ -590,7 +590,7 @@ A typical local-first workflow for integrating a new smart contract with Newton:
 | 1 | `newton-cli policy scaffold` | Create the policy source, schemas, fixtures, and deployment config |
 | 2 | `newton-cli policy build -p <dir>` | Validate and compile the policy artifacts |
 | 3 | `newton-cli policy simulate -p <dir>` | Prove at least one allow and one deny case locally |
-| 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy PolicyData + Policy after approval |
+| 4 | `newton-cli policy deploy -p <dir>` | Generate CIDs and deploy the policy after approval |
 | 5 | `forge build && forge test` | Build and adversarially test the application PolicyClient |
 | 6 | `forge script ... --broadcast` | Deploy the tested PolicyClient after approval |
 | 7 | `cast send ... setPolicies` | Configure ordered policies and params while the local deployer is owner |

@@ -263,7 +263,7 @@ async function storeEncryptedSecrets(
 ### Notes
 
 - Secrets are HPKE-encrypted client-side before upload — the plaintext never leaves your application
-- The gateway decrypts the envelope in memory to validate against the schema, then stores the envelope (not the plaintext)
+- The gateway never decrypts the envelope. It forwards it to an operator, which decrypts it in memory and checks it against the schema, and the gateway stores only the envelope
 - Operators decrypt the stored envelope locally during task evaluation — plaintext is never persisted by operators
 - Only the policy client owner (determined by `INewtonPolicyClient.getOwner()`) is authorized
 

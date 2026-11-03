@@ -620,7 +620,8 @@ const txHash = await walletClient.initialize({
   entrypoint: 'newton/policy/allow',
   policyCid: 'bafyrei...',
   schemaCid: 'bafyrei...',
-  policyData: ['0x...', '0x...'],
+  wasmCid: '', // empty for a pure-Rego policy
+  secretsSchemaCid: '', // empty unless wasmCid is set
   metadataCid: 'bafyrei...',
   owner: '0x...',
   policyBytes: await fetchPolicyBytes(policyCid),
@@ -635,7 +636,8 @@ type InitializePolicyArgs = {
   entrypoint: string;
   policyCid: string;
   schemaCid: string;
-  policyData: Address[];
+  wasmCid: string;
+  secretsSchemaCid: string;
   metadataCid: string;
   owner: Address;
 } & ({ policyCodeHash: Hex } | { policyBytes: Uint8Array });
@@ -649,15 +651,38 @@ initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 | ---------------- | ------------ | ----------------- | ------------------------------------------------------------------------ |
 | `factory`        | `Address`    | Yes               | Address of the deploying factory contract                                |
 | `entrypoint`     | `string`     | Yes               | Policy entrypoint path (e.g., `"newton/policy/allow"`)                   |
-| `policyCid`      | `string`     | Yes               | Content identifier (CID) of the policy WASM                              |
+| `policyCid`      | `string`     | Yes               | Content identifier (CID) of the Rego policy                              |
 | `schemaCid`      | `string`     | Yes               | Content identifier (CID) of the policy schema                            |
-| `policyData`     | `Address[]`  | Yes               | Array of PolicyData contract addresses                                   |
+| `wasmCid`        | `string`     | Yes               | CID of the policy's WASM oracle; empty string for a pure-Rego policy     |
+| `secretsSchemaCid` | `string`   | Yes               | CID of the schema for the oracle's secrets; empty string when the oracle needs none |
 | `metadataCid`    | `string`     | Yes               | Content identifier (CID) of the policy metadata                          |
 | `owner`          | `Address`    | Yes               | Owner address of the policy contract                                     |
 | `policyCodeHash` | `Hex`        | One of these two  | Pre-computed `keccak256` of the Rego policy bytes                        |
 | `policyBytes`    | `Uint8Array` | One of these two  | Raw Rego policy bytes; SDK computes `keccak256(policyBytes)` for you     |
 
+A non-empty `secretsSchemaCid` with an empty `wasmCid` reverts with `SecretsSchemaWithoutWasm()`.
+
 **Returns:** `` `0x${string}` `` -- The transaction hash.
+
+---
+
+### setSecretsSchemaCid
+
+Sets the CID of the schema for the policy's oracle secrets. Only the policy contract owner can call it. A non-empty CID on a policy without a WASM oracle reverts with `SecretsSchemaWithoutWasm()`; an empty string clears the schema.
+
+```ts
+const txHash = await walletClient.setSecretsSchemaCid({
+  secretsSchemaCid: 'bafyrei...',
+});
+```
+
+**Signature:**
+
+```ts
+setSecretsSchemaCid(args: {
+  secretsSchemaCid: string;
+}): Promise<`0x${string}`>
+```
 
 ---
 
@@ -1405,7 +1430,7 @@ getPolicyConfig(args: {
 
 #### getPolicyCid
 
-Returns the content identifier (CID) of the policy WASM stored in the contract.
+Returns the content identifier (CID) of the Rego policy stored in the contract.
 
 ```ts
 const cid = await publicClient.getPolicyCid();
@@ -1467,25 +1492,41 @@ getEntrypoint(): Promise<string>
 
 ---
 
-#### getPolicyData
+#### getWasmCid
 
-Returns the array of PolicyData contract addresses associated with the policy.
+Returns the CID of the policy's WASM oracle, or an empty string for a pure-Rego policy.
 
 ```ts
-const addresses = await publicClient.getPolicyData();
+const cid = await publicClient.getWasmCid();
 ```
 
 **Signature:**
 
 ```ts
-getPolicyData(): Promise<Address[]>
+getWasmCid(): Promise<string>
+```
+
+---
+
+#### getSecretsSchemaCid
+
+Returns the CID of the schema for the oracle's secrets, or an empty string when the oracle needs no secrets.
+
+```ts
+const cid = await publicClient.getSecretsSchemaCid();
+```
+
+**Signature:**
+
+```ts
+getSecretsSchemaCid(): Promise<string>
 ```
 
 ---
 
 #### isPolicyVerified
 
-Returns whether the policy contract has been verified.
+Deprecated. The protocol no longer verifies policies, and the AVS serves tasks for any deployed policy. The contract keeps the function for ABI stability, and it always returns `true`.
 
 ```ts
 const verified = await publicClient.isPolicyVerified();
@@ -1543,7 +1584,6 @@ The following methods read individual fields from the policy contract. They all 
 | `factory()`                          | `Promise<Address>`          | Returns the factory address that deployed the contract |
 | `entrypoint()`                       | `Promise<string>`           | Returns the policy entrypoint path                     |
 | `clientToPolicyId({ client })`       | `Promise<\`0x\$string\`\>\` | Maps a client address to its policy ID                 |
-| `policyData({ index })`              | `Promise<Address>`          | Returns the PolicyData contract address at the given index |
 | `policyCid()`                        | `Promise<string>`           | Returns the policy CID                                 |
 | `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
 | `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
