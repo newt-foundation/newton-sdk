@@ -47,13 +47,20 @@ sequenceDiagram
 3. **Commit phase:** Gateway broadcasts the canonical consensus data via `newt_evaluateAndSign`. Operators evaluate the policy using identical data and BLS-sign the result.
 4. **Aggregation:** Gateway collects BLS signatures until quorum is reached and produces the aggregate proof.
 
+### Threshold Decryption
+
+Identity, confidential, and ephemeral data are encrypted to a threshold key. Each operator holds one share of it, and any `t` of the `n` shares are enough to decrypt. Decryption happens inside the two phases:
+
+1. **Prepare phase:** Each operator computes a partial decryption of every encrypted input, with a DLEQ proof that the partial matches the operator's public share, and encrypts the partial separately to each peer operator. To collect the `t` partials that decryption needs, the Gateway raises the Prepare quorum to at least `t/n` of operator stake.
+2. **Commit phase:** The Gateway relays the encrypted partials to the operators. It cannot read them and never decrypts. Each operator checks the proof on every partial it receives, combines at least `t` valid partials, decrypts, and evaluates the policy before signing.
+
 ## Median Consensus
 
 For data oracles that return numeric values (e.g., price feeds), Newton uses **median consensus** with a configurable tolerance:
 
 1. Each operator fetches data independently during the Prepare phase
 2. The Gateway collects all responses and computes the median for each numeric field
-3. If any operator's value exceeds the tolerance threshold from the median, consensus **fails** with `ToleranceExceeded`
+3. If any operator's value exceeds the tolerance threshold from the median, consensus **fails** and the task returns a gateway error
 4. If all values are within tolerance, the Gateway normalizes responses to use median values
 
 ```
@@ -68,17 +75,17 @@ All within |value - median| / median <= 10% → Consensus value: 101.0
 ```
 
 :::note
-Values outside the tolerance cause a `ToleranceExceeded` error — operators are not silently excluded.
+Values outside the tolerance fail the task with a gateway error. Operators are not silently excluded.
 :::
 
 ## Configuration Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `two_phase_prepare_timeout_ms` | 30000 | Prepare phase timeout in milliseconds |
-| `two_phase_commit_timeout_ms` | 15000 | Commit phase timeout in milliseconds |
-| `two_phase_consensus_tolerance_pct` | 10.0 | Tolerance percentage for median consensus |
-| `quorum_threshold_percentage` | 67 | Minimum percentage of operator stake required |
+| `prepare_timeout_ms` | 30000 | Prepare phase timeout in milliseconds |
+| `evaluate_timeout_ms` | 15000 | Commit phase timeout in milliseconds |
+| `consensus_tolerance_pct` | 10 | Tolerance percentage for median consensus (integer) |
+| `quorum_threshold_percentage` | Set per deployment | Minimum percentage of operator stake required. A request that asks for less is raised to the deployment's minimum |
 | `quorum_number` | `"00"` | Quorum numbers to use (hex bytes) |
 
 ## BLS Signature Aggregation
@@ -88,7 +95,7 @@ Newton uses the **alt_bn128** curve (EIP-196/EIP-197) for BLS signature aggregat
 ### How It Works
 
 1. Each operator holds a BLS private key registered with the AVS
-2. Operators sign the task response hash with their individual key
+2. Operators sign the [consensus digest](#consensus-digest) with their individual key (on destination chains, the EIP-712 digest of a `BN254Certificate` whose `messageHash` is the consensus digest)
 3. The Gateway aggregates individual signatures into a single aggregate signature
 4. The on-chain verifier validates the aggregate signature against the registered operator set
 
@@ -114,6 +121,7 @@ Newton's security is backed by EigenLayer restaked ETH:
 - Operators must stake ETH (via EigenLayer restaking) to participate
 - Malicious behavior (incorrect evaluations) can be proven and results in **slashing** of staked ETH
 - The economic cost of attacking the network exceeds the potential gain
+- On mainnet, the operator set is permissioned: only vetted operators on the Newton operator allowlist can register, and the allowlist changes only through epoch governance
 
 ### Challenge Window
 
@@ -130,7 +138,6 @@ Operators can be slashed for:
 | Violation | Description |
 |-----------|-------------|
 | **Incorrect evaluation** | Signing a result that provably contradicts the policy |
-| **Equivocation** | Signing conflicting results for the same task |
 
 ### Privacy Guarantees
 
