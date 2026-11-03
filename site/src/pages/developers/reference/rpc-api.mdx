@@ -368,7 +368,7 @@ For a manual fallback, build the domain from the values the `NewtonPolicyClient`
 | `reference_block` | `Number` | Block number when response was prepared (if success) |
 | `expiration` | `null` | Always `null`. The onchain expiry anchors at the block of the transaction that settles the task, which the gateway cannot know yet. Read `AttestationValidator.attestationExpirations(taskId)` for the value |
 | `validate_calldata` | `String` | ABI-encoded calldata for `validateAttestationDirect` (`null` unless `include_validate_calldata` was true) |
-| `operator_errors` | `Array` | Not sent by the current gateway. Evaluation runs in-process, so there are no per-operator errors to report |
+| `operator_errors` | `Array` | Not sent by the current gateway. Read the failure reason from `error` |
 | `error` | `String` | Error message (if failed) |
 | `timestamp` | `Number` | Unix timestamp |
 
@@ -469,7 +469,7 @@ To look the task up later — its evaluation result, operator errors, and the po
     "reference_block": null,
     "expiration": null,
     "validate_calldata": null,
-    "error": "in-process commit produced no signed responses",
+    "error": "BLS aggregation failed: ...",
     "timestamp": 1705123456
   },
   "error": null,
@@ -578,7 +578,7 @@ The gateway ignores your `id` and confirms with a subscription ID of its own. Us
 }
 ```
 
-Each update carries a `TaskUpdateEvent` in `result`. Every event is `status_update`; read `data.status` for the stage. The first update is `processing` at progress 5, and the last in-process update is `success` at progress 90 with the BLS aggregation result:
+Each update carries a `TaskUpdateEvent` in `result`. Every event is `status_update`; read `data.status` for the stage. The first update is `processing` at progress 5, and the last is `success` at progress 90, sent once the gateway has queued the task for onchain submission, with the BLS aggregation result:
 
 ```json
 {
@@ -979,9 +979,9 @@ When no secrets are stored for the client and policy, the secrets host call your
 
 ### newt_simulatePolicy
 
-Runs the configured policy set's optional WASM oracles and then Rego in the gateway's in-process evaluator. Unlike `newt_simulateTask`, `wasm_args` contains oracle **inputs**. Policies and the client must already be deployed and configured. Parameters come from the client's set; this endpoint no longer accepts inline Rego, `policy_data`, `policy_params`, or an `entrypoint` override.
+Runs the configured policy set's optional WASM oracles and then Rego. Unlike `newt_simulateTask`, `wasm_args` contains oracle **inputs**. Policies and the client must already be deployed and configured. Parameters come from the client's set; this endpoint no longer accepts inline Rego, `policy_data`, `policy_params`, or an `entrypoint` override.
 
-**Permission:** `RpcRead`; on-chain client ownership is checked, with the controlled read-only admin-key exception described above. The in-process evaluator must be configured. This endpoint does not produce quorum signatures or execute an application transaction.
+**Permission:** `RpcRead`; on-chain client ownership is checked, with the controlled read-only admin-key exception described above. This endpoint does not produce quorum signatures or execute an application transaction.
 
 | Parameter | Type | Required | Meaning |
 |---|---|---|---|

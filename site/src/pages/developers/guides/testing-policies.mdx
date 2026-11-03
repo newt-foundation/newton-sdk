@@ -176,7 +176,7 @@ See [Deploying with CLI](/developers/guides/deploying-with-cli) for the current 
 
 ## Simulate the full policy set
 
-After deploying policies and configuring `setPolicies`, call SDK `simulatePolicy` with `policyClient`, `chainId`, `intent`, and an ordered `wasmArgs` array. The gateway runs each policy's optional WASM and then Rego in-process. It reads params and entrypoints from the configured set; do not send inline Rego or `policy_data` lists.
+After deploying policies and configuring `setPolicies`, call SDK `simulatePolicy` with `policyClient`, `chainId`, `intent`, and an ordered `wasmArgs` array. The gateway runs each policy's optional WASM and then Rego. It reads params and entrypoints from the configured set; do not send inline Rego or `policy_data` lists.
 
 ```typescript
 const simulation = await client.simulatePolicy({
