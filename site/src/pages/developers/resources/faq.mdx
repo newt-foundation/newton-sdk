@@ -68,15 +68,14 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 **Fix:** Wait for the existing task to complete, or modify the intent (e.g., change the nonce or timestamp) to produce a different hash.
 :::
 
-:::details[InvalidAttestation — on-chain verification failed]
-**Cause:** The attestation proof failed BLS signature verification on-chain.
+:::details[InvalidAttestation - your contract rejected the attestation]
+**Cause:** `InvalidAttestation()` is not a Newton contract error. Policy client contracts, including the examples in these docs, define it and revert with it when `_validateAttestation` or `_validateAttestationDirect` returns `false`.
 
 **Common reasons:**
-- The attestation has expired (check `expiration` field)
-- The operator set has rotated since the attestation was produced
-- The attestation was produced for a different chain
+- In direct mode the policy denied the intent: `_validateAttestationDirect` returns the quorum-signed `taskResponse.allowed`
+- The task was challenged, and the TaskManager returns `false` for a challenged task
 
-**Fix:** Request a fresh attestation and submit it before expiration. Ensure the `chainId` in your intent matches the chain where the PolicyClient is deployed.
+**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
 :::
 
 :::details[InvalidRequest: policy client has an empty policy set]
