@@ -17,7 +17,7 @@ jobs:
     name: SDK style/security checks & tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # The published SDK supports Node >= 20 (package.json engines); validate on that floor.
       - name: Install Node.js
@@ -76,7 +76,7 @@ jobs:
     name: Docs site build
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # The Vocs docs toolchain requires Node >= 22 (site/.nvmrc, site/package.json engines).
       - name: Install Node.js
