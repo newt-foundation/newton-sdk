@@ -59,7 +59,7 @@ linkApp(args: {
   appWalletAddress: Address
   appClientAddress: Address
   appIdentityDomain: Hex
-}): Promise<unknown>
+}): Promise<LinkAppResult>
 ```
 
 **Parameters:**
@@ -73,13 +73,11 @@ linkApp(args: {
 **Example:**
 
 ```typescript
-import type { Address, Hex } from 'viem'
-
-const link = (await walletClient.linkApp({
+const link = await walletClient.linkApp({
   appWalletAddress: '0xUserWallet...',
   appClientAddress: '0xYourPolicyClient...',
   appIdentityDomain: '0xabc123...',
-})) as { signature: Hex; identityDomains: Hex[]; nonce: string; deadline: number; identityOwner: Address }
+})
 
 // Sent from the user's app wallet, which becomes the linked client user
 await walletClient.linkIdentityAsUser({

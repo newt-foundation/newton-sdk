@@ -58,6 +58,7 @@ import type {
   SignDelegatorApprovalParams,
 } from './types/delegator'
 import type {
+  LinkAppResult,
   LinkIdentityAsSignerAndUserParams,
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
@@ -280,8 +281,8 @@ const newtonWalletClientActions =
         appWalletAddress: Address
         appClientAddress: Address
         appIdentityDomain: Hex
-      }): Promise<unknown> => {
-        return popupRequest(
+      }): Promise<LinkAppResult> => {
+        return popupRequest<LinkAppResult>(
           {
             method: NewtonIdpPayloadMethod.LinkApp,
             id: getPayloadId(),

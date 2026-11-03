@@ -804,7 +804,7 @@ linkApp(args: {
   appWalletAddress: Address;
   appClientAddress: Address;
   appIdentityDomain: Hex;
-}): Promise<unknown>
+}): Promise<LinkAppResult>
 ```
 
 ---
@@ -2797,6 +2797,18 @@ interface OperatorError {
 :::
 
 ### Identity Types
+
+:::details[LinkAppResult]
+  ```ts
+  interface LinkAppResult {
+    signature: Hex;
+    identityDomains: Hex[];
+    nonce: string; // pass as BigInt(nonce)
+    deadline: number; // pass as BigInt(deadline)
+    identityOwner: Address;
+  }
+  ```
+:::
 
 :::details[LinkIdentityAsSignerAndUserParams]
   ```ts
