@@ -133,8 +133,8 @@ When your smart contract receives an attestation, you validate it using one of t
 
 | Method | Function | Trade-off |
 |--------|----------|-----------|
-| **Standard** | `_validateAttestation(attestation, proof)` | Checks an attestation already committed by the aggregator. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
-| **Direct** | `_validateAttestationDirect(attestation, proof)` | Verifies the task, response, and BLS signatures directly on-chain. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
+| **Standard** | `_validateAttestation(attestation)` | Checks an attestation already committed by the aggregator. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
+| **Direct** | `_validateAttestationDirect(task, taskResponse, signatureData)` | Verifies the task, response, and BLS signatures directly onchain. See [Smart Contract Integration](/developers/guides/smart-contract-integration). |
 
 ## Supported Chains
 

@@ -259,7 +259,7 @@ A task that fails evaluation throws a plain `Error` with the gateway's reason. A
 
 ### evaluateIntentDirect
 
-Evaluates an intent directly through the gateway without waiting for on-chain task response confirmation. Results are intended for use with `validateAttestationDirect` on `NewtonPolicyClient` (`NewtonProverTaskManagerShared`).
+Evaluates an intent directly through the gateway without waiting for onchain task response confirmation. Pass the results to your policy client's `_validateAttestationDirect`, which calls the Task Manager's `validateAttestationDirect` (`NewtonProverTaskManagerShared`).
 
 ```ts
 const domain = await readEip712Domain(policyClient, publicClient);
@@ -483,7 +483,7 @@ interface SubmitIntentResult {
 ```
 
 :::note
-Use `submitIntentAndSubscribe` when you need on-chain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via `PolicyClient.validateAttestationDirect`.
+Use `submitIntentAndSubscribe` when you need onchain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via your policy client's `_validateAttestationDirect`.
 :::
 
 ---
@@ -787,7 +787,7 @@ registerUserData(args: {
 
 #### linkApp
 
-Links an application to the user's Newton identity.
+Opens the Newton identity popup, where the user signs a link between their identity and your policy client. Resolves with `{ signature, identityDomains, nonce, deadline, identityOwner }` and sends no transaction: submit the link with [`linkIdentityAsUser`](#linkidentityasuser) from the user's app wallet (`appWalletAddress`).
 
 ```ts
 await walletClient.linkApp({

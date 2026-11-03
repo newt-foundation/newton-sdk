@@ -175,7 +175,7 @@ export async function POST(request: Request) {
       intent: body.intent,
       intentSignature: body.intentSignature,
       wasmArgs: body.wasmArgs,
-      timeout: 30, // seconds
+      timeout: 30, // required by the type; the gateway does not apply it
     });
 
     return new Response(JSON.stringify(result, (_, value) =>
@@ -261,9 +261,9 @@ The SDK normalizes the response used above. If you call the JSON-RPC gateway dir
 | `401` or gateway error | Missing, invalid, or server-inaccessible API key | Verify `NEWTON_API_KEY` is present without printing it |
 | EIP-712 signature rejected | Wrong domain or changed intent fields | Read `eip712Domain()` and submit the exact signed intent |
 | Policy unexpectedly denies | Incorrect `functionSignature`, calldata, params, or WASM args | Compare with the policy's local allow fixture |
-| `InvalidAttestation` | PolicyClient, TaskManager, policy ID, or bound arguments differ | Verify deployed getters and Solidity intent checks |
+| `InvalidAttestation` | Your contract's validation call returned `false`: the task was challenged, or the policy denied the intent | For a denial, read the per-policy results. Policy ID, intent sender, and chain ID mismatches revert with `Unauthorized(reason)` instead; decode other selectors with the [error reference](/developers/reference/error-reference#on-chain-error-selectors) |
 | Attested call reverts | Downstream call failed or approval is missing | Inspect the PolicyClient and target revert reason |
-| Timeout | Gateway did not finish within the requested seconds | Increase `timeout` cautiously and inspect operator/oracle health |
+| Timeout (HTTP `408`) | The request ran past the gateway's server timeout (30 seconds in the default configuration); the request's `timeout` does not change it | Inspect operator and oracle health, and keep oracle calls well inside the limit |
 
 ## Next steps
 

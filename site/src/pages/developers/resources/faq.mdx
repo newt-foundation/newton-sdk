@@ -36,9 +36,11 @@ Any language that compiles to WASM and supports the WIT interface can be used.
 :::
 
 :::details[What is the difference between Standard and Direct validation?]
-**Standard validation** (`_validateAttestation`) uses the PolicyClientRegistry to automatically resolve your contract's policy configuration. It costs more gas but is simpler to use.
+**Standard validation** (`_validateAttestation`) checks an attestation that the aggregator has already recorded onchain with `respondToTask`, comparing it against the stored hash. It works once that response is onchain.
 
-**Direct validation** (`_validateAttestationDirect`) bypasses the registry. It uses less gas but requires your contract to manage its own policy reference.
+**Direct validation** (`_validateAttestationDirect`) verifies the task, the response, and the operators' BLS signatures inside your own transaction, so it does not wait for the aggregator's onchain response.
+
+Neither path reads the PolicyClientRegistry. Both check the attestation against your contract's policy ID.
 
 See [Validation Methods](/developers/overview/core-concepts#validation-methods) for details.
 :::
@@ -62,10 +64,10 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 
 ## Common Errors
 
-:::details[TaskAlreadyExists — duplicate task submission]
-**Cause:** You submitted a task with the same intent hash that is already being evaluated.
+:::details[TaskAlreadyExists - task ID already recorded]
+**Cause:** The Task Manager already has a task recorded under the new task's ID. The gateway derives every task ID from a new random UUID, so resubmitting the same intent creates a new task and does not raise this error.
 
-**Fix:** Wait for the existing task to complete, or modify the intent (e.g., change the nonce or timestamp) to produce a different hash.
+**Fix:** Resubmit the request; it gets a new task ID.
 :::
 
 :::details[InvalidAttestation - your contract rejected the attestation]

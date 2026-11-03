@@ -56,13 +56,13 @@ A task that fails evaluation is not a gateway error. `newt_createTask` returns H
 | `ZeroExpireAfter` | PolicyClient | A spec has zero expiry | Set a nonzero block window |
 | `PolicyParamsTooLarge` | PolicyClient | Params exceed 65,536 bytes | Reduce encoded params |
 | `OnlyPolicyClientOwner` | PolicyClient | Unauthorized replacement | Submit through the current owner |
-| `PolicyDenied` | TaskManager | Aggregate decision is false | Inspect per-policy simulation results; do not execute |
-| `TaskAlreadyExists(bytes32)` | TaskManager | Duplicate task submission | Use a different nonce or wait for existing task |
-| `Not authorized intent sender` | PolicyClient | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent is the transaction sender |
-| `Chain ID does not match` | PolicyClient | Attestation was created for a different chain | Verify the intent specifies the correct `chainId` |
+| `PolicyDenied` (event) | TaskManager | Not an error: `respondToTask` emits it when the aggregate decision is false and records no attestation, so standard validation of that task reverts with `AttestationHashMismatch()` | Inspect per-policy simulation results; do not execute |
+| `TaskAlreadyExists(bytes32)` | TaskManager | `createNewTask` found a task already recorded under this task ID. The gateway derives every task ID from a new random UUID, so resubmitting an intent does not cause it | Resubmit the request; it gets a new task ID |
+| `Unauthorized("Not authorized intent sender")` | PolicyClient | `msg.sender` is neither `attestation.intent.from` nor an approved delegator | Have `intent.from` send the transaction, or relay it through an approved delegator |
+| `Unauthorized("Chain ID does not match")` | PolicyClient | Attestation was created for a different chain | Verify the intent specifies the correct `chainId` |
 | `AttestationExpired()` | AttestationValidator | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` in policy config |
 | `AttestationAlreadySpent()` | AttestationValidator | Attestation has already been used | Each attestation is single-use; request a new one |
-| `InterfaceNotSupported` | PolicyClient | Contract does not implement `IERC165` correctly | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
+| `InterfaceNotSupported` | TaskManager, NewtonPolicy | The policy client does not report `INewtonPolicyClient` through ERC-165 | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
 
 ### On-Chain Error Selectors
 
@@ -76,6 +76,7 @@ When `_validateAttestationDirect()` reverts, the error can originate from the Po
 | `0x2a5d4fed` | `AttestationAlreadySpent()` | This attestation was already used |
 | `0xf984c150` | `CertificateMessageHashMismatch()` | BLS certificate hash mismatch |
 | `0xab1b236b` | `InvalidBLSSignature()` | BLS signature invalid (EigenLayer `BLSSignatureChecker`) |
+| `0x973d02cb` | `Unauthorized(string)` | A PolicyClient check failed; the reason string names it, for example `Policy ID does not match`, `Not authorized intent sender`, or `Chain ID does not match` |
 | `0x90fe746d` | `ClientNotRegistered(address)` | A PolicyClientRegistry call (`activateClient`, `deactivateClient`, `setClientOwner`, `getClientRecord`) on an address it never registered, or `deactivateClient` on an inactive client |
 
 Use `cast sig "ErrorName()"` to compute selectors for new errors.

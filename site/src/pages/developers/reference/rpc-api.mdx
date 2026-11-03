@@ -346,14 +346,14 @@ const intentSignature = await walletClient.signTypedData({
 });
 ```
 
-For manual fallback, the typed-data domain must match the policy client's Solidity `EIP712(name, version)` constructor values and deployed address:
+For a manual fallback, build the domain from the values the `NewtonPolicyClient` mixin fixes and the deployed address:
 
-| Solidity / deployment value | EIP-712 domain field |
+| Source | EIP-712 domain field |
 |---|---|
-| `EIP712("NewtonPolicyWallet", "1")` first argument | `name: "NewtonPolicyWallet"` |
-| `EIP712("NewtonPolicyWallet", "1")` second argument | `version: "1"` |
+| `NewtonPolicyClient` mixin | `name: "NewtonPolicyClient"` |
+| `NewtonPolicyClient` mixin | `version: "1"` |
 | Target chain | `chainId` |
-| Deployed PolicyClient address | `verifyingContract` |
+| Deployed PolicyClient address (the proxy, for an upgradeable client) | `verifyingContract` |
 
 #### Returns
 

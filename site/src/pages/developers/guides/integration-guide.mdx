@@ -166,9 +166,9 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   Re-run `newton-cli policy build -p <policy-dir>` after fixing the reported dependency or source error.
 :::
 :::details[InvalidAttestation error (0xbd8ba84d)]
-  Most common cause: wrong Task Manager address. The wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address.
+  Newton contracts do not define `InvalidAttestation()`. Your contract does, and the examples revert with it when `_validateAttestation` or `_validateAttestationDirect` returns `false`: the task was challenged, or on the direct path the policy denied the intent.
 
-  Other causes: intent parameter mismatch, policy ID mismatch, incorrect struct passthrough from `evaluateIntentDirect`.
+  Most other failures revert with their own errors. A wrong Task Manager address, a response that is not onchain yet, or a denial on the standard path reverts with `AttestationHashMismatch()`; the wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia, the Task Manager the gateway responds to. Policy ID, intent sender and chain ID mismatches revert with `Unauthorized(reason)`, expiry with `AttestationExpired()`, and reuse with `AttestationAlreadySpent()`. A `task`, `taskResponse` or `signatureData` changed on its way from `evaluateIntentDirect` fails validation inside the Task Manager. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
 :::
 :::details[ExecutionFailed error (0xacfdb444)]
   The attestation passed but the inner call reverted. Common causes:
@@ -187,7 +187,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 :::details[Policy evaluation times out]
   - Test WASM locally with `newton-cli policy-data simulate`
   - Verify `wasmArgs` format matches your WASM expectations
-  - Increase the `timeout` value in the evaluation request
+  - Raising the request's `timeout` does not help: the gateway does not apply it, and ends any request that runs past its server timeout (30 seconds in the default configuration) with an HTTP `408`
   - Check external APIs your WASM calls are responding
 :::
 :::details[Find out why a live task was non-compliant]
@@ -212,29 +212,40 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   // SPDX-License-Identifier: MIT
   pragma solidity ^0.8.27;
 
+  import {INewtonPolicy} from "newton-contracts/src/interfaces/INewtonPolicy.sol";
+  import {INewtonPolicyClient} from "newton-contracts/src/interfaces/INewtonPolicyClient.sol";
   import {NewtonPolicyWallet} from "./NewtonPolicyWallet.sol";
 
   contract WalletFactory {
-      address public immutable taskManager;
       address public immutable policy;
+      uint32 public immutable expireAfter;
+      bytes public policyParams;
 
       event WalletCreated(address indexed owner, address wallet);
 
-      constructor(address _taskManager, address _policy) {
-          taskManager = _taskManager;
+      constructor(address _policy, bytes memory _policyParams, uint32 _expireAfter) {
           policy = _policy;
+          policyParams = _policyParams;
+          expireAfter = _expireAfter;
       }
 
       function createWallet() external returns (address) {
-          NewtonPolicyWallet wallet = new NewtonPolicyWallet();
-          wallet.initialize(taskManager, policy, msg.sender);
+          // The factory owns the new wallet just long enough to set its policy set.
+          NewtonPolicyWallet wallet = new NewtonPolicyWallet(address(this));
+          INewtonPolicyClient.PolicySpec[] memory specs = new INewtonPolicyClient.PolicySpec[](1);
+          specs[0] = INewtonPolicyClient.PolicySpec({
+              policy: policy,
+              config: INewtonPolicy.PolicyConfig({policyParams: policyParams, expireAfter: expireAfter})
+          });
+          wallet.setPolicies(specs);
+          wallet.setPolicyClientOwner(msg.sender);
           emit WalletCreated(msg.sender, address(wallet));
           return address(wallet);
       }
   }
   ```
 
-  This deploys pre-configured wallet instances bound to your policy. Each user gets their own wallet with the same policy enforcement.
+  Each user gets their own wallet with the same policy set and owns it once `createWallet` returns. `setPolicies` reverts with `PolicyNotRegistered` unless the policy was deployed through the Task Manager's policy factory.
 :::
 
 <Card icon="comment-question" to="https://calendly.com/d/cxcy-vqp-9cm/meet-with-the-newton-team" title="Have questions?">

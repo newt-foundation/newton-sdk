@@ -120,8 +120,8 @@ Newton's security is backed by EigenLayer restaked ETH:
 After an attestation is submitted on-chain, there is a challenge window during which the result can be disputed:
 
 - Anyone can submit a challenge proving an operator's evaluation was incorrect
-- If the challenge succeeds, the offending operator is slashed
-- The attestation is marked as `SuccessfullyChallenged`
+- If the challenge succeeds, the operators that signed the response are slashed on the source chain (destination chains have no slashing)
+- The ChallengeVerifier records the task as challenged (`isTaskChallenged(taskId)` returns `true`), the Task Manager emits `TaskChallengedSuccessfully`, and the task's attestation no longer validates
 
 ### Slashing Conditions
 
@@ -140,21 +140,7 @@ Operators can be slashed for:
 
 ## Error Handling
 
-### Consensus Failures
-
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `ToleranceExceeded` | Operator values differ by more than tolerance | Increase `consensus_tolerance_pct` or investigate data source |
-| `NoResponses` | No operators responded in Prepare phase | Check operator health, increase timeout |
-| `InsufficientQuorum` | Not enough operators for quorum | Check operator registration and stake thresholds |
-
-### BLS Aggregation Failures
-
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `DigestMismatch` | Operators signed different messages | Verify consensus computation |
-| `InvalidSignature` | Operator signature verification failed | Check operator BLS key registration |
-| `QuorumNotReached` | Insufficient stake for quorum | Lower threshold or wait for more operators |
+Consensus and aggregation failures reach the caller as gateway errors. See [Error Codes](/developers/reference/rpc-api#error-codes) for each variant and its HTTP status.
 
 ## Next Steps
 

@@ -93,7 +93,7 @@ Once authenticated, create an API key for use with the Newton Gateway.
 ### Use the API key
     Include the key in the `Authorization` header when calling the Newton Gateway:
     ```bash
-    curl -X POST https://gateway-avs.sepolia.newton.xyz/rpc \
+    curl -X POST https://gateway.testnet.newton.xyz/rpc \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer <your_api_key>" \
       -d '{"jsonrpc":"2.0","method":"newt_createTask","params":{...},"id":"7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"}'
@@ -140,7 +140,7 @@ The Dashboard API verifies PolicyClient ownership by reading the on-chain `getOw
 - Upload encrypted secrets via `newt_storeEncryptedSecrets`
 - Access stored secrets via `newt_simulatePolicyDataWithClient`
 
-Ownership is transferable on-chain via `setOwner()` or `transferOwnership()` on the PolicyClient contract.
+Ownership is transferable onchain via `setPolicyClientOwner(newOwner)` on the PolicyClient contract. The `PolicyClientRegistry` keeps a separate owner record for the client; the owner on that record moves it with `setClientOwner(client, newOwner)`.
 
 ## Session Management
 

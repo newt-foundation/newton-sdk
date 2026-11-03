@@ -47,7 +47,7 @@ An [Intent](/developers/reference/glossary#intent) describes the transaction a u
 
 ```solidity
 struct Intent {
-    address from;              // Signer; checked against msg.sender
+    address from;              // Sender: msg.sender, or the signer when a delegator submits
     address to;                // Target contract
     uint256 value;             // ETH value
     bytes data;                // ABI-encoded calldata
@@ -273,7 +273,7 @@ function _validateAttestation(
 
 The standard method validates against an attestation that the Newton aggregator has already submitted on-chain via `respondToTask`. It verifies:
 1. Policy ID matches your contract's configured policy
-2. Intent sender (`from`) matches `msg.sender`
+2. `msg.sender` is the intent sender (`from`), or an approved delegator relaying an intent that `from` signed (see [Delegated Intents](/developers/guides/delegated-intents))
 3. Chain ID matches the current chain
 4. Attestation hash matches stored hash, is not expired, and has not been spent
 
@@ -293,7 +293,7 @@ Direct validation verifies BLS signatures on-chain without waiting for the aggre
 
 | Aspect | `_validateAttestation` | `_validateAttestationDirect` |
 |--------|------------------------|------------------------------|
-| **Prerequisite** | `respondToTask` called | Task created only |
+| **Prerequisite** | `respondToTask` called | None: the task does not need to exist onchain |
 | **Gas Cost** | ~50,000 - 100,000 | ~200,000 - 500,000 (BLS verification) |
 | **Latency** | Wait for aggregator | Immediate |
 | **Parameters** | Attestation only | Task + Response + Signatures |
@@ -361,7 +361,7 @@ contract DeployScript is Script {
 ```
 
 :::warning
-The Task Manager address **must** be `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. BLS signatures are bound to this address — using any other causes `InvalidAttestation`.
+The PolicyClient must point at the Task Manager the gateway responds to: `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia. Attestations are recorded only there, so on the standard path validating against any other address reverts with `AttestationHashMismatch()`.
 :::
 
 ### Configure the policy set
@@ -410,15 +410,16 @@ The `PolicyClientRegistry` is a central on-chain directory of approved policy cl
 
 ### Registration
 
-Registration is permissionless — any address can register a policy client contract, becoming its registered owner:
+Only the policy client's owner can register it, and the caller becomes the registered owner:
 
 ```solidity
-// The caller becomes the registered owner
+// Called by the client's owner (getOwner() == msg.sender)
 policyClientRegistry.registerClient(address(myPolicyClient));
 ```
 
 Requirements:
 - The client contract must implement `INewtonPolicyClient` (verified via ERC-165)
+- The caller must be the client's owner, or the call reverts with `NotClientOwner`
 - Each client can only be registered once
 
 ### Managing Client Status
@@ -462,12 +463,12 @@ newton-cli policy-client transfer-ownership \
 
 ### IdentityRegistry Integration
 
-The `IdentityRegistry` requires a `policyClientRegistry` address at initialization. Every `_linkIdentity()` call checks `IPolicyClientRegistry.isRegisteredClient()` on the target policy client and reverts with `PolicyClientNotRegistered` if the client is not registered or has been deactivated.
+The `IdentityRegistry` reads the `PolicyClientRegistry` address from the `NewtonAddressesProvider` passed to its constructor. Every `_linkIdentity()` call checks `IPolicyClientRegistry.isRegisteredClient()` on the target policy client and reverts with `PolicyClientNotRegistered` if the client is not registered or has been deactivated.
 
 Deployment lifecycle:
 
 1. Deploy `PolicyClientRegistry` and initialize it
-2. Deploy `IdentityRegistry` and pass the registry address to `initialize(admin, policyClientRegistry)`
+2. Deploy `IdentityRegistry` with a `NewtonAddressesProvider` that returns the registry, then call `initialize()`. The constructor reverts with `InvalidClientRegistryAddress()` if the provider returns no registry
 3. Register approved policy clients via `registerClient()`
 4. Any identity linking attempt against an unregistered or deactivated client reverts
 
@@ -574,10 +575,10 @@ function withdraw(NewtonMessage.Attestation calldata attestation) external {
 
 The `NewtonPolicyClient` mixin automatically enforces:
 
-- **Sender verification** — `attestation.intent.from == msg.sender` (prevents user A from using user B's attestation)
-- **Chain ID verification** — `attestation.intent.chainId == block.chainid` (prevents cross-chain replay attacks)
-- **Expiration** — `block.number < attestation.expiration` (attestations expire after the configured block window)
-- **Replay protection** — each attestation can only be used once (marked as "spent" after validation)
+- **Sender verification**: `msg.sender` must be `attestation.intent.from`, or an approved delegator carrying `from`'s signature over the intent (prevents user A from using user B's attestation)
+- **Chain ID verification**: `attestation.intent.chainId == block.chainid` (prevents cross-chain replay attacks)
+- **Expiration**: `block.number < attestation.expiration` (attestations expire after the configured block window)
+- **Replay protection**: each attestation can only be used once (marked as "spent" after validation)
 
 ### Additional Best Practices
 
@@ -591,16 +592,20 @@ The `NewtonPolicyClient` mixin automatically enforces:
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `InvalidAttestation()` | Wrong Task Manager address, expired attestation, or policy mismatch | Verify Task Manager address matches [Sepolia deployment](/developers/reference/contract-addresses) |
+| `InvalidAttestation()` | The validation call returned `false`: the task was challenged, or on the direct path the policy denied the intent | For a denial, read the per-policy results; otherwise request a fresh attestation |
+| `AttestationHashMismatch()` | No matching attestation is recorded on the configured Task Manager: wrong Task Manager address, the response is not onchain yet, or the policy denied the intent (a denial records no attestation) | Verify the Task Manager address matches the [Sepolia deployment](/developers/reference/contract-addresses), wait for the task to be responded, and check the per-policy results |
 | `ExecutionFailed()` | The target call reverted | Debug the target transaction independently |
 | `PolicyNotRegistered` | Policy is not registered with the configured factory | Verify `policyFactory()` and `isPolicy(policy)` |
 | `PolicyClientNotRegistered` | Client not registered in `PolicyClientRegistry` | Register via `registerClient()` or CLI `newton-cli policy-client register` |
-| `Policy ID does not match` | Attestation's policy ID differs from configured policy | Read `getPolicySetSnapshot()` and request a fresh attestation after replacement |
-| `Not authorized intent sender` | `msg.sender` does not match `attestation.intent.from` | Ensure the user who signed the intent calls the function |
-| `Chain ID does not match` | Attestation created for a different chain | Ensure the intent specifies the correct `chainId` |
-| `Attestation expired` | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` |
-| `Attestation already spent` | Attestation has already been used | Each attestation is single-use; request a new one |
-| `InterfaceNotSupported` | Contract does not implement `IERC165` correctly | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
+| `Unauthorized("Policy ID does not match")` | Attestation's policy ID differs from configured policy | Read `getPolicySetSnapshot()` and request a fresh attestation after replacement |
+| `Unauthorized("Not authorized intent sender")` | `msg.sender` is neither `attestation.intent.from` nor an approved delegator | Have `intent.from` call the function, or relay it through an approved delegator |
+| `Unauthorized("Delegator required")` | The client requires a delegator and `intent.from` called directly | Submit through an approved delegator |
+| `Unauthorized("Missing intent signature")`, `Unauthorized("Invalid intent signature")` | A delegator call carried no signature, or one that does not recover to `intent.from` | Have `intent.from` sign the intent; see [Delegated Intents](/developers/guides/delegated-intents) |
+| `Unauthorized("Intent already used")` | A delegator already spent this signed intent | Sign and submit a new intent |
+| `Unauthorized("Chain ID does not match")` | Attestation created for a different chain | Ensure the intent specifies the correct `chainId` |
+| `AttestationExpired()` | `block.number >= attestation.expiration` | Request a new attestation; consider increasing `expireAfter` |
+| `AttestationAlreadySpent()` | Attestation has already been used | Each attestation is single-use; request a new one |
+| `InterfaceNotSupported` | The client does not report `INewtonPolicyClient` through ERC-165 | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
 | Stack too deep | Missing `via_ir = true` | Add `via_ir = true` to foundry.toml |
 
 See [Error Reference](/developers/reference/error-reference) for the full list of Newton error codes.
