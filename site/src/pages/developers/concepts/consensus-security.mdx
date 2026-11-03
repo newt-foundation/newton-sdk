@@ -92,16 +92,18 @@ Newton uses the **alt_bn128** curve (EIP-196/EIP-197) for BLS signature aggregat
 3. The Gateway aggregates individual signatures into a single aggregate signature
 4. The on-chain verifier validates the aggregate signature against the registered operator set
 
-### Two-Digest System
+### Consensus Digest
 
-BLS aggregation requires all operators to sign the **exact same message**. However, each operator generates a unique ECDSA attestation. Newton solves this with two digest types:
+BLS aggregation requires all operators to sign the **exact same message**. Each operator BLS-signs the consensus digest, `keccak256(abi.encode(taskResponse))`, so every signer must produce a byte-identical `TaskResponse`.
 
-| Digest Type | Used For | Attestations |
-|-------------|----------|-------------|
-| **Consensus Digest** | BLS signing and verification | Excluded (zeroed out) |
-| **Full Digest** | Contract storage and challenge verification | Included |
+When an aggregated response is recorded for a task, the task manager stores two hashes:
 
-Operators BLS-sign the consensus digest (which is identical across all operators). The full digest (with unique attestations) is stored on-chain for challenge verification.
+| Hash | Value | Read with |
+|------|-------|-----------|
+| **Task response hash** | `keccak256(abi.encode(taskResponse, responseCertificate))` | `taskResponseHash(taskId)`, or the SDK's `getTaskResponseHash` |
+| **Normalized task response hash** | `keccak256(abi.encode(taskResponse))` | `normalizedTaskResponseHash(taskId)` |
+
+The normalized hash leaves out the response certificate, so it can be compared with the hash `AttestationValidator` records for a directly verified response. `challengeDirectlyVerifiedMismatch` uses it as the canonical side of that comparison.
 
 ## Security Model
 
