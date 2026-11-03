@@ -85,7 +85,7 @@ Values outside the tolerance fail the task with a gateway error. Operators are n
 | `prepare_timeout_ms` | 30000 | Prepare phase timeout in milliseconds |
 | `evaluate_timeout_ms` | 15000 | Commit phase timeout in milliseconds |
 | `consensus_tolerance_pct` | 10 | Tolerance percentage for median consensus (integer) |
-| `quorum_threshold_percentage` | Set per deployment | Minimum percentage of operator stake required. A request that asks for less is raised to the deployment's minimum |
+| `quorum_threshold_percentage` | 67 | Minimum percentage of operator stake that must sign, sized for Byzantine fault tolerance. A request that asks for less is raised to this minimum |
 | `quorum_number` | `"00"` | Quorum numbers to use (hex bytes) |
 
 ## BLS Signature Aggregation
