@@ -43,8 +43,3 @@ API_KEY="$API_KEY" DEPLOYMENT_ENV=stagef CHAIN_ID=11155111 \
   task submit-evaluation-request \
   --task-json examples/zktls-twitter/configs/task.json
 ```
-
-`newton-cli` accepts both `proofCid` and `proof_cid` in task JSON and rejects conflicting values.
-## First-time user tutorials
-
-For a guided external-user onboarding path, see `../../../docs/zktls-twitter/README.md`.

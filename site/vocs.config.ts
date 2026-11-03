@@ -121,6 +121,7 @@ export default defineConfig({
     { source: '/developers/vaults/sdk/composite-policy-packs', destination: '/developers/vaults/sdk/policies' },
     { source: '/developers/overview/newton-explorer', destination: '/developers/resources/newton-explorer' },
     { source: '/developers/advanced/kms-encryption', destination: '/developers/advanced/encrypting-secrets' },
+    { source: '/developers/guides/zktls-twitter', destination: '/developers/guides/writing-data-oracles' },
   ],
   sidebar: {
     '/developers/vaults': [
@@ -221,7 +222,6 @@ export default defineConfig({
           { text: 'Using the Dashboard', link: '/developers/guides/using-the-dashboard' },
           { text: 'Testing Policies', link: '/developers/guides/testing-policies' },
           { text: 'Privacy Flows', link: '/developers/guides/privacy-flows' },
-          { text: 'zkTLS Twitter', link: '/developers/guides/zktls-twitter' },
         ],
       },
       {
