@@ -59,7 +59,7 @@ Destination chains require four contracts to verify attestations:
 | Contract | Purpose |
 |----------|---------|
 | `ECDSAOperatorTableUpdater` | Receives operator state (BLS keys, stake weights, Merkle roots) from the source chain |
-| `BN254CertificateVerifier` | Verifies BLS certificates against cached operator state |
+| `BN254CertificateVerifier` | Verifies BLS certificates against the operator tables the updater writes to it. The proxy runs `ViewBN254CertificateVerifier`, Newton's fork of EigenLayer's verifier that skips the non-signer cache so verification works in view calls |
 | `DestinationTaskResponseHandler` | Decodes BN254 certificates and validates task responses |
 | `NewtonProverDestTaskManager` | Task lifecycle management (creation, response storage) |
 
