@@ -115,7 +115,7 @@ function zeroize(arr: Uint8Array): void {
  *
  * @param params - Encryption parameters
  * @param signingKey - Ed25519 private key seed (32 bytes as Uint8Array)
- * @returns Envelope + Ed25519 signature over the serialized envelope
+ * @returns Envelope + Ed25519 signature over the serialized envelope. No gateway method verifies the signature.
  */
 export async function createSecureEnvelope(
   params: CreateSecureEnvelopeParams,

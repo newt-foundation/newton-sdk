@@ -100,7 +100,7 @@ Encrypted data is wrapped in a `SecureEnvelope`:
   "ciphertext": "<hex-encoded HPKE ciphertext + Poly1305 tag>",
   "policy_client": "0x<policy client address>",
   "chain_id": 11155111,
-  "recipient_pubkey": "<hex-encoded system Ed25519 public key>"
+  "recipient_pubkey": "<hex-encoded X25519 key the envelope was encrypted to>"
 }
 ```
 
@@ -110,7 +110,7 @@ Encrypted data is wrapped in a `SecureEnvelope`:
 | `ciphertext` | HPKE ciphertext including the ChaCha20-Poly1305 authentication tag (hex) |
 | `policy_client` | 0x-prefixed EVM address of the target PolicyClient |
 | `chain_id` | Chain ID for context binding |
-| `recipient_pubkey` | System's Ed25519 public key (hex) |
+| `recipient_pubkey` | The X25519 public key the envelope was encrypted to (hex). The gateway defines this field as the recipient's Ed25519 key, but no gateway path reads it |
 
 **AAD construction:** The additional authenticated data is `keccak256(abi.encodePacked(policy_client_bytes, chain_id_be_bytes))`. This binds the ciphertext to a specific PolicyClient and chain — tampering with either field causes decryption to fail.
 
