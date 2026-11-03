@@ -21,7 +21,7 @@ jobs:
 
       # The published SDK supports Node >= 20 (package.json engines); validate on that floor.
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 20
 
@@ -80,7 +80,7 @@ jobs:
 
       # The Vocs docs toolchain requires Node >= 22 (site/.nvmrc, site/package.json engines).
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
