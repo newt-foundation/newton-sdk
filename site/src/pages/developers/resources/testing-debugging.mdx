@@ -32,7 +32,7 @@ For writing Rego unit tests with `opa test`, see [Testing Policies & Oracles](/d
 Test your WASM data oracle without deploying:
 
 ```bash
-newton-cli --chain-id 11155111 policy-data simulate \
+newton-cli --chain-id 11155111 policy simulate-wasm \
   --wasm-file policy.wasm \
   --input-json '{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"}'
 ```
@@ -97,7 +97,7 @@ If an attestation fails on-chain verification, check:
 | Symptom | Likely Cause | Diagnostic Step |
 |---------|-------------|-----------------|
 | `newt_simulateTask` returns `allowed: false` | Policy logic rejects the intent | Inspect `policies[i].allowed` and `policies[i].result` to find the denying policy |
-| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy-data simulate` |
+| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy simulate-wasm` |
 | Attestation expires before onchain submission | Too much time between evaluation and transaction | Reduce latency, or raise `expireAfter` in the policy set: an attestation expires after the smallest `expireAfter` among its policies |
 | On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
 | `TaskAlreadyExists` error | A task is already recorded under this task ID. The gateway gives every request a new task ID, so a resubmitted intent does not collide | Resubmit the request |

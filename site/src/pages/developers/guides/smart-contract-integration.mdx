@@ -440,9 +440,9 @@ policyClientRegistry.setClientOwner(address(myPolicyClient), newOwnerAddress);
 All registry operations are available via `newton-cli policy-client`:
 
 ```bash
-# Register a client
-newton-cli policy-client register \
-  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --private-key $KEY --rpc-url $RPC
+# Register a client (opens the dashboard; run newton-cli login first)
+newton-cli --chain-id 11155111 policy-client register \
+  --registry 0x0dbd6e44a1814f5efe4f67a00b7f28642e3064dd --client 0x... --rpc-url $RPC
 
 # Check registration status
 newton-cli policy-client status \

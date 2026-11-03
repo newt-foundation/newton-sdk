@@ -94,14 +94,14 @@ policy_files/
 └── policy_metadata.json
 ```
 
-Generate your `policy_cids.json` file with the Newton CLI command documented [here](/developers/guides/deploying-with-cli#step-1-generate-cids-and-upload-to-ipfs).
+Generate your `policy_cids.json` file with the Newton CLI command documented [here](/developers/reference/command-line-tool#upload-cids).
 
 **Deploy the policy contract**
 
 Once you have `policy_cids.json`, run:
 
 ```bash
-newton-cli policy deploy --cids policy_cids.json
+newton-cli policy deploy --policy-cids policy_cids.json
 ```
 
 After deploying, note your policy contract address — you'll need it in Step 2.

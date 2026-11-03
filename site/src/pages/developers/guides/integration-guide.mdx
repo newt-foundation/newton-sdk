@@ -185,7 +185,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```
 :::
 :::details[Policy evaluation times out]
-  - Test WASM locally with `newton-cli policy-data simulate`
+  - Test WASM locally with `newton-cli policy simulate-wasm`
   - Verify `wasmArgs` format matches your WASM expectations
   - Raising the request's `timeout` does not help: the gateway does not apply it, and ends any request that runs past its server timeout (30 seconds in the default configuration) with an HTTP `408`
   - Check external APIs your WASM calls are responding
@@ -200,7 +200,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
     | jq '{evaluation_result, error, operator_errors, policy_task_data}'
   ```
 
-  - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy-data simulate`.
+  - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy simulate-wasm`.
   - `policy_task_data` preserves ordered evidence. Inspect it alongside the task’s frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
 :::
 ## Factory Pattern

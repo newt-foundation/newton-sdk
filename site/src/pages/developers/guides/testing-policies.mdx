@@ -118,7 +118,7 @@ Recommended coverage:
 
 ### Quick local checks with the CLI
 
-The CLI uses the same Newton Regorus engine family as operator evaluation, including Newton's crypto and identity built-ins. Use it to evaluate a query and validate runtime syntax and built-in availability:
+The CLI uses the same Newton Regorus engine family as operator evaluation, including Newton's crypto built-ins, but not its identity or confidential built-ins. Use it to evaluate a query and validate runtime syntax and built-in availability:
 
 ```bash
 # Evaluate a query against policy + data + input files
@@ -144,7 +144,7 @@ Run the compiled oracle in isolation to confirm it produces the data shape your 
 
 ```bash
 # Local execution in a sandbox with the Newton HTTP host
-newton-cli --chain-id 11155111 policy-data simulate \
+newton-cli --chain-id 11155111 policy simulate-wasm \
   --wasm-file ./dist/policy.wasm \
   --input-json '{"network":"mainnet","vaultAddress":"0x..."}'
 ```

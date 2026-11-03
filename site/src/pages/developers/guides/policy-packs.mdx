@@ -116,7 +116,7 @@ This tutorial focuses on the pack-specific steps. For signing in, generating an 
 
 ### Using the CLI
 
-Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` address — you never deploy the oracle yourself. Make sure the CLI is installed (`curl -L cli.newton.xyz | sh && newtup`) and your `NEWTON_API_KEY` and chain are set; see [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
+Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` address; you never deploy the oracle yourself. Make sure the CLI is installed (`curl -L cli.newton.xyz | sh && newtup`) and `API_KEY`, `RPC_URL` and `PRIVATE_KEY` are set; see [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
 
 ::::steps
 ### Look up the pack's PolicyData address
@@ -134,7 +134,7 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
       --secrets-file secrets.json \
       --policy-client 0xYourPolicyClient \
       --policy-data-address 0xPackPolicyData \
-      --api-key $NEWTON_API_KEY
+      --api-key $API_KEY
     ```
 
     Packs that need no credentials skip this step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for the current secrets workflow.
@@ -146,8 +146,8 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
     Generate CIDs for your Rego and schemas, deploy the `NewtonPolicy` against the pack's `PolicyData` address, then set it on your PolicyClient.
 
     ```bash
-    # 1. Upload Rego + schemas to IPFS
-    newton-cli policy-files generate-cids \
+    # 1. Upload Rego + schemas to the Gateway object store
+    newton-cli --chain-id 11155111 policy-files upload-cids \
       --directory policy-files \
       --output policy_cids.json \
       --entrypoint "your_policy.allow"
@@ -158,12 +158,13 @@ Prefer the command line? `newton-cli` uses a pack by its deployed `PolicyData` a
       --policy-data-address 0xPackPolicyData
 
     # 3. Set the deployed policy on your PolicyClient
-    newton-cli policy-client set-policy \
-      --policy-client 0xYourPolicyClient \
-      --policy-address 0xDeployedPolicy
+    # policies.json: [{"policy": "0xDeployedPolicy", "params": {...}, "expire_after": <blocks>}]
+    newton-cli policy-client set-policies \
+      --client 0xYourPolicyClient \
+      --policies policies.json
     ```
 
-    Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
+    `set-policies` also stops unless the CLI config sets `eth_rpc_url`, `gateway_url` and `signer`; see [Config File](/developers/reference/command-line-tool#config-file). Because you reuse the pack's existing `PolicyData`, there is no `policy-data deploy` step. See [Deploying with CLI](/developers/guides/deploying-with-cli) for params, registration, and verification.
   
 ### Simulate
     Verify the policy resolves the pack's data before going live with `newt_simulatePolicy` (or `newt_simulatePolicyDataWithClient` to confirm uploaded secrets resolve). See [Testing Policies](/developers/guides/testing-policies).
