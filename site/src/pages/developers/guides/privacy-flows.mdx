@@ -230,7 +230,7 @@ Each string decodes to an envelope like this one. Build it with [`createSecureEn
 
 The gateway rejects the task with `InvalidRequest` when an entry's `_newton.privacy` array holds more than 10 envelopes, when a string is not base64 of envelope JSON, or when an envelope's `policy_client` or `chain_id` does not match the task. If the array holds envelope objects instead of strings, the gateway ignores the whole `_newton` object without an error.
 
-Operators decrypt each envelope locally and add its JSON plaintext to `data.privacy.inline` for Rego, in envelope order. An envelope that does not decrypt to JSON is skipped, so `data.privacy.inline[i]` is the envelope at index `i` only when every envelope before it decrypted. Your PolicyData WASM never sees `_newton`: operators remove it from the WASM input.
+Operators decrypt each envelope locally and add its JSON plaintext to `data.privacy.inline` for Rego, in envelope order, so `data.privacy.inline[i]` is the envelope at index `i`. Every envelope must decrypt to JSON: if one does not, the operator fails the whole evaluation instead of skipping it. Your PolicyData WASM never sees `_newton`: operators remove it from the WASM input.
 
 ### When to Use
 
