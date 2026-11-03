@@ -178,11 +178,18 @@ Verify `getOwner()` on-chain. `PolicyClientRegistry.setClientOwner` changes the 
 After ownership transfer, only the new owner can call `setPolicies`. That owner can replace the complete set and its parameters on the same client; a new client is not required for routine configuration changes.
 :::
 
-## Step 8 — Register with the dashboard user (coming soon)
+## Step 8 — Register with the dashboard user
 
-:::note
-PolicyClient registration is temporarily omitted from this guide. After [newt-foundation/newton-prover-avs#771](https://github.com/newt-foundation/newton-prover-avs/pull/771) lands in a stable `newton-cli` release, `newton-cli policy-client register` will open the dashboard so the dashboard user can sign and register the client. The exact released command and verification steps will be added here then.
-:::
+Registration records the client in `PolicyClientRegistry` under the dashboard login wallet. Log in first so the CLI knows which wallet to use, then run `register`:
+
+```bash
+newton-cli login
+newton-cli --chain-id "$CHAIN_ID" policy-client register \
+  --client 0xPOLICY_CLIENT \
+  --rpc-url "$RPC_URL"
+```
+
+The command opens the Newton dashboard in a browser, where the logged-in wallet signs the registration, then waits until `PolicyClientRegistry.isRegisteredClient` returns true. It prints the link if the browser does not open, exits early if the client is already registered, and gives up after 5 minutes. The registry address comes from the CLI's embedded deployment for `--chain-id`; pass `--registry` to override it.
 
 ## Step 9 — Upload secrets when used
 
@@ -198,7 +205,7 @@ Check these values on-chain:
 - `getPolicySetSnapshot()` returns the expected nonzero ID, revision, and ordered policies
 - Each policy has the intended params and nonzero `expireAfter`
 - `getOwner()` is the expected wallet
-- Registry record matches the dashboard user when registration is available and required
+- `PolicyClientRegistry.isRegisteredClient` returns true and the registry record matches the dashboard user
 - Client-scoped secrets exist when the WASM provider requires them
 
 Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler supplies `NEWTON_API_KEY`. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
