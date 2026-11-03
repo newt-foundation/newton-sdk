@@ -436,7 +436,7 @@ newton-cli --chain-id 84532 task submit-evaluation-request \
   --gateway-url https://gateway.testnet.newton.xyz/rpc
 ```
 
-The response includes `signature_data` for on-chain attestation validation.
+The response includes `signature_data` for onchain attestation validation.
 
 :::note
 The command normalizes the intent (converts `value`/`chainId` to hex) and submits it to the Newton Gateway. It does not sign anything; an intent signature, if any, comes from `intentSignature` in the task file.

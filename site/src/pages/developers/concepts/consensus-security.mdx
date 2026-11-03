@@ -90,14 +90,14 @@ Values outside the tolerance fail the task with a gateway error. Operators are n
 
 ## BLS Signature Aggregation
 
-Newton uses the **alt_bn128** curve (EIP-196/EIP-197) for BLS signature aggregation. This is the curve supported by Ethereum's pairing precompiled contracts, enabling efficient on-chain verification.
+Newton uses the **alt_bn128** curve (EIP-196/EIP-197) for BLS signature aggregation. This is the curve supported by Ethereum's pairing precompiled contracts, enabling efficient onchain verification.
 
 ### How It Works
 
 1. Each operator holds a BLS private key registered with the AVS
 2. Operators sign the [consensus digest](#consensus-digest) with their individual key (on destination chains, the EIP-712 digest of a `BN254Certificate` whose `messageHash` is the consensus digest)
 3. The Gateway aggregates individual signatures into a single aggregate signature
-4. The on-chain verifier validates the aggregate signature against the registered operator set
+4. The onchain verifier validates the aggregate signature against the registered operator set
 
 ### Consensus Digest
 
@@ -125,7 +125,7 @@ Newton's security is backed by EigenLayer restaked ETH:
 
 ### Challenge Window
 
-After an attestation is submitted on-chain, there is a challenge window during which the result can be disputed:
+After an attestation is submitted onchain, there is a challenge window during which the result can be disputed:
 
 - Anyone can submit a challenge proving an operator's evaluation was incorrect
 - If the challenge succeeds, the operators that signed the response are slashed on the source chain (destination chains have no slashing)
@@ -141,7 +141,7 @@ Operators can be slashed for:
 
 ### Privacy Guarantees
 
-- Only hashes and commitments go on-chain — no PII or sensitive data
+- Only hashes and commitments go onchain — no PII or sensitive data
 - PolicyData oracle secrets are encrypted with HPKE
 - Intent details are visible to operators during evaluation but not stored permanently
 

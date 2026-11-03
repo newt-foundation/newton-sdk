@@ -141,7 +141,7 @@ The book share is cross-multiplied rather than divided, so an empty book never d
 
 ### Explainability
 
-A separate `shared_risks` rule renders each breach as text, for example `"wstETH (token:0x7f39…) shared by 7 venues, $8979728 of a $16444693 book behind it"`. This is **not** evaluated on-chain; the AVS entrypoint is `xerberus_common_cause.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
+A separate `shared_risks` rule renders each breach as text, for example `"wstETH (token:0x7f39…) shared by 7 venues, $8979728 of a $16444693 book behind it"`. This is **not** evaluated onchain; the AVS entrypoint is `xerberus_common_cause.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
 
 ### Final Allow Rule
 

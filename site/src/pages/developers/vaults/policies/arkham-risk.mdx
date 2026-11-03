@@ -150,7 +150,7 @@ deny contains "missing_path_last_seen_days" if {
 
 ### Explainability
 
-A separate `risk_paths` rule renders each offending route as `"<category> exposure via <seed> at <n> hop(s), $<usd> contributed"`. This is **not** evaluated on-chain — the AVS entrypoint is `arkham_risk_exposure.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
+A separate `risk_paths` rule renders each offending route as `"<category> exposure via <seed> at <n> hop(s), $<usd> contributed"`. This is **not** evaluated onchain — the AVS entrypoint is `arkham_risk_exposure.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
 
 ```rego
 risk_paths contains detail if {

@@ -135,7 +135,7 @@ Most integrations need `rpc` permission (combined read + write). Use `rpc_read` 
 
 ## Policy Client Ownership
 
-The Dashboard API verifies PolicyClient ownership by reading the on-chain `getOwner()` method. This ensures that only the contract owner can:
+The Dashboard API verifies PolicyClient ownership by reading the onchain `getOwner()` method. This ensures that only the contract owner can:
 
 - Upload encrypted secrets via `newt_storeEncryptedSecrets`
 - Access stored secrets via `newt_simulatePolicyDataWithClient`

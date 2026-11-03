@@ -42,7 +42,7 @@ A task that fails evaluation is not a gateway error. `newt_createTask` returns H
 | `{"Timeout":<seconds>}` | The gateway stopped waiting for the operation | Retry the request |
 | `"RateLimitExceeded"` | Too many requests for this API key | Back off and retry |
 
-## On-Chain Errors
+## Onchain Errors
 
 | Error | Contract | Cause | Resolution |
 |-------|----------|-------|------------|
@@ -64,13 +64,13 @@ A task that fails evaluation is not a gateway error. `newt_createTask` returns H
 | `AttestationAlreadySpent()` | AttestationValidator | Attestation has already been used | Each attestation is single-use; request a new one |
 | `InterfaceNotSupported` | TaskManager, NewtonPolicy | The policy client does not report `INewtonPolicyClient` through ERC-165 | Override `supportsInterface` and call `super.supportsInterface(interfaceId)` |
 
-### On-Chain Error Selectors
+### Onchain Error Selectors
 
 When `_validateAttestationDirect()` reverts, the error can originate from the PolicyClient, TaskManager, or AttestationValidator. Standard ABI decoders (including viem) may show "Unable to decode signature" because these selectors are not in your contract's ABI.
 
 | Selector | Error | Meaning |
 |----------|-------|---------|
-| `0xec9758ff` | `InsufficientQuorumStake()` | Operators lack registered on-chain stake |
+| `0xec9758ff` | `InsufficientQuorumStake()` | Operators lack registered onchain stake |
 | `0x716dcc39` | `AttestationExpired()` | Attestation expired before tx was mined |
 | `0x297fb567` | `AttestationHashMismatch()` | The attestation does not match the stored hash, or none is stored because the task was denied or has not been responded to |
 | `0x2a5d4fed` | `AttestationAlreadySpent()` | This attestation was already used |

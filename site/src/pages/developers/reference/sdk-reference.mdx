@@ -200,7 +200,7 @@ These methods are available after extending a `WalletClient` with `newtonWalletC
 
 ### submitEvaluationRequest
 
-Submits an intent evaluation request to the Newton Protocol via the gateway. The task is created on-chain and operators evaluate the intent against the policy. Returns a `PendingTaskBuilder` that can be used to await the task response.
+Submits an intent evaluation request to the Newton Protocol via the gateway. The task is created onchain and operators evaluate the intent against the policy. Returns a `PendingTaskBuilder` that can be used to await the task response.
 
 ```ts
 const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequest({
@@ -219,7 +219,7 @@ const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequ
 
 console.log(result.taskId);  // Hex
 
-// Optionally wait for the on-chain response
+// Optionally wait for the onchain response
 const response = await waitForTaskResponded({ timeoutMs: 120000 });
 ```
 
@@ -247,7 +247,7 @@ submitEvaluationRequest(
 
 - `result.taskId` (`Hex`) -- The unique task identifier
 - `result.txHash` (`Hex | undefined`) -- Always `undefined`: `newt_createTask` returns no transaction hash. SDK 1.3.1 and earlier type it as `Hex`, but never set it either
-- `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
+- `waitForTaskResponded({ timeoutMs? })` -- A method to await the onchain attestation result
 
 A task that fails evaluation throws a plain `Error` with the gateway's reason. A call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror).
 
@@ -403,7 +403,7 @@ If you deploy a custom policy client that does not implement EIP-5267, hardcoded
 
 ### submitIntentAndSubscribe
 
-Submits a task via `newt_sendTask` and opens a WebSocket connection to receive the evaluation result. Results are intended for use with `validateAttestation` on `NewtonProverTaskManager` (the on-chain task verification path).
+Submits a task via `newt_sendTask` and opens a WebSocket connection to receive the evaluation result. Results are intended for use with `validateAttestation` on `NewtonProverTaskManager` (the onchain task verification path).
 
 ```ts
 const { result, ws } = await walletClient.submitIntentAndSubscribe({
@@ -609,7 +609,7 @@ simulatePolicyDataWithClient(
 
 Initializes a Newton Policy contract with the given configuration. This is a one-time setup call.
 
-The contract requires `keccak256` of the Rego policy bytes as `_policyCodeHash` so the on-chain hash matches the policy referenced by `policyCid`. Provide it one of two ways:
+The contract requires `keccak256` of the Rego policy bytes as `_policyCodeHash` so the onchain hash matches the policy referenced by `policyCid`. Provide it one of two ways:
 
 - `policyCodeHash` -- pre-computed hex hash (from `policy_cids.json` or another out-of-band source). Takes precedence when both are set.
 - `policyBytes` -- the raw Rego policy bytes; the SDK computes `keccak256` for you. Useful when fetching from IPFS via `policyCid`, reading a local file, or any other transport.
@@ -921,7 +921,7 @@ getSecretsPublicKey(): Promise<SecretsPublicKeyResponse>
 
 #### uploadIdentityEncrypted
 
-Uploads HPKE-encrypted identity data to the Newton Gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the on-chain `registerIdentityData` call.
+Uploads HPKE-encrypted identity data to the Newton Gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the onchain `registerIdentityData` call.
 
 ```ts
 const { data_ref_id, gateway_signature, deadline } = await walletClient.uploadIdentityEncrypted({
@@ -944,14 +944,14 @@ uploadIdentityEncrypted(
 **Returns:**
 
 - `data_ref_id` (`string`) -- Content-hash data reference ID: `keccak256(envelope_json_bytes)`
-- `gateway_signature` (`string`) -- Gateway EIP-712 signature for `registerIdentityData` on-chain call
+- `gateway_signature` (`string`) -- Gateway EIP-712 signature for `registerIdentityData` onchain call
 - `deadline` (`number`) -- Signature expiration (unix timestamp)
 
 ---
 
 #### getIdentityEncrypted
 
-Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the encrypted data blob (stored off-chain in the gateway).
+Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored onchain in IdentityRegistry) back to the encrypted data blob (stored offchain in the gateway).
 
 ```ts
 const { envelope, identity_domain, identity_owner } = await walletClient.getIdentityEncrypted({
@@ -1108,7 +1108,7 @@ These methods handle identity data registration and identity-to-PolicyClient lin
 
 #### registerIdentityData
 
-Register an identity data reference on-chain. The identity owner (caller) submits a `data_ref_id` obtained from the gateway's `newt_uploadIdentityEncrypted` RPC, along with the gateway's co-signature and deadline.
+Register an identity data reference onchain. The identity owner (caller) submits a `data_ref_id` obtained from the gateway's `newt_uploadIdentityEncrypted` RPC, along with the gateway's co-signature and deadline.
 
 ```ts
 await walletClient.registerIdentityData({
@@ -1314,7 +1314,7 @@ These methods are available after extending a `PublicClient` with `newtonPublicC
 
 #### waitForTaskResponded
 
-Polls the on-chain `TaskManager` contract for a `TaskResponded` event for the given task ID.
+Polls the onchain `TaskManager` contract for a `TaskResponded` event for the given task ID.
 
 ```ts
 const result = await publicClient.waitForTaskResponded({
@@ -1368,7 +1368,7 @@ getTaskStatus(args: {
 
 #### getTaskResponseHash
 
-Retrieves the response hash for a given task from the on-chain contract.
+Retrieves the response hash for a given task from the onchain contract.
 
 ```ts
 const hash = await publicClient.getTaskResponseHash({ taskId: '0x...' });
@@ -1542,7 +1542,7 @@ isPolicyVerified(): Promise<boolean>
 
 #### precomputePolicyId
 
-Synchronously computes a client's policy set ID without making an on-chain call. It matches the ID `NewtonPolicyClient` assigns in `setPolicies`, so order and repeated entries in `policies` change the result.
+Synchronously computes a client's policy set ID without making an onchain call. It matches the ID `NewtonPolicyClient` assigns in `setPolicies`, so order and repeated entries in `policies` change the result.
 
 ```ts
 const revision = await publicClient.policyRevision({ policyClientAddress: '0x...' });
@@ -1698,7 +1698,7 @@ client.getSecretsPublicKey(): Promise<SecretsPublicKeyResponse>
 
 ### `uploadIdentityEncrypted`
 
-Upload HPKE-encrypted identity data to the gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the on-chain `registerIdentityData` call.
+Upload HPKE-encrypted identity data to the gateway. The caller must provide a pre-built SecureEnvelope (via `createSecureEnvelope`) and an EIP-712 signature of the envelope JSON from the identity owner. The gateway stores the envelope and returns a `data_ref_id` + gateway signature for the onchain `registerIdentityData` call.
 
 **Standalone signature:**
 
@@ -1732,14 +1732,14 @@ client.uploadIdentityEncrypted(params: UploadIdentityEncryptedParams): Promise<U
 | Field | Type | Description |
 |-------|------|-------------|
 | `data_ref_id` | `string` | Content-hash data reference ID: `keccak256(envelope_json_bytes)` |
-| `gateway_signature` | `string` | Gateway EIP-712 signature for `registerIdentityData` on-chain call |
+| `gateway_signature` | `string` | Gateway EIP-712 signature for `registerIdentityData` onchain call |
 | `deadline` | `number` | Signature expiration (unix timestamp) |
 
 ---
 
 ### `getIdentityEncrypted`
 
-Fetch encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the encrypted data blob (stored off-chain in the gateway).
+Fetch encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored onchain in IdentityRegistry) back to the encrypted data blob (stored offchain in the gateway).
 
 **Standalone signature:**
 
@@ -1776,7 +1776,7 @@ client.getIdentityEncrypted(args: { dataRefId: string }): Promise<GetIdentityEnc
 
 ### `uploadConfidentialData`
 
-Encrypt confidential data (blacklists, allowlists, sanctions lists, etc.) client-side with HPKE and upload the envelope to the gateway. The gateway stores it and returns a content-hash `data_ref_id`. The provider then calls `ConfidentialDataRegistry.publishData(domain, dataRefId)` on-chain.
+Encrypt confidential data (blacklists, allowlists, sanctions lists, etc.) client-side with HPKE and upload the envelope to the gateway. The gateway stores it and returns a content-hash `data_ref_id`. The provider then calls `ConfidentialDataRegistry.publishData(domain, dataRefId)` onchain.
 
 The gateway checks neither the provider nor the domain on upload, and no Ed25519 signing key is required. `publishData` reverts unless the caller registered with `ConfidentialDataRegistry.registerProvider()`. A policy client can read the data only after a two-step grant: the provider calls `proposeGrant(domain, policyClient)`, then the policy client's owner calls `acceptGrant(provider, domain, policyClient)`.
 
@@ -1803,7 +1803,7 @@ client.uploadConfidentialData(params: UploadConfidentialDataParams): Promise<Upl
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `params.provider` | `string` | Provider address (must be registered on-chain with ConfidentialDataRegistry) |
+| `params.provider` | `string` | Provider address (must be registered onchain with ConfidentialDataRegistry) |
 | `params.domain` | `string` | Confidential domain as 0x-prefixed bytes32 hex, for example `keccak256("newton.confidential.blacklist")` |
 | `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
 | `params.chainId` | `number` | Chain ID for AAD context binding |
@@ -1856,7 +1856,7 @@ client.getConfidentialData(args: { dataRefId: string }): Promise<GetConfidential
 
 ## Identity Methods
 
-EIP-712 signed identity data submission to the on-chain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
+EIP-712 signed identity data submission to the onchain IdentityRegistry. These methods are available as wallet client actions and as standalone exports.
 
 :::info
 The identity module uses a single `EncryptedIdentityData { string data }` EIP-712 struct across all identity domains. The `identity_domain` field (bytes32 hash of the domain name) tells the gateway how to interpret the encrypted blob.
@@ -2231,7 +2231,7 @@ Each method takes the PolicyClient address and sends a transaction.
 :::
 
 :::details[HexlifiedIntent]
-  The intent with all fields encoded as hex strings for on-chain use.
+  The intent with all fields encoded as hex strings for onchain use.
 
   ```ts
   interface HexlifiedIntent {
@@ -2267,7 +2267,7 @@ Each method takes the PolicyClient address and sends a transaction.
     | 'SuccessfullyChallenged';
   ```
 
-  Represents the lifecycle state of a task on-chain.
+  Represents the lifecycle state of a task onchain.
 :::
 
 :::details[Task]
@@ -2623,7 +2623,7 @@ interface OperatorError {
   }
   ```
 
-  Returned by `submitEvaluationRequest`. Call `waitForTaskResponded()` to poll for the on-chain attestation.
+  Returned by `submitEvaluationRequest`. Call `waitForTaskResponded()` to poll for the onchain attestation.
 :::
 
 ---
