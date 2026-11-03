@@ -32,7 +32,7 @@ The open-source policy packs live in [newt-foundation/newton-policy-packs](https
 For more detail on how packs work, how they are implemented, and how to build policies from them, see [Policy Packs](/developers/guides/policy-packs).
 
 :::note
-The canonical deployment source is [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). The table below is a production-address snapshot for common curator workflows; use `deployments.json` for stage environments, WASM CIDs, deploy dates, and future redeploys.
+The canonical deployment source is [`newton-policy-packs/deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json). Look up a pack's policy address with `newton-cli policy packs`, which reads that file, instead of copying it from a snapshot. See [Pack Policy Addresses](#pack-policy-addresses).
 :::
 
 ## Available Packs
@@ -60,20 +60,21 @@ Grouped by data provider.
 | [Xerberus](https://xerberus.io) | [Portfolio What-If](/developers/vaults/policies/xerberus-what-if) | Denying a trade that concentrates the book or makes it harder to exit |
 | [Xerberus](https://xerberus.io) | [Common Cause](/developers/vaults/policies/xerberus-common-cause) | Denying false diversification across venues that share one upstream token, protocol, oracle or governance contract |
 
-## Deployed PolicyData Addresses
+## Pack Policy Addresses
 
-Production `PolicyData` addresses for each pack:
+Each published pack is a deployed `NewtonPolicy`. Resolve its address for your chain and environment with `newton-cli`, which reads [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json):
 
-:::note
-The Arkham, Pharos and Xerberus packs are documented but **not yet deployed**, so they have no row below. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth and will carry their addresses first.
-:::
+```bash
+# Every pack published on Base
+newton-cli --chain-id 8453 policy packs list
 
-| Pack | Ethereum (`1`) | Base (`8453`) | Ethereum Sepolia (`11155111`) | Base Sepolia (`84532`) |
-| --- | --- | --- | --- | --- |
-| Chainalysis | `0xCacbdEDA32C0048bbE0Ae0d3081Ced3490699049` | `0xceB2027a5fA390740971c7cbb2523841C19CC2f9` | `0x226d196d565b92952669701Fb6cb85B586706996` | `0xdC2e9d30B8e415F907e39f0bfe22974B9894740F` |
-| RedStone | `0xc81371B54F5d71E8aA92a3601f30f3520c34A5a9` | `0xa5aDDdcf0d37C50A338B3C7F8067FB175AFAf6Bf` | `0x6621D7F739a3682054ac974D772AEEBb8548b1BF` | `0xDbfE2fea061e71109e65e511CD11D070f49A187d` |
-| Vaults.fyi | `0xd0947ba40e526E7cdD9d2f9C276cED1B2e089c49` | `0x763800149600164edBd19d0eeE9f858d7ac27836` | `0x90ef32c7D103D5Af2A546f94BdA994BC37372017` | `0x443487D506eEc522e5fb5075eBDbD7496DB454dF` |
-| Webacy | `0xc127976860eEF5FF5d610548C456ABFEE66CD620` | `0x031afeF4c77774960Eb33fb446F9Ce3612C56b5c` | `0xBFf38a5A77262ADfC10667004A550337A97EFB36` | `0x01206E5302794Fba1B71b761594a5e8b4111Be60` |
+# One pack, machine-readable
+newton-cli --chain-id 8453 policy packs show --pack vaultsfyi --format json
+```
+
+The JSON output carries `policy` and `policy_data` as the same address, plus `wasm_cid` when the pack publishes an oracle. Put the `policy` value in your `policies.json` and pass that file to `newton-cli policy-client set-policies`; see [Using the CLI](/developers/guides/policy-packs#using-the-cli). The commands use the `prod` environment unless `DEPLOYMENT_ENV` is set. Pass `--env stagef` for staging, or `--catalog <path-or-url>` to read a different catalog.
+
+When a pack is not published for your chain and environment, `policy packs show` exits with `no published policy for pack`, or with `unknown pack` when the catalog has no entry for that pack at all.
 
 ## Composing Policy Packs
 

@@ -20,11 +20,11 @@ This policy denies **risk exposure you can explain**, using [Arkham Intelligence
 | --- | --- |
 | Pack id | `arkham_risk` |
 | Rego package | `arkham_risk_exposure` (the `--entrypoint` is `arkham_risk_exposure.allow`) |
-| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Policy address | `newton-cli --chain-id <chain-id> policy packs show --pack arkham_risk` ([details](/developers/vaults/policy-packs#pack-policy-addresses)) |
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
 :::
 
 ### Secret
