@@ -1,11 +1,16 @@
 export enum SDKErrorCode {
+  /** @deprecated The SDK never throws this code. */
   MissingApiKey = 'MISSING_API_KEY',
   PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
   MalformedResponse = 'MALFORMED_RESPONSE',
   InvalidArgument = 'INVALID_ARGUMENT',
+  /** @deprecated The SDK never throws this code. */
   ExtensionNotInitialized = 'EXTENSION_NOT_INITIALIZED',
+  /** @deprecated The SDK never throws this code. */
   IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
+  /** @deprecated The SDK never throws this code. */
   FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
+  /** @deprecated The SDK never throws this code. */
   FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
   MissingChain = 'MISSING_CHAIN',
   MissingAccount = 'MISSING_ACCOUNT',

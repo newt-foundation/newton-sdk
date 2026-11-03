@@ -115,7 +115,7 @@ Other failures, such as an unsupported chain, a missing contract address or a ta
 | `MISSING_ACCOUNT` | An identity link or unlink function gets a wallet client without an account |
 | `INVALID_ADDRESS` | The SDK has no IdentityRegistry address for the wallet client's chain |
 
-`SDKErrorCode` also defines `MISSING_API_KEY`, `EXTENSION_NOT_INITIALIZED`, `INCOMPATIBLE_EXTENSIONS`, `FAILED_TO_OPEN_POPUP` and `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE`. The SDK does not throw them.
+`SDKErrorCode` also defines `MISSING_API_KEY`, `EXTENSION_NOT_INITIALIZED`, `INCOMPATIBLE_EXTENSIONS`, `FAILED_TO_OPEN_POPUP` and `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE`. The SDK does not throw them, and they are deprecated.
 
 ```ts twoslash
 import { createWalletClient, http } from 'viem';
