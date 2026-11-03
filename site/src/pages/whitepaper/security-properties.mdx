@@ -38,8 +38,8 @@ Additional actors include credential issuers (trusted for attribute correctness)
 |--------------------------------|------------------------------------------------------------------------------------------------|----------------------------------------------------|
 | **Confidentiality**            | Encrypted policy inputs remain secret from any party without the decryption key                | HPKE (IND-CCA2), MPC secret sharing                |
 | **Attestation unforgeability** | No adversary can produce a valid BLS aggregate signature without quorum agreement              | BLS (EUF-CMA on BN254), stake-weighted quorum      |
-| **Authorization integrity**    | Privacy data cannot be accessed without both user and application consent                      | Dual Ed25519 signatures (EUF-CMA)                  |
-| **Context binding**            | Cryptographic artifacts cannot be replayed across policy clients, chains, or intents           | AAD binding (keccak256), intent hash in signatures |
+| **Authorization integrity**    | Stored privacy data reaches an evaluation only through a link or grant both parties approved   | ECDSA (EUF-CMA on secp256k1), onchain registries   |
+| **Context binding**            | Envelopes cannot be decrypted for another policy client or chain; link signatures work once    | AAD binding (keccak256), EIP-712 nonces            |
 | **Evaluation correctness**     | Policy evaluations are deterministic and verifiable; incorrect results are provably detectable | ZK challenge proofs, deterministic Rego evaluation |
 | **Accountability**             | Operators who sign incorrect responses face economic penalties                                 | Slashing (10% of stake), challenge window          |
 
@@ -73,28 +73,28 @@ The AAD computation (`keccak256(abi.encodePacked(policy_client, chain_id))`) cry
 
 **Security reduction.** The confidentiality of HPKE in Base mode reduces to the IND-CCA2 security of the underlying AEAD (ChaCha20-Poly1305) and the CDH assumption on Curve25519. An adversary who cannot solve CDH on Curve25519 cannot distinguish HPKE ciphertexts from random, even with access to a decryption oracle (excluding the challenge ciphertext). The AAD binding extends this guarantee: any modification to `policy_client` or `chain_id` produces an AAD mismatch that the AEAD authentication check rejects with overwhelming probability.
 
-### Dual-Signature Authorization Binding
+### Authorization Binding
 
-The dual-signature scheme for privacy authorization prevents several attack classes:
+Authorization for privacy data comes from onchain registry state and gateway checks, which prevent several attack classes:
 
-- **Unauthorized data access.** Encrypted data references require both user and application signatures, preventing either party from unilaterally accessing encrypted data.
-- **Cross-intent replay.** Both signatures bind the intent hash, preventing reuse of authorization across different transactions.
-- **Cross-client replay.** Both signatures bind the policy client address, preventing reuse across different applications.
-- **Signature ordering.** The application signature covers the user's signature bytes, creating an unforgeable chain of authorization.
+- **Unauthorized data use.** Identity data enters an evaluation only through an IdentityRegistry link that both the identity owner and the client user consented to, and confidential data only through a grant that the provider proposed and the policy client owner accepted.
+- **Cross-user reuse.** Operators look up identity data for the address that signed the task's intent, so data linked for one user does not enter another user's evaluation.
+- **Cross-client reuse.** Each link and grant names one policy client, and the gateway rejects an inline envelope that names a different policy client or chain than its task.
+- **Signature replay.** Link signatures are EIP-712 typed data with a nonce and a deadline under the registry's domain, so each one works once, before its deadline, on one chain.
 
-**Security reduction.** The unforgeability of the dual-signature scheme reduces to the EUF-CMA (Existential Unforgeability under Chosen Message Attack) security of Ed25519. An adversary who cannot break Ed25519's EUF-CMA property cannot forge either the user signature or the application signature. The chained structure — where the application signature covers the user's signature bytes — ensures that forging authorization requires breaking EUF-CMA for both keys independently: a valid application signature over a forged user signature is computationally infeasible, and vice versa.
+**Security reduction.** The unforgeability of these authorizations reduces to the EUF-CMA (Existential Unforgeability under Chosen Message Attack) security of ECDSA on secp256k1 and the access checks in the registry contracts. An adversary who cannot forge ECDSA signatures cannot register identity data without the gateway's signature, cannot link it without the consent of the identity owner and the client user, and cannot activate a confidential data grant without a transaction from the policy client owner.
 
 ### Composed Security of the Newton Privacy Envelope
 
-The Newton Privacy Envelope (NPE) composes three independently secure primitives: HPKE encryption (IND-CCA2), Ed25519 dual-signature authorization (EUF-CMA), and BLS attestation (co-CDH on BN254). The composed protocol satisfies the following properties:
+The privacy protocol built on the Newton Privacy Envelope (NPE) composes three independently secure primitives: HPKE encryption (IND-CCA2), ECDSA authorization signatures (EUF-CMA on secp256k1), and BLS attestation (co-CDH on BN254). The composed protocol satisfies the following properties:
 
 1. **Confidentiality.** Under the CDH assumption on Curve25519 and the IND-CCA2 security of ChaCha20-Poly1305, no adversary without the recipient's X25519 private key can recover the plaintext content of an NPE, even with access to a decryption oracle for other ciphertexts.
 
-2. **Authorization unforgeability.** Under EUF-CMA of Ed25519, no adversary can produce a valid dual-signature authorization without both the user's and application's Ed25519 signing keys. The intent hash and policy client binding in both signatures prevent cross-context reuse.
+2. **Authorization unforgeability.** Under EUF-CMA of ECDSA on secp256k1, no adversary can register identity data without the gateway's signature, link it to a policy client without the consent of the identity owner and the client user, or activate a confidential data grant without the policy client owner. Each link signature covers the link it authorizes, a nonce, and a deadline under the registry's EIP-712 domain, which prevents cross-context reuse.
 
 3. **Attestation integrity.** Under co-CDH on BN254 and the honest-majority assumption (adversary controls fewer than `t` of `n` staked operators), no adversary can produce a valid BLS aggregate signature for an incorrect policy evaluation result.
 
-These reductions are modular: compromising one primitive does not weaken the others. For example, if an adversary compromises HPKE confidentiality (breaking CDH on Curve25519), they learn plaintext data but cannot forge attestations (BLS) or authorization signatures (Ed25519). If an adversary compromises a single operator's BLS key, they cannot decrypt NPE ciphertexts (HPKE) or forge user authorization (Ed25519).
+These reductions are modular: compromising one primitive does not weaken the others. For example, if an adversary compromises HPKE confidentiality (breaking CDH on Curve25519), they learn plaintext data but cannot forge attestations (BLS) or authorization signatures (ECDSA). If an adversary compromises a single operator's BLS key, they cannot decrypt NPE ciphertexts (HPKE) or forge an identity owner's authorization (ECDSA).
 
 ### Post-Quantum Readiness
 
@@ -103,10 +103,10 @@ Newton's cryptographic primitives rely on elliptic curve assumptions (CDH on Cur
 | Component                | Current Primitive | Post-Quantum Replacement           | Standardization Status       |
 |--------------------------|-------------------|------------------------------------|------------------------------|
 | NPE encryption           | X25519 (DHKEM)    | ML-KEM-768 (FIPS 203)              | NIST standardized (2024)     |
-| Authorization signatures | Ed25519           | ML-DSA-65 (FIPS 204)               | NIST standardized (2024)     |
+| Authorization signatures | ECDSA (secp256k1) | ML-DSA-65 (FIPS 204)               | NIST standardized (2024)     |
 | BLS aggregate signatures | BN254             | Lattice-based aggregate signatures | Active research, no standard |
 
-HPKE's modular KEM/KDF/AEAD composition means that replacing X25519 with ML-KEM requires changing only the KEM instantiation — the KDF, AEAD, and application-layer protocol remain unchanged. Ed25519 can be replaced with ML-DSA in the dual-signature scheme without structural changes. BLS aggregate signatures present the most significant migration challenge, as no standardized post-quantum aggregate signature scheme with comparable compactness exists. Until such schemes mature, BLS remains the practical choice given Ethereum's BN254 precompile support.
+HPKE's modular KEM/KDF/AEAD composition means that replacing X25519 with ML-KEM requires changing only the KEM instantiation: the KDF, AEAD, and application-layer protocol remain unchanged. BLS aggregate signatures present the most significant migration challenge, as no standardized post-quantum aggregate signature scheme with comparable compactness exists. Until such schemes mature, BLS remains the practical choice given Ethereum's BN254 precompile support.
 
 ### Performance Characteristics
 

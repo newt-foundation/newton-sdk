@@ -61,7 +61,7 @@ Decryption requires cooperation from at least t operators (where t matches the B
 
 ### Newton Privacy Envelope (NPE) and AAD Binding
 
-The combination of HPKE encryption with Ed25519 dual-signature authorization forms Newton's core privacy primitive: the **Newton Privacy Envelope (NPE)**. The NPE composes authenticated encryption (HPKE) with explicit authorization signatures (Ed25519) to ensure that encrypted data can only be accessed when both the user and the application have cryptographically consented to a specific policy evaluation context.
+HPKE encryption bound to a policy evaluation context forms Newton's core privacy primitive: the **Newton Privacy Envelope (NPE)**. The NPE ties each ciphertext to one policy client on one chain. Who must authorize the data inside depends on how it reaches an evaluation, as [Authorization](#authorization) describes.
 
 Encrypted data is transported in a SecureEnvelope structure — the on-the-wire representation of an NPE — that bundles the HPKE ciphertext with the metadata required for decryption and policy binding:
 
@@ -71,7 +71,7 @@ Encrypted data is transported in a SecureEnvelope structure — the on-the-wire 
 | `ciphertext`       | hex string          | Variable (msg + 16 bytes AEAD tag) | Hex                | HPKE ciphertext including ChaCha20-Poly1305 authentication tag |
 | `policy_client`    | 0x-prefixed address | 20 bytes                           | EIP-55 checksummed | Ethereum address of the policy client contract                 |
 | `chain_id`         | u64                 | 8 bytes                            | Decimal string     | Chain ID for context binding                                   |
-| `recipient_pubkey` | hex string          | 32 bytes                           | Hex (64 chars)     | Recipient Ed25519 public key (for sender verification)         |
+| `recipient_pubkey` | hex string          | 32 bytes                           | Hex (64 chars)     | Recipient public key, unused by decryption and authorization   |
 
 For the complete binary wire format specification with byte offsets and serialization rules, see [Appendix A](/whitepaper/references#appendix-a-newton-privacy-envelope-wire-format).
 
@@ -83,27 +83,13 @@ AAD = keccak256(abi.encodePacked(policy_client_bytes, chain_id_be_bytes))
 
 This AAD binding serves a critical security function: it cryptographically ties the ciphertext to a specific policy client on a specific chain. If an attacker attempts to replay a SecureEnvelope against a different policy client or chain, the AAD mismatch causes the ChaCha20-Poly1305 authentication check to fail, and decryption is rejected. The seal operation computes AAD automatically during encryption, and the open operation recomputes it from the stored `policy_client` and `chain_id` fields during decryption.
 
-### Dual-Signature Authorization
+### Authorization
 
-Task creation with encrypted data references requires dual Ed25519 signatures to prevent unauthorized use of encrypted data across policy contexts.
+The gateway never decrypts envelopes. What authorizes data for an evaluation depends on how the data reaches it:
 
-**User signature.** The user signs a message binding their identity to the specific data references and intent:
-
-```
-user_message = keccak256(abi.encodePacked(policy_client, intent_hash, ref_id_1, ref_id_2, ...))
-```
-
-The user produces an Ed25519 signature over this digest using their derived Ed25519 signing key.
-
-**Application signature.** The application signs a message that chains the user's authorization:
-
-```
-app_message = keccak256(abi.encodePacked(policy_client, intent_hash, user_signature))
-```
-
-The application produces an Ed25519 signature over this digest, creating a chain of authorization: the application attests that it received and verified the user's consent for this specific intent and data reference combination. Both signatures must verify against their respective Ed25519 public keys for the gateway to proceed with task creation.
-
-This dual-signature scheme prevents several attack vectors: a compromised application key cannot fabricate user consent, a compromised user key cannot authorize data access without a valid application context, and neither signature can be replayed across different policy clients or intents because the `policy_client` and `intent_hash` are bound into both signing messages.
+- **Identity data.** The identity owner authorizes the upload with an EIP-712 signature, and the gateway countersigns the data reference that the owner then registers in the IdentityRegistry contract. Linking that data to a policy client names a client user and takes the consent of both the identity owner and the client user, each given by sending the transaction or by an EIP-712 signature with a nonce and a deadline. Operators load only the identity data linked to the policy client for the address that signed the task's intent.
+- **Confidential data.** A registered provider publishes a data reference to the ConfidentialDataRegistry contract and proposes a grant to a policy client. The grant takes effect only when the policy client's owner accepts it, and the provider can revoke it. Operators load the data under the grants active for the policy client.
+- **Ephemeral data.** An envelope sent inline with a task needs no signature. The gateway accepts a task for a policy client only from an API key whose wallet address owns that policy client, and it rejects an inline envelope that names a different policy client or chain than the task. The envelope is not bound to a sender, a task, or an intent.
 
 ### Privacy Data Flow
 
@@ -115,15 +101,15 @@ flowchart LR
     C -->|HPKE encrypt| E[SecureEnvelope]
     E -->|Upload via RPC| GW[Gateway]
     GW -->|Store encrypted| DB[Encrypted Data Store]
-    DB -->|Distribute via NATS| OP[Operators]
+    DB -->|Load by reference| OP[Operators]
     OP -->|Compute partial share| NATS[NATS Share Exchange]
     NATS -->|Reconstruct plaintext| PD[Plaintext - local]
     PD -->|Evaluate + BLS sign| AGG[Aggregator]
 ```
 
-The client reads the system's combined X25519 public key from the on-chain operator registry with a single contract call. This combined key is the output of the DKG protocol ([Key Derivation Chain](#key-derivation-chain)) — it corresponds to a threshold keypair distributed across the operator set, and no single entity holds the complete private key. The client encrypts sensitive data into one or more SecureEnvelopes using this combined key and uploads them. Each upload returns a reference UUID. At task creation time, the client includes these reference UUIDs along with dual-signature authorization.
+The client reads the system's combined X25519 public key from the onchain operator registry with a single contract call. This combined key is the output of the DKG protocol ([Key Derivation Chain](#key-derivation-chain)); it corresponds to a threshold keypair distributed across the operator set, and no single entity holds the complete private key. The client encrypts sensitive data into one or more SecureEnvelopes using this combined key. Identity and confidential data envelopes are uploaded, and each upload returns a content-addressed data reference that is then registered onchain. Tasks do not carry these references: operators find a task's identity and confidential data through the onchain registries (see [Authorization](#authorization)). Ephemeral envelopes travel inline with the task.
 
-The gateway distributes the encrypted envelopes to operators as part of the task payload via NATS. Each operator computes a partial decryption share using its DKG-produced share of the threshold private key, and publishes the partial share to the recipient operators via NATS operator-specific subjects (`newton.operators.{operator_id}.shares.{task_id}`). Shares are encrypted end-to-end to the recipient operator's individual X25519 public key (derived from their ECDSA key per the [Key Derivation Chain](#key-derivation-chain)) before publishing, ensuring that the NATS broker — and the current gateway operator — sees only ciphertext. Once an operator collects t partial shares from peers (where t is the threshold matching the BLS quorum requirement), it reconstructs the plaintext locally and evaluates the policy over the decrypted data. No single operator, and no central entity including the gateway, ever holds the complete decryption key. The verdict is then BLS-signed and aggregated as in the standard task flow.
+Operators load stored envelopes from the encrypted data store by reference, and inline envelopes arrive with the task. Each operator computes a partial decryption share using its DKG-produced share of the threshold private key, and publishes the partial share to the recipient operators via NATS operator-specific subjects (`newton.operators.{operator_id}.shares.{task_id}`). Shares are encrypted end-to-end to the recipient operator's individual X25519 public key (derived from their ECDSA key per the [Key Derivation Chain](#key-derivation-chain)) before publishing, ensuring that the NATS broker, and the current gateway operator, sees only ciphertext. Once an operator collects t partial shares from peers (where t is the threshold matching the BLS quorum requirement), it reconstructs the plaintext locally and evaluates the policy over the decrypted data. No single operator, and no central entity including the gateway, ever holds the complete decryption key. The verdict is then BLS-signed and aggregated as in the standard task flow.
 
 ### Multi-Party Computation for Policy Evaluation
 
