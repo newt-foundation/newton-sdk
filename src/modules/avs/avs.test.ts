@@ -1,10 +1,11 @@
 import { SDKError } from '@core/sdk-exceptions'
-import type { IntentFromParams } from '@core/types/task'
-import { http, createWalletClient } from 'viem'
+import { type IntentFromParams, TaskStatus } from '@core/types/task'
+import { http, type PublicClient, createWalletClient, zeroAddress } from 'viem'
 import { sepolia } from 'viem/chains'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   evaluateIntentDirect,
+  getTaskStatus,
   simulatePolicyData,
   simulatePolicyDataWithClient,
   simulateTask,
@@ -188,5 +189,54 @@ describe('avs gateway calls', () => {
       'timeout',
       'wasm_args',
     ])
+  })
+})
+
+describe('getTaskStatus', () => {
+  const taskId = `0x${'ab'.repeat(32)}` as const
+  const taskManager = '0x2222222222222222222222222222222222222222'
+  const attestationValidator = '0x3333333333333333333333333333333333333333'
+  const challengeVerifier = '0x4444444444444444444444444444444444444444'
+
+  const clientWith = (reads: Record<string, unknown>) =>
+    ({
+      readContract: vi.fn(async ({ functionName }: { functionName: string }) => reads[functionName]),
+      getBlockNumber: vi.fn(async () => 100n),
+    }) as unknown as PublicClient
+
+  const responded = { allTaskHashes: `0x${'01'.repeat(32)}`, allTaskResponses: `0x${'02'.repeat(32)}` }
+
+  it('returns SuccessfullyChallenged when the challenge verifier marks the task', async () => {
+    const client = clientWith({
+      ...responded,
+      challengeVerifier,
+      taskSuccesfullyChallenged: true,
+      attestationExpirations: 0,
+    })
+    await expect(getTaskStatus(client, { taskId }, taskManager, attestationValidator)).resolves.toBe(
+      TaskStatus.SuccessfullyChallenged,
+    )
+  })
+
+  it('falls through to the attestation checks when the task is not challenged', async () => {
+    const client = clientWith({
+      ...responded,
+      challengeVerifier,
+      taskSuccesfullyChallenged: false,
+      attestationExpirations: 500,
+    })
+    await expect(getTaskStatus(client, { taskId }, taskManager, attestationValidator)).resolves.toBe(
+      TaskStatus.Responded,
+    )
+  })
+
+  it('skips the challenge read when no challenge verifier is set', async () => {
+    const client = clientWith({ ...responded, challengeVerifier: zeroAddress, attestationExpirations: 0xffffffff })
+    await expect(getTaskStatus(client, { taskId }, taskManager, attestationValidator)).resolves.toBe(
+      TaskStatus.AttestationSpent,
+    )
+    expect(client.readContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: 'taskSuccesfullyChallenged' }),
+    )
   })
 })

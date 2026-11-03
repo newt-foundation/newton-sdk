@@ -1348,7 +1348,7 @@ waitForTaskResponded(args: {
 
 #### getTaskStatus
 
-Queries the current status of a task from the on-chain contracts.
+Queries the current status of a task from the onchain contracts. A successful challenge invalidates the attestation, so a challenged task returns `SuccessfullyChallenged` whatever its attestation state.
 
 ```ts
 const status = await publicClient.getTaskStatus({ taskId: '0x...' });

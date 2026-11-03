@@ -36,9 +36,14 @@ import {
   type WalletClient,
   hexToBigInt,
   padHex,
+  parseAbi,
   publicActions,
+  zeroAddress,
 } from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
+
+// ChallengeVerifier is not in the synced ABIs; getTaskStatus needs only this public mapping getter.
+const CHALLENGE_VERIFIER_ABI = parseAbi(['function taskSuccesfullyChallenged(bytes32 taskId) view returns (bool)'])
 
 export interface PendingTaskBuilder {
   readonly taskId?: TaskId
@@ -177,6 +182,22 @@ const getTaskStatus = async (
 
   if (!isTaskResponded) {
     return TaskStatus.Created
+  }
+
+  // Every successful challenge path sets this flag and invalidates the attestation, so it outranks the expiry checks.
+  const challengeVerifier = await publicClient.readContract({
+    address: taskManagerAddress,
+    abi: NewtonProverTaskManagerAbi,
+    functionName: 'challengeVerifier',
+  })
+  if (challengeVerifier !== zeroAddress) {
+    const isChallenged = await publicClient.readContract({
+      address: challengeVerifier,
+      abi: CHALLENGE_VERIFIER_ABI,
+      functionName: 'taskSuccesfullyChallenged',
+      args: [args.taskId],
+    })
+    if (isChallenged) return TaskStatus.SuccessfullyChallenged
   }
 
   // attestationExpirations: 0 = no attestation (negative eval), uint32 max = spent, else expiry block
