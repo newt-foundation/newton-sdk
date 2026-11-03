@@ -1,4 +1,20 @@
+import type { Address } from "@newton-protocol/zktls-twitter-example";
 import type { PolicyVisualization, ProofGenerationResult } from "./types";
+
+const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
+function isAddress(value: string): value is Address {
+  return ADDRESS_RE.test(value);
+}
+
+/** Checks a configured address before it reaches the gateway; `field` names it in the error. */
+export function toAddress(field: string, value: string): Address {
+  const trimmed = value.trim();
+  if (!isAddress(trimmed)) {
+    throw new Error(`${field} must be a 0x-prefixed 20-byte hex address, got "${value}"`);
+  }
+  return trimmed;
+}
 
 export function formatTimestamp(date = new Date()): string {
   return date.toLocaleTimeString(undefined, {

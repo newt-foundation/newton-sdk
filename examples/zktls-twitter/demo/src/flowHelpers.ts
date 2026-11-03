@@ -1,5 +1,6 @@
 import { encodeWasmArgs, type CreateTaskResponse, type TaskIntent } from "@newton-protocol/zktls-twitter-example";
 import type { PolicyDecision, ProofArtifact, TaskFormState, TaskPreview, TaskSubmission } from "./types";
+import { toAddress } from "./utils";
 
 const CID_RE = /\b(?:bafy[a-z2-7]{20,}|Qm[1-9A-HJ-NP-Za-km-z]{44})\b/;
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
@@ -14,8 +15,8 @@ export function toHexQuantity(value: string | number | bigint): string {
 
 export function buildIntent(form: TaskFormState): TaskIntent {
   return {
-    from: form.from,
-    to: form.to,
+    from: toAddress("from", form.from),
+    to: toAddress("to", form.to),
     value: toHexQuantity(form.value),
     data: form.data || "0x",
     chainId: toHexQuantity(form.chainId),

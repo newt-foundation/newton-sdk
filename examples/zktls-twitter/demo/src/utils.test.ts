@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { extractPolicyVisualization } from "./utils";
+import { extractPolicyVisualization, toAddress } from "./utils";
+
+describe("toAddress", () => {
+  it("accepts a 20-byte hex address and rejects anything else", () => {
+    expect(toAddress("from", " 0x2222222222222222222222222222222222222222 ")).toBe(
+      "0x2222222222222222222222222222222222222222",
+    );
+    expect(() => toAddress("policyClient", "0x1234")).toThrow(
+      'policyClient must be a 0x-prefixed 20-byte hex address, got "0x1234"',
+    );
+  });
+});
 
 describe("extractPolicyVisualization", () => {
   it("normalizes Rego result fields for result visualization", () => {
