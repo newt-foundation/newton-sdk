@@ -2,45 +2,6 @@ import type { Address, Hex } from 'viem'
 
 export type PolicyId = string
 
-export interface PolicyParamsJson {
-  admin: string
-  allowed_actions: {
-    [chainId: string]: {
-      address: string
-      function_name: string
-      max_limit: number
-    }
-  }
-  token_whitelist: {
-    [chainId: string]: {
-      address: string
-      max_limit: number
-      symbol: string
-    }
-  }
-} // developer-supplied
-export interface SetPolicyInput {
-  client: Address // policy client (e.g., vault) address
-  policyContract: Address // deployed policy contract (code/metadata)
-  policyDataRefs?: Address[] // optional array of PolicyData contract refs
-  params: PolicyParamsJson // JSON object → encoded to bytes passed to setPolicy
-}
-
-export interface SetPolicyResult {
-  ok: true
-  policyId: PolicyId
-  txHash: Hex
-}
-
-export interface PolicyInfo {
-  policyId: PolicyId
-  client: Address
-  policyContract: Address
-  policyDataRefs: Address[]
-  paramsBytes: Hex // canonical bytes as stored on-chain
-  paramsJson?: PolicyParamsJson // optional decode if schema known
-}
-
 // Not `Buffer`: it subclasses Uint8Array, so Node callers can still pass one, and naming it needs @types/node.
 type Bytes = Uint8Array | `0x${string}`
 
