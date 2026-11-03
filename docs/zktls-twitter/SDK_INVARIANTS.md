@@ -7,7 +7,6 @@ The implementations live in:
 - `examples/zktls-twitter/sdk/src/proof.ts` — IPFS proof storage and retrieval
 - `examples/zktls-twitter/sdk/src/attester.ts` — TLSNotary attester WebSocket lifecycle
 - `examples/zktls-twitter/sdk/src/gateway.ts` — Newton gateway JSON-RPC client
-- `examples/zktls-twitter/sdk/src/task.ts` - task submission and `/ws` task tracking
 - `examples/zktls-twitter/sdk/src/index.ts` — `encodeWasmArgs` / `decodeWasmArgs`
 
 Tests for every invariant are co-located in `*.test.ts` next to each module.
@@ -18,8 +17,6 @@ Tests for every invariant are co-located in `*.test.ts` next to each module.
 
 `ProofClient.store(proof)` and `ProofClient.retrieve(cid)` both verify that the bytes they hand to the caller actually hash to the CID the gateway returned (or that the caller supplied).
 
-`ProofClient` sends both requests to `attesterUrl`, or to the gateway URL without `/rpc` when `attesterUrl` is unset. The current Newton gateway has no `/v1/proof` route, so set `attesterUrl` to the service that stores proofs.
-
 ### `store(proof)`
 
 1. Decode the base64 proof into raw bytes.
@@ -28,7 +25,7 @@ Tests for every invariant are co-located in `*.test.ts` next to each module.
 4. **Re-derive the CID locally** from the bytes uploaded.
 5. Compare to the gateway-returned CID; throw `CID integrity check failed` on mismatch.
 
-This prevents a malicious or misconfigured gateway from substituting an unrelated CID. Without this check, a CID passed on as `proofCid` could resolve to content the client never authored. The current gateway rejects `proofCid` on tasks (section 4).
+This prevents a malicious or misconfigured gateway from substituting an unrelated CID. Without this check, downstream `proofCid` task submissions could resolve to content the client never authored.
 
 ### `retrieve(cid)`
 
@@ -86,9 +83,9 @@ Every fetch in the SDK uses an `AbortController` plus a streaming reader to enfo
 | Endpoint | Cap | Rationale |
 |---|---|---|
 | Gateway JSON-RPC (`/rpc`) | 1 MiB | Normal JSON-RPC responses are kilobytes; oversized bodies indicate a misconfigured proxy or HTML error page |
-| Proof retrieval (`/v1/proof/<cid>`) | 50 MiB | Same cap as `decodeWasmArgs` (section 5) |
+| Proof retrieval (`/v1/proof/<cid>`) | 50 MiB | Matches the operator-side proof size limit on prover-AVS |
 | Proof store error body | 1 MiB | Same as gateway JSON-RPC |
-| `wasmArgs` decoded JSON | 50 MiB (decoded bytes) | Decode guard only; the gateway's request body limit is lower (section 5) |
+| `wasmArgs` decoded JSON | 50 MiB hex (encoded) | Inline WASM args should be small; large data goes through `proofCid` |
 
 ### Streaming with `reader.cancel()`
 
@@ -107,11 +104,7 @@ For environments without `response.body` (test mocks, minimal polyfills), the SD
 
 ## 4. JSON-RPC wire convention
 
-The Newton gateway reads top-level params in snake_case (`policy_client`, `wasm_args`, `include_validate_calldata`) and the nested `intent` object in camelCase (`from`, `to`, `value`, `data`, `chainId`, `functionSignature`; it also accepts `chain_id` and `function_signature`). It ignores unknown keys, so a stale field such as `use_two_phase` is dropped without an error.
-
-`proof_cid` (also read as `proofCid`) is the exception: the current gateway rejects any value with InvalidRequest `proof_cid is unsupported; zkTLS proof verification is unavailable`, and rejects `_newton.proof_cid` inside a `wasm_args` entry the same way. The SDK still sends a `proofCid` it is given, so that rejection reaches the caller instead of the proof being dropped.
-
-`wasm_args` is an array with one hex entry per policy in the client's policy set, in order (`"0x"` for a policy without arguments). `TaskManager` sends a single value as a one-entry array.
+The Newton gateway accepts top-level params in snake_case (`policy_client`, `use_two_phase`, `proof_cid`, `wasm_args`) but tolerates the nested `intent` object in camelCase (`from`, `to`, `value`, `data`, `chainId`, `functionSignature`).
 
 ### Top-level conversion
 
@@ -126,7 +119,7 @@ key.replace(
 
 The two-arm regex handles two distinct word-boundary patterns:
 
-- **Arm 1** `([a-z0-9])([A-Z])`: lowercase-to-uppercase boundary. `policyClient` -> `policy_client`.
+- **Arm 1** `([a-z0-9])([A-Z])`: lowercase→uppercase boundary. `useTwoPhase` → `use_two_phase`.
 - **Arm 2** `([A-Z])([A-Z][a-z])`: consecutive caps where the second cap starts a lowercase word. `URLPath` → `URL_Path` → `url_path`.
 
 A naive single-arm regex would mangle PascalCase acronyms (`URL` → `u_r_l`).
@@ -135,23 +128,13 @@ A naive single-arm regex would mangle PascalCase acronyms (`URL` → `u_r_l`).
 
 Nested objects (such as `intent`) are not recursively converted because the gateway parses them in camelCase. If you add a new top-level param that contains a nested object, verify the gateway accepts the casing you ship.
 
-### Request id
-
-`id` is a fresh `crypto.randomUUID()`, or `null` where that is unavailable. The gateway types `id` as an optional UUID, answers any other value (such as `1`) with a plain-text 422, and assigns its own id to the request.
-
-### Error envelope
-
-A failed call comes back with a non-2xx status and `error` set to the gateway's error enum in serde's external tagging: a bare string for a unit variant (`"RateLimitExceeded"`), otherwise a one-key object (`{"InvalidRequest":"..."}`, `{"QuorumNotReached":[reason, errors]}`). `RpcError` keeps the HTTP `status`, the variant name as `code` and its payload as `data`, and its message reads `gateway <method> returned <status> [<code>] <detail>`.
-
-A response without that envelope (the empty 401 for an unknown API key, an empty 503, the 408 when a request outlasts the server timeout, the plain-text 400, 413, 415 or 422 from the HTTP layer) becomes `code: "http_error"`, with the body as the detail, or the status text when the body is empty, or `empty body` when both are. A 200 without a `result` key is `malformed_response`. No message carries the API key.
-
 ---
 
 ## 5. WASM args size cap
 
-`decodeWasmArgs(hex)` rejects a payload over 50 MiB of decoded bytes before it allocates, the same cap `proof.ts` puts on proof bodies. `encodeWasmArgs` has no cap.
+`encodeWasmArgs(json)` and `decodeWasmArgs(hex)` enforce a 50 MiB hex cap on the encoded form (~25 MiB of source JSON). The cap matches the operator-side proof size limit on prover-AVS, so a payload that fits in `wasmArgs` will also fit when the operator decodes it.
 
-The gateway's limit is lower: it caps the whole `/rpc` request body at 23,418,197 bytes (about 22.3 MiB) and answers a larger one with 413. Hex doubles the size, so an inline argument has to stay under about 11 MiB of JSON. The gateway rejects `proofCid`, so it offers no other route for larger data.
+For genuinely large data (model weights, large datasets), use `proofCid` to point at IPFS-stored content and pass only the CID inline.
 
 ---
 
@@ -189,22 +172,6 @@ expect(result.cid).toBe(proofCid);
 ```
 
 `cidFor(proofBytes)` derives the expected CID from the same bytes the SDK will hash internally. A hardcoded CID string would drift from the bytes and the test would either pass for the wrong reason (no integrity check) or fail unpredictably (integrity check rejects the mismatch).
-
----
-
-## 8. Task tracking over `/ws`
-
-`TaskManager.trackTask(topic)` opens the gateway's `/ws` beside the RPC URL: same host and path prefix, `/ws` in place of a trailing `/rpc` or appended when there is none, query and fragment dropped. A browser cannot set headers on a WebSocket, so the API key travels as a subprotocol: the client offers `newton.v1` and `newton.bearer.<apiKey>`. Before it connects, the SDK rejects a missing API key, or one with characters a subprotocol cannot carry, with an error that names the topic and URL but not the key (the WebSocket constructor's own error would print it).
-
-On open it sends one subscribe frame for the topic that `newt_sendTask` returns as `subscription_topic`, the task id as bare lowercase hex:
-
-```json
-{"type":"subscribe","id":"sub-1","method":"<topic>","params":null}
-```
-
-It skips `subscribed` and `pong` frames, passes the `result` of each `update` frame to `onUpdate`, resolves on the first event whose `data.status` is `success`, `failed` or `timeout`, and rejects on an `error` frame. Every terminal path closes the socket, as in section 2.
-
-A gateway that authenticates `/ws` only from the `Authorization` or `X-API-Key` header answers this upgrade with 401 `missing or invalid API key`, so subprotocol auth needs a gateway build that reads `newton.bearer.<key>`. The gateway ignores an `api_key` query parameter.
 
 ---
 

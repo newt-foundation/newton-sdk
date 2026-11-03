@@ -22,7 +22,7 @@ All tutorial documents are English-only. Copy-pasteable commands are collected i
 - Builds a zkTLS-backed `newt_createTask` request for Twitter/X follower verification.
 - Reuses the example payloads in `examples/zktls-twitter/configs/`.
 - References the operator-side Twitter policy from `newton-prover-avs`; this SDK repo carries only the client SDK/demo/tutorial assets.
-- Shows where a TLSNotary proof CID goes in the task request. The current gateway rejects it (see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) section 1).
+- Shows where a real TLSNotary proof CID plugs into the gateway/operator path.
 - Connects the CLI/demo payload path to the browser proof-generation UX in `newton-tlsn-extension-demo`.
 
 ## What this tutorial does not do
@@ -31,14 +31,12 @@ All tutorial documents are English-only. Copy-pasteable commands are collected i
 - It does not replace the TLSNotary browser/client prover UX.
 - It does not bypass gateway, operator, IPFS, or trusted notary key requirements for a live submission.
 
-Summary: this tutorial helps a first-time developer quickly understand the Newton zkTLS request shape and local execution path. A real submission still requires a running gateway and an API key, and it cannot carry the proof CID while the gateway rejects `proof_cid`.
+Summary: this tutorial helps a first-time developer quickly understand the Newton zkTLS request shape and local execution path. A real submission still requires a running gateway, API key, IPFS CID, and trusted TLSNotary key configuration.
 
 ## Identity integration roadmap
 
 The current demo proves Twitter/X follower data, stores the proof on IPFS, and
-passes the resulting CID as `proofCid`/`proof_cid` in the task request. The
-current gateway rejects that field with `proof_cid is unsupported; zkTLS proof
-verification is unavailable`, so the proof does not reach operators. The next
+passes the resulting CID as `proofCid`/`proof_cid` in the task request. The next
 protocol milestone is to make TLS proofs optionally travel with encrypted
 identity uploads so the gateway can verify the proof before persisting identity
 data, removing the required IPFS hop for identity-backed zkTLS flows.
@@ -78,7 +76,7 @@ scripts/zktls-tutorial-doctor.sh      # tutorial environment and fixture checker
 bin/deploy/docker-compose.gateway-local.yml
 ```
 
-The example SDK package (`examples/zktls-twitter/sdk/`) is `"private": true` and is not published to npm. It demonstrates the proof -> CID -> task pipeline against a running gateway and attester sidecar; the current gateway rejects a task that carries the CID. Production integrations should use `@newton-xyz/sdk` from the repo root.
+The example SDK package (`examples/zktls-twitter/sdk/`) is `"private": true` and is not published to npm. It demonstrates the proof → CID → task pipeline against a running gateway and attester sidecar. Production integrations should use `@newton-xyz/sdk` from the repo root.
 
 ## Validation commands used for this tutorial pack
 

@@ -344,8 +344,9 @@ The policy evaluates:
 `AttesterClient` and `ProofClient` fall back to `gatewayUrl` without `/rpc`, but
 the Newton gateway serves only `/health`, `/objects/:cid`, `/rpc` and `/ws`, so
 set `attesterUrl`. `trackTask` and `submitAndWait` need `apiKey`: the SDK sends it
-to `/ws` as the `newton.bearer.<key>` WebSocket subprotocol. If that upgrade
-fails, see `docs/zktls-twitter/TROUBLESHOOTING.md` section 19.
+to `/ws` as the `newton.bearer.<key>` WebSocket subprotocol. A gateway that
+reads the key only from the `Authorization` or `X-API-Key` header refuses that
+upgrade with 401 `missing or invalid API key`.
 
 ## License
 

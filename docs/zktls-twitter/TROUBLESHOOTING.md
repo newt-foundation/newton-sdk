@@ -2,30 +2,40 @@
 
 Summary: this guide lists the most common failure points and the quickest commands to inspect them.
 
-## 1. `proof_cid is unsupported; zkTLS proof verification is unavailable`
+## 1. `proof_cid` is missing from task payload
 
 Symptoms:
 
-- `newt_createTask` or `newt_sendTask` fails with HTTP 400 and `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}`
-- the example SDK throws `RpcError` with `code: "InvalidRequest"`: `gateway newt_createTask returned 400 [InvalidRequest] proof_cid is unsupported; zkTLS proof verification is unavailable`
-- a `wasm_args` entry that carries `_newton.proof_cid` fails with `wasm_args[i]._newton.proof_cid is unsupported; zkTLS proof verification is unavailable`
-- `newton-cli` stops with the same error before it sends the request
+- Gateway receives a task but operators do not fetch a TLSNotary proof.
+- Logs do not mention `_newton.proof_cid` or `proof_cid`.
 
-Cause: the current gateway does not verify zkTLS proofs, so it rejects any non-null `proof_cid` or `proofCid` instead of running the task without the proof.
-
-Fix: there is no supported way to attach a proof today. Find the field in a payload with:
+Fix:
 
 ```bash
-python3 -m json.tool /tmp/newton-zktls-twitter-payload.json | grep -E 'proof_cid|proofCid'
+python3 -m json.tool /tmp/newton-zktls-twitter-payload.json | grep -E 'proof_cid|use_two_phase'
 ```
 
-Removing it lets the task run, but the Twitter follower policy still denies: it allows only when `input.data.tlsn_verified` is true, which needs a verified proof.
+Use either SDK-style `proofCid` in `task.json` or raw JSON-RPC `proof_cid`. Do not pass both with different values.
 
-## 2. `conflicting proof CID aliases: proofCid=... but proof_cid=...`
+## 2. `Conflicting values for proof_cid and proofCid`
 
-Cause: the request carries both `proofCid` and `proof_cid` with different values. The gateway checks this before the rejection in section 1.
+Cause: both aliases were supplied with different CIDs.
 
-Fix: remove both. Keeping only one turns this into the section 1 error.
+Fix: keep exactly one CID value.
+
+```json
+{
+  "proofCid": "bafy..."
+}
+```
+
+or
+
+```json
+{
+  "proof_cid": "bafy..."
+}
+```
 
 ## 3. Gateway health check fails
 
@@ -54,9 +64,6 @@ Symptoms:
 
 - HTTP 401 / 403 from `/rpc`
 - `Authorization: Bearer` missing or wrong
-- the example SDK throws `RpcError` with `status: 401` and `code: "AuthenticationFailed"` when it sent no key, or `code: "http_error"` for an unknown key, which the gateway answers with an empty body
-- a key without the method's permission gets `status: 403` and `code: "AuthorizationFailed"`
-- `/ws` answers the upgrade with 401 `missing or invalid API key` (section 19)
 
 Fix:
 
@@ -69,8 +76,6 @@ curl -i -X POST http://127.0.0.1:8080/rpc \
 ```
 
 ## 5. IPFS fetch fails
-
-Sections 5 to 7 apply only to a gateway build that verifies zkTLS proofs. The current gateway rejects `proof_cid` before any operator sees the task (section 1).
 
 Symptoms:
 
@@ -203,19 +208,18 @@ Fixes:
 - inspect the attester logs for the message it tried to send; legitimate `sessionRegistered` and `sessionCompleted` messages are well below 1 MB
 - if a real revealed-value payload exceeds 1 MB, the attester is encoding too much state into a single frame — split the reveal across multiple `revealConfig` requests or trim the response body fields the policy needs
 
-## 15. `wasmArgs` too large
+## 15. `wasmArgs` hex cap exceeded
 
 Symptoms:
 
-- `decodeWasmArgs(hex)` throws `Invalid hex string: payload exceeds 52428800 bytes`
-- `newt_createTask` or `newt_sendTask` fails with HTTP 413, which the SDK reports as `RpcError` with `code: "http_error"`
+- `decodeWasmArgs(hex)` throws "wasmArgs hex too long" or task creation rejects oversized args
 
-Cause: `decodeWasmArgs` caps decoded args at 50 MiB as a memory guard. The gateway caps the whole `/rpc` request body at 23,418,197 bytes (about 22.3 MiB), and hex doubles the size, so an inline argument has to stay under about 11 MiB of JSON.
+Cause: encoded `wasmArgs` exceed the SDK's 50 MiB hex cap. This bound matches the operator-side proof size limit and protects against unbounded JSON serialization.
 
 Fixes:
 
-- inspect the JSON object you passed to `encodeWasmArgs(...)`; typical Twitter follower policies use about 100 bytes
-- there is no route for larger data: the gateway rejects `proofCid` (section 1)
+- inspect the JSON object you passed to `encodeWasmArgs(...)` — typical Twitter follower policies use ~100 bytes
+- if you are deliberately passing large data, route it through `proofCid` (IPFS) instead of inline `wasmArgs`
 
 ## 16. Gateway response body exceeds 1 MiB
 
@@ -230,39 +234,3 @@ Fixes:
 - a normal JSON-RPC response is well under 1 MiB; an oversized response usually means the gateway is returning unexpected content (HTML error page from a misconfigured proxy, debug dumps, etc.)
 - check `curl -i ${GATEWAY_URL}/rpc` directly to see the raw response size and content type
 - if the gateway is behind an HTTPS terminator, confirm it is not interpolating its own error pages into successful responses
-
-## 17. `Proof store failed: HTTP 404` or `Proof retrieve failed: HTTP 404`
-
-Cause: `ProofClient` sends `/v1/proof/store` and `/v1/proof/<cid>` to `attesterUrl`, or to the gateway URL without `/rpc` when `attesterUrl` is unset. The current Newton gateway serves only `/health`, `/objects/:cid`, `/rpc` and `/ws`, so it answers these paths with 404.
-
-Fix: set `attesterUrl` to the service that stores proofs.
-
-## 18. `gateway <method> returned <status> [<code>] <detail>`
-
-When the gateway answers with an error, `sdk.gateway.*` calls and `sdk.task.createTask(...)` or `sendTask(...)` throw `RpcError` with this message. `status` is the HTTP status, `code` is the gateway's error variant (`InvalidRequest`, `RateLimitExceeded`, `QuorumNotReached`, and so on), and `data` holds the variant's payload. `InvalidRequest` with `Invalid request format: ...` means `params` does not match the method's request type, for example an array where the gateway expects an object.
-
-`code: "http_error"` means the response had no JSON-RPC error body:
-
-- 401 with an empty body: the API key is unknown (section 4)
-- 503 with an empty body: the gateway could not check the API key
-- 408: the request outlasted the gateway's `server.request_timeout` (30 seconds in its sample `gateway.toml`); use `sdk.task.sendTask(...)` and track the task over `/ws` instead of waiting on `createTask`
-- 400, 415 or 422 with a plain-text body: the gateway could not read the request; for a hand-built request, check that `id` is a UUID or null
-
-## 19. `cannot track task <topic> at <url>: an API key is required`
-
-The same prefix also ends in `the API key holds characters a WebSocket subprotocol cannot carry`.
-
-Cause: `/ws` takes the API key as a `newton.bearer.<key>` subprotocol, so `trackTask` needs `apiKey` in the SDK config, and the key may hold only letters, digits and HTTP token punctuation such as `-`, `_` and `.`. The message never includes the key.
-
-Fix: pass `apiKey` to `createNewtonSDK(...)`.
-
-If `trackTask` fails with `Task tracking WebSocket error: ...` or `WebSocket closed: ...` before any update arrives, the gateway may have refused the upgrade. A gateway build that reads the API key only from the `Authorization` or `X-API-Key` header answers it with 401 `missing or invalid API key`; subprotocol auth needs a gateway that reads `newton.bearer.<key>`. The old `?api_key=` and `?topic=` query parameters do nothing: the gateway ignores `api_key` in the query and takes the topic from the subscribe frame.
-
-## 20. `task <topic> subscription failed: <message>`
-
-Cause: the gateway sent an `error` frame on `/ws`, and `<message>` is its text.
-
-Checks:
-
-- the topic must be the `subscription_topic` from `newt_sendTask`: the task id as bare lowercase hex, without `0x`
-- `trackTask` resolves on the first `update` whose `data.status` is `success`, `failed` or `timeout`; the gateway sends no separate success or failure event

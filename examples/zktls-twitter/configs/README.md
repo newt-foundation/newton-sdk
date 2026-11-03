@@ -42,14 +42,11 @@ The script still writes the old payload (`"id": 1`, a `params` array, a string `
 
 ## Newton CLI
 
+`newton-cli` rejects a non-null `proofCid` or `proof_cid` with the same `proof_cid is unsupported` error before it sends anything. Without one, it sends `params` as a one-element array, which the current gateway cannot read into its request type, so the command below does not work against the current gateway.
+
 ```bash
 API_KEY="$API_KEY" DEPLOYMENT_ENV=stagef CHAIN_ID=11155111 \
   cargo run -p newton-cli -- \
   task submit-evaluation-request \
   --task-json examples/zktls-twitter/configs/task.json
 ```
-
-`newton-cli` rejects a non-null `proofCid` or `proof_cid` with the same `proof_cid is unsupported` error before it sends anything. Without one, it sends `params` as a one-element array, which the current gateway cannot read into its request type, so this command does not work against the current gateway.
-## First-time user tutorials
-
-For a guided external-user onboarding path, see `../../../docs/zktls-twitter/README.md`.
