@@ -48,16 +48,16 @@ flowchart LR
 
 Each operator derives its individual HPKE keypair from its ECDSA key at startup using a unified derivation function that composes all three stages. These individual keys are used for operator identification and direct encrypted messaging (e.g., threshold share exchange between peers). During operator registration, each operator registers its individual X25519 public key on-chain in the operator registry — alongside its BLS public key, stake, and quorum membership.
 
-**Threshold key generation (DKG).** The system's combined HPKE public key — the key that clients encrypt to — is NOT derived from individual operator keys. Instead, it is produced by an interactive Distributed Key Generation (DKG) protocol run whenever the operator set changes (registration, deregistration, or stake updates). The DKG protocol (based on FROST DKG or Pedersen VSS) proceeds in two rounds:
+**Threshold key generation (DKG).** The system's combined HPKE public key — the key that clients encrypt to — is NOT derived from individual operator keys. Instead, it is produced by an interactive Distributed Key Generation (DKG) protocol run among the operators. The DKG protocol (based on FROST DKG or Pedersen VSS) proceeds in two rounds:
 
-1. **Commitment round.** Each operator generates a random polynomial of degree t-1 and broadcasts commitments (Feldman VSS commitments on Curve25519) to all other operators via NATS.
-2. **Share distribution round.** Each operator evaluates its polynomial at each peer's index and sends the resulting share to that peer via encrypted NATS messages. Each operator verifies received shares against the published commitments.
+1. **Commitment round.** Each operator generates a random polynomial of degree t-1 and broadcasts commitments (Feldman VSS commitments on Curve25519) to all other operators.
+2. **Share distribution round.** Each operator evaluates its polynomial at each peer's index and sends the resulting share to that peer. Each operator verifies received shares against the published commitments.
 
-The protocol produces: (a) a combined X25519 public key that is the sum of all operators' commitment constant terms, and (b) a private key share for each operator that is the sum of all shares received at its index. The combined public key is stored on-chain in a single storage slot on the operator registry contract. Clients read this combined key with a single contract call — no client-side aggregation is needed.
+The protocol produces: (a) a combined X25519 public key that is the sum of all operators' commitment constant terms, and (b) a private key share for each operator that is the sum of all shares received at its index. Clients fetch the combined public key from the gateway with the `newt_getPrivacyPublicKey` RPC method, so no client-side aggregation is needed.
 
-This DKG approach provides **key independence**: the threshold private key shares are cryptographically unrelated to operators' ECDSA or BLS keys. Compromise of an operator's ECDSA key does not compromise their threshold decryption share, and vice versa. The DKG ceremony is infrequent (only triggered by operator set changes) and does not affect task evaluation latency. Resharing protocols (proactive secret sharing) enable operator rotation without changing the combined public key, ensuring that clients' previously encrypted data remains decryptable by the updated operator set.
+This DKG approach provides **key independence**: the threshold private key shares are cryptographically unrelated to operators' ECDSA or BLS keys. Compromise of an operator's ECDSA key does not compromise their threshold decryption share, and vice versa. Key generation is a one-time ceremony rather than a per-task step, so it does not affect task evaluation latency. Operators can later refresh their shares (proactive secret sharing) without changing the combined public key, so data encrypted earlier stays decryptable.
 
-Decryption requires cooperation from at least t operators (where t matches the BLS quorum threshold), and no single entity — including the gateway — ever holds the complete private key.
+Decryption requires partial decryptions from at least t operators, and no single operator's share is enough to decrypt.
 
 ### Newton Privacy Envelope (NPE) and AAD Binding
 
@@ -97,19 +97,20 @@ The complete privacy data flow from client encryption through operator evaluatio
 
 ```mermaid
 flowchart LR
-    C[Client] -->|Read threshold public key| REG[Operator Registry]
+    C[Client] -->|newt_getPrivacyPublicKey| GW[Gateway]
     C -->|HPKE encrypt| E[SecureEnvelope]
-    E -->|Upload via RPC| GW[Gateway]
+    E -->|Upload via RPC| GW
     GW -->|Store encrypted| DB[Encrypted Data Store]
     DB -->|Load by reference| OP[Operators]
-    OP -->|Compute partial share| NATS[NATS Share Exchange]
-    NATS -->|Reconstruct plaintext| PD[Plaintext - local]
+    OP -->|Encrypted partial shares| GW
+    GW -->|Relay to each operator| OP
+    OP -->|Combine t shares| PD[Plaintext - local]
     PD -->|Evaluate + BLS sign| AGG[Aggregator]
 ```
 
-The client reads the system's combined X25519 public key from the onchain operator registry with a single contract call. This combined key is the output of the DKG protocol ([Key Derivation Chain](#key-derivation-chain)); it corresponds to a threshold keypair distributed across the operator set, and no single entity holds the complete private key. The client encrypts sensitive data into one or more SecureEnvelopes using this combined key. Identity and confidential data envelopes are uploaded, and each upload returns a content-addressed data reference that is then registered onchain. Tasks do not carry these references: operators find a task's identity and confidential data through the onchain registries (see [Authorization](#authorization)). Ephemeral envelopes travel inline with the task.
+The client fetches the system's combined X25519 public key from the gateway with the `newt_getPrivacyPublicKey` RPC method. This combined key is the output of the DKG protocol ([Key Derivation Chain](#key-derivation-chain)); it corresponds to a threshold keypair whose shares are distributed across the operator set, and decryption requires at least t of those shares. The client encrypts sensitive data into one or more SecureEnvelopes using this combined key. Identity and confidential data envelopes are uploaded, and each upload returns a content-addressed data reference that is then registered onchain. Tasks do not carry these references: operators find a task's identity and confidential data through the onchain registries (see [Authorization](#authorization)). Ephemeral envelopes travel inline with the task.
 
-Operators load stored envelopes from the encrypted data store by reference, and inline envelopes arrive with the task. Each operator computes a partial decryption share using its DKG-produced share of the threshold private key, and publishes the partial share to the recipient operators via NATS operator-specific subjects (`newton.operators.{operator_id}.shares.{task_id}`). Shares are encrypted end-to-end to the recipient operator's individual X25519 public key (derived from their ECDSA key per the [Key Derivation Chain](#key-derivation-chain)) before publishing, ensuring that the NATS broker, and the current gateway operator, sees only ciphertext. Once an operator collects t partial shares from peers (where t is the threshold matching the BLS quorum requirement), it reconstructs the plaintext locally and evaluates the policy over the decrypted data. No single operator, and no central entity including the gateway, ever holds the complete decryption key. The verdict is then BLS-signed and aggregated as in the standard task flow.
+Operators load stored envelopes from the encrypted data store by reference, and inline envelopes arrive with the task. In the Prepare phase, each operator computes a partial decryption share for every envelope using its DKG-produced share of the threshold private key, then encrypts the partial share separately to each peer operator's public key registered onchain. The gateway collects these encrypted partial shares and relays them to every operator in the Commit phase; it cannot read or combine them. Each operator decrypts the partial shares addressed to it and, once it holds at least t valid shares, reconstructs the plaintext locally and evaluates the policy over the decrypted data. No single operator's key share is enough to decrypt. The verdict is then BLS-signed and aggregated as in the standard task flow.
 
 ### Multi-Party Computation for Policy Evaluation
 

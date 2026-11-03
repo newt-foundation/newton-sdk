@@ -245,7 +245,7 @@ Operators decrypt each envelope locally and add its JSON plaintext to `data.priv
 | Storage | None (inline in request) | Gateway database |
 | On-chain | None | `IdentityRegistry` or `ConfidentialDataRegistry` |
 | Reusability | Single task only | Referenced by any future task |
-| Authorization | Part of task request | Onchain link to the policy client and an intent signed by the identity owner (identity), or a two-step grant (confidential) |
+| Authorization | Part of task request | Onchain link to the policy client and an intent signed by the linked client user (identity), or a two-step grant (confidential) |
 | Rego namespace | `data.privacy.inline[i]` | `newton.identity.*` or `newton.confidential.*` |
 
 ---
