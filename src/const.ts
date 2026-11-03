@@ -13,6 +13,9 @@ export const GATEWAY_API_URLS: Record<number, string> = {
   [mainnet.id]: 'https://gateway.newton.xyz/rpc',
   [baseSepolia.id]: 'https://gateway.testnet.newton.xyz/rpc',
   [base.id]: 'https://gateway.newton.xyz/rpc',
+  // Robinhood Chain testnet and Arc testnet; viem 2.35.1 has no chain objects for them
+  46630: 'https://gateway.testnet.newton.xyz/rpc',
+  5042002: 'https://gateway.testnet.newton.xyz/rpc',
 } as const
 
 export const GATEWAY_METHODS = {

@@ -39,6 +39,32 @@ Base Sepolia supports cross-chain policy verification.
 | ConfidentialDataRegistry | `0x64866c22ee0fb16b6b7502f5a4ca73d82f3de3d7` |
 | PolicyFactory | `0x8c05da8487978c1d5304fe8fbaf34afbd16b1834` |
 
+## Robinhood Chain Testnet (Chain ID: 46630)
+
+Robinhood Chain testnet supports cross-chain policy verification, with Ethereum Sepolia as the source chain.
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0x378b1fec2b8db0b57227f0750c3b58eabbbca787` |
+| AttestationValidator | `0xc385b802ab488cff5d67f15c9423760b1afe8410` |
+| PolicyClientRegistry | `0x17cb364bdd5f16ce8024478bd7a80129b1c73fc6` |
+| IdentityRegistry | `0x0b826d0bb473c633fb925f1738564803941411c3` |
+| ConfidentialDataRegistry | `0x571e1411c7079fed225f057720a35dcb918aa6b8` |
+| PolicyFactory | `0x200a466c03930581aa7cf43cdd1a8957e8d83e2f` |
+
+## Arc Testnet (Chain ID: 5042002)
+
+Arc testnet supports cross-chain policy verification, with Ethereum Sepolia as the source chain. Its contracts have the same addresses as on Robinhood Chain testnet.
+
+| Contract | Address |
+|----------|---------|
+| NewtonProverTaskManager | `0x378b1fec2b8db0b57227f0750c3b58eabbbca787` |
+| AttestationValidator | `0xc385b802ab488cff5d67f15c9423760b1afe8410` |
+| PolicyClientRegistry | `0x17cb364bdd5f16ce8024478bd7a80129b1c73fc6` |
+| IdentityRegistry | `0x0b826d0bb473c633fb925f1738564803941411c3` |
+| ConfidentialDataRegistry | `0x571e1411c7079fed225f057720a35dcb918aa6b8` |
+| PolicyFactory | `0x200a466c03930581aa7cf43cdd1a8957e8d83e2f` |
+
 ## Base Mainnet (Chain ID: 8453)
 
 Base mainnet serves as a destination chain for cross-chain policy verification.
@@ -71,10 +97,12 @@ Ethereum mainnet contracts are deployed but require coordination before producti
 
 | Network | Environment | URL |
 |---------|-------------|-----|
-| Testnet (Sepolia) | Production | `https://gateway.testnet.newton.xyz/rpc` |
-| Testnet (Sepolia) | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
+| Testnet | Production | `https://gateway.testnet.newton.xyz/rpc` |
+| Testnet | Staging | `https://gateway.stagef.testnet.newton.xyz/rpc` |
 | Mainnet | Production | `https://gateway.newton.xyz/rpc` |
 | Mainnet | Staging | `https://gateway.stagef.newton.xyz/rpc` |
+
+The SDK sends requests for Ethereum Sepolia, Base Sepolia, Robinhood Chain testnet and Arc testnet to the testnet gateway, and requests for Ethereum and Base to the mainnet gateway.
 
 ## Next Steps
 

@@ -80,7 +80,7 @@ For a step-by-step walkthrough of integrating these into your application, see t
 ## Setup & Initialization
 
 :::info
-Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Robinhood Chain testnet** (chain ID `46630`), **Arc testnet** (chain ID `5042002`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients. If your viem version has no chain object for Robinhood Chain testnet or Arc testnet, build one with viem's `defineChain`.
 :::
 
 ### newtonPublicClientActions
@@ -333,7 +333,7 @@ evaluateIntentDirect(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be a chain that the client's gateway serves: `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), `46630` (Robinhood Chain testnet) or `5042002` (Arc testnet) on testnet, `1` (Ethereum) or `8453` (Base) on mainnet. |
 | `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
 | `timeout`      | `number`           | Yes       | Sent as `timeout`. The gateway accepts it but does not apply it, and ends any HTTP request that runs past its server request timeout (30 seconds in the default configuration) with HTTP 408 |
 
@@ -460,7 +460,7 @@ submitIntentAndSubscribe(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be a chain that the client's gateway serves: `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), `46630` (Robinhood Chain testnet) or `5042002` (Arc testnet) on testnet, `1` (Ethereum) or `8453` (Base) on mainnet. |
 | `timeout`      | `number`           | Yes       | Sent as `timeout`. `newt_sendTask` does not read it                                                |
 
 **Returns:**
@@ -501,7 +501,7 @@ const result = await walletClient.simulateTask({
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
+    chainId: 11155111, // Ethereum Sepolia; 84532, 46630 and 5042002 also work on testnet
     functionSignature: '0x...',
   },
   wasmArgs: ['0x', '0x'], // One slot per policy: its oracle output, or '0x' for pure-Rego

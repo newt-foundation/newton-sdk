@@ -120,7 +120,8 @@ interface SdkOverrides {
   identityRegistry?: Address
 }
 
-const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id]
+// 46630 is Robinhood Chain testnet, 5042002 is Arc testnet
+const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id, 46630, 5042002]
 
 const newtonWalletClientActions =
   (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>

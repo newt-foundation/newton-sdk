@@ -32,6 +32,8 @@ export const DEPLOYMENT_KEYS = {
   1: 'newton-prover/1-prod',
   8453: 'newton-cross-chain/8453-prod',
   84532: 'newton-cross-chain/84532-prod',
+  46630: 'newton-cross-chain/46630-prod',
+  5042002: 'newton-cross-chain/5042002-prod',
 } as const satisfies Record<number, string>
 
 export type SupportedChainId = keyof typeof DEPLOYMENT_KEYS
