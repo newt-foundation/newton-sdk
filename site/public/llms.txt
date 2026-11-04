@@ -48,7 +48,7 @@ Docs: https://docs.newton.xyz
 
 ## Reference
 
-- [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference): Full API reference for @magicnewton/newton-protocol-sdk.
+- [SDK Reference](https://docs.newton.xyz/developers/reference/sdk-reference): Full API reference for @newton-xyz/sdk.
 - [RPC API](https://docs.newton.xyz/developers/reference/rpc-api): Newton Gateway JSON-RPC 2.0 methods.
 - [CLI Reference](https://docs.newton.xyz/developers/reference/command-line-tool): newton-cli commands and flags.
 - [Contract Addresses](https://docs.newton.xyz/developers/reference/contract-addresses): Deployed contract addresses per chain.
