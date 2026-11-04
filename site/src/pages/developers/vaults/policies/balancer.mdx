@@ -30,12 +30,4 @@ The Balancer policy pack uses keyless Balancer data in composite policies. It is
 
 Install the pack package and add it with `definePolicy(...).with(balancer)`.
 
-This pack ships **no `prepareQuery`** — `poolId` and `chain` name a pool the SDK cannot read off the vault — so its `wasmArgs` are curator-supplied per call, under `wasmArgs.balancer` rather than `prepareQueryOptions.balancer`:
-
-```typescript
-await shield.morpho.reallocate(vault, allocations, {
-  wasmArgs: { balancer: { poolId, chain: 'base' } },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+This pack ships **no `prepareQuery`**: `poolId` and `chain` name a pool the SDK cannot read off the vault, so the curator supplies them per call. VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.

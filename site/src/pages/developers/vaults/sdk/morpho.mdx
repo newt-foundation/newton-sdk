@@ -21,8 +21,8 @@ This guide focuses on `reallocate`, a curator-only MetaMorpho action. End-user d
 ## What This Demonstrates
 
 - **Exact calldata binding:** the attestation is bound to the exact `reallocate` calldata your app encodes.
-- **Composite policy checks:** one Shield can enforce a Vaults.fyi-only policy or a Vaults.fyi + Chainalysis policy in a single evaluation.
-- **Onchain policy parameters:** `setParams(...)` writes the curator's thresholds into the Shield-bound policy manifest.
+- **Composite policy checks:** one Shield can enforce a Vaults.fyi-only policy set or a Vaults.fyi + Chainalysis policy set in a single evaluation.
+- **Onchain policy parameters:** `setParams(...)` binds the Shield's policy set, writing the curator's thresholds as each module policy's own `policyParams`.
 - **Manager-action gating:** the Shield clone must hold a MetaMorpho role that can call `reallocate`.
 
 ## Target Network
@@ -51,7 +51,7 @@ The Morpho packages are optional peer dependencies of VaultKit. Curators who use
 
 ## Declare the Policy
 
-Use `definePolicy().with(...)` with the modules deployed in your Newton policy. A Vaults.fyi-only policy looks like this:
+Use `definePolicy().with(...)` with one module per `NewtonPolicy` you deployed. A Vaults.fyi-only policy looks like this:
 
 ```typescript
 import { definePolicy } from '@newton-xyz/vaultkit'
@@ -78,7 +78,7 @@ const policy = definePolicy({
   .with(chainalysis)
 ```
 
-The module list must match the policy's onchain `getPolicyData()` exactly. If the Shield is configured with a policy address that references a different module set, the SDK raises a typed configuration error before executing a vault action.
+Each module runs as its own `NewtonPolicy`, deployed from the pack's reference Rego and published WASM. Pass one per declared module in `createShield({ policies })`. A missing or unknown key fails the type check and throws `CompositeModuleSetMismatchError` at runtime, and a module policy that does not serve its pack's WASM throws `PolicyWasmCidMismatchError`, before any vault action runs.
 
 ## Create or Attach to a Shield
 
@@ -94,7 +94,10 @@ const shield = (await createShield({
   rpc: process.env.BASE_SEPOLIA_RPC_URL!,
   publicClient,
   policy,
-  policyAddress: '0xCompositePolicyAddress',
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+    // chainalysis: '0xChainalysisPolicy', for the two-module policy
+  },
   vault: '0xMetaMorphoVaultAddress',
   bypassDelaySeconds: 7n * 24n * 60n * 60n,
 })).extend(morphoActions)
@@ -208,9 +211,9 @@ For demos, point the Vaults.fyi lookup at a real mainnet vault through the polic
 | --- | --- | --- |
 | `401` from Newton Gateway | API key was minted for a different Newton environment. | Create a key for the same stack as `env`, usually `prod` for Base Sepolia testnet production. |
 | `UnsupportedChainError` | Wallet client is not on a VaultKit-supported chain. | Use a supported chain such as Base Sepolia (`84532`) for testnet Morpho flows. |
-| `ShieldDeploymentNotFoundError` | No Shield factory is registered for the selected chain and environment. | Check `env`, chain id, and RPC configuration. |
-| Module-set mismatch or composite policy mismatch | The modules declared with `definePolicy().with(...)` do not match the policy address. | Use a policy deployed with exactly the selected modules. |
-| `PolicyMismatchError` | An existing Shield clone is bound to different policy data. | Verify the clone, write the expected params in a recovery run, or use a new `version`. |
+| `ShieldDeploymentNotFoundError` | No Shield factory is recorded for the selected chain and environment. VaultKit 3.0.0 records none yet. | Pass your own factory as `deployment`, or attach to an existing clone with `policyClientAddress`. |
+| `CompositeModuleSetMismatchError` or `PolicyWasmCidMismatchError` | `policies` is missing a declared module or has an unknown key, or a module policy serves a different WASM. | Pass one deployed policy per module, each running its pack's WASM. |
+| `PolicyMismatchError` | An existing Shield clone binds a different policy set, or no set yet. | Attach with `attachWithoutVerify: true` and call `setParams(...)` in a recovery run, or use a new `version`. |
 | MetaMorpho role revert | The Shield clone is not curator, owner, or allocator. | Grant the clone a qualifying vault role, then rerun the action. |
 | `PolicyDeniedError` | Newton evaluated the policy and denied the intent. | Inspect the error cause, adjust params, or choose inputs that satisfy the policy. |
 | Vaults.fyi oracle errors or unexpected denials | Missing Vaults.fyi secret or no data for the lookup target. | Upload the API key and use a production-network data-source override for testnet demos. |

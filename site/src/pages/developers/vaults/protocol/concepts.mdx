@@ -45,7 +45,7 @@ The attestation binds to all fields. `from` must match the caller of `Shield.exe
 
 ## `Task`
 
-A `Task` is the offchain evaluation request sent to Newton Gateway. It carries the intent, policy reference, pack-specific `wasmArgs`, expiration metadata, and the curator's signature over the intent.
+A `Task` is the offchain evaluation request sent to Newton Gateway. It carries the intent, the Shield's policy set frozen at creation (the ordered `policies`, `policyId`, and `policyRevision`), one `wasmArgs` entry per policy, expiration metadata, and the curator's signature over the intent.
 
 ## `TaskResponse`
 
@@ -70,11 +70,11 @@ The aggregated BLS signature data is recorded through the AVS task manager. The 
 
 ## Policy and Params
 
-A Newton policy pins a policy template and a `PolicyConfig`. The config includes `policyParams`, a typed byte blob produced by the selected policy pack. Updating params changes future policy evaluations; it does not rewrite old attestations.
+A `NewtonPolicy` pins one Rego program and at most one WASM oracle. It holds no client's params, and there is no separate `NewtonPolicyData` contract. A Shield binds a policy set of 1 to 8 `PolicySpec { policy, config: { policyParams, expireAfter } }` entries, evaluated as a fail-closed AND. Each entry's `policyParams` is plain canonical JSON for that policy alone, stored on the Shield, and its Rego reads it as `data.params`. Updating params changes future policy evaluations; it does not rewrite old attestations.
 
 ## `wasmArgs`
 
-`wasmArgs` are per-call inputs for the policy WASM. They are not global configuration. They usually include the vault, network, asset, market id, external-data query fields, and freshness snapshots required for the policy to make a decision.
+`wasmArgs` are per-call inputs for each policy's WASM oracle: one entry per policy in set order, `0x` for a pure-Rego policy. They are not global configuration. They usually include the vault, network, asset, market id, external-data query fields, and freshness snapshots required for the policy to make a decision.
 
 ## Fail-Closed Behavior
 
@@ -83,4 +83,4 @@ If Newton operators deny the task, quorum is not reached, the attestation expire
 
 ## Policy-set clients
 
-For policy-set-capable deployments, a Task freezes the ordered specs, set ID, and revision. The response retains ordered per-policy evidence and aggregate `allowed`; all policies must allow. Preserve order and repeats when forwarding signed responses. Verify the Shield and Vault SDK release before adopting the core SDK schema.
+A Task freezes the ordered specs, set ID, and revision. The response retains ordered per-policy evidence and aggregate `allowed`; all policies must allow. Preserve order and repeats when forwarding signed responses. VaultKit 3.0.0 requires a policy-set Shield built from the 0.7 contracts, and reports a pre-0.7 Shield as one rather than misreading it.

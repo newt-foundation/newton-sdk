@@ -1,6 +1,6 @@
 ---
 title: "Integration Guide"
-description: "Install VaultKit 2.1, declare a Newton policy, and run a typed vault-manager action."
+description: "Install VaultKit 3.0, declare a Newton policy, and run a typed vault-manager action."
 keywords:
   - vaultkit integration
   - definePolicy
@@ -10,9 +10,9 @@ showAskAi: false
 ---
 import { Card } from 'vocs'
 
-# Integration Guide [Install VaultKit 2.1, declare a Newton policy, and run a typed vault-manager action.]
+# Integration Guide [Install VaultKit 3.0, declare a Newton policy, and run a typed vault-manager action.]
 
-VaultKit's current authoring flow is policy-first: declare the policy modules synchronously with `definePolicy(...)`, pass the deployed `NewtonPolicy` address to `createShield(...)`, extend the returned client with a vendor module, and then call a typed action.
+VaultKit's current authoring flow is policy-first: declare the policy modules synchronously with `definePolicy(...)`, pass each module's deployed `NewtonPolicy` to `createShield(...)`, extend the returned client with a vendor module, and then call a typed action.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ Install only the vendor SDKs your integration needs. The typed MetaMorpho module
 pnpm add @morpho-org/blue-sdk @morpho-org/blue-sdk-viem @morpho-org/morpho-ts
 ```
 
-`@newton-xyz/policy-pack-shared` is not part of the VaultKit 2.x flow. Policy authoring and manifest utilities now live in `@newton-xyz/policy-core`.
+`@newton-xyz/policy-pack-shared` is not part of the VaultKit 3.x flow. Policy authoring, params encoding, and policy-set introspection live in `@newton-xyz/policy-core`, a `^0.3.0` peer dependency.
 
 ## 1. Create Viem Clients
 
@@ -75,7 +75,9 @@ const policy = definePolicy({
 }).with(vaultsfyi)
 ```
 
-`definePolicy(...)` is synchronous and does not read the chain. Add more published packs or custom `defineOracle(...)` outputs with additional `.with(...)` calls. Module order does not need to match the deployed contract; VaultKit aligns the declared modules to `NewtonPolicy.getPolicyData()` when the client is created.
+`definePolicy(...)` is synchronous and does not read the chain. Add more published packs or custom `defineOracle(...)` outputs with additional `.with(...)` calls. Module order does not need to match the Shield's policy set; when attaching, VaultKit matches the set by membership and adopts the onchain order.
+
+Each module runs as its own `NewtonPolicy`, and packs ship no canonical one. Before creating the client, deploy one policy per module from the pack's reference Rego and its published WASM; see [Pack Policy Addresses](/developers/vaults/policy-packs#pack-policy-addresses).
 
 ## 3. Create the Client and Add a Vendor Module
 
@@ -90,11 +92,15 @@ const client = (await createShield({
   rpc: process.env.RPC_URL!,
   vault: '0xMetaMorphoVault',
   policy,
-  policyAddress: '0xDeployedNewtonPolicy',
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+  },
 })).extend(morphoActions)
 ```
 
-The `policyAddress` must reference a deployed `NewtonPolicy` whose `getPolicyData()` set matches the modules declared with `.with(...)`. `createShield(...)` resolves that policy and exposes the result as `client.policy`.
+`policies` maps each short pack ID to that module's deployed `NewtonPolicy`; the type requires an entry for every declared module. `createShield(...)` checks that each policy serves its pack's WASM for `(chainId, env)` and exposes the resolved set as `client.policy`.
+
+VaultKit 3.0.0 publishes no Shield factory deployment yet: every `SHIELD_DEPLOYMENTS` slot is `null`, so `createShield(...)` throws `ShieldDeploymentNotFoundError` unless you attach to an existing clone with `policyClientAddress` or pass your own factory as `deployment: { factory, implementation, beacon?, timelock?, deployedAtBlock? }`. Include `beacon` for a beacon factory: without it the SDK predicts an EIP-1167 clone address, so `createShield(...)` reports the wrong address. A fresh clone is deployed with no policy set; `setParams(...)` binds it.
 
 ## 4. Configure Parameters and Secrets
 
@@ -113,24 +119,24 @@ await client.uploadSecrets({
 })
 ```
 
-Parameters are encoded into the onchain composite manifest. Secrets are encrypted client-side and uploaded separately; they are not written onchain.
+`setParams(...)` binds the whole policy set through the Shield's `setPolicies(...)`, writing each module's slice as that policy's own `policyParams`. Secrets are encrypted client-side and uploaded separately, one envelope per module scoped to that module's policy; they are not written onchain.
 
-Use `client.encodeParams(params)` to inspect the exact bytes before writing them.
+Use `client.encodeParams(params)` to inspect the exact `PolicySpec[]` before writing it.
 
 ## 5. Verify the Attachment
 
 ```typescript
-console.log(client.policy.address)
+console.log(client.policy.policies)
 console.log(client.policy.modules)
 console.log(client.verification)
 ```
 
 When attaching to an existing deployment, VaultKit verifies progressively:
 
-1. The attached contract points to the expected policy address.
-2. The onchain oracle set and WASM CIDs match the declared modules.
-3. Stored params decode against the module schemas.
-4. When `expectedParams` is supplied, stored bytes exactly match the expected encoding.
+1. The clone's policy set is exactly the declared policies.
+2. Each module policy serves its pack's WASM.
+3. Each policy's stored params decode against its schema.
+4. When `expectedParams` is supplied, every policy's stored bytes exactly match the expected encoding.
 
 Call `client.reverify()` after changing parameters. Use `attachWithoutVerify: true` only to recover an incomplete first-time setup, and remove it immediately after writing the correct configuration.
 
@@ -203,5 +209,5 @@ See [Errors](/developers/vaults/sdk/errors) before adding retries. A determinist
 </Card>
 
 <Card title="Examples" icon="terminal" to="/developers/vaults/sdk/examples">
-  Copy current VaultKit 2.1 recipes.
+  Copy current VaultKit 3.0 recipes.
 </Card>

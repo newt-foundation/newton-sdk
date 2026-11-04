@@ -1,6 +1,6 @@
 ---
 title: "Errors"
-description: "VaultKit 2.1 error classes, stable codes, diagnostics, and retry guidance."
+description: "VaultKit 3.0 error classes, stable codes, diagnostics, and retry guidance."
 keywords:
   - vaultkit errors
   - rpc read error
@@ -8,9 +8,9 @@ keywords:
 showAskAi: false
 ---
 
-# Errors [VaultKit 2.1 error classes, stable codes, diagnostics, and retry guidance.]
+# Errors [VaultKit 3.0 error classes, stable codes, diagnostics, and retry guidance.]
 
-Every SDK error extends `ShieldError` and carries a stable `code`. `NewtonShieldError` is retained as a deprecated alias.
+Every VaultKit error extends `ShieldError` and carries a stable `code`. `NewtonShieldError` is retained as a deprecated alias. The policy-set errors VaultKit re-exports from `@newton-xyz/policy-core` extend plain `Error`; see [Policy-Set Errors](#policy-set-errors).
 
 ```typescript
 import { isShieldError, ShieldError } from '@newton-xyz/vaultkit'
@@ -38,11 +38,11 @@ try {
 | `GatewayRpcError` | `gateway_rpc_error` | Depends on the JSON-RPC code. |
 | `GatewayTimeoutError` | `gateway_timeout` | Retry with backoff. |
 | `RpcReadError` | `rpc_read_error` | Retry against a healthier RPC endpoint. This class is emitted only for reads proven to have failed for a transport reason. |
-| `PolicyMismatchError` | `policy_mismatch` | Reconcile the expected policy, module set, CIDs, or params. |
+| `PolicyMismatchError` | `policy_mismatch` | The Shield's policy set does not match: a different set, a drifted WASM CID, params that do not decode or byte-match, an unbound clone, or a pre-0.7 Shield. Re-bind with `attachWithoutVerify: true` and `setParams(...)`, or use another clone. When `sendCall` throws it because the gateway task was frozen to another set, retry once the set settles. |
 | `ParamMismatchError` | `param_mismatch` | Reconcile the expected and stored params. |
 | `InvalidConfigurationError` | `invalid_configuration` | Fix the caller configuration. |
 | `ExistingCloneVersionError` | `existing_clone_version` | Choose the intended existing version or a genuinely new version. |
-| `ShieldDeploymentNotFoundError` | `shield_deployment_not_found` | The chain is supported but that environment has no recorded deployment. |
+| `ShieldDeploymentNotFoundError` | `shield_deployment_not_found` | No Shield factory is recorded for that chain and environment. VaultKit 3.0.0 records none yet, so pass `deployment` or attach with `policyClientAddress`. |
 | `UnsupportedChainError` | `unsupported_chain` | Select a supported chain. |
 | `ConcurrentIntentError` | `concurrent_intent` | Wait for the in-flight call; serialize calls per client. |
 | `ExtendCollisionError` | `extend_collision` | Remove or rename the colliding extension. |
@@ -50,6 +50,19 @@ try {
 | `IntentMismatchError` | `intent_mismatch` | Rebuild and re-evaluate; never submit mismatched task data. |
 | `TransactionFailedError` | `transaction_failed` | Inspect `cause`; retry only if the underlying failure is transient. |
 | `ShieldExecutionError` | `shield_execution` | Inspect the decoded revert before deciding. |
+
+## Policy-Set Errors
+
+These come from `@newton-xyz/policy-core` and extend plain `Error`, not `ShieldError`. VaultKit re-exports all of them except `CompositeParamsValidationError`, which you import from `policy-core`.
+
+| Class | When |
+| --- | --- |
+| `PolicyWasmCidMismatchError` | A module policy does not serve its pack's WASM for `(chainId, env)`. `isPriorRelease` says whether it serves an earlier release; pin it with `expectedWasmCids`. |
+| `CompositeModuleSetMismatchError` | `policies` is missing a module or has an unknown key. As the `cause` of a `PolicyMismatchError`, the Shield's set is not exactly the composite's policies. |
+| `CompositeBuilderError` | Duplicate short IDs, two keys on the same policy, a gate with a WASM, a gate schema without a gate, or more than 8 policies. |
+| `PinnedWasmCidMismatchError` / `PinnedWasmCidNotInModuleHistoryError` | An `expectedWasmCids` pin does not match the policy, or is not in the pack's CID history. |
+| `CompositeParamsValidationError` | `setParams` or `encodeParams`: a slice fails its module's or the gate's schema, a key is missing or unknown, or one policy's params encode over 64 KiB. |
+| `CompositePrepareQueryError` | A module's `prepareQuery` rejected while building the intent. |
 
 ## RPC Reads: Transport vs Terminal
 
@@ -86,7 +99,7 @@ The top-level task summary can say that quorum was not reached even when operato
 
 ## Blocked-Intent Errors
 
-`assertIntentBlocked(...)` distinguishes three important outcomes:
+`assertIntentBlocked(...)` distinguishes three outcomes:
 
 - A confirmed `InvalidAttestation` simulation returns `{ blocked: true, taskId, reason }`.
 - An allowed action throws `PolicyNotDeniedError`.

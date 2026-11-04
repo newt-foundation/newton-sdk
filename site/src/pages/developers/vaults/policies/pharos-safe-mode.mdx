@@ -12,10 +12,10 @@ showAskAi: false
 
 # Pharos Stablecoin Safe Mode [Use Pharos stress signals in Newton policies to block exposure-increasing actions under stablecoin stress while leaving the exits open.]
 
-This policy is a **graduated response** to stablecoin stress, using [Pharos](https://pharos.watch). When stress rises or a depeg goes active, it stops actions that *increase* exposure while leaving the exits open: deposits and mints are blocked, withdrawals, redemptions and repayments are always permitted, and swaps are permitted only into a curator-approved safer asset. That is the point — an application gets a graduated response instead of a blunt protocol-wide pause.
+This policy is a **graduated response** to stablecoin stress, using [Pharos](https://pharos.watch). When stress rises or a depeg goes active, it stops actions that *increase* exposure while leaving the exits open: deposits and mints are blocked, withdrawals, redemptions and repayments are always permitted, and swaps are permitted only into a curator-approved safer asset. An application gets a graduated response instead of a blunt protocol-wide pause.
 
 :::note
-This is the only pack in the catalog that reads the **attested intent** as well as oracle data. A graduated response has to know whether the caller is adding exposure or shedding it, and that fact must come from the signed intent rather than from anything the oracle asserts.
+This pack decides by the function the **attested intent** calls, not only by oracle data. A graduated response has to know whether the caller is adding exposure or shedding it, and that fact must come from the signed intent rather than from anything the oracle asserts. Other packs read the intent only to tie the oracle's subject to the transaction, as the Xerberus packs do with `input.from`, `input.to` and the decoded call arguments.
 :::
 
 ## Deployment
@@ -28,7 +28,7 @@ This is the only pack in the catalog that reads the **attested intent** as well 
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
+This pack may not be published on your chain yet. Check [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) for its WASM CID on your `(chainId, env)` before deploying its policy.
 :::
 
 ### Secret
@@ -41,7 +41,7 @@ Sent by the oracle as the `X-API-Key` request header.
 
 ## Data Inputs
 
-Three GET requests against `https://api.pharos.watch`, all filtered by `stablecoin`, totalling roughly 11 KB per evaluation — the lightest Pharos pack: `/api/stress-signals?stablecoin={id}&days={n}`, `/api/depeg-events?stablecoin={id}&active=true&includePending=true`, and `/api/mint-burn-flows?stablecoin={id}&hours={n}`.
+Three GET requests against `https://api.pharos.watch`, all filtered by `stablecoin`: `/api/stress-signals?stablecoin={id}&days={n}`, `/api/depeg-events?stablecoin={id}&active=true&includePending=true`, and `/api/mint-burn-flows?stablecoin={id}&hours={n}`. Together they total roughly 11 KB per evaluation, which makes this the lightest Pharos pack.
 
 | Field | What it means | Why the policy uses it |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ Three GET requests against `https://api.pharos.watch`, all filtered by `stableco
 
 ### The attested intent
 
-The classifier is `input.function.name` — the bare function name, verified against newton-cli 0.5.2. The full `input` shape:
+The classifier is `input.function.name`: the bare function name, verified against newton-cli 0.5.2. The full `input` shape:
 
 ```json
 {
@@ -76,7 +76,7 @@ The classifier is `input.function.name` — the bare function name, verified aga
 
 ## Per-call wasmArgs
 
-This pack ships **no `prepareQuery`**: nothing onchain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call. Note there is deliberately **no amount** — this pack classifies the *action*, not the size.
+This pack ships **no `prepareQuery`**: nothing onchain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call. There is deliberately **no amount**: this pack classifies the *action*, not the size.
 
 | Field | Required? | Notes |
 | --- | --- | --- |
@@ -84,24 +84,14 @@ This pack ships **no `prepareQuery`**: nothing onchain maps an ERC-20 address to
 | `stress_lookback_days` | Optional, defaults to `7` | Stress window |
 | `flow_window_hours` | Optional, defaults to `24` | Mint/burn flow window |
 
-From the CLI or dashboard these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag:
-
-```typescript
-await shield.morpho.submitCap(vault, marketParams, newCap, {
-  wasmArgs: {
-    pharos_safe_mode: { stablecoin_id: 'usdc-circle' },
-  },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+From the CLI or dashboard these go in the simulate payload's `wasm_args`. VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.
 
 ## Policy Parameters
 
 | Param | Type | Description |
 | --- | --- | --- |
 | `safe_mode_stress_threshold` | `number` | Stress score at or above which safe mode engages |
-| `safe_mode_on_active_depeg` | `boolean` | Let an active depeg engage safe mode on its own. **Engages** safe mode — does not deny outright |
+| `safe_mode_on_active_depeg` | `boolean` | Let an active depeg engage safe mode on its own. **Engages** safe mode rather than denying outright |
 | `exposure_increasing_functions` | `string[]` | Bare names blocked in safe mode (e.g. `deposit`, `mint`) |
 | `exposure_reducing_functions` | `string[]` | Bare names always permitted (e.g. `withdraw`, `redeem`) |
 | `swap_functions` | `string[]` | Bare names treated as swaps |
@@ -111,7 +101,7 @@ await shield.morpho.submitCap(vault, marketParams, newCap, {
 | `deny_on_missing_fields` | `string[]` | Field names (`stress_score`, `data_age_seconds`) whose unreported (`null`) value denies rather than passes |
 
 :::warning
-The three function lists are an **allowlist**. A function in none of them denies as `unclassified_function` — in a calm market too, not just under stress. Enumerate every function your vault actually calls.
+The three function lists are an **allowlist**. A function in none of them denies as `unclassified_function` in a calm market too, not just under stress. Enumerate every function your vault actually calls.
 :::
 
 ## Rego Checks
@@ -220,7 +210,7 @@ import future.keywords
 
 default allow := false
 
-t := data.params.pharos_safe_mode
+t := data.params
 v := data.wasm.pharos_safe_mode
 
 nullable_fields := {
@@ -299,7 +289,7 @@ allow if {
 }
 ```
 
-Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.pharos_safe_mode`. See [Policies](/developers/vaults/sdk/policies).
+Composing this pack into a VaultKit composite does not move its params: the pack runs as its own `NewtonPolicy` in the Shield's policy set, and `setParams` writes the `pharos_safe_mode` slice as that policy's own `policyParams`. See [Policies](/developers/vaults/sdk/policies).
 
 :::warning
 Composing this pack with [`pharos_treasury`](/developers/vaults/policies/pharos-treasury) changes the **shape** of the response, not just its strictness. `pharos_treasury.deny_on_active_depeg` denies everything during a depeg, including the unwind this pack would have permitted. AND-composition takes the stricter of the two, so set `deny_on_active_depeg: false` if you want the graduated behaviour to survive composition.
@@ -307,12 +297,12 @@ Composing this pack with [`pharos_treasury`](/developers/vaults/policies/pharos-
 
 ## Notes
 
-- **Unclassified functions deny, always** — including in a calm market. The three function lists are an allowlist, not a safe-mode-only concern.
-- **`swap_destination_arg_index` is keyed per function**, because swap ABIs disagree on where the destination sits. Give each name in `swap_functions` its own entry — `{"swap": 1, "swapExactIn": 0}`.
+- **Unclassified functions deny, always**, including in a calm market. The three function lists are an allowlist, not a safe-mode-only concern.
+- **`swap_destination_arg_index` is keyed per function**, because swap ABIs disagree on where the destination sits. Give each name in `swap_functions` its own entry, for example `{"swap": 1, "swapExactIn": 0}`.
 - **A swap function with no mapped index denies** as `missing_swap_destination_index`, in a calm market as well as in safe mode: the policy cannot evaluate the destination at all, so it fails closed rather than waving the call through. Leave a Curve-style `exchange` unmapped and it is denied, not misread.
 - **An out-of-range index also fails closed.** The destination is left undefined, which denies rather than reading as approved.
 - Swap destinations are compared **case-insensitively**: the intent lowercases addresses while curator params are typically checksummed.
-- `null` is the oracle's "not reported", deliberately distinct from `0`. Worth listing `stress_score` in `deny_on_missing_fields` if you rely on `safe_mode_stress_threshold` — without a score, safe mode can only ever engage via the depeg branch.
+- `null` is the oracle's "not reported", deliberately distinct from `0`. If you rely on `safe_mode_stress_threshold`, consider listing `stress_score` in `deny_on_missing_fields`: without a score, safe mode can only ever engage via the depeg branch.
 - `input.chain_id` arrives as a *string* and is only populated when the intent JSON sets `chainId` (camelCase in, snake_case out). The `--chain-id` CLI flag does **not** populate it, so no rule here depends on it.
 - **`/api/mint-burn-flows` carries no anomaly flag of its own.** Pharos's judgement of flow abnormality lives in the stress `flow` signal, so the oracle uses that rather than inventing a threshold over raw mint/burn volumes.
-- Stress data is nested under `current` (`current.score`, `current.band`, `current.signals`) — not at the top level.
+- Stress data is nested under `current` (`current.score`, `current.band`, `current.signals`), not at the top level.

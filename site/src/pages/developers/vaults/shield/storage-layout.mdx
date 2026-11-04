@@ -1,17 +1,17 @@
 ---
 title: "Storage Layout"
-description: "How Shield storage layout is protected for EIP-1167 clones."
+description: "How Shield storage layout is protected across beacon upgrades."
 keywords:
   - shield storage layout
   - vaultkit storage
-  - eip-1167 clones
+  - beacon proxy
   - storage snapshot
 showAskAi: false
 ---
 
-# Storage Layout [How Shield storage layout is protected for EIP-1167 clones.]
+# Storage Layout [How Shield storage layout is protected across beacon upgrades.]
 
-Shield clones are EIP-1167 minimal proxies. Every curator clone shares the implementation's storage layout slot-for-slot, so storage changes are treated as compatibility changes.
+Shield clones are `BeaconProxy` instances that share the beacon's current implementation's storage layout slot-for-slot. A layout change that is not append-only corrupts every existing Shield the moment `beacon.upgradeTo(newImpl)` runs, and the stock beacon has no rollback, so storage changes are treated as live-upgrade safety changes.
 
 ## Rule
 
@@ -22,7 +22,7 @@ The layout is append-only:
 - Existing slots cannot be deleted.
 - New storage variables go after the existing layout.
 
-If a change needs to reorder, retype, or remove storage, deploy a new implementation and factory. Curators opt in by deploying new clones.
+If a change needs to reorder, retype, or remove storage, it cannot ship as a beacon upgrade: deploy a new implementation behind a new beacon and factory. Curators opt in by deploying new clones.
 
 ## Snapshot
 

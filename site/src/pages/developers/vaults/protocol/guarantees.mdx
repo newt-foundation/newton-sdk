@@ -23,7 +23,7 @@ The attestation binds to the full `Intent`: signer, target, value, calldata, cha
 
 ## 3. Onchain Policy Parameters
 
-Policy params live onchain in `NewtonPolicy.PolicyConfig.policyParams`. For composite packs, those bytes are a manifest envelope with `_manifest`, `modules`, and `params`; depositors can decode it and compare the modules against `getPolicyData()` and each oracle's `getWasmCid()`.
+Policy params live onchain in the Shield's policy set: one `PolicySpec { policy, config: { policyParams, expireAfter } }` per policy, where each `policyParams` is that policy's own params as plain JSON. There is no composite envelope. Depositors read the set atomically with `Shield.getPolicySetSnapshot()`, which returns `(policyId, revision, policies)`, then inspect each policy's oracle with `getWasmCid()` and its Rego with `getPolicyCodeHash()`.
 
 ## 4. Manager Actions Only
 
@@ -41,8 +41,8 @@ If the gateway is unavailable, operators do not reach quorum, policy evaluation 
 | Replay protection | The AVS task manager tracks consumed task ids. |
 | Expiration | Attestations are valid only for the configured block window. |
 | Delegate gate | `execute` and `executeDirect` require `onlyApprovedDelegate`. |
-| Policy binding | Shield validates the attestation's `policyId` against the currently bound policy id. |
+| Policy binding | Shield validates the attestation's `policyId` against the id of its current policy set. |
 
-## Non-Upgradeable Clones
+## Governed Upgrades
 
-Shield clones are EIP-1167 minimal proxies to a fixed implementation. There is no proxy-admin upgrade path. A new implementation requires a new factory and curator opt-in through a new clone.
+Shield clones are `BeaconProxy` instances. One `UpgradeableBeacon` per chain points them all at the same implementation, and an upgrade moves every Shield at once. On mainnet the beacon is owned by a timelock with a 7-day minimum delay and a guardian that can cancel, which gives curators seven days to exit before a scheduled upgrade lands. On testnet the dev key upgrades instantly. See [Upgrade Posture](/developers/vaults/shield/architecture#upgrade-posture).

@@ -24,7 +24,7 @@ This policy tiers a spending limit by **who the destination actually is**, using
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
+This pack may not be published on your chain yet. Check [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) for its WASM CID on your `(chainId, env)` before deploying its policy.
 :::
 
 ### Secret
@@ -47,15 +47,15 @@ Arkham returns **per-chain** results, because the same address can carry differe
 | `chain` | The chain slice actually used, which may differ from the request when `chain` was omitted | Makes the decision traceable to one network |
 | `has_attribution` | True when Arkham has either a verified entity or a prediction | Selects the verified tier vs. the introductory cap |
 | `entity_name` | Real-world entity behind the address, or `null` | Reviewer context |
-| `entity_category` | Arkham entity category (`cex`, `custodian`, `defi`, …), or `null` | Checked against `approved_entity_categories` |
-| `address_role` | From `arkhamLabel.name` — e.g. `Hot Wallet`, `Deposit` | Reviewer context |
+| `entity_category` | Arkham entity category (`cex`, `custodian`, `defi`, ...), or `null` | Checked against `approved_entity_categories` |
+| `address_role` | From `arkhamLabel.name`, e.g. `Hot Wallet`, `Deposit` | Reviewer context |
 | `is_contract` | Whether Arkham marks the address as a contract | Reviewer context |
-| `tags` | From `populatedTags[].id` — the stable machine name (`cex`), lowercased and deduplicated, **not** the display label | Matched against `prohibited_tags` |
+| `tags` | From `populatedTags[].id`: the stable machine name (`cex`), lowercased and deduplicated, **not** the display label | Matched against `prohibited_tags` |
 | `attribution_type` | `verified`, `predicted`, or `none` | Reviewer context |
 | `attribution_confidence` | `1` for a verified `arkhamEntity` (Arkham asserts these and attaches no confidence field), the prediction's own value for a predicted match, `null` when unattributed | Gated by `min_attribution_confidence` |
 | `risk_level` | Arkham headline risk level | Reviewer context |
 | `max_risk_score` | Highest category score driving the risk level, or `null` | Gated by `max_risk_score` |
-| `transaction_amount_usd` | Echoed from `wasmArgs` — **not attested**, see Notes | Every tier comparison rests on it |
+| `transaction_amount_usd` | Echoed from `wasmArgs`. **Not attested**, see Notes | Every tier comparison rests on it |
 | `data_age_seconds` | Age of the Arkham observation, or `null` | Gated by `max_data_age_seconds` |
 | `timestamp` | When this snapshot was taken | Audit |
 
@@ -66,24 +66,10 @@ This pack ships **no `prepareQuery`**: the address it screens is not something t
 | Field | Required? | Notes |
 | --- | --- | --- |
 | `address` | Required | The destination being judged |
-| `chain` | Optional | Arkham chain slug (`ethereum`, `base`, `arbitrum_one`, …). Arkham indexes production networks only |
+| `chain` | Optional | Arkham chain slug (`ethereum`, `base`, `arbitrum_one`, ...). Arkham indexes production networks only |
 | `transaction_amount_usd` | Optional, defaults to `0` | USD notional, for the tier rules |
 
-From the CLI or dashboard, these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag — keyed by pack id, and typed per module, so a misspelled field is a compile error rather than a fail-closed evaluation at run time:
-
-```typescript
-await shield.morpho.submitCap(vault, marketParams, newCap, {
-  wasmArgs: {
-    arkham_entity: {
-      address: destination,
-      chain: 'ethereum',
-      transaction_amount_usd: 5_000,
-    },
-  },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for why this is a separate bag from `prepareQueryOptions`.
+From the CLI or dashboard, these go in the simulate payload's `wasm_args`. VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.
 
 ## Policy Parameters
 
@@ -117,7 +103,7 @@ Every rule this policy enforces:
 
 ### Prohibited Tag
 
-A prohibited tag denies at any size — there is no amount below which a sanctioned or mixer destination becomes acceptable. `prohibited_tag_hits` is a set rather than a bare boolean so the offending tag stays traceable.
+A prohibited tag denies at any size: there is no amount below which a sanctioned or mixer destination becomes acceptable. `prohibited_tag_hits` is a set rather than a bare boolean so the offending tag stays traceable.
 
 ```rego
 prohibited_tag_hits contains tag if {
@@ -169,7 +155,7 @@ deny contains sprintf("missing_%v", [name]) if {
 
 ### Final Allow Rule
 
-The groundedness probes are load-bearing, not decoration. Every deny rule silent-skips on an undefined field, so an error envelope yields an **empty** deny set — a bare `count(deny) == 0` would fail *open* on exactly the payload that most needs to fail closed.
+The groundedness probes are load-bearing. Every deny rule silent-skips on an undefined field, so an error envelope yields an **empty** deny set, and a bare `count(deny) == 0` would fail *open* on exactly the payload that most needs to fail closed.
 
 ```rego
 allow if {
@@ -189,7 +175,7 @@ import future.keywords
 
 default allow := false
 
-t := data.params.arkham_entity
+t := data.params
 v := data.wasm.arkham_entity
 
 amount := v.transaction_amount_usd
@@ -253,11 +239,11 @@ allow if {
 }
 ```
 
-Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.arkham_entity`. See [Policies](/developers/vaults/sdk/policies).
+Composing this pack into a VaultKit composite does not move its params: the pack runs as its own `NewtonPolicy` in the Shield's policy set, and `setParams` writes the `arkham_entity` slice as that policy's own `policyParams`. See [Policies](/developers/vaults/sdk/policies).
 
 ## Notes
 
-- **`transaction_amount_usd` is caller-supplied and NOT attested.** It arrives through `wasmArgs`, so a caller controls it, and every tier rule rests on it. The attested alternative — `input.value` — is native-token wei rather than USD, and arrives as a *string*. A curator who needs a tamper-proof ceiling should pair this pack with a native-value cap in a composite rather than relying on the USD tiers alone.
+- **`transaction_amount_usd` is caller-supplied and NOT attested.** It arrives through `wasmArgs`, so a caller controls it, and every tier rule rests on it. The attested alternative, `input.value`, is native-token wei rather than USD and arrives as a *string*. A curator who needs a tamper-proof ceiling should pair this pack with a native-value cap in a composite rather than relying on the USD tiers alone.
 - `null` is the oracle's "Arkham did not report this", deliberately distinct from `0`: a null risk score means "not reported", a zero score would be a genuine clean verdict. Null optional fields fail soft. A **missing** key rather than an explicit null leaves the groundedness probes undefined and correctly blocks `allow`.
 - **Verified attribution carries no confidence field.** Arkham asserts `arkhamEntity` rather than inferring it, so the oracle scores it `1`. Only `arkhamEntityPrediction` has a real confidence value, which is what `min_attribution_confidence` meaningfully gates.
 - Arkham populates all three `deny_on_missing_fields` candidates for an attributed address, so listing them is safe for curators who would rather an unreported value block than pass.
