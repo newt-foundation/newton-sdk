@@ -1,3 +1,20 @@
+# v1.4.0 (Wed Nov 04 2026)
+
+#### 🚀 Enhancement
+
+- fix: align the SDK, docs and zkTLS example with the gateway [#201](https://github.com/newt-foundation/newton-sdk/pull/201) ([@denniswon](https://github.com/denniswon))
+
+#### 🐛 Bug Fix
+
+- docs: remove the zkTLS guide and tutorial pack [#202](https://github.com/newt-foundation/newton-sdk/pull/202) ([@denniswon](https://github.com/denniswon))
+- docs: fix stale policy types and precomputePolicyId reference [#200](https://github.com/newt-foundation/newton-sdk/pull/200) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v1.3.1 (Sun Nov 01 2026)
 
 #### 🐛 Bug Fix
