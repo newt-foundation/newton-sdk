@@ -172,24 +172,23 @@ const getTaskStatus = async (
   const doesTaskIdExist = !!hexToBigInt(allTaskHashes) // returns 0x0...0 if taskId does not exist
   if (!doesTaskIdExist) throw new Error(`Failed to retrieve task status for taskId ${args.taskId}`)
 
-  const allTaskResponses = (await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
-    functionName: 'allTaskResponses',
-    args: [args.taskId],
-  })) as Hex
-  const isTaskResponded = !!hexToBigInt(allTaskResponses)
+  const [allTaskResponses, challengeVerifier] = await Promise.all([
+    publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonProverTaskManagerAbi,
+      functionName: 'allTaskResponses',
+      args: [args.taskId],
+    }) as Promise<Hex>,
+    publicClient.readContract({
+      address: taskManagerAddress,
+      abi: NewtonProverTaskManagerAbi,
+      functionName: 'challengeVerifier',
+    }),
+  ])
 
-  if (!isTaskResponded) {
-    return TaskStatus.Created
-  }
-
-  // Every successful challenge path sets this flag and invalidates the attestation, so it outranks the expiry checks.
-  const challengeVerifier = await publicClient.readContract({
-    address: taskManagerAddress,
-    abi: NewtonProverTaskManagerAbi,
-    functionName: 'challengeVerifier',
-  })
+  // Every successful challenge path sets this flag and invalidates the attestation, so it outranks every other
+  // status. It is checked before the response: challengeDirectlyVerifiedAttestation only succeeds on a task that
+  // was never responded to.
   if (challengeVerifier !== zeroAddress) {
     const isChallenged = await publicClient.readContract({
       address: challengeVerifier,
@@ -199,6 +198,8 @@ const getTaskStatus = async (
     })
     if (isChallenged) return TaskStatus.SuccessfullyChallenged
   }
+
+  if (!hexToBigInt(allTaskResponses)) return TaskStatus.Created
 
   // attestationExpirations: 0 = no attestation (negative eval), uint32 max = spent, else expiry block
   const SPENT_SENTINEL = 0xffffffff
