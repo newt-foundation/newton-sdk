@@ -10,7 +10,7 @@ showAskAi: false
 
 # Custom Oracles [Author a typed policy-data oracle with `@newton-xyz/policy-core` and compose it into VaultKit.]
 
-`defineOracle(...)` gives custom and published oracles the same typed interface. It describes schemas, deployments, query preparation, and metadata; it does not build the oracle WASM or deploy `NewtonPolicyData`.
+`defineOracle(...)` gives custom and published oracles the same typed interface. It describes schemas, deployments, query preparation, and metadata; it does not build the oracle WASM or deploy the oracle's `NewtonPolicy`.
 
 ## Define the Oracle
 
@@ -42,7 +42,6 @@ export const maxLtvOracle = defineOracle({
   deployments: {
     '8453': {
       prod: {
-        policyData: '0xPolicyData',
         wasmCid: 'bafy...',
         policyCodeHash: '0x...',
         deployedAt: '2026-07-30',
@@ -67,15 +66,27 @@ IDs use `<short>/<purpose>/<version>`. The short ID becomes a Rego dot-path and 
 ## Compose It
 
 ```typescript
-import { definePolicy } from '@newton-xyz/vaultkit'
+import { createShield, definePolicy } from '@newton-xyz/vaultkit'
 import { vaultsfyi } from '@newton-xyz/policy-pack-vaultsfyi'
 
 const policy = definePolicy({ chainId: '8453', env: 'prod' })
   .with(vaultsfyi)
   .with(maxLtvOracle)
+
+const client = await createShield({
+  apiKey,
+  walletClient,
+  rpc,
+  vault,
+  policy,
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+    my_oracle: '0xMyOraclePolicy',
+  },
+})
 ```
 
-Custom and published modules receive identical module-set, deployment, WASM CID, and schema checks.
+The custom module runs as its own deployed policy, under its short ID in `policies`. Custom and published modules receive identical module-set, WASM CID, and schema checks.
 
 ## Configure and Call
 
@@ -103,7 +114,7 @@ await client.sendCall({
 
 ## Generate the Params Schema
 
-Use the schema derivation utilities from `@newton-xyz/policy-core` to generate the complete `{ _manifest, modules, params }` schema. The deployed policy validates the full manifest envelope, not only `params.my_oracle`.
+Each policy validates its own `policyParams` against its own pinned params schema, and VaultKit writes this module's slice, `params.my_oracle`, as that policy's params. Generate the schema with `generateCompositeParamsSchema({ modules }, gateJsonSchema?)` from `@newton-xyz/policy-core`, which returns one closed schema per policy, such as `{ my_oracle: schema }`. Do not hand-write one.
 
 Commit the generated schema alongside the policy-authorship project and regenerate it when a module schema changes.
 
@@ -114,11 +125,11 @@ The TypeScript definition is only the consumer-side contract. Taking an oracle l
 1. Implementing and testing the WASM oracle.
 2. Authoring fail-closed Rego.
 3. Building and publishing the content-addressed artifacts.
-4. Deploying `NewtonPolicyData` and a `NewtonPolicy` that references it.
-5. Recording the real address and WASM CID in `deployments`.
+4. Deploying a `NewtonPolicy` that runs your Rego with your oracle's WASM CID.
+5. Recording the WASM CID and the Rego's `policyCodeHash` in `deployments`.
 
 An empty deployment record is valid during offline authoring, but `createShield(...)` cannot resolve it for a live chain.
 
 ## Provenance
 
-Do not hard-code “audited” into the oracle object. Consumers can call `classifyProvenance(...)` with the module's objective facts and an audited-address registry they trust.
+Do not hard-code "audited" into the oracle object. Consumers can call `classifyProvenance(...)` with the module's objective facts, its `wasmCid` and `policyCodeHash`, and an audited registry they trust.

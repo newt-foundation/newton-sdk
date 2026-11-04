@@ -1,6 +1,6 @@
 ---
 title: "SDK Concepts"
-description: "How VaultKit 2.1 models policies, resolved modules, vendor extensions, intents, and verification."
+description: "How VaultKit 3.0 models policies, resolved modules, vendor extensions, intents, and verification."
 keywords:
   - vaultkit concepts
   - policy draft
@@ -9,25 +9,29 @@ keywords:
 showAskAi: false
 ---
 
-# SDK Concepts [How VaultKit 2.1 models policies, resolved modules, vendor extensions, intents, and verification.]
+# SDK Concepts [How VaultKit 3.0 models policies, resolved modules, vendor extensions, intents, and verification.]
+
+## Policy Sets
+
+A Shield is gated by a policy set (Newton protocol 0.7): 1 to 8 `NewtonPolicy` contracts, each one Rego program plus at most one WASM oracle, evaluated as a fail-closed AND. A composite gives each oracle module its own policy, plus an optional pure-Rego `_policy` gate. A pack is an ingredient of a policy set, never an alternative to one.
 
 ## Policy Inputs and Resolved Policies
 
-`createShield(...)` accepts either a `PolicyDraft` created with `definePolicy({ chainId, env }).with(...)` or a `BarePolicy` created with `policyFromAddress(...)`.
+`createShield(...)` accepts either a `PolicyDraft` created with `definePolicy({ chainId, env }).with(...)`, together with each module's deployed policy in `policies`, or a `BarePolicy` created with `policyFromAddress(...)`.
 
-After onchain resolution, both become a `ResolvedPolicy` exposed as `client.policy`. It contains the deployed address, chain, environment, optional params codec, and `modules`.
+After onchain resolution, both become a `ResolvedPolicy` exposed as `client.policy`. It contains the chain, the environment, the bound set as `policies` (`{ id, address }[]`, in set order), `modules`, and a bare policy's optional params codec.
 
 ## Policy Packs and Oracles
 
 A policy pack is a typed TypeScript wrapper for one policy-data oracle. It provides schemas, deployment records, `prepareQuery(...)`, and metadata. Published `@newton-xyz/policy-pack-*` packages and locally authored `defineOracle(...)` values share this interface.
 
-The SDK packages do not contain the oracle's Rego or WASM. Those artifacts are built and deployed separately.
+The pack npm packages ship only JavaScript, with no Rego or schemas. Each pack publishes its WASM per `(chainId, env)`, and you deploy each module's `NewtonPolicy` yourself from the pack's reference Rego and that WASM.
 
 ## Params, Secrets, and `wasmArgs`
 
-- Params are curator-controlled configuration encoded into the onchain policy manifest.
-- Secrets are encrypted locally and uploaded per oracle.
-- `wasmArgs` are per-call evaluation inputs produced by each oracle's `prepareQuery(...)`.
+- Params are curator-controlled configuration. Each policy stores its own slice onchain as that policy's `policyParams`.
+- Secrets are encrypted locally and uploaded per module, scoped to that module's policy.
+- `wasmArgs` are per-call evaluation inputs produced by each oracle's `prepareQuery(...)`. Each policy gets its own `wasm_args` entry; the gate gets `0x`.
 
 Callers pass typed overrides under `prepareQueryOptions.<shortId>`. The policy pack, not the vendor module, owns the resulting `wasmArgs`.
 
@@ -64,7 +68,7 @@ await client.sendCall({
 })
 ```
 
-The integration owns calldata integrity when using this method.
+With this method, your integration owns calldata integrity.
 
 ## Intent
 
@@ -74,12 +78,12 @@ An `Intent` binds the caller, target, value, calldata, chain, and human-readable
 
 Attachment verification is monotonic:
 
-1. Policy address
-2. Oracle set and WASM identities
-3. Parameter decoding
+1. The clone's policy set is exactly the declared policies, matched by membership
+2. Each module policy's WASM identity
+3. Per-policy parameter decoding
 4. Canonical byte equality against `expectedParams`
 
-`client.verification` is a snapshot. Call `client.reverify()` after configuration changes. A bare policy with no modules can satisfy address and codec checks but does not prove that an oracle set exists.
+`client.verification` is a snapshot. Call `client.reverify()` after configuration changes; it also adopts the set's current order. A bare policy with no modules can satisfy the set and codec checks but does not prove that an oracle set exists.
 
 ## Blocked-Intent Assertions
 

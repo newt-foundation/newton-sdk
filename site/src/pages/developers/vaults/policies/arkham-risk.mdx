@@ -24,7 +24,7 @@ This policy denies **risk exposure you can explain**, using [Arkham Intelligence
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
+This pack may not be published on your chain yet. Check [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) for its WASM CID on your `(chainId, env)` before deploying its policy.
 :::
 
 ### Secret
@@ -39,18 +39,18 @@ Sent by the oracle as the `API-Key` request header.
 
 Two GET requests against `https://api.arkm.com`: `/risk/address/{address}` for risk level, per-category scores and seed status, and `/risk/address/{address}/paths` for up to ten paths to risky sources, ranked by contributed USD.
 
-The oracle deliberately emits Arkham's **raw** paths rather than a precomputed verdict. "Severe" is a curator notion that lives in `data.params` and the Rego filters on it — anything collapsed in the WASM would be a decision the curator can no longer see or tune.
+The oracle deliberately emits Arkham's **raw** paths rather than a precomputed verdict. "Severe" is a curator notion that lives in `data.params` and the Rego filters on it. Anything collapsed in the WASM would be a decision the curator can no longer see or tune.
 
 | Field | What it means | Why the policy uses it |
 | --- | --- | --- |
 | `address` / `chain` | Echoed from `wasmArgs` | Audit |
 | `risk_level` | Arkham headline risk level | Reviewer context |
 | `max_score` | Highest category score, or `null` | Gated by `max_risk_score` |
-| `category_scores` | `{category: score}` map, harvested from Arkham's flat `<name>_score` sibling keys (`hacker_score`, `sanctioned_1hop_score`, …). Aggregate `max_score*` keys are excluded | Reviewer context |
+| `category_scores` | `{category: score}` map, harvested from Arkham's flat `<name>_score` sibling keys (`hacker_score`, `sanctioned_1hop_score`, ...). Aggregate `max_score*` keys are excluded | Reviewer context |
 | `top_risk_category` | Category driving the headline score | Reviewer context |
 | `is_seed` | Whether the address **is** a known risky source, not merely exposed to one | Gated by `deny_on_seed` |
 | `hop_distance` / `risk_weighted_incoming_usd` / `risk_weighted_outgoing_usd` | Additional Arkham risk context | Reviewer context |
-| `paths[]` | `category`, `direction`, `hop_distance`, `seed_address`, `score`, `contributed_usd`, `nodes[]`. `contributed_pct`, `first_seen_days` and `last_seen_days` are **always `null`** — Arkham does not return them | The three path rules filter on these |
+| `paths[]` | `category`, `direction`, `hop_distance`, `seed_address`, `score`, `contributed_usd`, `nodes[]`. `contributed_pct`, `first_seen_days` and `last_seen_days` are **always `null`** because Arkham does not return them | The three path rules filter on these |
 | `data_age_seconds` | Age of the Arkham observation, or `null` | Gated by `max_data_age_seconds` |
 | `timestamp` | When this snapshot was taken | Audit |
 
@@ -63,17 +63,7 @@ This pack ships **no `prepareQuery`**: the address it screens is not something t
 | `address` | Required | The address whose exposure is judged |
 | `chain` | Optional | Arkham chain slug. Arkham indexes production networks only |
 
-From the CLI or dashboard this goes in the simulate payload's `wasm_args`. From the SDK it goes in `sendCall`'s `wasmArgs` bag:
-
-```typescript
-await shield.morpho.submitCap(vault, marketParams, newCap, {
-  wasmArgs: {
-    arkham_risk: { address: destination, chain: 'ethereum' },
-  },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+From the CLI or dashboard this goes in the simulate payload's `wasm_args`. VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.
 
 ## Policy Parameters
 
@@ -82,7 +72,7 @@ await shield.morpho.submitCap(vault, marketParams, newCap, {
 | `severe_categories` | `string[]` | Categories treated as severe (e.g. `sanctions`, `hacker`, `mixer`). Configure in lowercase |
 | `max_severe_hop_distance` | `number` | Hops within which severe exposure denies outright |
 | `material_exposure_usd` | `number` | USD threshold for distant exposure |
-| `recent_exposure_days` | `number` | Recency window for distant exposure. **No effect today** — see Notes |
+| `recent_exposure_days` | `number` | Recency window for distant exposure. **No effect today**, see Notes |
 | `dust_tolerance_usd` | `number` | Paths at or below this are ignored entirely. Strict `>`, so `0` considers every path |
 | `deny_on_seed` | `boolean` | Deny when the address is itself a risky source |
 | `max_risk_score` | `number` | Maximum tolerated headline score 0-100 |
@@ -91,7 +81,7 @@ await shield.morpho.submitCap(vault, marketParams, newCap, {
 
 ## Rego Checks
 
-Paths are filtered in three stages — dust floor, then severity, then distance:
+Paths are filtered in three stages (dust floor, then severity, then distance):
 
 | Deny reason | Condition | What it catches |
 | --- | --- | --- |
@@ -127,7 +117,7 @@ severe_near_paths contains p if {
 
 ### Distant Exposure
 
-Two rules on value and recency, plus a third for the strict-mode case where Arkham reports no date at all — an undated path slips past the recency rule, so the missing date is itself the signal a curator asked to act on.
+Two rules on value and recency, plus a third for the strict-mode case where Arkham reports no date at all. An undated path slips past the recency rule, so the missing date is itself the signal a curator asked to act on.
 
 ```rego
 material_distant_paths contains p if {
@@ -150,7 +140,7 @@ deny contains "missing_path_last_seen_days" if {
 
 ### Explainability
 
-A separate `risk_paths` rule renders each offending route as `"<category> exposure via <seed> at <n> hop(s), $<usd> contributed"`. This is **not** evaluated onchain — the AVS entrypoint is `arkham_risk_exposure.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
+A separate `risk_paths` rule renders each offending route as `"<category> exposure via <seed> at <n> hop(s), $<usd> contributed"`. This is **not** evaluated onchain: the AVS entrypoint is `arkham_risk_exposure.allow` and nothing else. It exists for `opa eval`, local simulation, and composites that want to surface a reason to an operator.
 
 ```rego
 risk_paths contains detail if {
@@ -184,7 +174,7 @@ import future.keywords
 
 default allow := false
 
-t := data.params.arkham_risk
+t := data.params
 v := data.wasm.arkham_risk
 
 nullable_fields := {
@@ -275,13 +265,13 @@ allow if {
 }
 ```
 
-Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.arkham_risk`. See [Policies](/developers/vaults/sdk/policies).
+Composing this pack into a VaultKit composite does not move its params: the pack runs as its own `NewtonPolicy` in the Shield's policy set, and `setParams` writes the `arkham_risk` slice as that policy's own `policyParams`. See [Policies](/developers/vaults/sdk/policies).
 
 ## Notes
 
 - **"Severe" is yours, not Arkham's.** The oracle emits raw exposure paths; `severe_categories` decides what counts. That is what makes the denial explainable, and what lets you tighten it without a redeploy.
 - **The `recent_distant_exposure` rule is currently inert.** Arkham's paths endpoint returns no first/last transaction timestamps, so `last_seen_days` is always `null` and the rule fails soft; `recent_exposure_days` has no effect today. Distant exposure is still caught by `material_distant_exposure` on value.
-- ⚠️ **Consequently, listing `path_last_seen_days` in `deny_on_missing_fields` denies any address with a severe path beyond the hop limit.** Because the list is per field, you can require `max_score` without taking that on.
+- **Consequently, listing `path_last_seen_days` in `deny_on_missing_fields` denies any address with a severe path beyond the hop limit.** Because the list is per field, you can require `max_score` without taking that on.
 - **`contributed_pct` is also unavailable**, so size-relative thresholds must use `contributed_usd`.
 - **Dust tolerance is a strict `>` comparison**, so a path contributing exactly `dust_tolerance_usd` counts as dust and is ignored. Set it to `0` to consider every path.
 - A category outside `severe_categories` never trips the hop, materiality or recency rules, however large or direct. Only `max_risk_score` constrains it.

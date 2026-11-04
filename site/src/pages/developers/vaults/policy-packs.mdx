@@ -15,7 +15,7 @@ import { Card } from 'vocs'
 
 Newton vault policy packs combine Rego policy logic with policy data oracles. The oracle gathers the external data needed for a decision, then the Rego policy evaluates that data against the vault's configured parameters.
 
-In VaultKit 2.1, each published pack implements the `PolicyPack` contract from `@newton-xyz/policy-core`. Declare packs with `definePolicy(...).with(pack)`; use `defineOracle(...)` when authoring your own compatible oracle.
+In VaultKit 3.0, each published pack implements the `PolicyPack` contract from `@newton-xyz/policy-core`. Declare packs with `definePolicy(...).with(pack)`; use `defineOracle(...)` when authoring your own compatible oracle. Each pack runs as its own `NewtonPolicy` in the Shield's policy set, which allows a call only if every policy allows.
 
 ```typescript
 import { definePolicy } from '@newton-xyz/vaultkit'
@@ -62,7 +62,7 @@ Grouped by data provider.
 
 ## Pack Policy Addresses
 
-Each published pack is a deployed `NewtonPolicy`. Resolve its address for your chain and environment with `newton-cli`, which reads [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json):
+Each published pack is a factory-deployed `NewtonPolicy` that serves the pack's published WASM and reference Rego. Resolve its address for your chain and environment with `newton-cli`, which reads [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json), then pass it to `createShield({ policies })` under the module's short ID:
 
 ```bash
 # Every pack published on Base
@@ -72,9 +72,35 @@ newton-cli --chain-id 8453 policy packs list
 newton-cli --chain-id 8453 policy packs show --pack vaultsfyi --format json
 ```
 
-The JSON output carries `policy` and `policy_data` as the same address, plus `wasm_cid` when the pack publishes an oracle. Put the `policy` value in your `policies.json` and pass that file to `newton-cli policy-client set-policies`; see [Using the CLI](/developers/guides/policy-packs#using-the-cli). The commands use the `prod` environment unless `DEPLOYMENT_ENV` is set. Pass `--env stagef` for staging, or `--catalog <path-or-url>` to read a different catalog.
+Use the `policy` value from the JSON output. The commands use the `prod` environment unless `DEPLOYMENT_ENV` is set. Pass `--env stagef` for staging, or `--catalog <path-or-url>` to read a different catalog. When a pack is not published for your chain and environment, `policy packs show` exits with `no published policy for pack`, or with `unknown pack` when the catalog has no entry for that pack at all.
 
-When a pack is not published for your chain and environment, `policy packs show` exits with `no published policy for pack`, or with `unknown pack` when the catalog has no entry for that pack at all.
+A Shield binds its whole set with `shield.setParams(...)`, so skip the `policy-client set-policies` step that the CLI suggests.
+
+### Deploying Your Own Pack Policy
+
+To run a pack on a chain or environment where it is not published, or to own the policy contract, deploy it yourself from the pack's reference Rego and published WASM CID. You never build or upload a pack WASM.
+
+The `@newton-xyz/policy-pack-*` npm packages ship only JavaScript. Take the byte-exact reference directory (`policy.rego`, `params_schema.json`, `secrets_schema.json`, `policy_metadata.json`) from the pack's `<pack>/dist/` directory in [newton-policy-packs](https://github.com/newt-foundation/newton-policy-packs), at the commit matching your installed pack release.
+
+With `newton-cli` 0.7.0 or later, deploy each module's policy. Build the CLI from a newton-prover-avs `unified/main` checkout; the published releases report a 0.5.x version without the policy-set commands.
+
+```bash
+# 1. Upload the reference Rego, params schema, metadata, and secrets schema
+#    to this environment's gateway object store.
+newton-cli policy-files upload-cids -d policies/vaultsfyi --entrypoint vault_risk_rating.allow \
+  --secrets-schema-file policies/vaultsfyi/secrets_schema.json \
+  --gateway-url "$GATEWAY_URL" --api-key "$NEWTON_API_KEY" -o policies/vaultsfyi/policy_cids.json
+
+# 2. Set "wasmCid" in policy_cids.json to the pack's deployments[chainId][env].wasmCid.
+
+# 3. Deploy the NewtonPolicy.
+newton-cli policy deploy --policy-cids policies/vaultsfyi/policy_cids.json \
+  --policy-file policies/vaultsfyi/policy.rego --skip-cids
+```
+
+Each gateway has its own object store, so upload per environment. The pack's WASM must already be in that environment's store. A pure-Rego `_policy` gate is deployed the same way without step 2 and without a secrets schema; its `wasmCid` stays `""`.
+
+Keep the pack's Rego byte-for-byte. `classifyProvenance` reports a module as `audited` only if its policy serves the pack's audited WASM and its `policyCodeHash` matches the pack's reference Rego. To check something the pack does not, add another policy to the set instead of editing the pack's Rego.
 
 ## Composing Policy Packs
 
@@ -89,7 +115,7 @@ The result is a vault whose rules are explicit, inspectable, and enforced before
 
 The three Xerberus packs are built to run together as one gate for exposure-increasing actions: an exit quote for the asset, a what-if for the portfolio, and a common-cause check across venues. Pass the same `window` to all three so every result comes from one Xerberus snapshot.
 
-For custom oracles, policy-level `_policy` params, bare policies, manifest introspection, and provenance classification, see [Policies](/developers/vaults/sdk/policies) and [Custom Oracles](/developers/vaults/sdk/custom-oracles).
+For custom oracles, policy-level `_policy` params, bare policies, policy-set introspection, and provenance classification, see [Policies](/developers/vaults/sdk/policies) and [Custom Oracles](/developers/vaults/sdk/custom-oracles).
 
 <Card title="Policy Packs Guide" icon="book-open" to="/developers/guides/policy-packs">
   Learn how policy packs are structured, implemented, and used in Newton policies.

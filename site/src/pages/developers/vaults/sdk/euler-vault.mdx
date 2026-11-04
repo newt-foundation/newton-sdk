@@ -51,7 +51,7 @@ const shield = (await createShield({
   rpc: process.env.RPC_URL!,
   publicClient,
   policy,
-  policyAddress: '0xCompositePolicyAddress',
+  policies: { vaultsfyi: '0xVaultsfyiPolicy' },
   vault: '0xEVault',
 })).extend(eulerVaultActions)
 ```

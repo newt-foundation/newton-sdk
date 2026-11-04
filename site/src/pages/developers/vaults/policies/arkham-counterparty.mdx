@@ -24,7 +24,7 @@ This policy judges a payment against **the sending wallet's own history**, using
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
+This pack may not be published on your chain yet. Check [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) for its WASM CID on your `(chainId, env)` before deploying its policy.
 :::
 
 ### Secret
@@ -49,12 +49,12 @@ The baseline deliberately **excludes the most recent bucket**: that bucket is wh
 | `counterparty_transaction_count` | Prior transactions with this counterparty | Gated by `min_counterparty_transactions` |
 | `counterparty_total_usd` | Cumulative USD transacted with them | Reviewer context |
 | `counterparty_avg_usd` | Average prior transaction size, or `null` when there is no history to average | Basis for the anomaly multiple |
-| `counterparty_last_seen_days` | **Always `null`** — Arkham's counterparties endpoint returns no per-relationship timestamp | Would gate `stale_relationship`; inert today |
+| `counterparty_last_seen_days` | **Always `null`**: Arkham's counterparties endpoint returns no per-relationship timestamp | Would gate `stale_relationship`; inert today |
 | `counterparty_concentration_pct` | This counterparty's share (0-100) of recent activity | Gated by `max_counterparty_concentration_pct` |
 | `normal_daily_outflow_usd` | Mean daily outflow across the window, excluding the latest bucket | Baseline denominator |
 | `recent_daily_outflow_usd` | Latest bucket's outflow | Baseline numerator |
 | `outflow_ratio` | `recent / normal`, or `null` when no baseline exists | Gated by `max_outflow_vs_baseline_multiple` |
-| `transaction_amount_usd` | Echoed from `wasmArgs` — **not attested**, see Notes | The anomaly and cap rules rest on it |
+| `transaction_amount_usd` | Echoed from `wasmArgs`. **Not attested**, see Notes | The anomaly and cap rules rest on it |
 | `timestamp` | When this snapshot was taken | Audit |
 
 ## Per-call wasmArgs
@@ -65,26 +65,11 @@ This pack ships **no `prepareQuery`**: the sender and destination are not someth
 | --- | --- | --- |
 | `sender_address` | Required | The wallet whose history is read |
 | `destination_address` | Required | The counterparty being judged |
-| `chains` | Required | Comma-separated chain scope. **Not optional** — see Notes |
+| `chains` | Required | Comma-separated chain scope. **Not optional**, see Notes |
 | `transaction_amount_usd` | Optional, defaults to `0` | USD notional |
-| `history_window_days` | Optional, 1-365, defaults to `90` | Materially changes the counterparty set — see Notes |
+| `history_window_days` | Optional, 1-365, defaults to `90` | Materially changes the counterparty set, see Notes |
 
-From the CLI or dashboard these go in the simulate payload's `wasm_args`. From the SDK they go in `sendCall`'s `wasmArgs` bag:
-
-```typescript
-await shield.morpho.submitCap(vault, marketParams, newCap, {
-  wasmArgs: {
-    arkham_counterparty: {
-      sender_address: shieldClone,
-      destination_address: destination,
-      chains: 'ethereum',
-      transaction_amount_usd: 12_000,
-    },
-  },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+From the CLI or dashboard these go in the simulate payload's `wasm_args`. VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.
 
 ## Policy Parameters
 
@@ -93,12 +78,12 @@ await shield.morpho.submitCap(vault, marketParams, newCap, {
 | `require_known_counterparty` | `boolean` | Refuse any destination absent from history |
 | `max_new_counterparty_usd` | `number` | Introductory cap for a first payment |
 | `min_counterparty_transactions` | `number` | Prior transactions before a relationship counts as established |
-| `max_counterparty_last_seen_days` | `number` | Recency ceiling for the relationship. **No effect today** — see Notes |
+| `max_counterparty_last_seen_days` | `number` | Recency ceiling for the relationship. **No effect today**, see Notes |
 | `max_amount_vs_avg_multiple` | `number` | Amount ceiling as a multiple of the historical average. Must be greater than zero |
 | `max_counterparty_concentration_pct` | `number` | Concentration ceiling 0-100 |
 | `max_outflow_vs_baseline_multiple` | `number` | Outflow ceiling as a multiple of normal |
 | `max_data_age_seconds` | `number` | Freshness ceiling |
-| `deny_on_missing_fields` | `string[]` | Field names whose unreported (`null`) value denies. **Two entries deny everything today** — see Notes |
+| `deny_on_missing_fields` | `string[]` | Field names whose unreported (`null`) value denies. **Two entries deny everything today**, see Notes |
 
 ## Rego Checks
 
@@ -110,7 +95,7 @@ Every rule this policy enforces:
 | `new_counterparty_over_limit` | unknown and amount over `max_new_counterparty_usd` | A first payment larger than the introductory cap |
 | `counterparty_too_new` | known but fewer than `min_counterparty_transactions` prior txs | A relationship too thin to count as established |
 | `stale_relationship` | last seen over `max_counterparty_last_seen_days` ago | A dormant counterparty reactivating. **Currently inert** |
-| `amount_anomaly` | amount over `max_amount_vs_avg_multiple` × the historical average | A payment wildly out of scale with the relationship |
+| `amount_anomaly` | amount over `max_amount_vs_avg_multiple` times the historical average | A payment wildly out of scale with the relationship |
 | `misconfigured_max_amount_vs_avg_multiple` | the multiple is absent or not greater than `0` | A multiplier that would silently disable the anomaly rule |
 | `concentration_spike` | share over `max_counterparty_concentration_pct` | One destination suddenly dominating outflow |
 | `outflow_above_baseline` | ratio over `max_outflow_vs_baseline_multiple` | The wallet draining faster than it normally does |
@@ -119,7 +104,7 @@ Every rule this policy enforces:
 
 ### Amount Anomaly
 
-A zero-or-null historical average **skips** this rule: multiplying by zero would make every payment infinitely anomalous. That leaves a genuine gap — a counterparty whose average is a true `0` admits any amount here, gated only by the other rules. Closing it needs a notion of "expected size" this API does not provide, so lean on `max_new_counterparty_usd` and `max_outflow_vs_baseline_multiple` instead.
+A zero-or-null historical average **skips** this rule: multiplying by zero would make every payment infinitely anomalous. That leaves a real gap: a counterparty whose average is a true `0` admits any amount here, gated only by the other rules. Closing it needs a notion of "expected size" this API does not provide, so lean on `max_new_counterparty_usd` and `max_outflow_vs_baseline_multiple` instead.
 
 ```rego
 deny contains "amount_anomaly" if {
@@ -172,7 +157,7 @@ import future.keywords
 
 default allow := false
 
-t := data.params.arkham_counterparty
+t := data.params
 v := data.wasm.arkham_counterparty
 
 amount := v.transaction_amount_usd
@@ -243,14 +228,14 @@ allow if {
 }
 ```
 
-Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.arkham_counterparty`. See [Policies](/developers/vaults/sdk/policies).
+Composing this pack into a VaultKit composite does not move its params: the pack runs as its own `NewtonPolicy` in the Shield's policy set, and `setParams` writes the `arkham_counterparty` slice as that policy's own `policyParams`. See [Policies](/developers/vaults/sdk/policies).
 
 ## Notes
 
-- **`transaction_amount_usd` is caller-supplied and NOT attested.** It arrives through `wasmArgs`, so a caller controls it. The attested alternative — `input.value` — is native-token wei rather than USD, and arrives as a *string*. A curator needing a tamper-proof ceiling should pair this pack with a native-value cap in a composite.
+- **`transaction_amount_usd` is caller-supplied and NOT attested.** It arrives through `wasmArgs`, so a caller controls it. The attested alternative, `input.value`, is native-token wei rather than USD and arrives as a *string*. A curator needing a tamper-proof ceiling should pair this pack with a native-value cap in a composite.
 - **Two rules are inert today.** Arkham's counterparties and flow endpoints expose no per-relationship timestamp and no observation timestamp, so `counterparty_last_seen_days` and `data_age_seconds` are always `null`; `stale_relationship` and `stale_data` fail soft. Both fields and rules are kept so they activate automatically once Arkham exposes the data.
-- ⚠️ **Consequently, listing `counterparty_last_seen_days` or `data_age_seconds` in `deny_on_missing_fields` denies *every* transaction.** The list is per field precisely so that does not hold the others hostage: require `outflow_ratio` and `counterparty_avg_usd` and leave the two inert fields out.
-- **`chains` is required.** Unscoped, `/flow/address` returns every chain's full daily history — over 1 MB for an active wallet, which exhausts the WASM heap. Scoping to one chain brings it to roughly 270 KB.
-- **`history_window_days` materially changes the counterparty set.** A 90-day window on a wallet whose large relationships are older returns only small, recent ones — so an "established" counterparty can read as new. Widen the window to match the relationships you intend to recognise.
+- **Consequently, listing `counterparty_last_seen_days` or `data_age_seconds` in `deny_on_missing_fields` denies *every* transaction.** The list is per field precisely so that does not hold the others hostage: require `outflow_ratio` and `counterparty_avg_usd` and leave the two inert fields out.
+- **`chains` is required.** Unscoped, `/flow/address` returns every chain's full daily history: over 1 MB for an active wallet, which exhausts the WASM heap. Scoping to one chain brings it to roughly 270 KB.
+- **`history_window_days` materially changes the counterparty set.** A 90-day window on a wallet whose large relationships are older returns only small, recent ones, so an "established" counterparty can read as new. Widen the window to match the relationships you intend to recognise.
 - **`max_amount_vs_avg_multiple` must be greater than zero.** The check lives in Rego rather than the params schema because `exclusiveMinimum` is outside the regorus-clean keyword set the AVS-side schema sticks to.
 - `null` is the oracle's "not reported", deliberately distinct from `0`. Null optional fields fail soft; a **missing** key leaves the groundedness probes undefined and correctly blocks `allow`.
