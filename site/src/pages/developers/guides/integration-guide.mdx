@@ -53,19 +53,19 @@ Install only what you need for the steps you plan to follow:
 | Requirement                            | Steps | Use                                                                                    |
 | -------------------------------------- | ----- | -------------------------------------------------------------------------------------- |
 | **Node.js \>= 20 + npm**               | All   | SDK, frontend, WASM tooling                                                            |
-| **Sepolia ETH**                        | 3–5   | Gas fees on testnet                                                                    |
-| **Newton API key**                     | 4–5   | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
+| **Sepolia ETH**                        | 3-5   | Gas fees on testnet                                                                    |
+| **Newton API key**                     | 4-5   | Authenticate SDK requests ([create one here](/developers/overview/dashboard-api-keys)) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
-| **Rust + Cargo**                       | 1–3   | Building and running `newton-cli`                                                      |
+| **Rust + Cargo**                       | 1-3   | Building and running `newton-cli`                                                      |
 | **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 | **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
-:::details[Install all tooling (Steps 1–5)]
+:::details[Install all tooling (Steps 1-5)]
   ```bash
   # Rust (includes cargo)
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-  # Node.js (macOS — or use your preferred method)
+  # Node.js (macOS, or use your preferred method)
   brew install node
 
   # Foundry
@@ -103,7 +103,7 @@ Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates
 
 ## Step 3: Deploy with CLI (~15 min)
 
-Upload each policy’s Rego, schema, metadata, and optional WASM artifacts, then deploy independent [Policy](/developers/overview/core-concepts#policy) contracts. Configure the client’s ordered set with owner `setPolicies`.
+Upload each policy's Rego, schema, metadata, and optional WASM artifacts, then deploy independent [Policy](/developers/overview/core-concepts#policy) contracts. Configure the client's ordered set with owner `setPolicies`.
 
 :::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
@@ -201,7 +201,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```
 
   - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy simulate-wasm`.
-  - `policy_task_data` preserves ordered evidence. Inspect it alongside the task’s frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
+  - `policy_task_data` preserves ordered evidence. Inspect it alongside the task's frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
 :::
 ## Factory Pattern
 

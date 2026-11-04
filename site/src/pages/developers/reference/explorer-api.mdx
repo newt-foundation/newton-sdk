@@ -76,7 +76,7 @@ curl -sS https://explorer.api.newton.xyz/v1/task?size=5 \
 
 ### Pagination
 
-List endpoints accept `page` (from `1`, default `1`) and `size` (`1`–`100`, default `10`) query parameters and return:
+List endpoints accept `page` (from `1`, default `1`) and `size` (`1` to `100`, default `10`) query parameters and return:
 
 ```json
 {
@@ -93,7 +93,7 @@ Errors return a non-2xx status with a JSON body of the form `{ "detail": "<messa
 
 ### Timestamps and fields
 
-Timestamps are ISO 8601 in UTC. Fields that have not happened yet — for example `task_responded_at` before operators respond — are `null`.
+Timestamps are ISO 8601 in UTC. Fields for events that have not happened yet are `null`, for example `task_responded_at` before operators respond.
 
 ---
 
@@ -314,7 +314,7 @@ curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
 ```
 
 - `error` or `operator_errors` set: the evaluation failed. Check the oracle with [`newt_simulatePolicyData`](/developers/reference/rpc-api#newt_simulatepolicydata) and the policy with [`newt_simulatePolicy`](/developers/reference/rpc-api#newt_simulatepolicy).
-- `policy_task_data` contains the original evaluation evidence. Preserve the task’s frozen policy set and revision for reproduction. [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask) resolves the current set and is not historical replay.
+- `policy_task_data` contains the original evaluation evidence. Preserve the task's frozen policy set and revision for reproduction. [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask) resolves the current set and is not historical replay.
 
 ### Recent tasks for your PolicyClient's policy
 

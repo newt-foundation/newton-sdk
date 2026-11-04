@@ -245,9 +245,9 @@ submitEvaluationRequest(
 
 **Returns:** An object containing:
 
-- `result.taskId` (`Hex`) -- The unique task identifier
-- `result.txHash` (`Hex | undefined`) -- Always `undefined`: `newt_createTask` returns no transaction hash. SDK 1.3.1 and earlier type it as `Hex`, but never set it either
-- `waitForTaskResponded({ timeoutMs? })` -- A method to await the onchain attestation result
+- `result.taskId` (`Hex`): The unique task identifier
+- `result.txHash` (`Hex | undefined`): Always `undefined`: `newt_createTask` returns no transaction hash. SDK 1.3.1 and earlier type it as `Hex`, but never set it either
+- `waitForTaskResponded({ timeoutMs? })`: A method to await the onchain attestation result
 
 A task that fails evaluation throws a plain `Error` with the gateway's reason. A call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror).
 
@@ -339,10 +339,10 @@ evaluateIntentDirect(
 
 **Returns:**
 
-- `result.allowed` (`boolean`) -- Whether the intent was allowed by the policy
-- `result.task` (`Task`) -- The full task object
-- `result.taskResponse` -- The raw task response from the operator
-- `result.blsSignature` -- The BLS aggregate signature
+- `result.allowed` (`boolean`): Whether the intent was allowed by the policy
+- `result.task` (`Task`): The full task object
+- `result.taskResponse`: The raw task response from the operator
+- `result.blsSignature`: The BLS aggregate signature
 
 A task that fails evaluation throws a plain `Error` with the gateway's reason, and a call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror). If `newt_createTask` answers without a `task_response`, the call throws an `SDKError` with code `MALFORMED_RESPONSE`.
 
@@ -465,11 +465,11 @@ submitIntentAndSubscribe(
 
 **Returns:**
 
-- `result.message` (`string`) -- Status message from the gateway
-- `result.subscription_topic` (`string`) -- WebSocket topic for task updates: the task ID as lowercase hex without `0x`
-- `result.task_id` (`Hex`) -- 32-byte task identifier
-- `result.timestamp` (`number`) -- Task creation timestamp
-- `ws` (`WebSocket`) -- Active WebSocket connection subscribed to the task topic
+- `result.message` (`string`): Status message from the gateway
+- `result.subscription_topic` (`string`): WebSocket topic for task updates: the task ID as lowercase hex without `0x`
+- `result.task_id` (`Hex`): 32-byte task identifier
+- `result.timestamp` (`number`): Task creation timestamp
+- `ws` (`WebSocket`): Active WebSocket connection subscribed to the task topic
 
 **`SubmitIntentResult` type:**
 
@@ -611,8 +611,8 @@ Initializes a Newton Policy contract with the given configuration. This is a one
 
 The contract requires `keccak256` of the Rego policy bytes as `_policyCodeHash` so the onchain hash matches the policy referenced by `policyCid`. Provide it one of two ways:
 
-- `policyCodeHash` -- pre-computed hex hash (from `policy_cids.json` or another out-of-band source). Takes precedence when both are set.
-- `policyBytes` -- the raw Rego policy bytes; the SDK computes `keccak256` for you. Useful when fetching from IPFS via `policyCid`, reading a local file, or any other transport.
+- `policyCodeHash`: pre-computed hex hash (from `policy_cids.json` or another out-of-band source). Takes precedence when both are set.
+- `policyBytes`: the raw Rego policy bytes; the SDK computes `keccak256` for you. Useful when fetching from IPFS via `policyCid`, reading a local file, or any other transport.
 
 ```ts
 const txHash = await walletClient.initialize({
@@ -662,7 +662,7 @@ initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 
 A non-empty `secretsSchemaCid` with an empty `wasmCid` reverts with `SecretsSchemaWithoutWasm()`.
 
-**Returns:** `` `0x${string}` `` -- The transaction hash.
+**Returns:** `` `0x${string}` ``, the transaction hash.
 
 ---
 
@@ -853,9 +853,9 @@ getPrivacyPublicKey(): Promise<PrivacyPublicKeyResponse>
 
 **Returns:**
 
-- `public_key` (`string`) -- The gateway's X25519 public key (hex-encoded)
-- `key_type` (`string`) -- Key type identifier
-- `encryption_suite` (`string`) -- HPKE suite identifier
+- `public_key` (`string`): The gateway's X25519 public key (hex-encoded)
+- `key_type` (`string`): Key type identifier
+- `encryption_suite` (`string`): HPKE suite identifier
 
 ---
 
@@ -913,9 +913,9 @@ getSecretsPublicKey(): Promise<SecretsPublicKeyResponse>
 
 **Returns:**
 
-- `public_key` (`string`) -- The gateway's X25519 public key (hex-encoded)
-- `key_type` (`string`) -- Key type identifier
-- `encryption_suite` (`string`) -- HPKE suite identifier
+- `public_key` (`string`): The gateway's X25519 public key (hex-encoded)
+- `key_type` (`string`): Key type identifier
+- `encryption_suite` (`string`): HPKE suite identifier
 
 ---
 
@@ -943,9 +943,9 @@ uploadIdentityEncrypted(
 
 **Returns:**
 
-- `data_ref_id` (`string`) -- Content-hash data reference ID: `keccak256(envelope_json_bytes)`
-- `gateway_signature` (`string`) -- Gateway EIP-712 signature for `registerIdentityData` onchain call
-- `deadline` (`number`) -- Signature expiration (unix timestamp)
+- `data_ref_id` (`string`): Content-hash data reference ID: `keccak256(envelope_json_bytes)`
+- `gateway_signature` (`string`): Gateway EIP-712 signature for `registerIdentityData` onchain call
+- `deadline` (`number`): Signature expiration (unix timestamp)
 
 ---
 
@@ -969,9 +969,9 @@ getIdentityEncrypted(
 
 **Returns:**
 
-- `envelope` (`string`) -- The HPKE-encrypted identity data as a SecureEnvelope JSON string
-- `identity_domain` (`string`) -- The identity domain this data was registered under
-- `identity_owner` (`string`) -- The identity owner address
+- `envelope` (`string`): The HPKE-encrypted identity data as a SecureEnvelope JSON string
+- `identity_domain` (`string`): The identity domain this data was registered under
+- `identity_owner` (`string`): The identity owner address
 
 ---
 
@@ -1125,13 +1125,13 @@ await walletClient.registerIdentityData({
 registerIdentityData(args: RegisterIdentityDataParams): Promise<Hex>
 ```
 
-The contract verifies the gateway signature against `REGISTER_IDENTITY_TYPEHASH` and checks that the signer is a registered task generator via `isTaskGenerator()`. Overwrites are allowed — users can update their identity data reference by calling this again.
+The contract verifies the gateway signature against `REGISTER_IDENTITY_TYPEHASH` and checks that the signer is a registered task generator via `isTaskGenerator()`. Overwrites are allowed: users can update their identity data reference by calling this again.
 
 ---
 
 #### linkIdentityAsSignerAndUser
 
-Link identity data when the caller is both the identity owner and the client user. The simplest linking flow — no counterparty signatures needed.
+Link identity data when the caller is both the identity owner and the client user. This is the simplest linking flow, with no counterparty signatures needed.
 
 ```ts
 await walletClient.linkIdentityAsSignerAndUser({
@@ -1601,7 +1601,7 @@ The privacy module uses X25519 KEM + HKDF-SHA256 + ChaCha20-Poly1305 (RFC 9180, 
 
 ### `createSecureEnvelope`
 
-Encrypt plaintext into a SecureEnvelope using HPKE. This is a pure offline function — zero network calls. The ephemeral HPKE key is generated internally and zeroed after use.
+Encrypt plaintext into a SecureEnvelope using HPKE. This is a pure offline function with zero network calls. The ephemeral HPKE key is generated internally and zeroed after use.
 
 **Standalone signature:**
 
@@ -1638,7 +1638,7 @@ The caller is responsible for zeroing the `signingKey` buffer when done. The fun
 
 ### `getPrivacyPublicKey`
 
-Fetch the gateway's X25519 HPKE public key. Call this once and cache the result — the key only changes on gateway restart or key rotation.
+Fetch the gateway's X25519 HPKE public key. Call this once and cache the result; the key only changes on gateway restart or key rotation.
 
 **Standalone signature:**
 
@@ -2354,7 +2354,7 @@ interface SubmitEvaluationRequestParams {
   intentSignature?: Hex
   quorumNumber?: Hex
   quorumThresholdPercentage?: number
-  /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
+  /** One per policy, positionally aligned. Pure-Rego policies still need a slot: pass `'0x'`. */
   wasmArgs: Hex[]
   /** Seconds. Sent as `timeout`; the gateway accepts it but does not apply it. */
   timeout: number
@@ -3029,7 +3029,7 @@ The SDK provides multiple entry points for tree-shaking and targeted imports.
 
 | Import Path                                 | Description                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| `@newton-xyz/sdk`          | Full SDK -- all methods, types, utilities, and constants                          |
+| `@newton-xyz/sdk`          | Full SDK: all methods, types, utilities, and constants                            |
 | `@newton-xyz/sdk/types`    | Type definitions and interfaces only                                              |
 
 :::info
@@ -3040,5 +3040,5 @@ Use subpath exports to minimize bundle size when you only need a subset of SDK f
 
 ## Related Resources
 
-- [Integration Guide](/developers/guides/integration-guide) -- Step-by-step guide to building with the Newton Protocol SDK
-- [RPC API Reference](/developers/reference/rpc-api) -- Underlying JSON-RPC methods called by the SDK
+- [Integration Guide](/developers/guides/integration-guide): Step-by-step guide to building with the Newton Protocol SDK
+- [RPC API Reference](/developers/reference/rpc-api): Underlying JSON-RPC methods called by the SDK

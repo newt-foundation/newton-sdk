@@ -8,7 +8,7 @@ import { Card,Cards } from 'vocs'
 
 # Identity Policy Reference [Newton identity Rego built-in functions for writing policies that check user identity data.]
 
-Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements — like age, country, and document status — directly in your Rego policies.
+Newton provides Rego built-in functions for checking user identity data within policy evaluation. These functions let you enforce KYC requirements such as age, country, and document status directly in your Rego policies.
 
 Identity built-ins are domain-namespaced under `newton.identity.<domain>.*`. The KYC domain is the first implemented domain. A generic `newton.identity.get(field_name)` accessor works across any domain for ad-hoc field access.
 

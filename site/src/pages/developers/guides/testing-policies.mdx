@@ -86,7 +86,7 @@ test_deny_risk_score_below_floor if {
     "risk_score_below_floor" in vault_risk_rating.deny with data.params as default_params with data.wasm as d
 }
 
-# A null risk score must not deny — guards against a fail-closed regression.
+# A null risk score must not deny; this guards against a fail-closed regression.
 test_risk_score_null_does_not_deny if {
     d := with_data({"risk_score": null})
     not "risk_score_below_floor" in vault_risk_rating.deny with data.params as default_params with data.wasm as d
@@ -109,12 +109,12 @@ opa test ./policy.rego ./policy_test.rego -v
 
 Recommended coverage:
 
-- **Happy path** — clean data allows.
-- **Each deny rule** — one test per rule, asserting the expected reason is in `deny` and `allow` is false.
-- **Param toggles** — a deny flag set to `false` does not deny.
-- **Edge values** — `null`, empty, and out-of-range fields behave as intended.
-- **No fail-open under multiple failures** — two deny conditions at once still denies.
-- **Multiple policies** — test each policy with its own params and oracle fixture, then test the aggregate decision. There is no cross-policy `data.wasm` merge.
+- **Happy path**: clean data allows.
+- **Each deny rule**: one test per rule, asserting the expected reason is in `deny` and `allow` is false.
+- **Param toggles**: a deny flag set to `false` does not deny.
+- **Edge values**: `null`, empty, and out-of-range fields behave as intended.
+- **No fail-open under multiple failures**: two deny conditions at once still deny.
+- **Multiple policies**: test each policy with its own params and oracle fixture, then test the aggregate decision. There is no cross-policy `data.wasm` merge.
 
 ### Quick local checks with the CLI
 

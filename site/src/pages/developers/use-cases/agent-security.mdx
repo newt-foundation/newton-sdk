@@ -27,16 +27,16 @@ Autonomous AI agents that transact onchain need guardrails. Without policy enfor
 
 AI agents operating onchain face unique risks:
 
-- **Unbounded spending** — an agent with wallet access can send any amount to any address
-- **Scope creep** — an agent authorized for one task (e.g., swap tokens) might attempt unrelated actions
-- **No audit trail** — you cannot easily verify why an agent made a specific transaction
-- **Prompt injection / manipulation** — adversarial inputs can cause agents to take unintended actions
+- **Unbounded spending**: an agent with wallet access can send any amount to any address
+- **Scope creep**: an agent authorized for one task (e.g., swap tokens) might attempt unrelated actions
+- **No audit trail**: you cannot easily verify why an agent made a specific transaction
+- **Prompt injection / manipulation**: adversarial inputs can cause agents to take unintended actions
 
 Current approaches rely on either no guardrails (trusting the agent) or hardcoded allowlists in the wallet (inflexible and hard to update).
 
 ## How Newton Solves It
 
-Newton evaluates every agent-initiated transaction against a policy before execution. The policy is a [Rego program](/developers/guides/writing-policies) that encodes your guardrails — what the agent can do, how much it can spend, and which contracts it can interact with.
+Newton evaluates every agent-initiated transaction against a policy before execution. The policy is a [Rego program](/developers/guides/writing-policies) that encodes your guardrails: what the agent can do, how much it can spend, and which contracts it can interact with.
 
 ### Per-Transaction Spending Limits
 
@@ -135,7 +135,7 @@ The agent wallet inherits from [NewtonPolicyClient](/developers/guides/smart-con
 
 | Approach | Limitation | Newton advantage |
 |----------|-----------|-----------------|
-| Hardcoded wallet allowlists | Inflexible, requires redeployment to change | Policies are updatable via IPFS — no contract redeploy |
+| Hardcoded wallet allowlists | Inflexible, requires redeployment to change | Policies can be updated via IPFS without a contract redeploy |
 | Offchain policy server | Single point of failure, trust assumption | Decentralized evaluation with cryptographic attestations |
 | No guardrails | Agent can do anything | Every action requires policy approval |
 | Multisig approval | Slow, blocks autonomous operation | Policies evaluate in sub-seconds, no human in the loop (unless the policy requires it) |

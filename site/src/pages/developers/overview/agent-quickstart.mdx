@@ -25,7 +25,7 @@ Newton Agent Skills are under active dogfood testing. Review generated code and 
 
 `newton-demo` coordinates the other two skills. Use it when your brief includes a policy, contract, and user interface.
 
-## Step 1 — Install the skills
+## Step 1: Install the skills
 
 Clone the public skills repository:
 
@@ -71,7 +71,7 @@ Record the chain, TaskManager, configured factory, and gateway deployment before
 
 Local scaffold, build, and policy simulation do not require dashboard login, a wallet, or deployment credentials.
 
-## Step 2 — Write a brief
+## Step 2: Write a brief
 
 Give the agent the decisions that define the integration. Include:
 
@@ -111,7 +111,7 @@ Scope:
 
 If a policy rule, chain, target, or protected action is missing, the agent should ask instead of inventing it.
 
-## Step 3 — Review the local result
+## Step 3: Review the local result
 
 The agent works locally before requesting live access:
 
@@ -135,7 +135,7 @@ The handoff files make the workflow resumable:
 
 Review the agent's reported paths, allow/deny results, Foundry test results, and any unresolved questions. A partial handoff may contain `null` addresses before deployment; that is expected.
 
-## Step 4 — Approve live operations separately
+## Step 4: Approve live operations separately
 
 The agent must stop before each operation that changes external state:
 
@@ -153,7 +153,7 @@ Provide credentials outside chat through the process environment or `~/.newton/.
 The user's browser wallet signs the EIP-712 intent. The generated server Route Handler calls `evaluateIntentDirect` with `NEWTON_API_KEY`; it does not need the user's private key.
 :::
 
-## Step 5 — Resume instead of starting over
+## Step 5: Resume instead of starting over
 
 When continuing later, point the agent at the handoff files:
 

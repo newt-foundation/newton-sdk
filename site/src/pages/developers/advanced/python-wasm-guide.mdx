@@ -116,7 +116,7 @@ from wit_world.imports.http import HttpRequest, HttpResponse
 
 # WIT: export run: func(input: string) -> result<string, string>
 # We return a JSON string on success AND on "errors"
-# (i.e., we don't surface WIT Err<string> — we encode error info in JSON)
+# (i.e., we don't surface WIT Err<string>; we encode error info in JSON)
 class WitWorld(wit_world.WitWorld):
     def run(self, input: str) -> str:
         req = loads(input)
@@ -141,7 +141,7 @@ class WitWorld(wit_world.WitWorld):
         })
 ```
 
-> **Note:** Keep all imports at the top of the file; don’t import inside functions.
+> **Note:** Keep all imports at the top of the file; don't import inside functions.
 
 ---
 
@@ -154,7 +154,7 @@ cd py_bindings
 componentize-py -d ../newton-provider.wit -w newton-provider componentize --stub-wasi app -o ../policy.wasm
 ```
 
-You’ll get `policy.wasm` in the project root — a component that:
+You'll get `policy.wasm` in the project root. The component:
 
 - **Imports** `newton:provider/http.fetch` from the host
 - **Exports** `run(input: string) -> result<string, string>`

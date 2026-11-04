@@ -108,9 +108,9 @@ As of v0.2.0, ownership is determined **onchain** via the `INewtonPolicyClient.g
 
 **How Ownership Works:**
 
-1. **Ownership is read from the chain** — the Gateway calls `getOwner()` on the `policy_client` contract to determine the current owner.
+1. **Ownership is read from the chain.** The Gateway calls `getOwner()` on the `policy_client` contract to determine the current owner.
 2. **Ownership is verified** when calling endpoints that require it. The Gateway checks that the caller's API key is associated with the onchain owner of the `policy_client`.
-3. **Ownership is transferable** — call `setPolicyClientOwner()` as the current owner; the Gateway reads the new onchain owner on its next check.
+3. **Ownership is transferable.** Call `setPolicyClientOwner()` as the current owner; the Gateway reads the new onchain owner on its next check.
 
 **Endpoints Requiring Ownership Verification:**
 
@@ -376,7 +376,7 @@ For a manual fallback, build the domain from the values the `NewtonPolicyClient`
 The `task`, `task_response`, and `signature_data` fields enable clients to call `validateAttestationDirect` optimistically without waiting for onchain task submission. The `signature_data` field contains pre-built, chain-aware encoded bytes ready to pass directly to the contract, and `validateAttestationDirect` computes its own expiry.
 :::
 
-To look the task up later — its evaluation result, operator errors, and the policy data it was evaluated against — pass `task_id` to the [Explorer API](/developers/reference/explorer-api#get-a-task).
+To look the task up later, including its evaluation result, operator errors, and the policy data it was evaluated against, pass `task_id` to the [Explorer API](/developers/reference/explorer-api#get-a-task).
 
 #### Example
 
@@ -1050,13 +1050,13 @@ Any other URL fails with `{"InvalidRequest":"Webhook URL must use HTTPS (or http
 
 **Failure Types:**
 
-- `channel_error` -- Internal channel communication failures
-- `timeout` -- Task processing timed out
-- `quorum_not_reached` -- Insufficient operator signatures
-- `onchain_submission_failed` -- Blockchain submission failed
-- `policy_evaluation_failed` -- Policy evaluation error
-- `signature_verification_failed` -- BLS signature verification error
-- `internal_error` -- Unexpected internal error
+- `channel_error`: Internal channel communication failures
+- `timeout`: Task processing timed out
+- `quorum_not_reached`: Insufficient operator signatures
+- `onchain_submission_failed`: Blockchain submission failed
+- `policy_evaluation_failed`: Policy evaluation error
+- `signature_verification_failed`: BLS signature verification error
+- `internal_error`: Unexpected internal error
 
 :::note
 The current gateway sends only `onchain_submission_failed` notifications, for tasks whose onchain submission fails. It reports evaluation and aggregation failures in the `newt_createTask` result or in the `newt_sendTask` WebSocket updates instead.
@@ -1614,7 +1614,7 @@ An unknown `data_ref_id` fails with `{"InvalidRequest":"confidential data ref no
 
 ## Related Resources
 
-- [SDK Reference](/developers/reference/sdk-reference) -- TypeScript SDK for interacting with Newton Protocol
-- [Integration Guide](/developers/guides/integration-guide) -- Step-by-step guide for integrating Newton into your application
-- [Open Policy Agent (Rego) Documentation](https://www.openpolicyagent.org/docs/latest/) -- Reference for writing Rego policies
-- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification) -- Protocol specification
+- [SDK Reference](/developers/reference/sdk-reference): TypeScript SDK for interacting with Newton Protocol
+- [Integration Guide](/developers/guides/integration-guide): Step-by-step guide for integrating Newton into your application
+- [Open Policy Agent (Rego) Documentation](https://www.openpolicyagent.org/docs/latest/): Reference for writing Rego policies
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification): Protocol specification

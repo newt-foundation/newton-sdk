@@ -21,7 +21,7 @@ This guide uses a split architecture:
 - The exact intent encoding expected by the policy and PolicyClient
 - Node.js >= 20
 
-## Step 1 — Create the project
+## Step 1: Create the project
 
 ```bash
 npx create-next-app@latest newton-sdk-app \
@@ -30,7 +30,7 @@ cd newton-sdk-app
 npm install @newton-xyz/sdk viem wagmi @tanstack/react-query
 ```
 
-## Step 2 — Configure server and public values
+## Step 2: Configure server and public values
 
 Create a gitignored `.env.local`:
 
@@ -53,7 +53,7 @@ NEXT_PUBLIC_CHAIN_ID=11155111
 
 Do not add `SIGNER_PRIVATE_KEY` to the application. The connected wallet signs the intent and later sends the PolicyClient transaction.
 
-## Step 3 — Keep one intent encoding
+## Step 3: Keep one intent encoding
 
 Policy simulation, the gateway request, the EIP-712 signature, and the PolicyClient checks must use the same six fields:
 
@@ -83,7 +83,7 @@ const intent = {
 
 `intent.to` is the downstream target the policy evaluates, which is not necessarily the PolicyClient. `functionSignature` is hex-encoded human-readable ABI text, not the four-byte selector. Match the exact named form used by the policy fixture and PolicyClient.
 
-## Step 4 — Sign in the browser
+## Step 4: Sign in the browser
 
 Read the EIP-712 domain from the PolicyClient when it exposes EIP-5267 `eip712Domain()`. Otherwise use only the fallback domain documented by that PolicyClient, with `verifyingContract` set to the PolicyClient address.
 
@@ -110,7 +110,7 @@ const intentSignature = await walletClient.signTypedData({
 
 The signature must cover the exact intent submitted to the server. Do not sign with an application-owned private key or replace `intent.from` with a server account.
 
-## Step 5 — Evaluate in a Route Handler
+## Step 5: Evaluate in a Route Handler
 
 Create `src/app/api/evaluate/route.ts`:
 
@@ -192,7 +192,7 @@ Read `getPolicySetSnapshot()` to confirm the expected set and argument count. Ke
 
 For production, validate `policyClient`, `intent.to`, chain, calldata, and request size against server-owned configuration before calling the gateway. Add authentication and rate limiting appropriate to your application.
 
-## Step 6 — Submit only on allow
+## Step 6: Submit only on allow
 
 Send the signed intent to the Route Handler. Hex-encode integer fields before JSON serialization because `JSON.stringify` cannot serialize `bigint`:
 

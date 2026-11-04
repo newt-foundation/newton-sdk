@@ -637,7 +637,7 @@ For the full contract-side integration, see the [Smart Contract Integration](/de
   `task`, `privacy` and the `policy-client` subcommands other than `register` and `show` need `eth_rpc_url`, `gateway_url` and `signer` from the config file or `NEWTON_CLI__` variables. See [Config File](#config-file).
 :::
 :::details[HPKE private key not configured]
-  The `secrets upload` command encrypts client-side. The gateway's HPKE public key is fetched automatically via `newt_getSecretsPublicKey` — no local key configuration is needed.
+  The `secrets upload` command encrypts client-side. It fetches the gateway's HPKE public key automatically via `newt_getSecretsPublicKey`, so you don't need to configure a local key.
 :::
 ## Next Steps
 

@@ -91,11 +91,11 @@ flowchart LR
     A --> B --> C --> D
 ```
 
-1. **User signs Intent** — creates and signs an Intent describing the desired transaction
-2. **Task created** — the Gateway creates a task on the TaskManager contract
-3. **Operators evaluate** — operators fetch the policy, evaluate it, and BLS-sign the result
-4. **Aggregator collects** — signatures are aggregated until quorum is reached
-5. **Contract validates** — your contract validates the attestation and executes the transaction
+1. **User signs Intent**: the user creates and signs an Intent describing the desired transaction
+2. **Task created**: the Gateway creates a task on the TaskManager contract
+3. **Operators evaluate**: operators fetch the policy, evaluate it, and BLS-sign the result
+4. **Aggregator collects**: the aggregator collects signatures until quorum is reached
+5. **Contract validates**: your contract validates the attestation and executes the transaction
 
 ## Quick Start
 
@@ -385,7 +385,7 @@ specs[1] = INewtonPolicyClient.PolicySpec({
 bytes32 newPolicyId = client.setPolicies(specs);
 ```
 
-Choose each expiration for your application's block-time and authorization window; 25 is illustrative. For exact `cast` configuration and readback commands, see [Deploying with CLI](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters).
+Choose each expiration for your application's block-time and authorization window; 25 is illustrative. For exact `cast` configuration and readback commands, see [Deploying with CLI](/developers/guides/deploying-with-cli#step-6-bind-policy-and-parameters).
 
 ### Replace a set on the same client
 
@@ -583,7 +583,7 @@ The `NewtonPolicyClient` mixin automatically enforces:
 ### Additional Best Practices
 
 - Always verify function selectors match expectations when decoding intent data
-- Set appropriate `expireAfter` values — too short and users cannot execute; too long and the security window increases
+- Set appropriate `expireAfter` values. Too short and users cannot execute; too long and the security window increases
 - Protect the `policyClientOwner` key with a multisig or timelock
 - Preserve the inherited `supportsInterface` implementation for the pinned interface
 - Fund the contract with ETH if it needs to execute value transfers

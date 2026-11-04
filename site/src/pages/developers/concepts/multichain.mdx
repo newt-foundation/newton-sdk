@@ -47,10 +47,10 @@ flowchart LR
     PC --> BV
 ```
 
-1. **Task submitted** — a caller submits a task to the Gateway with the intent's `chain_id` set to the destination chain
-2. **Operators evaluate** — operators evaluate the policy using the source chain infrastructure
-3. **BN254 certificate produced** — the BLS aggregate signature is encoded as a BN254 certificate for the destination chain
-4. **Attestation verified on destination** — the PolicyClient on the destination chain validates the certificate using the `BN254CertificateVerifier`
+1. **Task submitted**: a caller submits a task to the Gateway with the intent's `chain_id` set to the destination chain
+2. **Operators evaluate**: they evaluate the policy using the source chain infrastructure
+3. **BN254 certificate produced**: the BLS aggregate signature is encoded as a BN254 certificate for the destination chain
+4. **Attestation verified on destination**: the PolicyClient on the destination chain validates the certificate using the `BN254CertificateVerifier`
 
 ## Destination Chain Contracts
 
@@ -88,8 +88,8 @@ A `BN254Certificate` contains:
 |-------|-------------|
 | `referenceTimestamp` | Timestamp binding the certificate to a specific operator set snapshot |
 | `messageHash` | Hash of the task response being attested |
-| `signature` | BN254 G1 point — the aggregate BLS signature |
-| `apk` | BN254 G2 point — the aggregate public key of signing operators |
+| `signature` | The aggregate BLS signature, a BN254 G1 point |
+| `apk` | The aggregate public key of signing operators, a BN254 G2 point |
 | `nonSignerWitnesses` | Merkle proof-based witnesses for operators who did **not** sign |
 
 The verifier validates certificates by:
@@ -106,8 +106,8 @@ The verifier validates certificates by:
 
 If an attestation on a destination chain is disputed, the challenge flows across both chains:
 
-1. **Destination chain:** Challenger calls `raiseAndResolveChallenge()` — the attestation is invalidated, but no slashing occurs (destination chains have no `ServiceManager`)
-2. **Source chain:** Challenger relays the same challenge to Ethereum — actual slashing occurs via the source chain's slashing mechanism
+1. **Destination chain:** Challenger calls `raiseAndResolveChallenge()`. The attestation is invalidated, but no slashing occurs (destination chains have no `ServiceManager`).
+2. **Source chain:** Challenger relays the same challenge to Ethereum, where actual slashing occurs via the source chain's slashing mechanism.
 
 ## Tasks on Destination Chains
 

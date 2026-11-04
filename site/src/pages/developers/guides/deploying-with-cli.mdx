@@ -46,7 +46,7 @@ Do not commit populated credentials or source a project-local `.env`. Never past
 
 Provide any CLI upload credentials through your secret manager or protected shell environment. Gateway SDK examples use `NEWTON_API_KEY`, a separate application environment-variable name.
 
-## Step 1 — Build the policy
+## Step 1: Build the policy
 
 Given a scaffolded directory such as `policies/transfer-limit`:
 
@@ -56,7 +56,7 @@ newton-cli policy build -p policies/transfer-limit
 
 Use the CLI build command instead of invoking `jco componentize` directly. It validates the expected policy files and writes compiled artifacts under `dist/`.
 
-## Step 2 — Simulate allow and deny
+## Step 2: Simulate allow and deny
 
 Configure `configs/intent.json`, `configs/wasm_args.json`, and `configs/params.json`, then run:
 
@@ -75,7 +75,7 @@ Local WASM output is available to Rego under `data.wasm.*`; policy parameters ar
 
 Do not deploy until both cases match the intended policy.
 
-## Step 3 — Review deployment configuration
+## Step 3: Review deployment configuration
 
 `policy scaffold` creates the non-secret file `configs/deployment.toml`. Review its chain and expiration settings before deployment. Environment variables and explicit CLI flags override the file.
 
@@ -96,7 +96,7 @@ policies/transfer-limit/
     policy.rego
 ```
 
-## Step 4 — Deploy each policy
+## Step 4: Deploy each policy
 
 Deploy each independent policy and record its artifact CIDs, code hash, address, receipt, and deployed bytecode.
 
@@ -125,7 +125,7 @@ For an oracle-backed policy, `wasmCid` and optional `secretsSchemaCid` belong to
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
 :::
 
-## Step 5 — Deploy the PolicyClient
+## Step 5: Deploy the PolicyClient
 
 The PolicyClient is application code, not something `registerClient` creates. Implement and test it with Foundry first, then deploy it with the local deployer as initial owner:
 
@@ -143,7 +143,7 @@ Resolve current protocol addresses for the target chain rather than copying cons
 newton-cli --chain-id "$CHAIN_ID" deployments show
 ```
 
-## Step 6 — Bind policy and parameters
+## Step 6: Bind policy and parameters
 
 While the local deployer owns the client, replace its complete policy set with one call. Set `POLICY_0`, `POLICY_1`, and the client address to reviewed deployments. Each params file must match its policy schema.
 
@@ -161,7 +161,7 @@ cast call "$POLICY_CLIENT" \
 
 The expiry of 25 blocks is illustrative. Choose an application-appropriate window. Record the returned ID, revision, and ordered specs together. Every replacement, including an identical one, advances the revision and invalidates old attestations.
 
-## Step 7 — Transfer ownership for dashboard operations
+## Step 7: Transfer ownership for dashboard operations
 
 Gateway secrets and client-scoped live evaluation authorize against `PolicyClient.getOwner()`. If the dashboard login wallet must own the client, transfer after policy binding is complete:
 
@@ -178,7 +178,7 @@ Verify `getOwner()` onchain. `PolicyClientRegistry.setClientOwner` changes the r
 After ownership transfer, only the new owner can call `setPolicies`. That owner can replace the complete set and its parameters on the same client; a new client is not required for routine configuration changes.
 :::
 
-## Step 8 — Register with the dashboard user
+## Step 8: Register with the dashboard user
 
 Registration records the client in `PolicyClientRegistry` under the dashboard login wallet. Log in first so the CLI knows which wallet to use, then run `register`:
 
@@ -191,13 +191,13 @@ newton-cli --chain-id "$CHAIN_ID" policy-client register \
 
 The command opens the Newton dashboard in a browser, where the logged-in wallet signs the registration, then waits until `PolicyClientRegistry.isRegisteredClient` returns true. It prints the link if the browser does not open, exits early if the client is already registered, and gives up after 5 minutes. The registry address comes from the CLI's embedded deployment for `--chain-id`; pass `--registry` to override it.
 
-## Step 9 — Upload secrets when used
+## Step 9: Upload secrets when used
 
 For oracle-backed policies, verify the Policy contract's `secretsSchemaCid`, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client. Use [the gateway secrets API](/developers/reference/rpc-api#newt_storeencryptedsecrets) for the selected policy-set release.
 
 Pure-Rego policies skip this step. Keep secrets outside tracked source and never print them while diagnosing uploads.
 
-## Step 10 — Verify before live evaluation
+## Step 10: Verify before live evaluation
 
 Check these values onchain:
 

@@ -16,7 +16,7 @@ The policy-set implementation composes an ordered set of independent policies. E
 
 Newton's policy engine supports **Rego v1 syntax** through Newton's fork of **Regorus 0.9.0**. Its compatibility target is an **OPA v1.2.0-compatible subset plus Newton-specific extensions**. Newton extends the engine with privacy-preserving operations and cryptographic primitives for cross-chain signature verification and hash computation, but it does not implement every OPA built-in. Existing OPA policies and libraries must be checked for unsupported standard crypto/JWT, GraphQL, JSON Patch, network/CIDR/DNS, AWS provider, metadata, and module-parsing functions before use.
 
-Rego policies are pure functions: given the same input data and policy rules, evaluation always produces the same result. This determinism is essential for Newton's security model -- it enables challengers to independently verify any evaluation and prove correctness via zero-knowledge proofs. Policies are content-addressed on IPFS via CID, ensuring all operators fetch and evaluate the exact same rule set.
+Rego policies are pure functions: given the same input data and policy rules, evaluation always produces the same result. This determinism is essential for Newton's security model: it enables challengers to independently verify any evaluation and prove correctness via zero-knowledge proofs. Policies are content-addressed on IPFS via CID, ensuring all operators fetch and evaluate the exact same rule set.
 
 ### Newton-Crypto Extensions
 
@@ -29,7 +29,7 @@ Newton Rego adds Ethereum-specific cryptographic builtins to the Rego evaluator:
 
 These builtins enable policies to verify Ethereum signatures within the Rego evaluation context, supporting use cases such as verifying that a transaction intent was signed by an authorized party, checking multi-signature approvals, or validating delegation chains.
 
-Extensions follow the `newton.*` namespace convention and are registered at engine initialization. The cryptographic extensions are isolated to minimize upstream divergence from the base Rego engine. The extension model is designed for cross-chain extensibility — the `newton.crypto` namespace provides a unified surface for adding signature verification and hash computation primitives across blockchain cryptographic schemes, enabling policies that operate across chain boundaries without per-chain policy rewrites.
+Extensions follow the `newton.*` namespace convention and are registered at engine initialization. The cryptographic extensions are isolated to minimize upstream divergence from the base Rego engine. The extension model is designed for cross-chain extensibility: the `newton.crypto` namespace provides a unified surface for adding signature verification and hash computation primitives across blockchain cryptographic schemes, enabling policies that operate across chain boundaries without per-chain policy rewrites.
 
 ### WASM-Sandboxed Data Providers
 
@@ -49,14 +49,14 @@ The sandbox enforces strict resource limits to prevent denial-of-service and res
 
 Policy data providers often require API keys, authentication tokens, or other secrets to access external data sources. Newton encrypts these secrets using the Newton Privacy Envelope (NPE), the same HPKE-based construction used for policy data privacy ([Privacy Architecture](/whitepaper/privacy-architecture)):
 
-1. Clients encrypt secrets into a SecureEnvelope using the system's combined X25519 public key (the DKG-produced threshold key stored on-chain in the operator registry).
+1. Clients encrypt secrets into a SecureEnvelope using the system's combined X25519 public key (the DKG-produced threshold key stored onchain in the operator registry).
 2. Encrypted envelopes are uploaded and stored in the encrypted data store.
 3. During the [Prepare Phase](/whitepaper/streaming-consensus#prepare-phase-distributed-wasm-data-collection), when operators execute WASM data providers, the encrypted secrets are distributed alongside the task payload.
 4. Each operator produces a partial decryption share using its DKG-produced share of the threshold private key and exchanges shares with peers via encrypted NATS messages (see [Privacy Data Flow](/whitepaper/privacy-architecture#privacy-data-flow)). Once t shares are collected, the operator reconstructs the secret locally.
 5. The decrypted secret is injected into the WASM sandbox for the duration of the data provider execution. Decrypted secrets exist only in memory during execution and are never persisted in plaintext.
 6. After WASM execution completes, the decrypted material is dropped.
 
-This approach eliminates external key management dependencies and central points of trust. No single entity — including the gateway — ever holds the complete decryption key for policy client secrets. The threshold decryption mechanism is identical to the one used for user privacy data ([Privacy Data Flow](/whitepaper/privacy-architecture#privacy-data-flow)), meaning policy client secrets and user privacy data flow through the same cryptographic pipeline, simplifying the trust model to a single well-audited construction.
+This approach eliminates external key management dependencies and central points of trust. No single entity, including the gateway, ever holds the complete decryption key for policy client secrets. The threshold decryption mechanism is identical to the one used for user privacy data ([Privacy Data Flow](/whitepaper/privacy-architecture#privacy-data-flow)), meaning policy client secrets and user privacy data flow through the same cryptographic pipeline, simplifying the trust model to a single well-audited construction.
 
 ### Policy Versioning and Content Addressing
 
@@ -64,8 +64,8 @@ Policy versioning operates at two levels:
 
 **Semantic versioning at the contract level.** The TaskManager enforces a minimum compatible policy version, rejecting tasks that reference policy factories below the minimum. This prevents protocol-level incompatibility between factory versions.
 
-**Content addressing at the storage level.** Policies, schemas, and metadata are stored on IPFS and referenced by CID: policy CID (Rego rules), schema CID (JSON schema for secrets validation), and metadata CID (policy metadata). CIDs are immutable by definition -- the same content always produces the same CID, and any change produces a different CID. This provides tamper-evident policy storage without requiring on-chain storage of full policy code.
+**Content addressing at the storage level.** Policies, schemas, and metadata are stored on IPFS and referenced by CID: policy CID (Rego rules), schema CID (JSON schema for secrets validation), and metadata CID (policy metadata). CIDs are immutable by definition: the same content always produces the same CID, and any change produces a different CID. This provides tamper-evident policy storage without requiring onchain storage of full policy code.
 
 ### Multi-Plugin Composition
 
-A single policy evaluation can invoke multiple WASM data providers in sequence. The policy task data supports multiple policy data entries, each with an independent WASM binary, arguments CID, and attestation. This enables composable data pipelines: one plugin fetches sanctions data, another fetches risk scores, a third fetches on-chain state, and the Rego policy evaluates all results together.
+A single policy evaluation can invoke multiple WASM data providers in sequence. The policy task data supports multiple policy data entries, each with an independent WASM binary and arguments CID. This enables composable data pipelines: one plugin fetches sanctions data, another fetches risk scores, a third fetches onchain state, and the Rego policy evaluates all results together.

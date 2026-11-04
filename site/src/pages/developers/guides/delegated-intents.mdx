@@ -32,9 +32,9 @@ The PolicyClient owner decides who may act as a delegator, and the delegator has
 - The URL of a delegator that serves that PolicyClient
 - `@newton-xyz/sdk` and `viem`
 
-## Step 1 — Approve the delegator
+## Step 1: Approve the delegator
 
-Approval needs signatures from both sides. The delegator key signs a `DelegatorApproval(nonce, deadline)` message under the PolicyClient's EIP-712 domain. The owner then submits it on chain.
+Approval needs signatures from both sides. The delegator key signs a `DelegatorApproval(nonce, deadline)` message under the PolicyClient's EIP-712 domain. The owner then submits it onchain.
 
 ```ts
 import { createWalletClient, http } from 'viem'
@@ -78,7 +78,7 @@ await publicClient.delegatorRequired({ policyClient })
 
 `removeDelegator` (owner) and `resignDelegator` (the delegator itself) remove a delegator. `resignDelegator` also invalidates any approvals the delegator signed but nobody submitted.
 
-## Step 2 — Authenticate to the delegator
+## Step 2: Authenticate to the delegator
 
 Every call that reads from the delegator is signed, and by default so is every submission. The SDK signs an EIP-712 `NewtonRequest` naming the delegator's hostname, the verb and route path (such as `GET /v1/intents`, without the query string), the hash of the exact body, and a timestamp, and sends it in the `X-Newton-Auth` header. A signed request is only accepted for about two minutes, and only for the same verb and path. Pass `auth` to the client and it signs each call:
 
@@ -119,7 +119,7 @@ const auth = { signer: session.account, session: session.grant, chainId: sepolia
 
 The caller is still the grantor: the user's own intents, or everything their role allows. Submitting works the same way, so a user's session can submit only to a delegator that accepts sender submissions (see Step 3). `signNewtonRequest` and `signSessionGrant` are exported for signing requests yourself.
 
-## Step 3 — Sign and submit an intent
+## Step 3: Sign and submit an intent
 
 The user signs the intent in the browser, and your backend submits it with an account the delegator trusts: a reader or the PolicyClient's owner. `signDelegatedIntent` takes a plain viem `WalletClient`, works with local accounts and browser wallets, and needs no Newton API key. It is also a `newtonWalletClientActions` method.
 
@@ -180,7 +180,7 @@ const final = await pending.waitForIntent({ timeoutMs: 120_000 })
 
 A repeat submission without `auth` gets back only `intentId` and `state`. The full record goes only to a caller that can read the intent.
 
-## Step 4 — Track the intent
+## Step 4: Track the intent
 
 An intent moves through these states:
 
@@ -192,7 +192,7 @@ An intent moves through these states:
 | `broadcast` | The PolicyClient transaction was sent |
 | `included` | The transaction has a receipt |
 | `finalized` | Final, and its effect verified (terminal) |
-| `denied` | The policy denied the intent; nothing went on chain (terminal) |
+| `denied` | The policy denied the intent; nothing went onchain (terminal) |
 | `failed` | The intent cannot complete (terminal) |
 
 `attested`, `tasked`, `broadcast` and `included` can fall back to `accepted` if the attestation expires before the call lands. The delegator then requests a new attestation.
