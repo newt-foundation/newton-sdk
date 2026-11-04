@@ -57,7 +57,7 @@ interface http {
 interface secrets {
     record secret-response {
         // Raw bytes of the decrypted secrets JSON object.
-        // The scope (policy client and Policy) is bound by the host execution context.
+        // The scope (policy_client, policy_data) is bound by the host execution context.
         value: list<u8>,
     }
 
