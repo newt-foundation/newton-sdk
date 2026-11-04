@@ -217,7 +217,7 @@ Record evidence separately:
 | Local contract tests | Configuration, intent binding, deny, stale response, and replay assertions |
 | Gateway simulation | Endpoint, current set ID, per-policy results, aggregate verdict; no signatures |
 | Live operator evaluation | Gateway task ID, frozen task, aggregate `allowed`, signed response |
-| On-chain validation | Successful BLS validation or expected revert |
+| Onchain validation | Successful BLS validation or expected revert |
 | Application execution | Transaction hash, receipt, and resulting application state |
 
 Do not use wall-clock conditions for a deterministic tutorial. An allow decision applies to evaluation time; block-based expiration is not a promise that external conditions remain true until execution.
@@ -228,7 +228,7 @@ Do not use wall-clock conditions for a deterministic tutorial. An allow decision
 2. Test optional WASM locally, then deploy each policy with its artifacts.
 3. Configure the client's ordered set and upload required policy-scoped secrets.
 4. Simulate with `newt_simulatePolicy` and cover every truth-table case.
-5. Evaluate through live operators, then validate and execute an allowed transaction on-chain.
+5. Evaluate through live operators, then validate and execute an allowed transaction onchain.
 6. Verify denial, stale attestations, and replay cannot change application state.
 
 ## Next Steps

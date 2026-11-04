@@ -235,7 +235,7 @@ For a full reference on supported Rego syntax, see the [Rego Syntax Guide](/deve
 
 ## Using Identity Data in Policies
 
-Newton provides built-in functions for checking user identity data (KYC status, age, location) within your policies. Identity data is injected by operators from the on-chain IdentityRegistry — you only see boolean check results, never raw personal data.
+Newton provides built-in functions for checking user identity data (KYC status, age, location) within your policies. Identity data is injected by operators from the onchain IdentityRegistry — you only see boolean check results, never raw personal data.
 
 ```rego
 package kyc_gated_transfer
@@ -256,7 +256,7 @@ Identity built-ins are domain-namespaced (e.g., `newton.identity.kyc.*`). A gene
 ## Next Steps
 
 <Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
-  Deploy your policy to IPFS and register it on-chain
+  Deploy your policy to IPFS and register it onchain
 </Card>
 <Card icon="shield" to="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
   Integrate the policy into your smart contract

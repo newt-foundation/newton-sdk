@@ -103,14 +103,14 @@ curl -X POST https://gateway.testnet.newton.xyz/rpc \
 Some endpoints require **ownership verification** of a `policy_client` address. This mechanism protects access to stored secrets and ensures only authorized users can manage secrets for a given PolicyClient.
 
 :::note
-As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.getOwner()` method on the PolicyClient contract. PolicyClient ownership transfers through `setPolicyClientOwner()` on the contract. The Gateway reads on-chain state for every ownership check.
+As of v0.2.0, ownership is determined **onchain** via the `INewtonPolicyClient.getOwner()` method on the PolicyClient contract. PolicyClient ownership transfers through `setPolicyClientOwner()` on the contract. The Gateway reads onchain state for every ownership check.
 :::
 
 **How Ownership Works:**
 
 1. **Ownership is read from the chain** — the Gateway calls `getOwner()` on the `policy_client` contract to determine the current owner.
-2. **Ownership is verified** when calling endpoints that require it. The Gateway checks that the caller's API key is associated with the on-chain owner of the `policy_client`.
-3. **Ownership is transferable** — call `setPolicyClientOwner()` as the current owner; the Gateway reads the new on-chain owner on its next check.
+2. **Ownership is verified** when calling endpoints that require it. The Gateway checks that the caller's API key is associated with the onchain owner of the `policy_client`.
+3. **Ownership is transferable** — call `setPolicyClientOwner()` as the current owner; the Gateway reads the new onchain owner on its next check.
 
 **Endpoints Requiring Ownership Verification:**
 
@@ -122,7 +122,7 @@ As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.
 | `newt_simulatePolicyData` | No (caller provides secrets directly) |
 | `newt_simulatePolicyDataWithClient` | Yes (fetches stored secrets) |
 | `newt_simulatePolicy` | Yes; explicitly authorized read-only admin keys can bypass |
-| `newt_storeEncryptedSecrets` | Yes (verifies on-chain owner) |
+| `newt_storeEncryptedSecrets` | Yes (verifies onchain owner) |
 
 :::note
 The pinned `newt_simulatePolicy` handler checks client ownership for every set, including pure-Rego sets. An explicitly authorized admin API key can bypass this check on read endpoints only, after its permission is revalidated.
@@ -614,7 +614,7 @@ The gateway delivers updates only to subscriptions that exist when it publishes 
 
 ### newt_simulateTask
 
-Evaluates Rego locally on the gateway using provided oracle **outputs**. It resolves the client's current policy set; it does not execute WASM, contact an operator quorum, produce BLS signatures, or create an on-chain task. Reconfiguration changes what this endpoint evaluates: it is not historical replay of a task's frozen set.
+Evaluates Rego locally on the gateway using provided oracle **outputs**. It resolves the client's current policy set; it does not execute WASM, contact an operator quorum, produce BLS signatures, or create an onchain task. Reconfiguration changes what this endpoint evaluates: it is not historical replay of a task's frozen set.
 
 **Permission:** `RpcRead`.
 
@@ -668,7 +668,7 @@ A completed denial is `success: true, allowed: false`. A simulation failure is `
 
 ### newt_storeEncryptedSecrets
 
-Uploads encrypted secrets for a Policy contract. Secrets are validated against the on-chain schema and stored for use during task evaluation.
+Uploads encrypted secrets for a Policy contract. Secrets are validated against the onchain schema and stored for use during task evaluation.
 
 **Permission:** `RpcWrite`
 
@@ -981,7 +981,7 @@ When no secrets are stored for the client and policy, the secrets host call your
 
 Runs the configured policy set's optional WASM oracles and then Rego. Unlike `newt_simulateTask`, `wasm_args` contains oracle **inputs**. Policies and the client must already be deployed and configured. Parameters come from the client's set; this endpoint no longer accepts inline Rego, `policy_data`, `policy_params`, or an `entrypoint` override.
 
-**Permission:** `RpcRead`; on-chain client ownership is checked, with the controlled read-only admin-key exception described above. This endpoint does not produce quorum signatures or execute an application transaction.
+**Permission:** `RpcRead`; onchain client ownership is checked, with the controlled read-only admin-key exception described above. This endpoint does not produce quorum signatures or execute an application transaction.
 
 | Parameter | Type | Required | Meaning |
 |---|---|---|---|
@@ -1026,7 +1026,7 @@ Runs the configured policy set's optional WASM oracles and then Rego. Unlike `ne
 
 A completed denial is `success: true, allowed: false`. A simulation failure is `success: false, allowed: null`. Neither response carries a BLS attestation.
 
-Use `policies[i].policy_index` and `policies[i].policy` to map each verdict back to the configured order. For production evaluation and signatures, use `newt_createTask` or `newt_sendTask` and subsequently validate the attestation on-chain.
+Use `policies[i].policy_index` and `policies[i].policy` to map each verdict back to the configured order. For production evaluation and signatures, use `newt_createTask` or `newt_sendTask` and subsequently validate the attestation onchain.
 
 ---
 
@@ -1231,7 +1231,7 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 3. Upload policy-scoped secrets when needed; test individual WASM modules with scalar-argument simulation endpoints.
 4. Run `newt_simulatePolicy` for WASM + Rego, or `newt_simulateTask` with precomputed outputs. Neither produces signatures.
 5. Sign the exact intent and submit `newt_createTask` or `newt_sendTask` for live operator evaluation.
-6. Check aggregate `allowed` and validate the signed response on-chain before application execution.
+6. Check aggregate `allowed` and validate the signed response onchain before application execution.
 7. Preserve task snapshots for historical investigation. Current-set simulation is not historical replay.
 
 For required cases and evidence, see [Testing Policies](/developers/guides/testing-policies#policy-set-validation-checklist).
@@ -1418,7 +1418,7 @@ Use `newt_getSecretsPublicKey` when encrypting WASM secrets via `storeEncryptedS
 
 ### newt_uploadIdentityEncrypted
 
-Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encrypted envelope and returns a `data_ref_id`, gateway EIP-712 signature, and deadline for the on-chain `registerIdentityData` call.
+Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encrypted envelope and returns a `data_ref_id`, gateway EIP-712 signature, and deadline for the onchain `registerIdentityData` call.
 
 **Permission:** `RpcWrite`
 
@@ -1437,7 +1437,7 @@ Uploads HPKE-encrypted identity data to the gateway. The gateway stores the encr
 | Field | Type | Description |
 |---|---|---|
 | `data_ref_id` | `String` | Content-hash data reference ID: `keccak256(envelope_json_bytes)` |
-| `gateway_signature` | `String` | Gateway EIP-712 signature for `registerIdentityData` on-chain call |
+| `gateway_signature` | `String` | Gateway EIP-712 signature for `registerIdentityData` onchain call |
 | `deadline` | `Number` | Signature expiration (unix timestamp) for `registerIdentityData` |
 
 #### Example
@@ -1477,7 +1477,7 @@ After receiving the response, call `registerIdentityData` on the IdentityRegistr
 
 ### newt_getIdentityEncrypted
 
-Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored on-chain in IdentityRegistry) back to the actual encrypted data blob (stored off-chain in the gateway).
+Fetches encrypted identity data by its content-hash reference ID. Used to resolve a `data_ref_id` (stored onchain in IdentityRegistry) back to the actual encrypted data blob (stored offchain in the gateway).
 
 **Permission:** `RpcRead`
 

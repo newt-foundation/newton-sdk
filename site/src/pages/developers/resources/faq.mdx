@@ -49,7 +49,7 @@ See [Validation Methods](/developers/overview/core-concepts#validation-methods) 
 A task typically goes from submission to attestation in under a second, around 200 ms at the median on Base Sepolia testnet. See [Consensus & Security](/developers/concepts/consensus-security) for how operators reach agreement.
 :::
 
-:::details[Can I test policies without deploying on-chain?]
+:::details[Can I test policies without deploying onchain?]
 Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set’s optional WASM and Rego without an application transaction or BLS attestation. You can also test individual components:
 - `newt_simulatePolicy` — test Rego policy logic with provided inputs
 - `newt_simulatePolicyData` — test a WASM data oracle
@@ -77,7 +77,7 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 - In direct mode the policy denied the intent: `_validateAttestationDirect` returns the quorum-signed `taskResponse.allowed`
 - The task was challenged, and the TaskManager returns `false` for a challenged task
 
-**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
+**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#onchain-error-selectors).
 :::
 
 :::details[InvalidRequest: policy client has an empty policy set]

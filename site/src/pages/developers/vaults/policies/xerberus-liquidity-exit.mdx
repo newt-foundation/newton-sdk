@@ -53,7 +53,7 @@ One MCP `tools/call` of the `liquidity_exit_quote` tool, sent as JSON-RPC 2.0 to
 | `notional_usd` | Position size quoted | Audit |
 | `impact_band_pct` | Impact band the quote was modeled at | Gated by `max_impact_band_pct` |
 | `max_sale_per_day_usd` | Most that can be sold per day inside the band | `no_exit_liquidity` |
-| `days_to_exit` | Days to exit on the on-chain DEX floor inside the band | Gated by `max_days_to_exit` |
+| `days_to_exit` | Days to exit on the onchain DEX floor inside the band | Gated by `max_days_to_exit` |
 | `exit_horizon` | Xerberus's bucket for `days_to_exit`, e.g. `1-7d` | Reviewer context |
 | `fastest_route` / `fastest_days_to_exit` | The quickest measured route, e.g. `native_redemption`, and its clock | Reviewer context |
 | `redemption_route_status` / `redemption_days_to_exit` | Whether a protocol-native redemption route exists (`present`, `inherited`, `not_modelled`, `not_applicable`) and its clock | Reviewer context |

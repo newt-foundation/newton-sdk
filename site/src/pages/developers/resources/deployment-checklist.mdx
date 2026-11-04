@@ -43,7 +43,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
   
 ::::
 
-## On-Chain Deployment
+## Onchain Deployment
 
 ::::steps
 ### Mainnet policy allowlisting confirmed
@@ -102,7 +102,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 ### End-to-end flow verified
     1. Submit an evaluation via `evaluateIntentDirect` or `submitEvaluationRequest`
     2. Receive attestation
-    3. Execute the attested transaction on-chain
+    3. Execute the attested transaction onchain
     4. Verify the transaction succeeds
   
 ### Error handling implemented
@@ -112,10 +112,10 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 
 ## Security
 
-- [ ] PolicyClient ownership verified on-chain (not just in your local config)
+- [ ] PolicyClient ownership verified onchain (not just in your local config)
 - [ ] API keys stored in environment variables, never committed to source control
 - [ ] WASM oracle does not log or expose secrets
-- [ ] Attestation expiration is checked before on-chain submission
+- [ ] Attestation expiration is checked before onchain submission
 - [ ] Challenge window (100 blocks) is accounted for in your UX
 - [ ] Contract uses `_validateAttestation` or `_validateAttestationDirect` correctly
 - [ ] Intent fields (`from`, `to`, `value`, `data`, `chainId`) are validated before submission
@@ -166,7 +166,7 @@ Record evidence separately:
 | Local contract tests | Configuration, intent binding, deny, stale response, and replay assertions |
 | Gateway simulation | Endpoint, current set ID, per-policy results, aggregate verdict; no signatures |
 | Live operator evaluation | Gateway task ID, frozen task, aggregate `allowed`, signed response |
-| On-chain validation | Successful BLS validation or expected revert |
+| Onchain validation | Successful BLS validation or expected revert |
 | Application execution | Transaction hash, receipt, and resulting application state |
 
 Do not use wall-clock conditions for a deterministic tutorial. An allow decision applies to evaluation time; block-based expiration is not a promise that external conditions remain true until execution.

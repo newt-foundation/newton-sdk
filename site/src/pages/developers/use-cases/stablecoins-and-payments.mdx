@@ -36,7 +36,7 @@ Traditional approaches force a choice: either centralized compliance (a server t
 
 ## How Newton Solves It
 
-Newton evaluates every transaction against a [Rego policy](/developers/guides/writing-policies) before it executes on-chain. The evaluation is performed by a decentralized network of [EigenLayer operators](/developers/concepts/architecture), and the result is cryptographically attested via BLS signatures.
+Newton evaluates every transaction against a [Rego policy](/developers/guides/writing-policies) before it executes onchain. The evaluation is performed by a decentralized network of [EigenLayer operators](/developers/concepts/architecture), and the result is cryptographically attested via BLS signatures.
 
 ### Sanctions Screening
 
@@ -102,7 +102,7 @@ sequenceDiagram
     PaymentContract->>PaymentContract: Execute or revert
 ```
 
-The payment contract inherits from [NewtonPolicyClient](/developers/guides/smart-contract-integration), which validates the attestation before executing the transfer. No off-chain server sits in the critical path.
+The payment contract inherits from [NewtonPolicyClient](/developers/guides/smart-contract-integration), which validates the attestation before executing the transfer. No offchain server sits in the critical path.
 
 ## Why Newton Over Centralized Compliance
 
@@ -111,7 +111,7 @@ The payment contract inherits from [NewtonPolicyClient](/developers/guides/smart
 | Single point of failure | Yes | No — distributed operators |
 | Censorship risk | Yes — operator can block arbitrarily | No — policy rules are transparent and auditable |
 | Latency | Depends on server | Sub-second (parallel operator evaluation) |
-| Auditability | Server logs (opaque) | On-chain attestations (verifiable) |
+| Auditability | Server logs (opaque) | Onchain attestations (verifiable) |
 | Customization | Vendor-defined rules | Your own Rego policies |
 
 ## Get Started

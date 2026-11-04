@@ -172,7 +172,7 @@ cast send 0xPOLICY_CLIENT \
   --private-key "$PRIVATE_KEY"
 ```
 
-Verify `getOwner()` on-chain. `PolicyClientRegistry.setClientOwner` changes the registry record; it is not a substitute for `setPolicyClientOwner` on the contract.
+Verify `getOwner()` onchain. `PolicyClientRegistry.setClientOwner` changes the registry record; it is not a substitute for `setPolicyClientOwner` on the contract.
 
 :::warning
 After ownership transfer, only the new owner can call `setPolicies`. That owner can replace the complete set and its parameters on the same client; a new client is not required for routine configuration changes.
@@ -199,7 +199,7 @@ Pure-Rego policies skip this step. Keep secrets outside tracked source and never
 
 ## Step 10 — Verify before live evaluation
 
-Check these values on-chain:
+Check these values onchain:
 
 - PolicyClient TaskManager matches the target Newton deployment
 - `getPolicySetSnapshot()` returns the expected nonzero ID, revision, and ordered policies

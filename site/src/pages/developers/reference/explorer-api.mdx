@@ -19,7 +19,7 @@ Use it alongside the other Newton interfaces:
 | Need | Use |
 |------|-----|
 | Submit or simulate a task, manage secrets | [RPC API](/developers/reference/rpc-api) (Newton Gateway) |
-| Check a task's on-chain status from your app | SDK [`getTaskStatus`](/developers/reference/sdk-reference#gettaskstatus) |
+| Check a task's onchain status from your app | SDK [`getTaskStatus`](/developers/reference/sdk-reference#gettaskstatus) |
 | Look up a task's evaluation result, errors, and policy data after the fact | Explorer API |
 | List tasks for a policy, browse policies, or pull protocol stats | Explorer API |
 
@@ -115,7 +115,7 @@ List endpoints return task summaries. [Get a task](#get-a-task) returns the full
 | `error` | `string \| null` | Task-level error, if the task failed |
 | `operator_errors` | `object \| array \| null` | Errors reported by individual operators |
 | `created_block` | `number \| null` | Block the task was created in |
-| `task_created_at` | `string \| null` | When the task was created on-chain |
+| `task_created_at` | `string \| null` | When the task was created onchain |
 | `task_responded_at` | `string \| null` | When operators responded |
 | `attestation_spent_at` | `string \| null` | When the attestation was consumed by the PolicyClient |
 | `task_challenged_at` | `string \| null` | When the task was challenged |
@@ -209,7 +209,7 @@ Returns a paginated list of [task summaries](#task-object).
 | `author` | `string \| null` | Author from the policy metadata |
 | `description` | `string \| null` | Description from the policy metadata |
 | `verified` | `boolean \| null` | Whether the policy is verified |
-| `policy_info` | `object \| null` | On-chain policy info (including the metadata reference) |
+| `policy_info` | `object \| null` | Onchain policy info (including the metadata reference) |
 | `deployed_txn_hash` | `string \| null` | Deployment transaction |
 | `policy_deployed_at` | `string \| null` | Deployment time |
 

@@ -120,7 +120,7 @@ sequenceDiagram
 
 ## Audit Trail
 
-Every Newton policy evaluation produces an on-chain attestation — a BLS signature proving that the transaction was evaluated by the operator network and the result. This provides:
+Every Newton policy evaluation produces an onchain attestation — a BLS signature proving that the transaction was evaluated by the operator network and the result. This provides:
 
 - **Verifiable compliance proof** for regulators and auditors
 - **Immutable record** of every policy decision
@@ -132,7 +132,7 @@ Every Newton policy evaluation produces an on-chain attestation — a BLS signat
 |---|---|---|
 | Trust model | Trust the compliance vendor | Trust the math — cryptographic attestations |
 | Availability | Single point of failure | Distributed EigenLayer operators |
-| Auditability | Vendor-provided logs | On-chain attestations + IPFS-stored policies |
+| Auditability | Vendor-provided logs | Onchain attestations + IPFS-stored policies |
 | Customization | Vendor-defined rules | Your own Rego policies |
 | Latency | API round-trip | Sub-second (parallel evaluation) |
 | Verifiability | "Trust us" | BLS proofs verifiable by anyone |
