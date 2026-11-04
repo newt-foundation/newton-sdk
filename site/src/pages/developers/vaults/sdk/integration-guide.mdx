@@ -100,7 +100,7 @@ const client = (await createShield({
 
 `policies` maps each short pack ID to that module's deployed `NewtonPolicy`; the type requires an entry for every declared module. `createShield(...)` checks that each policy serves its pack's WASM for `(chainId, env)` and exposes the resolved set as `client.policy`.
 
-VaultKit 3.0.0 publishes no Shield factory deployment yet: every `SHIELD_DEPLOYMENTS` slot is `null`, so `createShield(...)` throws `ShieldDeploymentNotFoundError` unless you attach to an existing clone with `policyClientAddress` or pass your own factory as `deployment: { factory, implementation, beacon?, timelock?, deployedAtBlock? }`. A fresh clone is deployed with no policy set; `setParams(...)` binds it.
+VaultKit 3.0.0 publishes no Shield factory deployment yet: every `SHIELD_DEPLOYMENTS` slot is `null`, so `createShield(...)` throws `ShieldDeploymentNotFoundError` unless you attach to an existing clone with `policyClientAddress` or pass your own factory as `deployment: { factory, implementation, beacon?, timelock?, deployedAtBlock? }`. Include `beacon` for a beacon factory: without it the SDK predicts an EIP-1167 clone address, so `createShield(...)` reports the wrong address. A fresh clone is deployed with no policy set; `setParams(...)` binds it.
 
 ## 4. Configure Parameters and Secrets
 

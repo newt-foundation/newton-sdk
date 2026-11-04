@@ -5,7 +5,7 @@ keywords:
   - shield contract
   - shield factory
   - create2
-  - eip-1167
+  - beacon proxy
   - vaultkit architecture
 showAskAi: false
 ---
@@ -16,17 +16,17 @@ A Shield is the onchain policy client that stands between a curator and a vault 
 
 ## One Implementation per Chain
 
-Each supported chain has a shared `Shield` implementation. Per-curator Shields are EIP-1167 minimal-proxy clones deployed from that implementation.
+Each supported chain has a shared `Shield` implementation behind an `UpgradeableBeacon`. Per-curator Shields are `BeaconProxy` clones that delegate to the beacon's current implementation.
 
 This keeps the surface small:
 
 - One audited implementation per chain.
-- Every clone shares the same bytecode and storage layout.
-- Curators opt into new implementations by deploying fresh clones rather than accepting proxy-admin upgrades.
+- Every clone runs the bytecode the beacon points at and shares its storage layout.
+- One governed `beacon.upgradeTo(newImpl)` moves every curator's Shield to a new implementation at once. There is no per-clone admin.
 
 ## Deterministic Clones
 
-`ShieldFactory.createShield(curator, vault, version, policy, bypassDelaySeconds)` deploys a clone with CREATE2. The salt is derived from:
+`ShieldFactory.createShield(curator, vault, version, policy, bypassDelaySeconds)` deploys a `BeaconProxy` with CREATE2. The salt is derived from:
 
 - `curator`
 - `vault`
@@ -83,10 +83,9 @@ If the target vault reverts with a reason, Shield bubbles that revert data. If t
 
 ## Upgrade Posture
 
-Shield clones are not upgradeable. There is no UUPS hook, transparent-proxy admin, or implementation setter. An implementation change means:
+Shields are upgradeable through the beacon, so their safety rests on governance rather than on immutable bytecode:
 
-1. Deploy a new implementation.
-2. Deploy a new factory pointing at it.
-3. Let curators opt in by creating fresh clones.
+- **Mainnet:** the beacon is owned by a `TimelockController` with a 7-day minimum delay. A Newton multisig that needs at least two signers schedules and executes upgrades, and a separate guardian Safe can cancel them.
+- **Testnet:** the dev key owns the beacon and upgrades instantly.
 
-This makes the active code path inspectable for curators and depositors.
+A scheduled upgrade emits `CallScheduled` on the timelock with its `eta`. On mainnet the 7-day delay is the curator's exit window: a curator who objects can pause or exit the vault, revoke the Shield's manager role, or call `setApprovedDelegate(hotKey, false)` to stop the hot path before the upgrade executes. `ShieldFactory.beacon()` returns the beacon, and its `Upgraded` events record every implementation the clones have run.

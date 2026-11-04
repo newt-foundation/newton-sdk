@@ -68,8 +68,14 @@ deny contains "divergence_sustained" if {
 
 ### Final Allow Rule
 
+`allow` is written as positive conditions rather than `count(deny) == 0`, so a missing or malformed oracle field leaves it undefined and the policy fails closed even when no deny rule fires.
+
 ```rego
-allow if count(deny) == 0
+allow if {
+    v.redstone_feed_age_seconds <= t.max_feed_age_seconds
+    v.divergence_bp < t.deny_bp
+    not divergence_sustained_blocks
+}
 ```
 
 ## Complete Policy
@@ -81,7 +87,7 @@ import future.keywords
 
 default allow := false
 
-t := data.params.redstone
+t := data.params
 v := data.wasm.redstone
 
 deny contains "redstone_feed_stale" if v.redstone_feed_age_seconds > t.max_feed_age_seconds
@@ -96,5 +102,17 @@ deny contains "divergence_sustained" if {
     v.sustained_seconds >= t.deny_sustained_seconds
 }
 
-allow if count(deny) == 0
+allow if {
+    v.redstone_feed_age_seconds <= t.max_feed_age_seconds
+    v.divergence_bp < t.deny_bp
+    not divergence_sustained_blocks
+}
+
+divergence_sustained_blocks if {
+    t.enable_sustained_check
+    v.prev_snapshot_present
+    v.divergence_bp >= t.warn_bp
+    v.prev_divergence_bp >= t.warn_bp
+    v.sustained_seconds >= t.deny_sustained_seconds
+}
 ```
