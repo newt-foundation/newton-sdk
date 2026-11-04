@@ -52,7 +52,7 @@ The SDK uses this to make `createShield(...)` idempotent.
 
 The factory immutably pins:
 
-- The Shield implementation.
+- The Shield `UpgradeableBeacon`, which every clone reads its implementation from.
 - The Newton task manager used for attestation validation.
 
 ## Initialization

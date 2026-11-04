@@ -121,7 +121,7 @@ deny contains "vault_corrupted" if {
 
 ### Final Allow Rule
 
-`allow` is written as positive conditions rather than `count(deny) == 0`, so a missing or malformed oracle field leaves it undefined and the policy fails closed even when no deny rule fires.
+`allow` is written as positive conditions rather than `count(deny) == 0`, so a missing oracle field leaves it undefined and the policy fails closed even when no deny rule fires.
 
 ```rego
 allow if {

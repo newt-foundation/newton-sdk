@@ -15,7 +15,7 @@ showAskAi: false
 This policy is a **graduated response** to stablecoin stress, using [Pharos](https://pharos.watch). When stress rises or a depeg goes active, it stops actions that *increase* exposure while leaving the exits open: deposits and mints are blocked, withdrawals, redemptions and repayments are always permitted, and swaps are permitted only into a curator-approved safer asset. An application gets a graduated response instead of a blunt protocol-wide pause.
 
 :::note
-This pack decides by the function the **attested intent** calls, not only by oracle data. A graduated response has to know whether the caller is adding exposure or shedding it, and that fact must come from the signed intent rather than from anything the oracle asserts. Other packs read the intent only to tie the oracle's subject to the transaction, as the Xerberus packs do with `input.from` and `input.to`.
+This pack decides by the function the **attested intent** calls, not only by oracle data. A graduated response has to know whether the caller is adding exposure or shedding it, and that fact must come from the signed intent rather than from anything the oracle asserts. Other packs read the intent only to tie the oracle's subject to the transaction, as the Xerberus packs do with `input.from`, `input.to` and the decoded call arguments.
 :::
 
 ## Deployment
