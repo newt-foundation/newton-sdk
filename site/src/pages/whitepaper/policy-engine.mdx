@@ -68,4 +68,4 @@ Policy versioning operates at two levels:
 
 ### Multi-Plugin Composition
 
-A single policy evaluation can invoke multiple WASM data providers in sequence. The policy task data supports multiple policy data entries, each with an independent WASM binary, arguments CID, and attestation. This enables composable data pipelines: one plugin fetches sanctions data, another fetches risk scores, a third fetches onchain state, and the Rego policy evaluates all results together.
+A single policy evaluation can invoke multiple WASM data providers in sequence. The policy task data supports multiple policy data entries, each with an independent WASM binary and arguments CID. This enables composable data pipelines: one plugin fetches sanctions data, another fetches risk scores, a third fetches onchain state, and the Rego policy evaluates all results together.

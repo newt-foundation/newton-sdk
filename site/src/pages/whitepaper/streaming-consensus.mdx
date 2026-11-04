@@ -64,7 +64,7 @@ The gateway publishes a Prepare request to the NATS task subject for the relevan
 - A hash of the data for quick comparison
 - A timestamp for freshness verification
 
-This distributed WASM execution is a foundational property of Newton's decentralized architecture: every operator in the active validator set independently runs the data provider, ensuring that no single entity controls the inputs to policy evaluation. Each operator fetches data from external sources (sanctions feeds, oracle prices, risk scores) through its own network path, producing independent attestations over the data it observed. This redundancy provides both fault tolerance (no single data source failure blocks the protocol) and tamper resistance (manipulating the data input requires compromising a quorum of independent data paths).
+This distributed WASM execution is a foundational property of Newton's decentralized architecture: every operator in the active validator set independently runs the data provider, ensuring that no single entity controls the inputs to policy evaluation. Each operator fetches data from external sources (sanctions feeds, oracle prices, risk scores) through its own network path, producing an independent observation of the data. This redundancy provides both fault tolerance (no single data source failure blocks the protocol) and tamper resistance (manipulating the data input requires compromising a quorum of independent data paths).
 
 Prepare phase responses are unsigned (no BLS signature). Operators do not evaluate the Rego policy during this phase; they only fetch data. Responses stream back to the gateway as each operator completes, enabling the gateway to begin consensus computation as soon as a quorum of responses has arrived.
 
