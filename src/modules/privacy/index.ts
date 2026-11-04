@@ -115,7 +115,7 @@ function zeroize(arr: Uint8Array): void {
  *
  * @param params - Encryption parameters
  * @param signingKey - Ed25519 private key seed (32 bytes as Uint8Array)
- * @returns Envelope + Ed25519 signature over the serialized envelope
+ * @returns Envelope + Ed25519 signature over the serialized envelope. No gateway method verifies the signature.
  */
 export async function createSecureEnvelope(
   params: CreateSecureEnvelopeParams,
@@ -186,7 +186,6 @@ export async function getPrivacyPublicKey(
 ): Promise<PrivacyPublicKeyResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.getPrivacyPublicKey, {}, apiKey)
-  if (res.error) throw res.error
   return res.result as PrivacyPublicKeyResponse
 }
 
@@ -214,7 +213,6 @@ export async function uploadIdentityEncrypted(
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.uploadIdentityEncrypted, rpcRequest, apiKey)
-  if (res.error) throw res.error
   return res.result as UploadIdentityEncryptedResponse
 }
 
@@ -232,7 +230,6 @@ export async function getIdentityEncrypted(
 ): Promise<GetIdentityEncryptedResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.getIdentityEncrypted, { data_ref_id: dataRefId }, apiKey)
-  if (res.error) throw res.error
   return res.result as GetIdentityEncryptedResult
 }
 
@@ -249,7 +246,6 @@ export async function getSecretsPublicKey(
 ): Promise<SecretsPublicKeyResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.getSecretsPublicKey, {}, apiKey)
-  if (res.error) throw res.error
   return res.result as SecretsPublicKeyResponse
 }
 
@@ -274,9 +270,9 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
 /**
  * Upload HPKE-encrypted secrets for a policy client's policy.
  *
- * The gateway decrypts the HPKE envelope, validates the plaintext against
- * the policy's secrets schema, and stores the envelope for operator-side decryption
- * during policy evaluation.
+ * The gateway forwards the HPKE envelope to an operator, which decrypts it and
+ * validates the plaintext against the policy's secrets schema. On success the
+ * gateway stores the envelope for operator-side decryption during policy evaluation.
  */
 export async function storeEncryptedSecrets(
   chainId: number,
@@ -315,18 +311,17 @@ export async function storeEncryptedSecrets(
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.storeEncryptedSecrets, rpcRequest, apiKey)
-  if (res.error) throw res.error
   return res.result as StoreEncryptedSecretsResponse
 }
 
 /**
  * Compute dual Ed25519 signatures for privacy-enabled task creation.
  *
- * Dual signatures prevent the app from forging user authorization, and ensure
- * the app explicitly acknowledges which encrypted data refs are being used.
- * The gateway validates both when `encrypted_data_refs` are present in `newt_createTask`.
+ * @deprecated The gateway has no dual-signature privacy path: `newt_createTask` and `newt_sendTask` take no
+ * `encrypted_data_refs` or signatures, and the SDK no longer sends them. Identity data is resolved from the
+ * IdentityRegistry for the intent signer; ephemeral data goes inline in `wasmArgs` under `_newton.privacy`.
  *
- * Signature scheme (must match `crates/gateway/src/processor/privacy_auth.rs`):
+ * Signature scheme:
  * - User signs: keccak256(abi.encodePacked(policy_client, intent_hash, ref_id_1, ref_id_2, ...))
  * - App signs: keccak256(abi.encodePacked(policy_client, intent_hash, user_signature))
  *
@@ -394,8 +389,8 @@ export async function uploadConfidentialData(
     recipientPublicKey = keyResponse.public_key
   }
 
-  // Ephemeral Ed25519 key for envelope signing (not used for auth).
-  // Auth: gateway validates provider via on-chain ConfidentialDataRegistry, not this signature.
+  // Ephemeral Ed25519 key for envelope signing (not used for auth). The gateway does not check the provider;
+  // ConfidentialDataRegistry.publishData does, onchain.
   const ephemeralKey = new Uint8Array(32)
   crypto.getRandomValues(ephemeralKey)
 
@@ -422,7 +417,6 @@ export async function uploadConfidentialData(
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.uploadConfidentialData, rpcRequest, apiKey)
-  if (res.error) throw res.error
   return res.result as UploadConfidentialDataResult
 }
 
@@ -440,7 +434,6 @@ export async function getConfidentialData(
 ): Promise<GetConfidentialDataResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
   const res = await avsHttpService.Post(GATEWAY_METHODS.getConfidentialData, { data_ref_id: dataRefId }, apiKey)
-  if (res.error) throw res.error
   return res.result as GetConfidentialDataResult
 }
 

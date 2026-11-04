@@ -22,7 +22,7 @@ The SDK integrates with [viem](https://viem.sh) by extending `PublicClient` and 
 
 ## Policy-set requests
 
-This reference targets SDK **1.2.2**. `submitEvaluationRequest`, `evaluateIntentDirect`, `submitIntentAndSubscribe`, and `simulatePolicy` require `wasmArgs: Hex[]`, positionally aligned with the client's ordered set. Pass `['0x']` for one pure-Rego policy and `['0x', '0x']` for two. A scalar or omitted value is not supported by these SDK methods.
+This reference covers the SDK release after **1.3.1**; sections note where 1.3.1 and earlier differ. `submitEvaluationRequest`, `evaluateIntentDirect`, `submitIntentAndSubscribe`, `simulateTask`, and `simulatePolicy` require `wasmArgs: Hex[]`, positionally aligned with the client's ordered set. Pass `['0x']` for one pure-Rego policy and `['0x', '0x']` for two. A scalar or omitted value is not supported by these SDK methods.
 
 ```ts
 interface PolicyConfig { policyParams: Hex; expireAfter: number }
@@ -80,7 +80,7 @@ For a step-by-step walkthrough of integrating these into your application, see t
 ## Setup & Initialization
 
 :::info
-Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients.
+Newton Protocol currently supports **Ethereum Sepolia** (chain ID `11155111`), **Base Sepolia** (chain ID `84532`), **Robinhood Chain testnet** (chain ID `46630`), **Arc testnet** (chain ID `5042002`), **Ethereum Mainnet** (chain ID `1`), and **Base** (chain ID `8453`). Pass the corresponding `chain` object from `viem/chains` when constructing your clients. If your viem version has no chain object for Robinhood Chain testnet or Arc testnet, build one with viem's `defineChain`.
 :::
 
 ### newtonPublicClientActions
@@ -186,7 +186,7 @@ interface SdkOverrides {
 
 | Field                         | Type      | Description                                  |
 | ----------------------------- | --------- | -------------------------------------------- |
-| `gatewayApiUrl`               | `string`  | Custom Newton Gateway API URL                |
+| `gatewayApiUrl`               | `string`  | Custom Newton Gateway API URL. `submitIntentAndSubscribe` opens its WebSocket on the `/ws` path beside it |
 | `taskManagerAddress`          | `Address` | Custom TaskManager contract address          |
 | `attestationValidatorAddress` | `Address` | Custom AttestationValidator contract address |
 | `newtonIdpUrl`                | `string`  | Custom Newton identity provider URL          |
@@ -218,7 +218,6 @@ const { result, waitForTaskResponded } = await walletClient.submitEvaluationRequ
 });
 
 console.log(result.taskId);  // Hex
-console.log(result.txHash);  // Hex
 
 // Optionally wait for the on-chain response
 const response = await waitForTaskResponded({ timeoutMs: 120000 });
@@ -229,7 +228,7 @@ const response = await waitForTaskResponded({ timeoutMs: 120000 });
 ```ts
 submitEvaluationRequest(
   args: SubmitEvaluationRequestParams
-): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder>
+): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder>
 ```
 
 **Parameters:**
@@ -238,25 +237,29 @@ submitEvaluationRequest(
 | -------------------------- | ------------------ | -------- | --------------------------------------------------------------------------- |
 | `policyClient`             | `Address`          | Yes      | The policy client contract address                                          |
 | `intent`                   | `IntentFromParams` | Yes      | The intent to evaluate                                                      |
-| `timeout`                  | `number`           | Yes      | Request timeout in seconds                                                  |
-| `proofCid`                 | `string`           | No       | IPFS CID of a TLSNotary presentation proof for zkTLS-backed evaluation      |
+| `timeout`                  | `number`           | Yes      | Sent as `timeout`. The gateway accepts it but does not apply it, and ends any HTTP request that runs past its server request timeout (30 seconds in the default configuration) with HTTP 408 |
+| `proofCid`                 | `string`           | No       | Deprecated. The gateway rejects any value with `InvalidRequest`: zkTLS proof verification is unavailable |
 | `includeValidateCalldata`  | `boolean`          | No       | Include ABI-encoded `validateAttestationDirect` calldata in the response    |
+
+`identityDomain`, `encryptedDataRefs`, `userSignature`, `appSignature`, `userPublicKey`, and `appPublicKey` are deprecated. The gateway has no such fields, and releases after 1.3.1 do not send them. Operators resolve identity data from the domains linked to the signer recovered from `intentSignature`.
 
 **Returns:** An object containing:
 
 - `result.taskId` (`Hex`) -- The unique task identifier
-- `result.txHash` (`Hex`) -- The transaction hash
+- `result.txHash` (`Hex | undefined`) -- Always `undefined`: `newt_createTask` returns no transaction hash. SDK 1.3.1 and earlier type it as `Hex`, but never set it either
 - `waitForTaskResponded({ timeoutMs? })` -- A method to await the on-chain attestation result
 
+A task that fails evaluation throws a plain `Error` with the gateway's reason. A call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror).
+
 :::note
-The `validate_calldata` and `operator_errors` fields are available on the raw `GatewayCreateTaskResult` returned by the `newt_createTask` RPC method (see the [RPC API Reference](/developers/reference/rpc-api)). These fields are not surfaced by the SDK's `submitEvaluationRequest` or `evaluateIntentDirect` wrappers — call the gateway RPC directly when you need them.
+`newt_createTask` returns `validate_calldata` when you pass `includeValidateCalldata: true` (see the [RPC API Reference](/developers/reference/rpc-api)). The SDK's `submitEvaluationRequest` and `evaluateIntentDirect` wrappers do not surface it: call the gateway RPC directly when you need it.
 :::
 
 ---
 
 ### evaluateIntentDirect
 
-Evaluates an intent directly through the gateway without waiting for on-chain task response confirmation. Results are intended for use with `validateAttestationDirect` on `NewtonPolicyClient` (`NewtonProverTaskManagerShared`).
+Evaluates an intent directly through the gateway without waiting for onchain task response confirmation. Pass the results to your policy client's `_validateAttestationDirect`, which calls the Task Manager's `validateAttestationDirect` (`NewtonProverTaskManagerShared`).
 
 ```ts
 const domain = await readEip712Domain(policyClient, publicClient);
@@ -330,9 +333,9 @@ evaluateIntentDirect(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be a chain that the client's gateway serves: `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), `46630` (Robinhood Chain testnet) or `5042002` (Arc testnet) on testnet, `1` (Ethereum) or `8453` (Base) on mainnet. |
 | `intentSignature` | `Hex`           | No       | EIP-712 signature of the exact intent. Optional in the SDK type, but required by policies and identity flows that read `input.intent_signature`. |
-| `timeout`      | `number`           | Yes       | Request timeout in seconds                                                                         |
+| `timeout`      | `number`           | Yes       | Sent as `timeout`. The gateway accepts it but does not apply it, and ends any HTTP request that runs past its server request timeout (30 seconds in the default configuration) with HTTP 408 |
 
 **Returns:**
 
@@ -341,8 +344,10 @@ evaluateIntentDirect(
 - `result.taskResponse` -- The raw task response from the operator
 - `result.blsSignature` -- The BLS aggregate signature
 
+A task that fails evaluation throws a plain `Error` with the gateway's reason, and a call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror). If `newt_createTask` answers without a `task_response`, the call throws an `SDKError` with code `MALFORMED_RESPONSE`.
+
 :::warning
-Some policy clients and identity-backed flows require `intentSignature` even though it is optional in the base request type. If you omit it or pass `"0x"`, the gateway can fail before policy evaluation with `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
+Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the policy client's `eip712Domain()` and load identity data only when that signer is `intent.from`. If you omit the signature, operators skip identity data, and a policy that needs it denies. A signature that is present but does not recover to `intent.from` under the policy client's domain is rejected with HTTP 400 `{"InvalidRequest":"intent_signature does not verify: ..."}`. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
 :::
 
 Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
@@ -418,12 +423,26 @@ const { result, ws } = await walletClient.submitIntentAndSubscribe({
 console.log(result.task_id);             // Hex task identifier
 console.log(result.subscription_topic);  // WebSocket topic
 
-// Listen for the task response
+// Listen for task updates
 ws.onmessage = (event) => {
-  const taskResponse = JSON.parse(event.data);
-  console.log(taskResponse);
+  const message = JSON.parse(event.data);
+  if (message.type !== 'update') return; // `subscribed`, `error` and `pong` frames carry no task data
+  const update = message.result;
+  if (update.event === 'status_update') {
+    console.log(update.data.status, update.data.progress, update.data.error);
+  } else if (update.event === 'submission_finalized') {
+    console.log(update.status, update.transactionHash); // onchain submission outcome
+  }
 };
 ```
+
+The SDK opens the socket on the `/ws` path beside the gateway URL, for example `wss://gateway.testnet.newton.xyz/ws`, and subscribes to `result.subscription_topic` once it opens. It sends the API key as a `newton.bearer.<key>` subprotocol beside `newton.v1`, never in the URL. An API key that a subprotocol cannot carry makes the call throw an `SDKError` with code `INVALID_ARGUMENT`. SDK 1.3.1 and earlier send the key in an `api_key` query parameter, which the gateway ignores, so their upgrade fails with HTTP 401.
+
+See [WebSocket Updates](/developers/reference/rpc-api#websocket-updates) for every frame the gateway sends.
+
+:::warning
+The gateway does not replay updates: it delivers them only to subscriptions that exist when it publishes them. The SDK subscribes after `newt_sendTask` returns, so `ws` can miss the first updates of a fast task.
+:::
 
 **Signature:**
 
@@ -441,13 +460,13 @@ submitIntentAndSubscribe(
 | Parameter      | Type               | Required | Description                                                                                        |
 | -------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `policyClient` | `Address`          | Yes      | The policy client contract address                                                                 |
-| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), or `8453` (Base). |
-| `timeout`      | `number`           | Yes       | Request timeout in seconds                                                                         |
+| `intent`       | `IntentFromParams` | Yes      | The intent to evaluate. `chainId` must be a chain that the client's gateway serves: `11155111` (Ethereum Sepolia), `84532` (Base Sepolia), `46630` (Robinhood Chain testnet) or `5042002` (Arc testnet) on testnet, `1` (Ethereum) or `8453` (Base) on mainnet. |
+| `timeout`      | `number`           | Yes       | Sent as `timeout`. `newt_sendTask` does not read it                                                |
 
 **Returns:**
 
 - `result.message` (`string`) -- Status message from the gateway
-- `result.subscription_topic` (`string`) -- WebSocket topic to subscribe to for task updates
+- `result.subscription_topic` (`string`) -- WebSocket topic for task updates: the task ID as lowercase hex without `0x`
 - `result.task_id` (`Hex`) -- 32-byte task identifier
 - `result.timestamp` (`number`) -- Task creation timestamp
 - `ws` (`WebSocket`) -- Active WebSocket connection subscribed to the task topic
@@ -464,46 +483,38 @@ interface SubmitIntentResult {
 ```
 
 :::note
-Use `submitIntentAndSubscribe` when you need on-chain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via `PolicyClient.validateAttestationDirect`.
+Use `submitIntentAndSubscribe` when you need onchain task verification via `NewtonProverTaskManager.validateAttestation`. Use `evaluateIntentDirect` for the simpler direct validation path via your policy client's `_validateAttestationDirect`.
 :::
 
 ---
 
 ### simulateTask
 
-:::warning
-SDK v1.2.2's `simulateTask` wrapper still sends the legacy `policy_task_data` schema shown below. It is not compatible with the policy-set gateway at the pinned revision. Use `simulatePolicy` for full WASM + Rego simulation, or call [newt_simulateTask](/developers/reference/rpc-api#newt_simulatetask) directly with the new schema for provided-output evaluation. Neither simulation returns a BLS attestation.
-:::
+Evaluates the policy client's policy set on the gateway ([newt_simulateTask](/developers/reference/rpc-api#newt_simulatetask)) with oracle outputs you provide in `wasmArgs`. It runs no WASM, creates no task, and collects no operator signatures. The gateway reads the set at the current block, so it can differ from the set a past task was admitted with.
 
 ```ts
 const result = await walletClient.simulateTask({
+  policyClient: '0x...',
+  chainId: 11155111,
   intent: {
     from: '0x...',
     to: '0x...',
     value: '0x0',
     data: '0x...',
-    chainId: 11155111, // Ethereum Sepolia; use 84532 for Base Sepolia or 8453 for Base
+    chainId: 11155111, // Ethereum Sepolia; 84532, 46630 and 5042002 also work on testnet
     functionSignature: '0x...',
   },
-  policyTaskData: {
-    policyId: '0x...',
-    policyAddress: '0x...',
-    policy: '0x...',
-    policyData: [
-      {
-        wasmArgs: '0x',
-        data: '0x...',
-        expireBlock: 999999,
-      },
-    ],
-  },
+  wasmArgs: ['0x', '0x'], // One slot per policy: its oracle output, or '0x' for pure-Rego
 });
 
-console.log(result.success);
-console.log(result.result?.allow);
-console.log(result.result?.reason);
+console.log(result.success, result.allowed, result.policy_id);
+for (const policy of result.policies ?? []) {
+  console.log(policy.policy_index, policy.policy, policy.allowed, policy.result);
+}
 console.log(result.error);
 ```
+
+`simulateTask` in SDK 1.3.1 and earlier takes `{ intent, policyTaskData }` and sends the old `policy_task_data` request, which the gateway does not accept. Call `newt_simulateTask` directly from those releases.
 
 **Signature:**
 
@@ -543,7 +554,7 @@ simulatePolicy(args: SimulatePolicyParams): Promise<SimulatePolicyResult>
 
 ### simulatePolicyData
 
-Simulates one Policy’s WASM. No ownership verification is required for caller-supplied secrets. In v1.2.2 the SDK types `secrets` as a string and forwards it unchanged, while the pinned gateway expects a SecureEnvelope JSON object. Use raw RPC for encrypted inline secrets until the wrapper matches; the no-secrets example can omit that field.
+Simulates one Policy's WASM. No ownership verification is required for caller-supplied secrets. Pass `secrets` as the `envelope` that [`createSecureEnvelope`](#createsecureenvelope) returns, or as its JSON string; the SDK sends it as a SecureEnvelope JSON object. A string that is not JSON makes the call throw an `SDKError` with code `INVALID_ARGUMENT`. SDK 1.3.1 and earlier type `secrets` as a string and send it unchanged, and the gateway answers a string with `success: false` and `secrets is not a valid SecureEnvelope: <details>`.
 
 ```ts
 const result = await walletClient.simulatePolicyData({
@@ -553,8 +564,8 @@ const result = await walletClient.simulatePolicyData({
 });
 
 console.log(result.success);
-console.log(result.policy_data?.specifier);
-console.log(result.policy_data?.data);
+console.log(result.policy_data); // the WASM's JSON output, or null on failure
+console.log(result.error);
 ```
 
 **Signature:**
@@ -569,17 +580,19 @@ simulatePolicyData(
 
 ### simulatePolicyDataWithClient
 
-Simulates one Policy’s WASM with stored secrets. Requires client ownership. SDK v1.2.2’s wrapper omits the required top-level `chain_id`; use [raw RPC](/developers/reference/rpc-api#newt_simulatepolicydatawithclient) with the deployment chain for the pinned gateway. The signature below documents the wrapper, not a compatible request.
+Simulates one Policy's WASM with stored secrets. Requires client ownership. `chainId` is required: SDK 1.3.1 and earlier do not send `chain_id`, so the gateway rejects their request with `InvalidRequest`. Call [`newt_simulatePolicyDataWithClient`](/developers/reference/rpc-api#newt_simulatepolicydatawithclient) directly from those releases.
 
 ```ts
 const result = await walletClient.simulatePolicyDataWithClient({
   policyAddress: '0x...',
   policyClient: '0x...',
   wasmArgs: '0x...',
+  chainId: 11155111, // required
 });
 
 console.log(result.success);
-console.log(result.policy_data?.specifier);
+console.log(result.policy_data); // the WASM's JSON output, or null on failure
+console.log(result.error);
 ```
 
 **Signature:**
@@ -607,7 +620,8 @@ const txHash = await walletClient.initialize({
   entrypoint: 'newton/policy/allow',
   policyCid: 'bafyrei...',
   schemaCid: 'bafyrei...',
-  policyData: ['0x...', '0x...'],
+  wasmCid: '', // empty for a pure-Rego policy
+  secretsSchemaCid: '', // empty unless wasmCid is set
   metadataCid: 'bafyrei...',
   owner: '0x...',
   policyBytes: await fetchPolicyBytes(policyCid),
@@ -622,7 +636,8 @@ type InitializePolicyArgs = {
   entrypoint: string;
   policyCid: string;
   schemaCid: string;
-  policyData: Address[];
+  wasmCid: string;
+  secretsSchemaCid: string;
   metadataCid: string;
   owner: Address;
 } & ({ policyCodeHash: Hex } | { policyBytes: Uint8Array });
@@ -636,15 +651,38 @@ initialize(args: InitializePolicyArgs): Promise<`0x${string}`>
 | ---------------- | ------------ | ----------------- | ------------------------------------------------------------------------ |
 | `factory`        | `Address`    | Yes               | Address of the deploying factory contract                                |
 | `entrypoint`     | `string`     | Yes               | Policy entrypoint path (e.g., `"newton/policy/allow"`)                   |
-| `policyCid`      | `string`     | Yes               | Content identifier (CID) of the policy WASM                              |
+| `policyCid`      | `string`     | Yes               | Content identifier (CID) of the Rego policy                              |
 | `schemaCid`      | `string`     | Yes               | Content identifier (CID) of the policy schema                            |
-| `policyData`     | `Address[]`  | Yes               | Array of PolicyData contract addresses                                   |
+| `wasmCid`        | `string`     | Yes               | CID of the policy's WASM oracle; empty string for a pure-Rego policy     |
+| `secretsSchemaCid` | `string`   | Yes               | CID of the schema for the oracle's secrets; empty string when the oracle needs none |
 | `metadataCid`    | `string`     | Yes               | Content identifier (CID) of the policy metadata                          |
 | `owner`          | `Address`    | Yes               | Owner address of the policy contract                                     |
 | `policyCodeHash` | `Hex`        | One of these two  | Pre-computed `keccak256` of the Rego policy bytes                        |
 | `policyBytes`    | `Uint8Array` | One of these two  | Raw Rego policy bytes; SDK computes `keccak256(policyBytes)` for you     |
 
+A non-empty `secretsSchemaCid` with an empty `wasmCid` reverts with `SecretsSchemaWithoutWasm()`.
+
 **Returns:** `` `0x${string}` `` -- The transaction hash.
+
+---
+
+### setSecretsSchemaCid
+
+Sets the CID of the schema for the policy's oracle secrets. Only the policy contract owner can call it. A non-empty CID on a policy without a WASM oracle reverts with `SecretsSchemaWithoutWasm()`; an empty string clears the schema.
+
+```ts
+const txHash = await walletClient.setSecretsSchemaCid({
+  secretsSchemaCid: 'bafyrei...',
+});
+```
+
+**Signature:**
+
+```ts
+setSecretsSchemaCid(args: {
+  secretsSchemaCid: string;
+}): Promise<`0x${string}`>
+```
 
 ---
 
@@ -749,7 +787,7 @@ registerUserData(args: {
 
 #### linkApp
 
-Links an application to the user's Newton identity.
+Opens the Newton identity popup, where the user signs a link between their identity and your policy client. Resolves with `{ signature, identityDomains, nonce, deadline, identityOwner }` and sends no transaction: submit the link with [`linkIdentityAsUser`](#linkidentityasuser) from the user's app wallet (`appWalletAddress`).
 
 ```ts
 await walletClient.linkApp({
@@ -766,7 +804,7 @@ linkApp(args: {
   appWalletAddress: Address;
   appClientAddress: Address;
   appIdentityDomain: Hex;
-}): Promise<unknown>
+}): Promise<LinkAppResult>
 ```
 
 ---
@@ -984,6 +1022,10 @@ storeEncryptedSecrets(
 #### signPrivacyAuthorization
 
 Computes dual Ed25519 signatures (user + app) for privacy-enabled task creation. Runs entirely offline.
+
+:::warning
+Deprecated. The gateway has no dual-signature privacy path: `newt_createTask` and `newt_sendTask` take no `encrypted_data_refs` or signatures, and releases after 1.3.1 do not send them. Operators resolve identity data from the IdentityRegistry for the intent signer, and ephemeral data goes inline in `wasmArgs` under `_newton.privacy` (see [Privacy Flows](/developers/guides/privacy-flows)).
+:::
 
 ```ts
 const { userSignature, appSignature, userPublicKey, appPublicKey } =
@@ -1306,7 +1348,7 @@ waitForTaskResponded(args: {
 
 #### getTaskStatus
 
-Queries the current status of a task from the on-chain contracts.
+Queries the current status of a task from the onchain contracts. A successful challenge invalidates the attestation, so a challenged task returns `SuccessfullyChallenged` whatever its attestation state, including a task challenged before any response was recorded.
 
 ```ts
 const status = await publicClient.getTaskStatus({ taskId: '0x...' });
@@ -1326,7 +1368,7 @@ getTaskStatus(args: {
 
 #### getTaskResponseHash
 
-Retrieves the response hash for a given task from the on-chain contract.
+Reads `allTaskHashes(taskId)`, the hash the task manager stored when the task was created; an unknown task reads as the zero hash. Despite the name, this is not the response hash: read `taskResponseHash(taskId)` on the task manager for that.
 
 ```ts
 const hash = await publicClient.getTaskResponseHash({ taskId: '0x...' });
@@ -1388,7 +1430,7 @@ getPolicyConfig(args: {
 
 #### getPolicyCid
 
-Returns the content identifier (CID) of the policy WASM stored in the contract.
+Returns the content identifier (CID) of the Rego policy stored in the contract.
 
 ```ts
 const cid = await publicClient.getPolicyCid();
@@ -1450,25 +1492,41 @@ getEntrypoint(): Promise<string>
 
 ---
 
-#### getPolicyData
+#### getWasmCid
 
-Returns the array of PolicyData contract addresses associated with the policy.
+Returns the CID of the policy's WASM oracle, or an empty string for a pure-Rego policy.
 
 ```ts
-const addresses = await publicClient.getPolicyData();
+const cid = await publicClient.getWasmCid();
 ```
 
 **Signature:**
 
 ```ts
-getPolicyData(): Promise<Address[]>
+getWasmCid(): Promise<string>
+```
+
+---
+
+#### getSecretsSchemaCid
+
+Returns the CID of the schema for the oracle's secrets, or an empty string when the oracle needs no secrets.
+
+```ts
+const cid = await publicClient.getSecretsSchemaCid();
+```
+
+**Signature:**
+
+```ts
+getSecretsSchemaCid(): Promise<string>
 ```
 
 ---
 
 #### isPolicyVerified
 
-Returns whether the policy contract has been verified.
+Deprecated. The protocol no longer verifies policies, and the AVS serves tasks for any deployed policy. The contract keeps the function for ABI stability, and it always returns `true`.
 
 ```ts
 const verified = await publicClient.isPolicyVerified();
@@ -1526,7 +1584,6 @@ The following methods read individual fields from the policy contract. They all 
 | `factory()`                          | `Promise<Address>`          | Returns the factory address that deployed the contract |
 | `entrypoint()`                       | `Promise<string>`           | Returns the policy entrypoint path                     |
 | `clientToPolicyId({ client })`       | `Promise<\`0x\$string\`\>\` | Maps a client address to its policy ID                 |
-| `policyData({ index })`              | `Promise<Address>`          | Returns the PolicyData contract address at the given index |
 | `policyCid()`                        | `Promise<string>`           | Returns the policy CID                                 |
 | `schemaCid()`                        | `Promise<string>`           | Returns the schema CID                                 |
 | `metadataCid()`                      | `Promise<string>`           | Returns the metadata CID                               |
@@ -1721,7 +1778,9 @@ client.getIdentityEncrypted(args: { dataRefId: string }): Promise<GetIdentityEnc
 
 Encrypt confidential data (blacklists, allowlists, sanctions lists, etc.) client-side with HPKE and upload the envelope to the gateway. The gateway stores it and returns a content-hash `data_ref_id`. The provider then calls `ConfidentialDataRegistry.publishData(domain, dataRefId)` on-chain.
 
-The gateway validates provider registration via on-chain lookup — no Ed25519 signing key required.
+The gateway checks neither the provider nor the domain on upload, and no Ed25519 signing key is required. `publishData` reverts unless the caller registered with `ConfidentialDataRegistry.registerProvider()`. A policy client can read the data only after a two-step grant: the provider calls `proposeGrant(domain, policyClient)`, then the policy client's owner calls `acceptGrant(provider, domain, policyClient)`.
+
+Operators recognize two domains: `keccak256("newton.confidential.blacklist")` (or `keccak256("blacklist")`) and `keccak256("newton.confidential.allowlist")` (or `keccak256("allowlist")`). They load data in any other domain under a generic namespace, where the blacklist and allowlist builtins do not see it. See [Privacy Flows](/developers/guides/privacy-flows).
 
 **Standalone signature:**
 
@@ -1745,7 +1804,7 @@ client.uploadConfidentialData(params: UploadConfidentialDataParams): Promise<Upl
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `params.provider` | `string` | Provider address (must be registered on-chain with ConfidentialDataRegistry) |
-| `params.domain` | `string` | Confidential domain as 0x-prefixed bytes32 hex (e.g., `keccak256("newton.privacy.blacklist")`) |
+| `params.domain` | `string` | Confidential domain as 0x-prefixed bytes32 hex, for example `keccak256("newton.confidential.blacklist")` |
 | `params.plaintext` | `Uint8Array \| string \| Record<string, unknown>` | Data to encrypt and upload |
 | `params.chainId` | `number` | Chain ID for AAD context binding |
 | `params.recipientPublicKey` | `string?` | Gateway's X25519 key (hex, no 0x prefix). If omitted, fetched via RPC. |
@@ -2288,24 +2347,33 @@ interface TaskResponseResult {
 interface SubmitEvaluationRequestParams {
   policyClient: Address
   intent: IntentFromParams
+  /**
+   * EIP-712 signature of the intent under the policy client's `eip712Domain()`. Identity policies need it: operators
+   * resolve identity for the recovered signer, which must equal `intent.from`, and skip identity data without it.
+   */
   intentSignature?: Hex
   quorumNumber?: Hex
   quorumThresholdPercentage?: number
   /** One per policy, positionally aligned. Pure-Rego policies still need a slot — pass `'0x'`. */
   wasmArgs: Hex[]
-  timeout: number // in seconds
+  /** Seconds. Sent as `timeout`; the gateway accepts it but does not apply it. */
+  timeout: number
+  /**
+   * @deprecated Not sent: the gateway has no such field. Operators resolve identity from every domain linked to the
+   * intent signer, recovered from `intentSignature`.
+   */
   identityDomain?: Hex
-  /** Encrypted data reference UUIDs for privacy-preserving evaluation */
+  /** @deprecated Not sent: the gateway has no dual-signature privacy path. Ephemeral data goes inline in `wasmArgs`. */
   encryptedDataRefs?: string[]
-  /** User Ed25519 signature for privacy authorization (hex-encoded) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   userSignature?: string
-  /** Application Ed25519 signature for privacy authorization (hex-encoded) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   appSignature?: string
-  /** User Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   userPublicKey?: string
-  /** Application Ed25519 public key for privacy signature verification (hex-encoded, 32 bytes) */
+  /** @deprecated Not sent, see `encryptedDataRefs`. */
   appPublicKey?: string
-  /** IPFS CID of a TLSNotary presentation proof for zkTLS-backed policy evaluation */
+  /** @deprecated The gateway rejects any value: zkTLS proof verification is unavailable. */
   proofCid?: string
   /** Include ABI-encoded validateAttestationDirect calldata in the response */
   includeValidateCalldata?: boolean
@@ -2320,30 +2388,18 @@ interface SubmitEvaluationRequestParams {
 :::details[SimulateTaskParams & SimulateTaskResult]
 ```ts
 interface SimulateTaskParams {
+  policyClient: Address
+  chainId: number
   intent: IntentFromParams
-  policyTaskData: SimulateTaskPolicyTaskData
+  /** One per policy, positionally aligned. `'0x'` for a pure-Rego policy. */
+  wasmArgs: Hex[]
 }
 
-interface SimulateTaskPolicyTaskData {
-  policyId: Hex
-  policyAddress: Address
-  policy: Hex
-  policyData: SimulateTaskPolicyData[]
-}
-
-interface SimulateTaskPolicyData {
-  wasmArgs: Hex
-  data: Hex
-  expireBlock: number
-}
-
-interface SimulateTaskResult {
-  success: boolean
-  result: { allow?: boolean; reason?: string } | null
-  error: string | null
-  details: unknown
-}
+/** newt_simulateTask answers in the same shape as newt_simulatePolicy. */
+type SimulateTaskResult = SimulatePolicyResult
 ```
+
+SDK 1.3.1 and earlier type `SimulateTaskParams` as `{ intent, policyTaskData }` and `SimulateTaskResult` as `{ success, result, error, details }`.
 :::
 
 :::details[SimulatePolicyParams & SimulatePolicyResult]
@@ -2380,18 +2436,16 @@ interface SimulatePolicyResult {
   ```ts
   interface SimulatePolicyDataParams {
     policyAddress: Address;
-    secrets?: string;
+    /** The `envelope` that `createSecureEnvelope` returns, or its JSON string. */
+    secrets?: SecureEnvelope | string;
     wasmArgs?: Hex;
     chainId: number; // required
   }
   
   interface SimulatePolicyDataResult {
     success: boolean;
-    policy_data: {
-      specifier: string;
-      data: unknown;
-      timestamp: number;
-    } | null;
+    /** The PolicyData WASM's JSON output on success, `null` on failure. */
+    policy_data: unknown;
     error: string | null;
   }
   ```
@@ -2402,16 +2456,14 @@ interface SimulatePolicyResult {
   interface SimulatePolicyDataWithClientParams {
     policyAddress: Address;
     policyClient: Address;
+    chainId: number; // required
     wasmArgs?: Hex;
   }
   
   interface SimulatePolicyDataWithClientResult {
     success: boolean;
-    policy_data: {
-      specifier: string;
-      data: unknown;
-      timestamp: number;
-    } | null;
+    /** The PolicyData WASM's JSON output on success, `null` on failure. */
+    policy_data: unknown;
     error: string | null;
   }
   ```
@@ -2446,11 +2498,13 @@ interface SimulatePolicyResult {
 
 :::details[GatewayCreateTaskResult & AggregationResponse]
 ```ts
+/** The `newt_createTask` result. A failed task has `status: 'failed'` and `error`, `task_id`, `task` and `timestamp` set; the other fields are `null`. */
 interface GatewayCreateTaskResult {
-  aggregation_response: AggregationResponse
+  bls_aggregation_result: AggregationResponse | null
   error: string | null
-  expiration: number
-  reference_block: number
+  /** Always `null`: read `AttestationValidator.attestationExpirations(taskId)` for the onchain expiry. */
+  expiration: null
+  reference_block: number | null
   status: 'success' | 'failed'
   task: Task
   task_id: Hex
@@ -2479,25 +2533,30 @@ interface GatewayCreateTaskResult {
       policyId: Hex
     }>
     task_id: Hex
-  }
-  signature_data: Hex
-  /** ABI-encoded calldata for validateAttestationDirect (present when include_validate_calldata was true) */
-  validate_calldata?: string
-  /** Per-operator error details when quorum fails */
+  } | null
+  signature_data: Hex | null
+  /** ABI-encoded calldata for validateAttestationDirect; `null` unless include_validate_calldata was true */
+  validate_calldata: string | null
+  /** The gateway declares this field but never sets it, so `newt_createTask` omits it */
   operator_errors?: OperatorError[]
   timestamp: number
 }
 
+/** The gateway's `BlsAggregationServiceResponse`. BN254 points are their uncompressed bytes. */
 interface AggregationResponse {
   non_signer_quorum_bitmap_indices: number[]
   non_signer_stake_indices: number[][]
+  non_signers_operators_ids: Hex[]
   non_signers_pub_keys_g1: number[][]
   quorum_apk_indices: number[]
   quorum_apks_g1: number[][]
   signers_agg_sig_g1: { g1_point: number[] }
   signers_apk_g2: number[]
-  total_stake_indices: number[]
+  signers_count: number
   task_created_block: number
+  task_id: Hex
+  task_response_digest: Hex
+  total_stake_indices: number[]
 }
 
 interface OperatorError {
@@ -2665,6 +2724,7 @@ interface OperatorError {
 
 :::details[SignPrivacyAuthorizationParams & PrivacyAuthorizationResult]
   ```ts
+  /** @deprecated See `signPrivacyAuthorization`. */
   interface SignPrivacyAuthorizationParams {
     policyClient: Address;
     intentHash: Hex;
@@ -2673,6 +2733,7 @@ interface OperatorError {
     appSigningKey: string;
   }
 
+  /** @deprecated See `signPrivacyAuthorization`. */
   interface PrivacyAuthorizationResult {
     userSignature: string;
     appSignature: string;
@@ -2736,6 +2797,18 @@ interface OperatorError {
 :::
 
 ### Identity Types
+
+:::details[LinkAppResult]
+  ```ts
+  interface LinkAppResult {
+    signature: Hex;
+    identityDomains: Hex[];
+    nonce: string; // pass as BigInt(nonce)
+    deadline: number; // pass as BigInt(deadline)
+    identityOwner: Address;
+  }
+  ```
+:::
 
 :::details[LinkIdentityAsSignerAndUserParams]
   ```ts
@@ -2827,7 +2900,7 @@ The SDK provides structured error classes with typed error codes for precise err
 
 ### SDKError
 
-Thrown when an SDK-level error occurs (e.g., missing API key, invalid arguments).
+Thrown when the SDK rejects an argument or a gateway response. `code` is an `SDKErrorCode`; [SDKError Codes](/developers/reference/error-reference#sdkerror-codes) lists when the SDK throws each code.
 
 ```ts
 class SDKError extends Error {
@@ -2838,9 +2911,24 @@ class SDKError extends Error {
 }
 ```
 
+### GatewayError
+
+Thrown when a gateway JSON-RPC call fails. `code` is the gateway's error variant, such as `AuthorizationFailed` or `RateLimitExceeded`, or `http_error` / `malformed_response`. See [GatewayError](/developers/reference/error-reference#gatewayerror) for every property. SDK 1.3.1 and earlier throw the `error` value from the response body as is, which is not an `Error` instance.
+
+```ts
+class GatewayError extends Error {
+  method: string;
+  status: number;
+  code: string;
+  rawMessage: string;
+  data?: unknown;
+  retryAfter?: number;
+}
+```
+
 ### MagicRPCError
 
-Thrown when the Newton Gateway returns a JSON-RPC error.
+Thrown when the Newton Wallet popup returns an error, and with code `UserRejectedAction` when the user closes the popup. Gateway calls throw [`GatewayError`](#gatewayerror) instead.
 
 ```ts
 class MagicRPCError extends Error {
@@ -2871,13 +2959,18 @@ class DelegatorError extends Error {
 :::details[SDKErrorCode enum values]
   ```ts
   enum SDKErrorCode {
+    /** @deprecated The SDK never throws this code. */
     MissingApiKey = 'MISSING_API_KEY',
     PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
     MalformedResponse = 'MALFORMED_RESPONSE',
     InvalidArgument = 'INVALID_ARGUMENT',
+    /** @deprecated The SDK never throws this code. */
     ExtensionNotInitialized = 'EXTENSION_NOT_INITIALIZED',
+    /** @deprecated The SDK never throws this code. */
     IncompatibleExtensions = 'INCOMPATIBLE_EXTENSIONS',
+    /** @deprecated The SDK never throws this code. */
     FailedToOpenPopup = 'FAILED_TO_OPEN_POPUP',
+    /** @deprecated The SDK never throws this code. */
     FailedToRetrieveNativeTokenBalance = 'FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE',
     MissingChain = 'MISSING_CHAIN',
     MissingAccount = 'MISSING_ACCOUNT',
@@ -2925,7 +3018,7 @@ class DelegatorError extends Error {
 :::
 
 :::note
-`SDKError`, `MagicRPCError`, `SDKErrorCode`, and `RPCErrorCode` are exported from the package's public API, so you can narrow with `instanceof SDKError` / `instanceof MagicRPCError` and switch on the typed `code`. `SDKWarningCode` is not exported.
+`SDKError`, `GatewayError`, `DelegatorError`, `MagicRPCError`, `SDKErrorCode`, and `RPCErrorCode` are exported from `@newton-xyz/sdk`, so you can narrow with `instanceof` and switch on the typed `code`. `SDKWarningCode` is exported only from `@newton-xyz/sdk/types`.
 :::
 
 ---

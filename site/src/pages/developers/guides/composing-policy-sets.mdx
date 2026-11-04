@@ -41,7 +41,7 @@ for (const policy of result.policies ?? []) {
 }
 ```
 
-Upload required secrets per Policy address and client before simulation. `newt_simulatePolicy` runs optional WASM and Rego in-process, with no BLS signatures. Use `newt_simulateTask` only with precomputed outputs; both resolve the current set rather than replaying a historical snapshot.
+Upload required secrets per Policy address and client before simulation. `newt_simulatePolicy` runs optional WASM and Rego with no BLS signatures. Use `newt_simulateTask` only with precomputed outputs; both resolve the current set rather than replaying a historical snapshot.
 
 ## Deployment and validation
 

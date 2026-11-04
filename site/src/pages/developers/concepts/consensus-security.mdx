@@ -47,13 +47,20 @@ sequenceDiagram
 3. **Commit phase:** Gateway broadcasts the canonical consensus data via `newt_evaluateAndSign`. Operators evaluate the policy using identical data and BLS-sign the result.
 4. **Aggregation:** Gateway collects BLS signatures until quorum is reached and produces the aggregate proof.
 
+### Threshold Decryption
+
+Identity, confidential, and ephemeral data are encrypted to a threshold key. Each operator holds one share of it, and any `t` of the `n` shares are enough to decrypt. Decryption happens inside the two phases:
+
+1. **Prepare phase:** Each operator computes a partial decryption of every encrypted input, with a DLEQ proof that the partial matches the operator's public share, and encrypts the partial separately to each peer operator. To collect the `t` partials that decryption needs, the Gateway raises the Prepare quorum to at least `t/n` of operator stake.
+2. **Commit phase:** The Gateway relays the encrypted partials to the operators. It cannot read them and never decrypts. Each operator checks the proof on every partial it receives, combines at least `t` valid partials, decrypts, and evaluates the policy before signing.
+
 ## Median Consensus
 
 For data oracles that return numeric values (e.g., price feeds), Newton uses **median consensus** with a configurable tolerance:
 
 1. Each operator fetches data independently during the Prepare phase
 2. The Gateway collects all responses and computes the median for each numeric field
-3. If any operator's value exceeds the tolerance threshold from the median, consensus **fails** with `ToleranceExceeded`
+3. If any operator's value exceeds the tolerance threshold from the median, consensus **fails** and the task returns a gateway error
 4. If all values are within tolerance, the Gateway normalizes responses to use median values
 
 ```
@@ -68,17 +75,17 @@ All within |value - median| / median <= 10% → Consensus value: 101.0
 ```
 
 :::note
-Values outside the tolerance cause a `ToleranceExceeded` error — operators are not silently excluded.
+Values outside the tolerance fail the task with a gateway error. Operators are not silently excluded.
 :::
 
 ## Configuration Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `two_phase_prepare_timeout_ms` | 30000 | Prepare phase timeout in milliseconds |
-| `two_phase_commit_timeout_ms` | 15000 | Commit phase timeout in milliseconds |
-| `two_phase_consensus_tolerance_pct` | 10.0 | Tolerance percentage for median consensus |
-| `quorum_threshold_percentage` | 67 | Minimum percentage of operator stake required |
+| `prepare_timeout_ms` | 30000 | Prepare phase timeout in milliseconds |
+| `evaluate_timeout_ms` | 15000 | Commit phase timeout in milliseconds |
+| `consensus_tolerance_pct` | 10 | Tolerance percentage for median consensus (integer) |
+| `quorum_threshold_percentage` | 67 | Minimum percentage of operator stake that must sign, sized for Byzantine fault tolerance. A request that asks for less is raised to this minimum |
 | `quorum_number` | `"00"` | Quorum numbers to use (hex bytes) |
 
 ## BLS Signature Aggregation
@@ -88,20 +95,22 @@ Newton uses the **alt_bn128** curve (EIP-196/EIP-197) for BLS signature aggregat
 ### How It Works
 
 1. Each operator holds a BLS private key registered with the AVS
-2. Operators sign the task response hash with their individual key
+2. Operators sign the [consensus digest](#consensus-digest) with their individual key (on destination chains, the EIP-712 digest of a `BN254Certificate` whose `messageHash` is the consensus digest)
 3. The Gateway aggregates individual signatures into a single aggregate signature
 4. The on-chain verifier validates the aggregate signature against the registered operator set
 
-### Two-Digest System
+### Consensus Digest
 
-BLS aggregation requires all operators to sign the **exact same message**. However, each operator generates a unique ECDSA attestation. Newton solves this with two digest types:
+BLS aggregation requires all operators to sign the **exact same message**. Each operator BLS-signs the consensus digest, `keccak256(abi.encode(taskResponse))`, so every signer must produce a byte-identical `TaskResponse`.
 
-| Digest Type | Used For | Attestations |
-|-------------|----------|-------------|
-| **Consensus Digest** | BLS signing and verification | Excluded (zeroed out) |
-| **Full Digest** | Contract storage and challenge verification | Included |
+When an aggregated response is recorded for a task, the task manager stores two hashes:
 
-Operators BLS-sign the consensus digest (which is identical across all operators). The full digest (with unique attestations) is stored on-chain for challenge verification.
+| Hash | Value | Read with |
+|------|-------|-----------|
+| **Task response hash** | `keccak256(abi.encode(taskResponse, responseCertificate))` | `taskResponseHash(taskId)` |
+| **Normalized task response hash** | `keccak256(abi.encode(taskResponse))` | `normalizedTaskResponseHash(taskId)` |
+
+The normalized hash leaves out the response certificate, so it can be compared with the hash `AttestationValidator` records for a directly verified response. `challengeDirectlyVerifiedMismatch` uses it as the canonical side of that comparison.
 
 ## Security Model
 
@@ -112,14 +121,15 @@ Newton's security is backed by EigenLayer restaked ETH:
 - Operators must stake ETH (via EigenLayer restaking) to participate
 - Malicious behavior (incorrect evaluations) can be proven and results in **slashing** of staked ETH
 - The economic cost of attacking the network exceeds the potential gain
+- On mainnet, the operator set is permissioned: only vetted operators on the Newton operator allowlist can register, and the allowlist changes only through epoch governance
 
 ### Challenge Window
 
 After an attestation is submitted on-chain, there is a challenge window during which the result can be disputed:
 
 - Anyone can submit a challenge proving an operator's evaluation was incorrect
-- If the challenge succeeds, the offending operator is slashed
-- The attestation is marked as `SuccessfullyChallenged`
+- If the challenge succeeds, the operators that signed the response are slashed on the source chain (destination chains have no slashing)
+- The ChallengeVerifier records the task as challenged (`isTaskChallenged(taskId)` returns `true`), the Task Manager emits `TaskChallengedSuccessfully`, and the task's attestation no longer validates
 
 ### Slashing Conditions
 
@@ -128,7 +138,6 @@ Operators can be slashed for:
 | Violation | Description |
 |-----------|-------------|
 | **Incorrect evaluation** | Signing a result that provably contradicts the policy |
-| **Equivocation** | Signing conflicting results for the same task |
 
 ### Privacy Guarantees
 
@@ -138,21 +147,7 @@ Operators can be slashed for:
 
 ## Error Handling
 
-### Consensus Failures
-
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `ToleranceExceeded` | Operator values differ by more than tolerance | Increase `consensus_tolerance_pct` or investigate data source |
-| `NoResponses` | No operators responded in Prepare phase | Check operator health, increase timeout |
-| `InsufficientQuorum` | Not enough operators for quorum | Check operator registration and stake thresholds |
-
-### BLS Aggregation Failures
-
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `DigestMismatch` | Operators signed different messages | Verify consensus computation |
-| `InvalidSignature` | Operator signature verification failed | Check operator BLS key registration |
-| `QuorumNotReached` | Insufficient stake for quorum | Lower threshold or wait for more operators |
+Consensus and aggregation failures reach the caller as gateway errors. See [Error Codes](/developers/reference/rpc-api#error-codes) for each variant and its HTTP status.
 
 ## Next Steps
 

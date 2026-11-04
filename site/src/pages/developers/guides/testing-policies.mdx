@@ -118,7 +118,7 @@ Recommended coverage:
 
 ### Quick local checks with the CLI
 
-The CLI uses the same Newton Regorus engine family as operator evaluation, including Newton's crypto and identity built-ins. Use it to evaluate a query and validate runtime syntax and built-in availability:
+The CLI uses the same Newton Regorus engine family as operator evaluation, including Newton's crypto built-ins, but not its identity, confidential or time built-ins. Use it to evaluate a query and validate runtime syntax and built-in availability:
 
 ```bash
 # Evaluate a query against policy + data + input files
@@ -144,7 +144,7 @@ Run the compiled oracle in isolation to confirm it produces the data shape your 
 
 ```bash
 # Local execution in a sandbox with the Newton HTTP host
-newton-cli --chain-id 11155111 policy-data simulate \
+newton-cli --chain-id 11155111 policy simulate-wasm \
   --wasm-file ./dist/policy.wasm \
   --input-json '{"network":"mainnet","vaultAddress":"0x..."}'
 ```
@@ -176,7 +176,7 @@ See [Deploying with CLI](/developers/guides/deploying-with-cli) for the current 
 
 ## Simulate the full policy set
 
-After deploying policies and configuring `setPolicies`, call SDK `simulatePolicy` with `policyClient`, `chainId`, `intent`, and an ordered `wasmArgs` array. The gateway runs each policy's optional WASM and then Rego in-process. It reads params and entrypoints from the configured set; do not send inline Rego or `policy_data` lists.
+After deploying policies and configuring `setPolicies`, call SDK `simulatePolicy` with `policyClient`, `chainId`, `intent`, and an ordered `wasmArgs` array. The gateway runs each policy's optional WASM and then Rego. It reads params and entrypoints from the configured set; do not send inline Rego or `policy_data` lists.
 
 ```typescript
 const simulation = await client.simulatePolicy({

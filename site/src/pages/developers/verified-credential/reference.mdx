@@ -50,7 +50,7 @@ await walletClient.registerUserData({
 
 ### `linkApp`
 
-Links a user's registered identity to your policy client contract. The user must confirm the link in the Newton identity popup, which triggers a signed transaction from their wallet.
+Asks the user to link their registered identity to your policy client contract. The Newton identity popup has the user sign the link, then resolves with `{ signature, identityDomains, nonce, deadline, identityOwner }`. It sends no transaction: your app submits the link by calling [`linkIdentityAsUser`](#linkidentityasuser) from the user's app wallet (`appWalletAddress`).
 
 **Signature:**
 
@@ -59,7 +59,7 @@ linkApp(args: {
   appWalletAddress: Address
   appClientAddress: Address
   appIdentityDomain: Hex
-}): Promise<unknown>
+}): Promise<LinkAppResult>
 ```
 
 **Parameters:**
@@ -73,10 +73,20 @@ linkApp(args: {
 **Example:**
 
 ```typescript
-await walletClient.linkApp({
+const link = await walletClient.linkApp({
   appWalletAddress: '0xUserWallet...',
   appClientAddress: '0xYourPolicyClient...',
   appIdentityDomain: '0xabc123...',
+})
+
+// Sent from the user's app wallet, which becomes the linked client user
+await walletClient.linkIdentityAsUser({
+  identityOwner: link.identityOwner,
+  policyClient: '0xYourPolicyClient...',
+  identityDomains: link.identityDomains,
+  identityOwnerSignature: link.signature,
+  identityOwnerNonce: BigInt(link.nonce),
+  identityOwnerDeadline: BigInt(link.deadline),
 })
 ```
 
@@ -120,7 +130,7 @@ await walletClient.unlinkApp({
 
 ### `linkIdentityAsUser`
 
-Called on the `IdentityRegistry` contract to link a user's identity to a policy client. This is invoked under the hood when the user confirms the link via `linkApp`. See [Contract Addresses](/developers/reference/contract-addresses) for the `IdentityRegistry` address.
+Called on the `IdentityRegistry` contract to link a user's identity to a policy client. `linkApp` does not call it: your app sends it from the user's app wallet, because the registry records `msg.sender` as the client user. The SDK wraps it as `walletClient.linkIdentityAsUser`. See [Contract Addresses](/developers/reference/contract-addresses) for the `IdentityRegistry` address.
 
 **Signature:**
 
@@ -137,7 +147,7 @@ function linkIdentityAsUser(
 
 **Parameters:**
 
-The following are the output of the link SDK method.
+`linkApp` resolves with every value except `_policyClient`, which is your policy client address.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -152,7 +162,7 @@ The following are the output of the link SDK method.
 
 ## Sample Policy Client
 
-Your policy client contract must inherit both `NewtonPolicyClient` and `EIP712`. Below is a complete example:
+Your policy client contract inherits `NewtonPolicyClient`, which implements the EIP-712 domain itself, so don't add OpenZeppelin's `EIP712`. Below is a complete example:
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -160,9 +170,8 @@ pragma solidity ^0.8.27;
 
 import {NewtonPolicyClient} from "newton-contracts/src/mixins/NewtonPolicyClient.sol";
 import {INewtonProverTaskManager} from "newton-contracts/src/interfaces/INewtonProverTaskManager.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
-contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
+contract NewtonPolicyWallet is NewtonPolicyClient {
     event Executed(address indexed to, uint256 value, bytes data, bytes32 taskId);
     error InvalidAttestation();
     error ExecutionFailed();
@@ -170,7 +179,7 @@ contract NewtonPolicyWallet is NewtonPolicyClient, EIP712 {
     constructor(
         address policyTaskManager,
         address owner
-    ) payable EIP712("NewtonPolicyWallet", "1") {
+    ) payable {
         _initNewtonPolicyClient(policyTaskManager, owner);
     }
 

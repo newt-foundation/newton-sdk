@@ -9,7 +9,7 @@ import type {
   SystemChecks,
   TwitterTaskSubmission,
 } from "../types";
-import { isChromeLikeBrowser } from "../utils";
+import { isChromeLikeBrowser, toAddress } from "../utils";
 
 const TWITTER_API_HOST = "x.com";
 
@@ -399,10 +399,10 @@ export async function submitTwitterFollowersTask(
   submission: TwitterTaskSubmission,
 ): Promise<CreateTaskResponse> {
   return sdk.task.createTask({
-    policyClient: submission.policyClient,
+    policyClient: toAddress("policyClient", submission.policyClient),
     intent: {
-      from: submission.from,
-      to: submission.to,
+      from: toAddress("from", submission.from),
+      to: toAddress("to", submission.to),
       value: "0x0",
       data: "0x",
       chainId: toHexQuantity(submission.chainId),
@@ -417,7 +417,6 @@ export async function submitTwitterFollowersTask(
       feed_id: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
     },
     timeout: 60,
-    useTwoPhase: true,
   });
 }
 

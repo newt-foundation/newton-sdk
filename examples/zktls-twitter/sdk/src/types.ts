@@ -1,7 +1,9 @@
 /**
  * Newton Protocol SDK — Core type definitions
  *
- * Mirrors the Rust types in crates/gateway/src/rpc/types/ with camelCase JSON conventions.
+ * Mirrors the Rust types in crates/gateway/src/rpc/. Request fields are camelCase
+ * here and converted shallowly to snake_case on the wire (the nested `intent`
+ * stays camelCase); response fields keep the gateway's snake_case names.
  */
 
 // ---------------------------------------------------------------------------
@@ -23,8 +25,8 @@ export type HexBytes = string;
 /** Uint256 represented as 0x-prefixed hex string */
 export type U256 = string;
 
-/** Task identifier (u32 on-chain) */
-export type TaskId = number;
+/** Task identifier: 0x-prefixed 32-byte hex */
+export type TaskId = string;
 
 // ---------------------------------------------------------------------------
 // Intent
@@ -58,33 +60,41 @@ export interface CreateTaskRequest {
   intentSignature?: string;
   quorumNumber?: string;
   quorumThresholdPercentage?: number;
-  wasmArgs?: HexBytes;
+  /** One hex entry per policy in the client's policy set, `"0x"` for a pure-Rego policy. */
+  wasmArgs?: HexBytes[];
   timeout?: number;
-  useTwoPhase?: boolean;
+  /**
+   * @deprecated The gateway rejects any value with InvalidRequest "proof_cid is
+   * unsupported; zkTLS proof verification is unavailable".
+   */
   proofCid?: string;
   includeValidateCalldata?: boolean;
 }
 
 export interface OperatorError {
-  operatorId: string;
-  operatorAddress: Address;
-  error: string;
+  operator_address: Address;
+  operator_id: string;
+  error_code: number;
+  message: string;
+  /** RFC 3339 */
+  timestamp: string;
+  retryable: boolean;
 }
 
 export interface CreateTaskResponse {
-  taskId: TaskId;
+  task_id: TaskId;
   status: TaskStatus;
   /** TODO: Replace `unknown` with concrete BLS aggregation response shape once the gateway schema stabilizes. */
-  aggregationResponse?: unknown;
-  signatureData?: string;
+  bls_aggregation_result?: unknown;
+  signature_data?: string | null;
   /** TODO: Replace `unknown` with concrete task metadata shape once the gateway schema stabilizes. */
   task?: unknown;
-  taskResponse?: unknown;
-  referenceBlock?: number;
-  expiration?: number;
-  validateCalldata?: string;
-  error?: string;
-  operatorErrors?: OperatorError[];
+  task_response?: unknown;
+  reference_block?: number | null;
+  expiration?: number | null;
+  validate_calldata?: string | null;
+  error?: string | null;
+  operator_errors?: OperatorError[];
   timestamp: number;
 }
 
@@ -98,14 +108,20 @@ export interface SendTaskRequest {
   intentSignature?: string;
   quorumNumber?: string;
   quorumThresholdPercentage?: number;
-  wasmArgs?: HexBytes;
+  /** One hex entry per policy in the client's policy set, `"0x"` for a pure-Rego policy. */
+  wasmArgs?: HexBytes[];
   timeout?: number;
+  /**
+   * @deprecated The gateway rejects any value with InvalidRequest "proof_cid is
+   * unsupported; zkTLS proof verification is unavailable".
+   */
   proofCid?: string;
 }
 
 export interface SendTaskResponse {
-  taskId: TaskId;
-  subscriptionTopic: string;
+  task_id: TaskId;
+  /** Topic for the /ws subscribe frame: the task id as bare lowercase hex, no `0x`. */
+  subscription_topic: string;
   message: string;
   timestamp: number;
 }
@@ -115,75 +131,62 @@ export interface SendTaskResponse {
 // ---------------------------------------------------------------------------
 
 export interface SimulateTaskRequest {
-  intent: TaskIntent;
-  policyTaskData: unknown;
+  policyClient: Address;
   chainId: number;
+  intent: TaskIntent;
+  /** One hex entry per policy, as for createTask. */
+  wasmArgs?: HexBytes[];
+}
+
+export interface PolicySimulationResult {
+  policy_index: number;
+  policy: Address;
+  result: unknown;
+  allowed: boolean;
+  expire_after: number;
 }
 
 export interface SimulateTaskResponse {
   success: boolean;
-  result?: unknown;
-  error?: string;
-  details?: unknown;
+  /** AND over every policy in the set. */
+  allowed?: boolean | null;
+  policy_id?: string | null;
+  policies?: PolicySimulationResult[] | null;
+  error?: string | null;
+  parsed_intent?: unknown;
 }
 
 // ---------------------------------------------------------------------------
 // Simulate Policy (full evaluation)
 // ---------------------------------------------------------------------------
 
-export interface PolicyDataInput {
-  policyDataAddress: Address;
-  wasmArgs?: HexBytes;
-}
-
 export interface SimulatePolicyRequest {
   policyClient: Address;
   chainId: number;
-  policy: string;
   intent: TaskIntent;
-  entrypoint?: string;
-  policyData: PolicyDataInput[];
-  policyParams?: Record<string, unknown>;
+  /** One hex entry per policy, as for createTask. */
+  wasmArgs?: HexBytes[];
   intentSignature?: string;
 }
 
-export interface PolicyEvaluationResult {
-  policy: string;
-  parsedIntent: unknown;
-  policyParamsAndData: unknown;
-  entrypoint: string;
-  result: unknown;
-  expireAfter: number;
-}
-
-export interface MissingSecretInfo {
-  policyDataAddress: Address;
-  hasSecretsSchema: boolean;
-}
-
-export interface SimulatePolicyResponse {
-  success: boolean;
-  evaluationResult?: PolicyEvaluationResult;
-  error?: string;
-  errorDetails?: {
-    missingSecrets: MissingSecretInfo[];
-    suggestedActions: string[];
-  };
-}
+export type SimulatePolicyResponse = SimulateTaskResponse;
 
 // ---------------------------------------------------------------------------
 // Simulate Policy Data (WASM execution)
 // ---------------------------------------------------------------------------
 
 export interface SimulatePolicyDataRequest {
-  policyDataAddress: Address;
+  /** NewtonPolicy contract address; the gateway reads the WASM and secrets schema from it. */
+  policyAddress: Address;
   chainId: number;
-  secrets?: unknown;
+  /** HPKE SecureEnvelope as a JSON object, not a string. */
+  secrets?: Record<string, unknown>;
   wasmArgs?: HexBytes;
 }
 
 export interface SimulatePolicyDataWithClientRequest {
-  policyDataAddress: Address;
+  /** NewtonPolicy contract address; the gateway reads the WASM and secrets schema from it. */
+  policyAddress: Address;
   chainId: number;
   policyClient: Address;
   wasmArgs?: HexBytes;
@@ -191,8 +194,8 @@ export interface SimulatePolicyDataWithClientRequest {
 
 export interface SimulatePolicyDataResponse {
   success: boolean;
-  policyData?: unknown;
-  error?: string;
+  policy_data?: unknown;
+  error?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +204,7 @@ export interface SimulatePolicyDataResponse {
 
 export interface StoreSecretsRequest {
   policyClient: Address;
-  policyDataAddress: Address;
+  policyAddress: Address;
   envelope: string;
   chainId: number;
 }
@@ -225,8 +228,8 @@ export interface UploadIdentityRequest {
 }
 
 export interface UploadIdentityResponse {
-  dataRefId: string;
-  gatewaySignature: string;
+  data_ref_id: string;
+  gateway_signature: string;
   deadline: number;
 }
 
@@ -236,8 +239,8 @@ export interface GetIdentityRequest {
 
 export interface GetIdentityResponse {
   envelope: string;
-  identityDomain: string;
-  identityOwner: string;
+  identity_domain: string;
+  identity_owner: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,16 +248,15 @@ export interface GetIdentityResponse {
 // ---------------------------------------------------------------------------
 
 export interface UploadConfidentialDataRequest {
-  policyClient: Address;
-  policyDataAddress: Address;
+  provider: Address;
+  /** bytes32, 0x-prefixed */
+  domain: HexBytes;
   envelope: string;
   chainId: number;
 }
 
 export interface UploadConfidentialDataResponse {
-  success: boolean;
-  dataRefId?: string;
-  error?: string;
+  data_ref_id: string;
 }
 
 export interface GetConfidentialDataRequest {
@@ -263,6 +265,8 @@ export interface GetConfidentialDataRequest {
 
 export interface GetConfidentialDataResponse {
   envelope: string;
+  domain: string;
+  provider: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -270,64 +274,81 @@ export interface GetConfidentialDataResponse {
 // ---------------------------------------------------------------------------
 
 export interface GetPrivacyPublicKeyResponse {
-  publicKey: string;
+  public_key: string;
+  key_type: string;
+  encryption_suite: string;
 }
 
 export interface GetSecretsPublicKeyResponse {
-  publicKey: string;
+  public_key: string;
+  key_type: string;
+  encryption_suite: string;
 }
 
 // ---------------------------------------------------------------------------
 // Webhooks
 // ---------------------------------------------------------------------------
 
+/** Failure categories a webhook can filter on. */
+export type WebhookFailureType =
+  | "channel_error"
+  | "timeout"
+  | "quorum_not_reached"
+  | "onchain_submission_failed"
+  | "policy_evaluation_failed"
+  | "signature_verification_failed"
+  | "internal_error";
+
+/** The webhook belongs to the calling API key. */
 export interface RegisterWebhookRequest {
+  /** https://, or http://localhost for local testing */
   url: string;
-  policyClient: Address;
-  events?: string[];
+  secret?: string;
+  /** Default 10 */
+  timeoutSeconds?: number;
+  /** Default 3 */
+  maxRetries?: number;
+  failureTypes?: WebhookFailureType[];
 }
 
 export interface RegisterWebhookResponse {
   success: boolean;
-  webhookId?: string;
-  error?: string;
-}
-
-export interface UnregisterWebhookRequest {
-  webhookId: string;
+  message: string;
 }
 
 export interface UnregisterWebhookResponse {
   success: boolean;
-  error?: string;
+  message: string;
 }
 
 // ---------------------------------------------------------------------------
 // Task WebSocket Events
 // ---------------------------------------------------------------------------
 
+/** The gateway only emits `status_update`; completion shows in `data.status`. */
 export type TaskEventType = "status_update" | "success" | "failure" | "operator_response";
 
 export interface OperatorResponse {
-  operatorId: string;
-  operatorAddress: Address;
+  operator_id: string;
+  operator_address: Address;
   status: OperatorStatus;
   data?: unknown;
-  error?: string;
-  responseTimeMs: number;
+  error?: string | null;
+  response_time_ms: number;
 }
 
 export interface TaskUpdateData {
   status: TaskStatus;
-  operatorResponses: OperatorResponse[];
+  operator_responses: OperatorResponse[];
   result?: unknown;
-  error?: string;
+  error?: string | null;
   progress: number;
 }
 
+/** The `result` of a gateway `update` frame on /ws. */
 export interface TaskUpdateEvent {
   event: TaskEventType;
-  taskId: TaskId;
+  task_id: TaskId;
   timestamp: number;
   data: TaskUpdateData;
 }
@@ -416,26 +437,25 @@ export interface StoreProofResponse {
 
 export interface JsonRpcRequest<T = unknown> {
   jsonrpc: "2.0";
-  // Outbound requests always use string ids (UUID or `req-N` fallback). The
-  // response interface keeps `number | string` because servers may echo back
-  // either form per the JSON-RPC 2.0 spec.
-  id: string;
+  /** A UUID or null: the gateway answers any other id with a 422 and assigns its own. */
+  id: string | null;
   method: string;
   params: T;
 }
 
 export interface JsonRpcResponse<T = unknown> {
   jsonrpc: "2.0";
-  id: number | string;
-  result?: T;
-  error?: JsonRpcError;
+  id: string | null;
+  result?: T | null;
+  error?: JsonRpcError | null;
 }
 
-export interface JsonRpcError {
-  code: number;
-  message: string;
-  data?: unknown;
-}
+/**
+ * The gateway's error enum in serde's external tagging: a bare string for a
+ * unit variant (`"RateLimitExceeded"`), otherwise a one-key object
+ * (`{"InvalidRequest":"..."}`).
+ */
+export type JsonRpcError = string | Record<string, unknown>;
 
 // ---------------------------------------------------------------------------
 // SDK Configuration
@@ -446,7 +466,7 @@ export interface NewtonSDKConfig {
   gatewayUrl: string;
   /** Attester endpoint URL (e.g. "http://localhost:7047") */
   attesterUrl?: string;
-  /** API key for authenticated endpoints */
+  /** API key: a Bearer header on /rpc, a `newton.bearer.<key>` subprotocol on /ws */
   apiKey?: string;
   /** Default timeout in milliseconds (default: 30000) */
   timeout?: number;

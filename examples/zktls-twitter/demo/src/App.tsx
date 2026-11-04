@@ -114,7 +114,7 @@ export function App({ services = newtonDemoServices }: AppProps) {
         twitterUsername,
       });
       setPolicyResult(extractPolicyVisualization(response, minFollowers, proof));
-      log(`Task ${response.taskId ?? "sync"} returned status ${response.status}`, "success");
+      log(`Task ${response.task_id} returned status ${response.status}`, "success");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log(`Task submission failed: ${message}`, "error");

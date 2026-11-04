@@ -25,7 +25,7 @@ function fakeServices(): DemoServices {
       proxyUrl: "ws://localhost:7047/proxy?token=api.x.com&session=session-1",
     })),
     submitTask: vi.fn(async () => ({
-      taskId: 99,
+      task_id: `0x${"99".repeat(32)}`,
       status: "success" as const,
       timestamp: 123,
       result: {

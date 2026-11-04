@@ -69,3 +69,24 @@ export class DelegatorError extends Error {
     Object.setPrototypeOf(this, DelegatorError.prototype)
   }
 }
+
+/**
+ * A failed Newton Gateway JSON-RPC call. `code` is the gateway's error variant, e.g. `RateLimitExceeded`,
+ * `InvalidRequest` or `AuthorizationFailed`, with the variant's payload in `data`; `http_error` for a non-2xx answer
+ * without a JSON-RPC body, such as the 401 for an invalid API key; or `malformed_response` for a 2xx body that is not a
+ * JSON-RPC result. `retryAfter` is the `Retry-After` header in seconds, sent with `ServiceOverloaded`.
+ */
+export class GatewayError extends Error {
+  constructor(
+    public method: string,
+    public status: number,
+    public code: string,
+    public rawMessage: string,
+    public data?: unknown,
+    public retryAfter?: number,
+  ) {
+    super(`Newton SDK: gateway ${method} returned ${status} [${code}] ${rawMessage}`)
+    this.name = 'GatewayError'
+    Object.setPrototypeOf(this, GatewayError.prototype)
+  }
+}

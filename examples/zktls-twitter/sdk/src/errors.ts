@@ -2,8 +2,6 @@
  * Newton SDK error types.
  */
 
-import type { JsonRpcError } from "./types.js";
-
 export class NewtonSDKError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -11,15 +9,24 @@ export class NewtonSDKError extends Error {
   }
 }
 
+/**
+ * A gateway JSON-RPC call that failed. `code` is the gateway error variant
+ * (`InvalidRequest`, `RateLimitExceeded`, ...) or, for a response without a
+ * JSON error body, `http_error`, `malformed_response` or `response_too_large`.
+ */
 export class RpcError extends NewtonSDKError {
-  public readonly code: number;
+  public readonly method: string;
+  public readonly status: number;
+  public readonly code: string;
   public readonly data?: unknown;
 
-  constructor(err: JsonRpcError) {
-    super(err.message);
+  constructor(method: string, status: number, code: string, message: string, data?: unknown) {
+    super(`gateway ${method} returned ${status} [${code}] ${message}`);
     this.name = "RpcError";
-    this.code = err.code;
-    this.data = err.data;
+    this.method = method;
+    this.status = status;
+    this.code = code;
+    this.data = data;
   }
 }
 

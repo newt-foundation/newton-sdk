@@ -29,7 +29,6 @@ import type {
   SimulateTaskResponse,
   StoreSecretsRequest,
   StoreSecretsResponse,
-  UnregisterWebhookRequest,
   UnregisterWebhookResponse,
   UploadConfidentialDataRequest,
   UploadConfidentialDataResponse,
@@ -43,7 +42,6 @@ export class GatewayClient {
   private readonly url: string;
   private readonly headers: Record<string, string>;
   private readonly timeout: number;
-  private requestId = 0;
 
   constructor(config: NewtonSDKConfig) {
     // Ensure URL ends with /rpc
@@ -147,14 +145,14 @@ export class GatewayClient {
   // Webhooks
   // -------------------------------------------------------------------------
 
-  /** Register a webhook for failure notifications. */
+  /** Register the failure-notification webhook for this API key. */
   async registerWebhook(req: RegisterWebhookRequest): Promise<RegisterWebhookResponse> {
     return this.call("newt_registerWebhook", req);
   }
 
-  /** Remove a webhook configuration. */
-  async unregisterWebhook(req: UnregisterWebhookRequest): Promise<UnregisterWebhookResponse> {
-    return this.call("newt_unregisterWebhook", req);
+  /** Remove the webhook registered for this API key. */
+  async unregisterWebhook(): Promise<UnregisterWebhookResponse> {
+    return this.call("newt_unregisterWebhook", {});
   }
 
   // -------------------------------------------------------------------------
@@ -197,27 +195,39 @@ export class GatewayClient {
         signal: controller.signal,
       });
 
-      if (!response.ok) {
-        const text = await readBoundedText(response);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}${text ? ` ${text}` : ""}`);
-      }
-
-      // Reject responses that advertise an oversized body before parsing JSON.
+      // Reject responses that advertise an oversized body before reading it.
       // Production gateways send compact JSON-RPC envelopes; a multi-MiB body
       // here is either misconfigured or hostile and should not pour into JSON.parse.
       if (!isAdvertisedSizeAcceptable(response)) {
-        throw new Error(
-          `HTTP ${response.status}: response body exceeds ${MAX_RPC_BODY_BYTES} byte cap`,
+        throw new RpcError(
+          method,
+          response.status,
+          "response_too_large",
+          `body exceeds ${MAX_RPC_BODY_BYTES} byte cap`,
         );
       }
 
-      const json = (await response.json()) as JsonRpcResponse<TRes>;
+      const text = await readBoundedText(response);
+      const envelope = parseJson(text) as JsonRpcResponse<TRes> | null | undefined;
 
-      if (json.error) {
-        throw new RpcError(json.error);
+      if (envelope?.error != null) {
+        const { code, message, data } = parseGatewayError(envelope.error);
+        throw new RpcError(method, response.status, code, message, data);
+      }
+      if (!response.ok) {
+        throw new RpcError(
+          method,
+          response.status,
+          "http_error",
+          text || response.statusText || "empty body",
+        );
+      }
+      // A method can answer with a null result, so only a body without the key is malformed.
+      if (envelope == null || typeof envelope !== "object" || !("result" in envelope)) {
+        throw new RpcError(method, response.status, "malformed_response", "expected a JSON-RPC result");
       }
 
-      return json.result as TRes;
+      return envelope.result as TRes;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         throw new TimeoutError(this.timeout);
@@ -228,15 +238,13 @@ export class GatewayClient {
     }
   }
 
-  private nextRequestId(): string {
+  private nextRequestId(): string | null {
+    // The gateway parses `id` as an optional UUID, answers any other value with
+    // a 422, and assigns its own id, so without crypto.randomUUID send null.
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
-
-    // Fallback for environments without crypto.randomUUID (older Node, sandbox).
-    // JSON-RPC permits any string id, so a stable monotonic prefix is sufficient.
-    this.requestId += 1;
-    return `req-${this.requestId}`;
+    return null;
   }
 }
 
@@ -255,10 +263,31 @@ function isAdvertisedSizeAcceptable(response: Response): boolean {
 }
 
 async function readBoundedText(response: Response): Promise<string> {
-  if (typeof response.text !== "function") return "";
-  if (!isAdvertisedSizeAcceptable(response)) {
-    return `<body suppressed: exceeds ${MAX_RPC_BODY_BYTES} byte cap>`;
-  }
-  const text = await response.text().catch(() => "");
+  const text = await response.text();
   return text.length > MAX_RPC_BODY_BYTES ? text.slice(0, MAX_RPC_BODY_BYTES) : text;
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Status-only rejections (401 bad key, 408, 413, 503) and axum's 400/415/422
+    // body rejections carry an empty or plain-text body.
+    return undefined;
+  }
+}
+
+/**
+ * The gateway serializes its error enum with serde's external tagging: a unit
+ * variant is a bare string (`"RateLimitExceeded"`), any other variant a one-key
+ * object (`{"InvalidRequest":"..."}`, `{"QuorumNotReached":[reason, errors]}`).
+ */
+function parseGatewayError(error: unknown): { code: string; message: string; data?: unknown } {
+  if (typeof error === "string") return { code: error, message: error };
+  const entries = error !== null && typeof error === "object" ? Object.entries(error) : [];
+  if (entries.length === 1) {
+    const [code, data] = entries[0];
+    return { code, message: typeof data === "string" ? data : JSON.stringify(data), data };
+  }
+  return { code: "unknown_error", message: JSON.stringify(error), data: error };
 }

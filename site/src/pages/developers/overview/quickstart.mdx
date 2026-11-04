@@ -87,7 +87,7 @@ sequenceDiagram
 
 Simulation produces no BLS signatures and sends no application transaction. For live authorization, sign the exact intent, call `evaluateIntentDirect`, and validate the returned task and attestation in your contract before executing. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
-Use `simulatePolicy` as shown here rather than the older `simulateTask` wrapper, which still targets the old gateway schema. See [RPC API](/developers/reference/rpc-api#newt_simulatetask) for the provided-output alternative.
+`simulatePolicy` runs each policy's optional WASM on the gateway. If you already have the oracle outputs, `simulateTask` evaluates the set with them and runs no WASM; SDK 1.3.1 and earlier send its old request schema, which the gateway does not accept. See [RPC API](/developers/reference/rpc-api#newt_simulatetask).
 
 ## Next steps
 

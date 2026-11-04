@@ -64,8 +64,8 @@ Client (Browser/Server)          Newton Gateway              Operators
        |-- 3. uploadEncryptedData --> |-- store encrypted -->   |
        |<-- data_ref_id -----------  |                         |
        |                              |                         |
-       |-- 4. createTask ----------> |-- decrypt (HPKE) -->    |
-       |   (with data refs + sigs)   |-- broadcast plaintext ->|
+       |-- 4. createTask ----------> |-- forward task -------> |
+       |   (with data refs + sigs)   |                         |-- fetch + decrypt (HPKE)
        |                              |                         |-- evaluate policy
        |                              |                         |-- BLS sign result
        |                              |<-- aggregated result ---|
@@ -74,6 +74,6 @@ Client (Browser/Server)          Newton Gateway              Operators
 
 Key properties:
 - Encryption happens client-side (zero plaintext leaves the client)
-- The gateway decrypts only at task evaluation time
-- Operators receive plaintext only during the evaluation window, then zero it
+- The gateway never decrypts; operators decrypt locally at task evaluation time
+- Operators hold plaintext only during the evaluation window, then zero it
 - AAD binding prevents ciphertext reuse across different policy clients or chains

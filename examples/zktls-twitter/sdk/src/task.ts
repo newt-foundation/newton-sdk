@@ -22,24 +22,37 @@ import { SessionError, TimeoutError } from "./errors.js";
 import { encodeWasmArgs } from "./utils.js";
 import { formatWebSocketError } from "./attester.js";
 
+/** A hex string, or an object that is sent as hex-encoded JSON. */
+type WasmArg = string | Record<string, unknown>;
+
 export interface TaskOptions {
   /** Policy client contract address */
   policyClient: Address;
   /** Transaction intent */
   intent: TaskIntent;
-  /** WASM arguments (will be hex-encoded if provided as an object) */
-  wasmArgs?: string | Record<string, unknown>;
-  /** Timeout in seconds (gateway-side, default: 60) */
+  /**
+   * WASM arguments, one per policy in the client's policy set (`"0x"` for a
+   * pure-Rego policy). A single value is sent as a one-entry list.
+   */
+  wasmArgs?: WasmArg | WasmArg[];
+  /**
+   * Timeout in seconds (gateway-side, default: 60). The gateway's own HTTP
+   * request timeout (`server.request_timeout`, 30 in its sample gateway.toml)
+   * can end a synchronous createTask first, with a 408.
+   */
   timeout?: number;
-  /** Enable two-phase consensus (default: true for zkTLS) */
-  useTwoPhase?: boolean;
-  /** IPFS CID of a TLSNotary proof */
+  /**
+   * @deprecated The gateway rejects any value with InvalidRequest "proof_cid is
+   * unsupported; zkTLS proof verification is unavailable". Still sent so that
+   * rejection reaches the caller instead of the proof being dropped silently.
+   */
   proofCid?: string;
   /** Include validate calldata in response */
   includeValidateCalldata?: boolean;
 }
 
 type WebSocketLike = {
+  send(data: string): void;
   close(): void;
   onopen: ((ev: unknown) => void) | null;
   onmessage: ((ev: { data: unknown }) => void) | null;
@@ -47,19 +60,44 @@ type WebSocketLike = {
   onclose: ((ev: unknown) => void) | null;
 };
 
-type WebSocketConstructor = new (url: string) => WebSocketLike;
+type WebSocketConstructor = new (url: string, protocols?: string | string[]) => WebSocketLike;
+
+/** Gateway frames on /ws, tagged by `type`. */
+type GatewayWsFrame =
+  | { type: "update"; subscription_id: string; result: TaskUpdateEvent }
+  | { type: "error"; message: string }
+  | { type: "subscribed" | "unsubscribed" | "response" | "pong" };
+
+/** Offered on every connection; the gateway accepts the upgrade by echoing it. */
+const WS_SUBPROTOCOL = "newton.v1";
+/** Browsers cannot set headers on a WebSocket, so the API key travels as a `newton.bearer.<key>` subprotocol. */
+const WS_BEARER_SUBPROTOCOL_PREFIX = "newton.bearer.";
+/** RFC 7230 token characters, the only ones a subprotocol may hold. */
+const SUBPROTOCOL_TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+/** `data.status` values that end a task. */
+const TERMINAL_STATUSES = new Set(["success", "failed", "timeout"]);
+
+/** The gateway's `/ws` endpoint beside its JSON-RPC URL: same host, port and path prefix, `ws:` for `http:`. */
+function getTaskEventsUrl(gatewayUrl: string): string {
+  const url = new URL(gatewayUrl);
+  url.protocol = url.protocol === "http:" ? "ws:" : "wss:";
+  url.pathname = url.pathname.replace(/(\/rpc)?\/?$/, "/ws");
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
 
 export class TaskManager {
   private readonly gateway: GatewayClient;
-  private readonly wsBaseUrl: string;
+  private readonly gatewayUrl: string;
+  private readonly apiKey: string | undefined;
   private wsImpl: WebSocketConstructor | undefined;
   private readonly timeout: number;
 
   constructor(config: NewtonSDKConfig, gateway?: GatewayClient) {
     this.gateway = gateway ?? new GatewayClient(config);
-    this.wsBaseUrl = config.gatewayUrl
-      .replace(/\/rpc$/, "")
-      .replace(/^http/, "ws");
+    this.gatewayUrl = config.gatewayUrl;
+    this.apiKey = config.apiKey;
     this.timeout = config.timeout ?? 30_000;
   }
 
@@ -92,10 +130,15 @@ export class TaskManager {
   /**
    * Subscribe to task updates over WebSocket.
    *
-   * @param topic - Subscription topic from SendTaskResponse
+   * Connects to the gateway's `/ws` with the API key as a `newton.bearer.<key>`
+   * subprotocol, sends a subscribe frame for `topic`, and passes each `update`
+   * frame's event to `onUpdate`.
+   *
+   * @param topic - `subscription_topic` from SendTaskResponse (bare lowercase hex task id)
    * @param onUpdate - Callback for each task update event
    * @param timeoutMs - Maximum time to wait for completion (default: SDK timeout)
-   * @returns Promise that resolves with the final TaskUpdateEvent on success/failure
+   * @returns Promise that resolves with the first event whose `data.status` is
+   *   success, failed or timeout, and rejects on a gateway `error` frame
    */
   async trackTask(
     topic: string,
@@ -121,7 +164,17 @@ export class TaskManager {
         return;
       }
 
-      const ws = new WS(`${this.wsBaseUrl}/ws?topic=${encodeURIComponent(topic)}`);
+      const wsUrl = getTaskEventsUrl(this.gatewayUrl);
+      // Checked here because the WebSocket constructor's SyntaxError would print the protocol, key included.
+      if (!this.apiKey || !SUBPROTOCOL_TOKEN.test(this.apiKey)) {
+        const reason = this.apiKey
+          ? "the API key holds characters a WebSocket subprotocol cannot carry"
+          : "an API key is required";
+        reject(new SessionError(`cannot track task ${topic} at ${wsUrl}: ${reason}`));
+        return;
+      }
+
+      const ws = new WS(wsUrl, [WS_SUBPROTOCOL, `${WS_BEARER_SUBPROTOCOL_PREFIX}${this.apiKey}`]);
       let settled = false;
       const timer = setTimeout(() => {
         if (settled) return;
@@ -146,6 +199,10 @@ export class TaskManager {
         resolve(event);
       };
 
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "subscribe", id: "sub-1", method: topic, params: null }));
+      };
+
       ws.onmessage = (ev) => {
         const raw = String(ev.data);
         // Defensive cap matches the AttesterClient frame guard so a hostile
@@ -158,9 +215,9 @@ export class TaskManager {
           return;
         }
 
-        let event: TaskUpdateEvent;
+        let frame: GatewayWsFrame;
         try {
-          event = JSON.parse(raw) as TaskUpdateEvent;
+          frame = JSON.parse(raw) as GatewayWsFrame;
         } catch (err) {
           // Non-JSON frames are tolerated to allow gateway-side keepalives or
           // future control frames without settling the outer Promise. Surface
@@ -172,6 +229,14 @@ export class TaskManager {
           return;
         }
 
+        if (frame?.type === "error") {
+          rejectWithCleanup(new SessionError(`task ${topic} subscription failed: ${frame.message}`));
+          return;
+        }
+        // `subscribed` and `pong` frames carry no task data.
+        if (frame?.type !== "update") return;
+        const event = frame.result;
+
         try {
           onUpdate?.(event);
         } catch (err) {
@@ -181,7 +246,7 @@ export class TaskManager {
           return;
         }
 
-        if (event.event === "success" || event.event === "failure") {
+        if (TERMINAL_STATUSES.has(event?.data?.status)) {
           resolveWithCleanup(event);
         }
       };
@@ -213,19 +278,18 @@ export class TaskManager {
     timeoutMs?: number,
   ): Promise<TaskUpdateEvent> {
     const response = await this.sendTask(options);
-    return this.trackTask(response.subscriptionTopic, onUpdate, timeoutMs);
+    return this.trackTask(response.subscription_topic, onUpdate, timeoutMs);
   }
 
   // -------------------------------------------------------------------------
   // Internal
   // -------------------------------------------------------------------------
 
-  private resolveWasmArgs(
-    wasmArgs: string | Record<string, unknown> | undefined,
-  ): string | undefined {
+  private resolveWasmArgs(wasmArgs: WasmArg | WasmArg[] | undefined): string[] | undefined {
     if (wasmArgs === undefined) return undefined;
-    if (typeof wasmArgs === "string") return wasmArgs;
-    return encodeWasmArgs(wasmArgs);
+    return (Array.isArray(wasmArgs) ? wasmArgs : [wasmArgs]).map((arg) =>
+      typeof arg === "string" ? arg : encodeWasmArgs(arg),
+    );
   }
 
   private buildCreateRequest(options: TaskOptions): CreateTaskRequest {
@@ -234,7 +298,6 @@ export class TaskManager {
       intent: options.intent,
       wasmArgs: this.resolveWasmArgs(options.wasmArgs),
       timeout: options.timeout ?? 60,
-      useTwoPhase: options.useTwoPhase,
       proofCid: options.proofCid,
       includeValidateCalldata: options.includeValidateCalldata,
     };

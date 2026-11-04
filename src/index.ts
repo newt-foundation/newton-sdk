@@ -58,6 +58,7 @@ import type {
   SignDelegatorApprovalParams,
 } from './types/delegator'
 import type {
+  LinkAppResult,
   LinkIdentityAsSignerAndUserParams,
   LinkIdentityAsSignerParams,
   LinkIdentityAsUserParams,
@@ -120,7 +121,8 @@ interface SdkOverrides {
   identityRegistry?: Address
 }
 
-const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id]
+// 46630 is Robinhood Chain testnet, 5042002 is Arc testnet
+const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id, 46630, 5042002]
 
 const newtonWalletClientActions =
   (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
@@ -157,7 +159,7 @@ const newtonWalletClientActions =
     return {
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
-      ): Promise<{ result: { taskId: Hex; txHash: Hex } } & PendingTaskBuilder> =>
+      ): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> =>
         submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
 
       evaluateIntentDirect: (
@@ -279,8 +281,8 @@ const newtonWalletClientActions =
         appWalletAddress: Address
         appClientAddress: Address
         appIdentityDomain: Hex
-      }): Promise<unknown> => {
-        return popupRequest(
+      }): Promise<LinkAppResult> => {
+        return popupRequest<LinkAppResult>(
           {
             method: NewtonIdpPayloadMethod.LinkApp,
             id: getPayloadId(),
@@ -675,5 +677,5 @@ export {
   uploadIdentityEncrypted,
 }
 export { registerWebhook, unregisterWebhook }
-export { SDKError, MagicRPCError, DelegatorError } from './sdk-exceptions'
+export { SDKError, MagicRPCError, DelegatorError, GatewayError } from './sdk-exceptions'
 export { SDKErrorCode, RPCErrorCode } from './types/core/exception-types'

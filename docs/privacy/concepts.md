@@ -8,7 +8,7 @@ The privacy layer solves this with a simple principle: **encrypt on the client, 
 
 - The client encrypts data locally using the gateway's public key
 - The ciphertext travels over the network and is stored encrypted
-- The gateway decrypts only when a properly authorized task references the data
+- Operators decrypt only when a properly authorized task references the data; the gateway never decrypts
 - Operators see plaintext only during the evaluation window, then zero it
 
 ## HPKE Encryption (RFC 9180)

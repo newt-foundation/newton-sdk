@@ -9,10 +9,19 @@ import { CID } from "multiformats/cid";
 import { sha256 } from "multiformats/hashes/sha2";
 
 import { createNewtonSDK, encodeWasmArgs, decodeWasmArgs } from "./index.js";
-import type { JsonRpcResponse, CreateTaskResponse, SendTaskResponse } from "./types.js";
+import type { CreateTaskResponse, SendTaskResponse } from "./types.js";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
+
+const TOPIC = "ab".repeat(32);
+const TASK_ID = `0x${TOPIC}`;
+const PROOF_CID_REJECTION = "proof_cid is unsupported; zkTLS proof verification is unavailable";
+
+/** The gateway's success envelope. */
+function rpcResult(result: unknown): Response {
+  return new Response(JSON.stringify({ jsonrpc: "2.0", result, error: null, id: null }), { status: 200 });
+}
 
 async function cidFor(bytes: Uint8Array): Promise<string> {
   return CID.createV1(0x55, await sha256.digest(bytes)).toString();
@@ -79,26 +88,17 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
     expect(JSON.parse(init.body).proof).toBe(proofBase64);
   });
 
-  it("Step 3: createTask with proofCid — full payload validation", async () => {
-    const proofCid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+  it("Step 3: createTask - full payload validation", async () => {
+    const gatewayResult = {
+      task_id: TASK_ID,
+      status: "success",
+      signature_data: "0xabcdef",
+      reference_block: 1000,
+      expiration: null,
+      timestamp: 1700000000,
+    } satisfies CreateTaskResponse;
 
-    const gatewayResponse: JsonRpcResponse<CreateTaskResponse> = {
-      jsonrpc: "2.0",
-      id: 1,
-      result: {
-        taskId: 42,
-        status: "success",
-        signatureData: "0xabcdef",
-        referenceBlock: 1000,
-        expiration: 1100,
-        timestamp: 1700000000,
-      },
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => gatewayResponse,
-    });
+    mockFetch.mockResolvedValueOnce(rpcResult(gatewayResult));
 
     const result = await sdk.task.createTask({
       policyClient: "0x1111111111111111111111111111111111111111",
@@ -111,13 +111,11 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
         functionSignature: "0x",
       },
       wasmArgs: { min_followers: 1000, twitter_username: "newton_protocol" },
-      useTwoPhase: true,
-      proofCid,
       timeout: 60,
     });
 
     // Verify result
-    expect(result.taskId).toBe(42);
+    expect(result.task_id).toBe(TASK_ID);
     expect(result.status).toBe("success");
 
     // Verify the JSON-RPC payload sent to gateway
@@ -132,35 +130,29 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
     const params = body.params;
     // Gateway expects snake_case
     expect(params.policy_client).toBe("0x1111111111111111111111111111111111111111");
-    expect(params.use_two_phase).toBe(true);
-    expect(params.proof_cid).toBe(proofCid);
     expect(params.timeout).toBe(60);
+    expect(params).not.toHaveProperty("use_two_phase");
+    expect(params).not.toHaveProperty("proof_cid");
 
-    // wasm_args should be hex-encoded JSON
-    expect(params.wasm_args).toMatch(/^0x[0-9a-f]+$/);
-    const decodedArgs = decodeWasmArgs(params.wasm_args);
+    // wasm_args holds one hex-encoded JSON entry per policy
+    expect(params.wasm_args).toHaveLength(1);
+    expect(params.wasm_args[0]).toMatch(/^0x[0-9a-f]+$/);
+    const decodedArgs = decodeWasmArgs(params.wasm_args[0]);
     expect(decodedArgs).toEqual({ min_followers: 1000, twitter_username: "newton_protocol" });
 
     // Intent stays camelCase (nested object not converted)
-    expect(params.intent).toBeDefined();
+    expect(params.intent.chainId).toBe("0xaa36a7");
   });
 
   it("Step 4: sendTask async + subscription topic", async () => {
-    const gatewayResponse: JsonRpcResponse<SendTaskResponse> = {
-      jsonrpc: "2.0",
-      id: 1,
-      result: {
-        taskId: 43,
-        subscriptionTopic: "task:43:updates",
-        message: "Task submitted for async processing",
-        timestamp: 1700000001,
-      },
-    };
+    const gatewayResult = {
+      task_id: TASK_ID,
+      subscription_topic: TOPIC,
+      message: "Task submitted for async processing",
+      timestamp: 1700000001,
+    } satisfies SendTaskResponse;
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => gatewayResponse,
-    });
+    mockFetch.mockResolvedValueOnce(rpcResult(gatewayResult));
 
     const result = await sdk.task.sendTask({
       policyClient: "0x1111111111111111111111111111111111111111",
@@ -172,15 +164,15 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
         chainId: "0xaa36a7",
         functionSignature: "0x",
       },
-      proofCid: "bafytest",
       wasmArgs: { min_followers: 500 },
     });
 
-    expect(result.taskId).toBe(43);
-    expect(result.subscriptionTopic).toBe("task:43:updates");
+    expect(result.task_id).toBe(TASK_ID);
+    expect(result.subscription_topic).toBe(TOPIC);
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.method).toBe("newt_sendTask");
+    expect(decodeWasmArgs(body.params.wasm_args[0])).toEqual({ min_followers: 500 });
   });
 
   it("Step 5: retrieve proof from IPFS by CID", async () => {
@@ -200,19 +192,12 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
     );
   });
 
-  it("handles JSON-RPC error from gateway", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        jsonrpc: "2.0",
-        id: 1,
-        error: {
-          code: -32000,
-          message: "Policy evaluation failed: insufficient followers (500 < 1000)",
-          data: { allow: false, followers_count: 500, min_required: 1000 },
-        },
+  it("surfaces the gateway's proof_cid rejection", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ jsonrpc: "2.0", result: null, error: { InvalidRequest: PROOF_CID_REJECTION }, id: null }), {
+        status: 400,
       }),
-    });
+    );
 
     await expect(
       sdk.task.createTask({
@@ -227,18 +212,15 @@ describe("Integration: zkTLS Twitter follower verification flow", () => {
         },
         proofCid: "bafyfail",
       }),
-    ).rejects.toThrow("Policy evaluation failed");
+    ).rejects.toThrow(`returned 400 [InvalidRequest] ${PROOF_CID_REJECTION}`);
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body).params.proof_cid).toBe("bafyfail");
   });
 
   it("handles HTTP errors gracefully", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 503,
-      statusText: "Service Unavailable",
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 503 }));
 
     await expect(
       sdk.gateway.getPrivacyPublicKey(),
-    ).rejects.toThrow("HTTP 503");
+    ).rejects.toThrow("gateway newt_getPrivacyPublicKey returned 503 [http_error] empty body");
   });
 });

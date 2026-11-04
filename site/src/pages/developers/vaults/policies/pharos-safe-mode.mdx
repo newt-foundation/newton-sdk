@@ -24,11 +24,11 @@ This is the only pack in the catalog that reads the **attested intent** as well 
 | --- | --- |
 | Pack id | `pharos_safe_mode` |
 | Rego package | `pharos_safe_mode` (the `--entrypoint` is `pharos_safe_mode.allow`) |
-| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Policy address | `newton-cli --chain-id <chain-id> policy packs show --pack pharos_safe_mode` ([details](/developers/vaults/policy-packs#pack-policy-addresses)) |
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
 :::
 
 ### Secret

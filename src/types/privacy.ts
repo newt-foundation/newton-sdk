@@ -10,7 +10,10 @@ export interface SecureEnvelope {
   policy_client: Address
   /** Chain ID for AAD context binding */
   chain_id: number
-  /** Recipient X25519 public key (hex-encoded, no 0x prefix) */
+  /**
+   * The X25519 key the envelope was encrypted to (hex-encoded, no 0x prefix). The gateway defines this field as the
+   * recipient's Ed25519 key, but no gateway path reads it.
+   */
   recipient_pubkey: string
 }
 
@@ -30,9 +33,12 @@ export interface CreateSecureEnvelopeParams {
 export interface SecureEnvelopeResult {
   /** The encrypted envelope */
   envelope: SecureEnvelope
-  /** Ed25519 signature over the serialized envelope (hex-encoded, no 0x prefix) */
+  /**
+   * Ed25519 signature over the serialized envelope (hex-encoded, no 0x prefix). No gateway method accepts or verifies
+   * it: identity upload takes the owner's EIP-712 signature instead.
+   */
   signature: string
-  /** Sender's Ed25519 public key (hex-encoded, no 0x prefix) */
+  /** Sender's Ed25519 public key (hex-encoded, no 0x prefix). Unused by the gateway, see `signature`. */
   senderPublicKey: string
 }
 
@@ -118,13 +124,13 @@ export interface StoreEncryptedSecretsRpcRequest {
   chain_id: number
 }
 
-/** Parameters for computing dual-signature privacy authorization. */
+/** @deprecated See `signPrivacyAuthorization`. */
 export interface SignPrivacyAuthorizationParams {
   /** Policy client address */
   policyClient: Address
   /** Keccak256 hash of the intent (hex-encoded, 32 bytes) */
   intentHash: string
-  /** Encrypted data reference UUIDs returned from uploadIdentityEncrypted */
+  /** Data reference ids returned by uploadIdentityEncrypted: 0x-prefixed keccak256 of the envelope JSON */
   encryptedDataRefs: string[]
   /** User's Ed25519 private key seed (hex-encoded, 32 bytes, no 0x prefix) */
   userSigningKey: string
@@ -136,7 +142,11 @@ export interface SignPrivacyAuthorizationParams {
 export interface UploadConfidentialDataParams {
   /** Provider address (must be registered on-chain with ConfidentialDataRegistry) */
   provider: string
-  /** Confidential domain as 0x-prefixed bytes32 hex (e.g., keccak256("newton.privacy.blacklist")) */
+  /**
+   * Confidential domain as 0x-prefixed bytes32 hex. Operators recognize keccak256("newton.confidential.blacklist") or
+   * keccak256("blacklist"), and the allowlist pair; data under any other domain never reaches the blacklist or
+   * allowlist builtins.
+   */
   domain: string
   /** Data to encrypt (will be JSON.stringify'd if not a string or Uint8Array) */
   plaintext: Uint8Array | string | Record<string, unknown>
@@ -170,7 +180,7 @@ export interface GetConfidentialDataResult {
   provider: string
 }
 
-/** Result of dual-signature privacy authorization computation. */
+/** @deprecated See `signPrivacyAuthorization`. */
 export interface PrivacyAuthorizationResult {
   /** User Ed25519 signature (hex-encoded, no 0x prefix) */
   userSignature: string

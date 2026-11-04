@@ -19,7 +19,7 @@ Newton Protocol is a decentralized policy engine for onchain transaction authori
 :::
 
 :::details[What chains does Newton support?]
-Newton currently supports **Ethereum Sepolia** (`11155111`) as both a source and destination chain, plus policy execution on **Base** (`8453`) and **Base Sepolia** (`84532`). See [Supported Networks](/developers/concepts/multichain#supported-networks).
+Newton currently supports **Ethereum Sepolia** (`11155111`) as both a source and destination chain and **Ethereum mainnet** (`1`) as a source chain, plus policy execution on **Base** (`8453`), **Base Sepolia** (`84532`), **Robinhood Chain testnet** (`46630`) and **Arc testnet** (`5042002`). See [Supported Networks](/developers/concepts/multichain#supported-networks).
 :::
 
 :::details[How do I get an API key?]
@@ -36,15 +36,17 @@ Any language that compiles to WASM and supports the WIT interface can be used.
 :::
 
 :::details[What is the difference between Standard and Direct validation?]
-**Standard validation** (`_validateAttestation`) uses the PolicyClientRegistry to automatically resolve your contract's policy configuration. It costs more gas but is simpler to use.
+**Standard validation** (`_validateAttestation`) checks an attestation that the aggregator has already recorded onchain with `respondToTask`, comparing it against the stored hash. It works once that response is onchain.
 
-**Direct validation** (`_validateAttestationDirect`) bypasses the registry. It uses less gas but requires your contract to manage its own policy reference.
+**Direct validation** (`_validateAttestationDirect`) verifies the task, the response, and the operators' BLS signatures inside your own transaction, so it does not wait for the aggregator's onchain response.
+
+Neither path reads the PolicyClientRegistry. Both check the attestation against your contract's policy ID.
 
 See [Validation Methods](/developers/overview/core-concepts#validation-methods) for details.
 :::
 
 :::details[How long does policy evaluation take?]
-Two-phase consensus (Prepare-Commit) takes approximately **4 seconds**. See [Consensus & Security](/developers/concepts/consensus-security).
+A task typically goes from submission to attestation in under a second, around 200 ms at the median on Base Sepolia testnet. See [Consensus & Security](/developers/concepts/consensus-security) for how operators reach agreement.
 :::
 
 :::details[Can I test policies without deploying on-chain?]
@@ -62,38 +64,36 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 
 ## Common Errors
 
-:::details[TaskAlreadyExists — duplicate task submission]
-**Cause:** You submitted a task with the same intent hash that is already being evaluated.
+:::details[TaskAlreadyExists - task ID already recorded]
+**Cause:** The Task Manager already has a task recorded under the new task's ID. The gateway derives every task ID from a new random UUID, so resubmitting the same intent creates a new task and does not raise this error.
 
-**Fix:** Wait for the existing task to complete, or modify the intent (e.g., change the nonce or timestamp) to produce a different hash.
+**Fix:** Resubmit the request; it gets a new task ID.
 :::
 
-:::details[InvalidAttestation — on-chain verification failed]
-**Cause:** The attestation proof failed BLS signature verification on-chain.
+:::details[InvalidAttestation - your contract rejected the attestation]
+**Cause:** `InvalidAttestation()` is not a Newton contract error. Policy client contracts, including the examples in these docs, define it and revert with it when `_validateAttestation` or `_validateAttestationDirect` returns `false`.
 
 **Common reasons:**
-- The attestation has expired (check `expiration` field)
-- The operator set has rotated since the attestation was produced
-- The attestation was produced for a different chain
+- In direct mode the policy denied the intent: `_validateAttestationDirect` returns the quorum-signed `taskResponse.allowed`
+- The task was challenged, and the TaskManager returns `false` for a challenged task
 
-**Fix:** Request a fresh attestation and submit it before expiration. Ensure the `chainId` in your intent matches the chain where the PolicyClient is deployed.
+**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
 :::
 
-:::details[PolicyNotFound (-32617) — policy not found]
-**Cause:** The Gateway could not find the policy associated with the provided PolicyClient address.
+:::details[InvalidRequest: policy client has an empty policy set]
+**Cause:** `newt_createTask` reads the policy set before it replies, so a PolicyClient with no policies fails with HTTP 400 `{"InvalidRequest":"policy client 0x... has an empty policy set"}`. `newt_sendTask` accepts the task first and reads the set afterwards, so the same problem arrives as a failed task on the WebSocket topic. An address that is not a PolicyClient on the chain you are calling fails the owner check first, with HTTP 500 `{"Internal":"failed to query on-chain owner for policy client 0x...: ..."}`.
 
 **Fix:** Verify:
-1. The PolicyClient address is correct and deployed on the expected chain
-2. The PolicyClient has a policy set (use `newton-cli policy-client status`)
-3. The PolicyClient is registered with the PolicyClientRegistry
+1. The PolicyClient address is correct and deployed on the chain you are calling
+2. The PolicyClient has a policy set (use `newton-cli policy-client show`)
 :::
 
-:::details[Unauthorized (-32615) — authentication failed]
-**Cause:** Your API key is missing, invalid, or lacks the required permission.
+:::details[AuthenticationFailed or AuthorizationFailed: API key rejected]
+**Cause:** A request without an API key gets HTTP 401 `{"AuthenticationFailed":"missing or invalid API key"}`. An unknown or revoked key gets HTTP 401 with an empty body. A key without the method's permission gets HTTP 403, for example `{"AuthorizationFailed":"RpcWrite permission required"}`.
 
 **Fix:**
-- Ensure your `Authorization: Bearer <key>` header is present
-- Check that your key has the required permission level (`rpc_read` for simulations, `rpc_write` for secret storage)
+- Send the key in an `Authorization: Bearer <key>` or `X-API-Key` header
+- Check that your key has the permission the method needs (`rpc_read` for simulations and reads, `rpc_write` for task submission and writes, `rpc` for both)
 - Verify the key has not been revoked
 :::
 
@@ -101,7 +101,7 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 **Cause:** The WASM component's `run` function is not returning valid JSON, or the HTTP fetch is failing silently.
 
 **Fix:**
-1. Test locally: `newton-cli --chain-id 11155111 policy-data simulate --wasm-file policy.wasm --input-json '{}'`
+1. Test locally: `newton-cli --chain-id 11155111 policy simulate-wasm --wasm-file policy.wasm --input-json '{}'`
 2. Verify your `run` function returns a JSON string (not an object)
 3. Check that HTTP requests use the correct URL and headers
 4. Ensure secrets are stored if your oracle requires API keys

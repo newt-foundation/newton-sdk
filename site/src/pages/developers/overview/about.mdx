@@ -59,16 +59,17 @@ async function simulate() {
   const sender = '0x0000000000000000000000000000000000000000' as `0x${string}`
   const recipient = '0x0000000000000000000000000000000000000001' as `0x${string}`
   const calldata = '0x' as `0x${string}`
-  const policyId = '0x' + '0'.repeat(64) as `0x${string}`
-  const policyAddress = '0x1234567890123456789012345678901234567890' as `0x${string}`
+  const policyClient = '0x1234567890123456789012345678901234567890' as `0x${string}`
 
-  // Simulate a policy evaluation against a transaction intent
-  const result = await client.simulateTask({
+  // Simulate the policy client's policy set against a transaction intent
+  const result = await client.simulatePolicy({
+    policyClient,
+    chainId: 11155111,
     intent: { from: sender, to: recipient, value: '0x0', data: calldata, chainId: 11155111, functionSignature: '0xa9059cbb' },
-    policyTaskData: { policyId, policyAddress, policy: '0x', policyData: [] },
+    wasmArgs: ['0x'], // One slot per policy: its oracle input, or '0x' for pure-Rego
   })
 
-  console.log(result.result?.allow) // true or false
+  console.log(result.allowed) // true, false, or null when the simulation failed
 }
 ```
 

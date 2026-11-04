@@ -76,7 +76,7 @@ export interface TaskFormState {
 export interface TaskPreview {
   policyClient: string;
   intent: TaskIntent;
-  wasmArgs: string;
+  wasmArgs: string[];
   wasmArgsJson: {
     min_followers: number;
     twitter_username: string;
@@ -85,7 +85,7 @@ export interface TaskPreview {
     feed_id: string;
   };
   timeout: number;
-  useTwoPhase: boolean;
+  /** Deprecated: the current gateway rejects any proof CID with InvalidRequest. */
   proofCid?: string;
 }
 

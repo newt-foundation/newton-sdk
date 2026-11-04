@@ -32,7 +32,7 @@ For writing Rego unit tests with `opa test`, see [Testing Policies & Oracles](/d
 Test your WASM data oracle without deploying:
 
 ```bash
-newton-cli --chain-id 11155111 policy-data simulate \
+newton-cli --chain-id 11155111 policy simulate-wasm \
   --wasm-file policy.wasm \
   --input-json '{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"}'
 ```
@@ -41,7 +41,7 @@ The CLI runs your WASM component in a sandboxed environment with the Newton HTTP
 
 ## Gateway Simulation
 
-The policy-set endpoints resolve a configured client on the specified chain. Use `policy_client`, numeric `chain_id`, `intent`, and positional `wasm_args` arrays. SDK `simulatePolicy` supports this schema in v1.2.2; its `simulateTask` wrapper does not.
+The policy-set endpoints resolve a configured client on the specified chain. Use `policy_client`, numeric `chain_id`, `intent`, and positional `wasm_args` arrays. SDK `simulatePolicy` sends this schema. SDK `simulateTask` sends it in releases after 1.3.1; 1.3.1 and earlier send the old `policy_task_data` request, which the gateway does not accept.
 
 | Endpoint | Executes WASM? | Input | Result |
 |---|---|---|---|
@@ -50,7 +50,7 @@ The policy-set endpoints resolve a configured client on the specified chain. Use
 | `newt_simulatePolicy` | Yes, each policy's optional module | Current client set and ordered oracle inputs | Per-policy verdicts and aggregate `allowed` |
 | `newt_simulateTask` | No | Current client set and ordered precomputed oracle outputs | Per-policy verdicts and aggregate `allowed` |
 
-These simulations run in-process on the gateway. They do not produce BLS quorum signatures or execute application transactions. `newt_createTask` / `newt_sendTask` exercise live operator evaluation.
+These simulations do not produce BLS quorum signatures or execute application transactions. `newt_createTask` / `newt_sendTask` exercise live operator evaluation.
 
 A completed denial has `success: true, allowed: false`; a simulation error has `success: false, allowed: null`. Inspect `policies[i].policy_index`, `policy`, `allowed`, and `result` to find the denying rule. See [RPC examples](/developers/reference/rpc-api#newt_simulatepolicy).
 
@@ -96,32 +96,36 @@ If an attestation fails on-chain verification, check:
 
 | Symptom | Likely Cause | Diagnostic Step |
 |---------|-------------|-----------------|
-| `newt_simulateTask` returns `non-compliant` | Policy logic rejects the intent | Run `newt_simulatePolicy` with the same inputs to isolate the Rego evaluation |
-| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy-data simulate` |
-| Attestation expires before on-chain submission | Too much time between evaluation and transaction | Reduce latency or increase the `expiry_offset` parameter |
+| `newt_simulateTask` returns `allowed: false` | Policy logic rejects the intent | Inspect `policies[i].allowed` and `policies[i].result` to find the denying policy |
+| Oracle returns empty data | WASM `run` function error or HTTP fetch failure | Test locally with `newton-cli policy simulate-wasm` |
+| Attestation expires before onchain submission | Too much time between evaluation and transaction | Reduce latency, or raise `expireAfter` in the policy set: an attestation expires after the smallest `expireAfter` among its policies |
 | On-chain verification fails | Operator set rotated or wrong chain | Check reference block and chain ID |
-| `TaskAlreadyExists` error | Duplicate intent hash | Modify the intent nonce or wait for the existing task |
-| Policy returns `CAP` instead of `ALLOW` | Intent value exceeds policy threshold | Check `data.params` values on your PolicyClient |
+| `TaskAlreadyExists` error | A task is already recorded under this task ID. The gateway gives every request a new task ID, so a resubmitted intent does not collide | Resubmit the request |
+| Policy denies an intent above a value limit | Intent value exceeds a threshold set in the policy params | Check `data.params` values on your PolicyClient |
 | A live task was non-compliant or failed and you need to know why | Oracle data, params, or operator errors | Fetch the task from the [Explorer API](/developers/reference/explorer-api#check-a-task-after-submitting-it) and inspect `error`, `operator_errors`, and `policy_task_data` |
 
 ## SDK Debugging
 
-Enable verbose logging in the Newton SDK:
+The SDK has no logging option. Simulate the intent first and print the full result, including each policy's verdict:
 
 ```typescript
-import { createPublicClient, http } from 'viem';
+import { createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
-import { newtonPublicClientActions } from '@newton-xyz/sdk';
+import { newtonWalletClientActions } from '@newton-xyz/sdk';
 
-const client = createPublicClient({
+const client = createWalletClient({
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
   chain: sepolia,
   transport: http(),
-}).extend(newtonPublicClientActions());
+}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }));
 
 // Simulate first to debug
-const simulation = await client.simulateTask({
+const simulation = await client.simulatePolicy({
   policyClient: '0xYourPolicyClientAddress',
+  chainId: sepolia.id,
   intent: { /* ... */ },
+  wasmArgs: ['0x'], // One slot per policy
 });
 
 console.log('Simulation result:', JSON.stringify(simulation, null, 2));

@@ -16,6 +16,19 @@ export interface KycUserData {
 /** Well-known identity domain name strings. */
 export type IdentityDomainName = 'kyc'
 
+/**
+ * Result of linkApp: the identity owner's signed link authorization. Pass it to linkIdentityAsUser,
+ * with `BigInt(nonce)` and `BigInt(deadline)` for the nonce and deadline.
+ */
+export interface LinkAppResult {
+  signature: Hex
+  identityDomains: Hex[]
+  /** IdentityRegistry nonce of the identity owner, as a decimal string. */
+  nonce: string
+  deadline: number
+  identityOwner: Address
+}
+
 /** Parameters for linkIdentityAsSignerAndUser — caller is both identity owner and client user. */
 export interface LinkIdentityAsSignerAndUserParams {
   policyClient: Address

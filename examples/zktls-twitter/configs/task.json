@@ -8,8 +8,9 @@
     "chainId": 11155111,
     "functionSignature": "0x"
   },
-  "wasmArgs": "0x7b226d696e5f666f6c6c6f77657273223a313030302c22747769747465725f757365726e616d65223a226e6577746f6e5f70726f746f636f6c227d",
+  "wasmArgs": [
+    "0x7b226d696e5f666f6c6c6f77657273223a313030302c22747769747465725f757365726e616d65223a226e6577746f6e5f70726f746f636f6c227d"
+  ],
   "timeout": 60,
-  "useTwoPhase": true,
   "proofCid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 }

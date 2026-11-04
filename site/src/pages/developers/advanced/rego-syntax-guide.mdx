@@ -506,59 +506,59 @@ Until domain-specific built-ins are available for a new domain, policy authors c
 
 ---
 
-## Privacy Extensions (`newton.privacy.*`)
+## Confidential Data Extensions (`newton.confidential.*`)
 
-Provider-managed confidential data (blacklists, allowlists, sanctions lists) uploaded via the `ConfidentialDataRegistry`. Operators fetch and decrypt this data at task time based on the `confidential_domain` in `policyParams`.
+Provider-managed confidential data (blacklists, allowlists, sanctions lists) uploaded via the `ConfidentialDataRegistry`. At task time, operators fetch and decrypt the data of every domain granted to the policy client (`getGrantedDomains(policyClient)`), so the policy takes no domain parameter. See [Privacy Flows](/developers/guides/privacy-flows#2-confidential-data-provider-managed) for the upload and grant steps.
 
 Two access patterns:
-- **Domain-namespaced builtins** (primary): `newton.privacy.blacklist.contains(addr)`. Type-safe with address normalization.
-- **Generic field accessor** (escape hatch): `newton.privacy.get("field_name")`. Returns raw field values across all registered privacy domains.
+- **Domain-namespaced builtins** (primary): `newton.confidential.blacklist.contains(addr)`. Type-safe with address normalization. Only data published under `keccak256("newton.confidential.blacklist")` or `keccak256("blacklist")` reaches the blacklist builtins, and `keccak256("newton.confidential.allowlist")` or `keccak256("allowlist")` the allowlist builtins. Operators register these builtins only when the task loads data for that domain; without it, a call fails evaluation with `could not find function`.
+- **Generic field accessor** (escape hatch): `newton.confidential.get("field_name")`. Returns raw field values across all granted confidential domains.
 
-### Blacklist Domain (`newton.privacy.blacklist.*`)
+### Blacklist Domain (`newton.confidential.blacklist.*`)
 
-#### `newton.privacy.blacklist.contains`
+#### `newton.confidential.blacklist.contains`
 
 ```rego
-result := newton.privacy.blacklist.contains(address)
+result := newton.confidential.blacklist.contains(address)
 ```
 
 Returns `true` if `address` is in the provider's blacklist. Addresses are normalized to lowercase hex before comparison.
 
-#### `newton.privacy.blacklist.count`
+#### `newton.confidential.blacklist.count`
 
 ```rego
-result := newton.privacy.blacklist.count()
+result := newton.confidential.blacklist.count()
 ```
 
 Returns the number of addresses in the blacklist.
 
-### Allowlist Domain (`newton.privacy.allowlist.*`)
+### Allowlist Domain (`newton.confidential.allowlist.*`)
 
-#### `newton.privacy.allowlist.contains`
+#### `newton.confidential.allowlist.contains`
 
 ```rego
-result := newton.privacy.allowlist.contains(address)
+result := newton.confidential.allowlist.contains(address)
 ```
 
 Returns `true` if `address` is in the provider's allowlist.
 
-#### `newton.privacy.allowlist.count`
+#### `newton.confidential.allowlist.count`
 
 ```rego
-result := newton.privacy.allowlist.count()
+result := newton.confidential.allowlist.count()
 ```
 
 Returns the number of addresses in the allowlist.
 
-### Generic Field Accessor (`newton.privacy.get`)
+### Generic Field Accessor (`newton.confidential.get`)
 
 ```rego
-value := newton.privacy.get("field_name")
+value := newton.confidential.get("field_name")
 ```
 
-Returns `undefined` if the field does not exist, which allows `default` rules to apply.
+Returns `undefined` if the field does not exist, which allows `default` rules to apply. Blacklist data provides the fields `blacklist_addresses` and `blacklist_count`, allowlist data `allowlist_addresses` and `allowlist_count`, and any other granted domain the top-level keys of its decrypted JSON.
 
-### Privacy Policy Examples
+### Confidential Data Policy Examples
 
 #### Blacklist check (deny blacklisted senders)
 
@@ -568,7 +568,7 @@ package sanctions_check
 default allow := false
 
 allow if {
-    not newton.privacy.blacklist.contains(input.from)
+    not newton.confidential.blacklist.contains(input.from)
 }
 ```
 
@@ -580,11 +580,11 @@ package allowlist_only
 default allow := false
 
 allow if {
-    newton.privacy.allowlist.contains(input.from)
+    newton.confidential.allowlist.contains(input.from)
 }
 ```
 
-#### Combined identity + privacy check
+#### Combined identity and confidential data check
 
 ```rego
 package compliant_transfer
@@ -596,9 +596,9 @@ allow if {
     newton.identity.kyc.check_approved()
     newton.identity.kyc.age_gte(18)
     # Sender must not be blacklisted
-    not newton.privacy.blacklist.contains(input.from)
+    not newton.confidential.blacklist.contains(input.from)
     # Recipient must be on allowlist
-    newton.privacy.allowlist.contains(input.to)
+    newton.confidential.allowlist.contains(input.to)
 }
 ```
 

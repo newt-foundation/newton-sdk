@@ -25,7 +25,7 @@ This guide walks through the end-to-end integration of Newton Verifiable Credent
 |-------------|---------|
 | **Newton SDK** | `@newton-xyz/sdk` installed in your JavaScript/TypeScript app |
 | **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
-| **Policy client contract** | Must inherit `NewtonPolicyClient` + `EIP712` and be registered with `PolicyClientRegistry` |
+| **Policy client contract** | Must inherit `NewtonPolicyClient` and be registered with `PolicyClientRegistry` |
 | **Identity domain** | A fixed `bytes32` hex value for your application — the output of `keccak256("kyc")` |
 | **KYC vendor** | A third-party vendor to collect user identity data. The vendor's output must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields). |
 
@@ -94,24 +94,24 @@ policy_files/
 └── policy_metadata.json
 ```
 
-Generate your `policy_cids.json` file with the Newton CLI command documented [here](/developers/guides/deploying-with-cli#step-1-generate-cids-and-upload-to-ipfs).
+Generate your `policy_cids.json` file with the Newton CLI command documented [here](/developers/reference/command-line-tool#upload-cids).
 
 **Deploy the policy contract**
 
 Once you have `policy_cids.json`, run:
 
 ```bash
-newton-cli policy deploy --cids policy_cids.json
+newton-cli policy deploy --policy-cids policy_cids.json
 ```
 
 After deploying, note your policy contract address — you'll need it in Step 2.
 
 ## Step 2: Deploy a Policy Client Contract
 
-Your policy client must inherit from both `NewtonPolicyClient` and `EIP712`. See the [Reference](/developers/verified-credential/reference#sample-policy-client) for a complete sample contract.
+Your policy client inherits `NewtonPolicyClient`, which implements the EIP-712 domain itself, so don't add OpenZeppelin's `EIP712`. See the [Reference](/developers/verified-credential/reference#sample-policy-client) for a complete sample contract.
 
 Key requirements:
-- Inherit `NewtonPolicyClient` and `EIP712`
+- Inherit `NewtonPolicyClient`, which provides the EIP-712 domain
 - Call `_initNewtonPolicyClient(policyTaskManager, owner)` in the constructor
 - Register the contract with the `PolicyClientRegistry` — see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration)
 
@@ -161,17 +161,17 @@ The user sees a confirmation prompt in the Newton identity popup to verify the K
 
 ### 5a. Initiate Identity Link
 
-Call `linkApp` to link the user's registered identity to your policy client contract:
+Call `linkApp` to ask the user to link their registered identity to your policy client contract:
 
 ```typescript
-await walletClient.linkApp({
+const link = await walletClient.linkApp({
   appWalletAddress: userWalletAddress,
   appClientAddress: yourPolicyClientAddress,
   appIdentityDomain: '0xa29cad97d4110e8822dedef32879f84a8e8889bf965ff9c57998689e2fdafbc4',
 })
 ```
 
-This creates an association between the user's Newton identity wallet and your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.
+Once you submit it in step 5b, the link associates the user's Newton identity wallet with your policy client contract in the `IdentityRegistry`. After this link is established, Newton's policy engine can access the user's registered KYC data when evaluating tasks submitted through your policy client.
 
 A user's registered identity data can be reused across any application sharing the same identity domain, not just yours. Before calling `linkApp`, surface this to the user in plain language: linking grants your app access to the same KYC data other apps may already have, and other apps may gain access to data registered here.
 
@@ -179,21 +179,33 @@ You can find the `IdentityRegistry` contract address in [Contract Addresses](/de
 
 ### 5b. User Confirms the Link
 
-The user completes the link confirmation in the Newton identity popup. Under the hood, this calls `linkIdentityAsUser` on the `IdentityRegistry` contract — a transaction signed by the user's Newton identity wallet.
+The user confirms the link in the Newton identity popup by signing it with their Newton identity wallet. The popup sends no transaction: `linkApp` resolves with the signed values, and your app submits them by calling `linkIdentityAsUser` on the `IdentityRegistry` from the user's app wallet (`appWalletAddress`). The registry records `msg.sender` as the linked client user, so a transaction from any other account reverts with `InvalidSignature()`. Pass the values through unchanged, because the signature covers them.
 
 ```typescript
-// This is called internally by the SDK when the user confirms — shown here for reference
+await walletClient.linkIdentityAsUser({
+  identityOwner: link.identityOwner,
+  policyClient: yourPolicyClientAddress,
+  identityDomains: link.identityDomains,
+  identityOwnerSignature: link.signature,
+  identityOwnerNonce: BigInt(link.nonce),
+  identityOwnerDeadline: BigInt(link.deadline),
+})
+```
+
+The call sends this `IdentityRegistry` function:
+
+```solidity
 function linkIdentityAsUser(
     address _identityOwner,      // user's Newton identity wallet
     address _policyClient,       // your policy client contract
     bytes32[] _identityDomains,  // [your identity domain]
-    bytes _signature,            // user's authorization signature
+    bytes _signature,            // identity owner's signature over the link
     uint256 _nonce,
     uint256 _deadline
 )
 ```
 
-See [SDK & Contract Reference](/developers/verified-credential/reference#linkidentityasuser) for the full function signature and return value.
+See [SDK & Contract Reference](/developers/verified-credential/reference#linkidentityasuser) for the full function signature and parameters.
 
 ## Step 6: Submit a Task
 
@@ -215,11 +227,11 @@ const intent = {
 **2. Sign the intent using your policy client's EIP712 domain**
 
 ```typescript
-// The EIP712 domain name and version must match your policy client's constructor args
+// NewtonPolicyClient fixes the domain name and version; eip712Domain() on your policy client returns them
 const intentSignature = await walletClient.signTypedData({
   account: userAddress,
   domain: {
-    name: 'NewtonPolicyWallet',  // must match EIP712("NewtonPolicyWallet", "1")
+    name: 'NewtonPolicyClient',  // fixed by the NewtonPolicyClient mixin
     version: '1',
     chainId: 11155111,
     verifyingContract: yourPolicyClientAddress,
@@ -251,12 +263,15 @@ const { result } = await newtonWalletClient.evaluateIntentDirect({
   intent,
   intentSignature,
   timeout: 60,
-  identityDomain: IDENTITY_DOMAIN,
   wasmArgs: ['0x'], // One pure-Rego identity policy; align with your actual set
 })
 // result.allowed — true if the policy passed
 // result.task, result.taskResponse, result.blsSignature — needed for Step 7
 ```
+
+:::warning
+Identity policies need `intentSignature`. Operators recover the signer under your policy client's EIP-712 domain and load the identity data of every domain linked to the policy client for that signer. If the signature is missing, operators skip identity data without an error and the identity policy denies. If it is present but does not recover to `intent.from`, the gateway rejects the task and `evaluateIntentDirect` throws a `GatewayError` (`intent_signature does not verify: ...`). The task request takes no identity domain: SDK 1.3.1 and earlier send `identityDomain`, and the gateway ignores it.
+:::
 
 ## Step 7: Execute On-Chain Transaction with Attestation
 
