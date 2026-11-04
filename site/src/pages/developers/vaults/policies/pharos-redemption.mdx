@@ -39,10 +39,10 @@ Sent by the oracle as the `X-API-Key` request header.
 
 Two GET requests against `https://api.pharos.watch`:
 
-1. `/api/redemption-backstops` — the redemption map. This endpoint takes **no query parameters at all** and returns all ~328 coins as a 1.1 MB document. `JSON.parse` on that exhausts the WASM heap, so this coin's object is cut out of the **raw text** and only that ~3 KB is parsed.
-2. `/api/stablecoin-reserves/{id}` — ~1.4 KB, reserve composition and provenance.
+1. `/api/redemption-backstops`: the redemption map. This endpoint takes **no query parameters at all** and returns all ~328 coins as a 1.1 MB document. `JSON.parse` on that exhausts the WASM heap, so this coin's object is cut out of the **raw text** and only that ~3 KB is parsed.
+2. `/api/stablecoin-reserves/{id}`: ~1.4 KB, reserve composition and provenance.
 
-"Available" means Pharos actually reported a route for this asset — an absent entry is a genuine "no redemption path", not a soft null.
+"Available" means Pharos actually reported a route for this asset. An absent entry is a genuine "no redemption path", not a soft null.
 
 | Field | What it means | Why the policy uses it |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ Two GET requests against `https://api.pharos.watch`:
 | `holder_eligibility` / `provider` / `source_mode` | Who qualifies, and who Pharos attributes the route to | Reviewer context |
 | `immediate_capacity_usd` / `modeled_exit_size_usd` | What can be redeemed now, and the size Pharos modelled | Basis for the capacity multiple |
 | `capacity_multiple` | `immediate_capacity_usd / transaction_amount_usd`, or `null` when no amount was supplied | Gated by `min_capacity_multiple` |
-| `capacity_confidence` | Qualitative band (e.g. `documented-bound`) — a **string**, not a number | Gated by `approved_capacity_confidence` |
+| `capacity_confidence` | Qualitative band (e.g. `documented-bound`). A **string**, not a number | Gated by `approved_capacity_confidence` |
 | `route_score` / `access_score` / `settlement_score` / `capacity_score` | Pharos's 0-100 quality measures | `route_score` gated by `min_route_score` |
 | `fee_bps` / `queue_enabled` | Cost and whether redemptions queue | Reviewer context |
 | `reserve_composition` | `{slice name: percentage}` | Reviewer context |
@@ -64,7 +64,7 @@ Two GET requests against `https://api.pharos.watch`:
 
 ## Per-call wasmArgs
 
-This pack ships **no `prepareQuery`**: nothing on-chain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call.
+This pack ships **no `prepareQuery`**: nothing onchain maps an ERC-20 address to a Pharos stablecoin id, so the curator supplies it per call.
 
 | Field | Required? | Notes |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ From the CLI or dashboard these go in the simulate payload's `wasm_args`. VaultK
 | `approved_route_families` | `string[]` | Acceptable route families (observed: `offchain-issuer`) |
 | `approved_access_models` | `string[]` | Acceptable access models (observed: `issuer-api`) |
 | `approved_settlement_models` | `string[]` | Acceptable settlement models (observed: `same-day`) |
-| `required_route_status` | `string` | Status a working route must report — **`open`**, not `active` |
+| `required_route_status` | `string` | Status a working route must report: **`open`**, not `active` |
 | `min_route_score` | `number` | Minimum 0-100 route score |
 | `approved_capacity_confidence` | `string[]` | Acceptable confidence bands; an empty array disables the check |
 | `min_capacity_multiple` | `number` | Required immediate capacity as a multiple of the position |
@@ -109,7 +109,7 @@ Every rule this policy enforces:
 
 ### Route Status
 
-Pharos reports **`open`** for a working route, not `active`. Configuring `active` — the intuitive guess — denies every healthy asset. A test pins this.
+Pharos reports **`open`** for a working route, not `active`. Configuring `active`, the intuitive guess, denies every healthy asset. A test pins this.
 
 ```rego
 deny contains "route_status_not_approved" if {
@@ -244,10 +244,10 @@ Composing this pack into a VaultKit composite does not move its params: the pack
 
 ## Notes
 
-- **`required_route_status` is `"open"`, not `"active"`** — configuring `active` denies every healthy asset. A test pins this.
+- **`required_route_status` is `"open"`, not `"active"`.** Configuring `active` denies every healthy asset. A test pins this.
 - **Pharos publishes no daily limit and no redemption minimum.** Sizing is therefore against `immediate_capacity_usd`, and there is no `below_min_redeem` rule.
 - **There is no numeric confidence either.** `capacity_confidence` is a qualitative band (`documented-bound`), so route quality is gated on the 0-100 `route_score`.
 - **`transaction_amount_usd` is caller-supplied and NOT attested.** See [`pharos_treasury`](/developers/vaults/policies/pharos-treasury) for the same caveat.
 - `null` is the oracle's "not reported", distinct from `0`. Null optional fields fail soft; a **missing** key blocks `allow`.
 - Listing `capacity_multiple` in `deny_on_missing_fields` requires every call to supply a position size. Because the list is per field, you can require the rest without that.
-- **This pack rides within about 40% of a hard runtime memory limit.** `/api/redemption-backstops` has no filter, so the oracle downloads all ~1.14 MB and slices this coin's ~3 KB object out of the raw text. A `MAX_SLICEABLE_BYTES` guard trips first and returns a readable error — which fails closed — rather than trapping the component with no verdict. The durable fix is a per-asset endpoint from Pharos.
+- **This pack rides within about 40% of a hard runtime memory limit.** `/api/redemption-backstops` has no filter, so the oracle downloads all ~1.14 MB and slices this coin's ~3 KB object out of the raw text. A `MAX_SLICEABLE_BYTES` guard trips first and returns a readable error (which fails closed) rather than trapping the component with no verdict. The durable fix is a per-asset endpoint from Pharos.

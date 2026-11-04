@@ -99,7 +99,7 @@ The top-level task summary can say that quorum was not reached even when operato
 
 ## Blocked-Intent Errors
 
-`assertIntentBlocked(...)` distinguishes three important outcomes:
+`assertIntentBlocked(...)` distinguishes three outcomes:
 
 - A confirmed `InvalidAttestation` simulation returns `{ blocked: true, taskId, reason }`.
 - An allowed action throws `PolicyNotDeniedError`.
