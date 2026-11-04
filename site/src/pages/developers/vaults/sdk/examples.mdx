@@ -1,6 +1,6 @@
 ---
 title: "Examples"
-description: "VaultKit 2.1 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions."
+description: "VaultKit 3.0 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions."
 keywords:
   - vaultkit examples
   - definePolicy
@@ -8,7 +8,7 @@ keywords:
 showAskAi: false
 ---
 
-# Examples [VaultKit 2.1 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions.]
+# Examples [VaultKit 3.0 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions.]
 
 ## Declare a Published Policy
 
@@ -37,7 +37,10 @@ const client = await createShield({
   rpc: process.env.RPC_URL!,
   vault: '0xVault',
   policy,
-  policyAddress: '0xNewtonPolicy',
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+    chainalysis: '0xChainalysisPolicy',
+  },
   expectedParams: {
     vaultsfyi: { risk_score_floor: 80 },
     chainalysis: { deny_on_sanctioned: true },
@@ -45,7 +48,7 @@ const client = await createShield({
 })
 ```
 
-An existing attachment must pass the verification ladder. A mismatch throws instead of silently changing the policy.
+An existing attachment must pass the verification ladder. A mismatch throws instead of silently changing the policy set.
 
 ## Use a Bare Policy
 
@@ -71,7 +74,7 @@ const client = await createShield({
 })
 ```
 
-Use `policyFromAddress(...)` for a monolithic or calldata-only policy that does not use the composite module model. Do not also pass `policyAddress`; the address is already part of the bare policy.
+Use `policyFromAddress(...)` for one deployed policy that does not use the composite module model. Do not pass `policies` or `expectedWasmCids`; the bare policy already carries its one address.
 
 ## Add Policy-Level Parameters
 
@@ -98,7 +101,7 @@ await client.setParams({
 })
 ```
 
-The gate reads these composite-wide values under `data.params.params._policy`.
+These composite-wide values are the `_policy` gate's own params, which its Rego reads at `data.params.<field>`. The draft needs the gate's deployed address as `policies._policy` at `createShield(...)`.
 
 ## Extend with a Typed Vendor Module
 
@@ -140,7 +143,7 @@ With `sendCall(...)`, your integration owns the target, calldata, value, and hum
 ## Inspect and Reverify
 
 ```typescript
-console.log(client.policy.address)
+console.table(client.policy.policies)
 console.table(client.policy.modules)
 console.log(client.verification.achievedRung)
 
@@ -148,7 +151,7 @@ await client.setParams(nextParams)
 const current = await client.reverify()
 ```
 
-For independent manifest inspection, import `introspectComposite(...)` from `@newton-xyz/policy-core`.
+For an independent read of the Shield's policy set, import `introspectComposite(...)` or `getPolicyManifest(...)` from `@newton-xyz/policy-core`.
 
 ## Prove a Denied Intent Is Blocked
 
@@ -193,7 +196,7 @@ const baseClient = await createShield({
   rpc: baseRpc,
   vault: baseVault,
   policy: basePolicy,
-  policyAddress: basePolicyAddress,
+  policies: { vaultsfyi: baseVaultsfyiPolicy },
 })
 
 const ethereumClient = await createShield({
@@ -202,6 +205,6 @@ const ethereumClient = await createShield({
   rpc: ethereumRpc,
   vault: ethereumVault,
   policy: ethereumPolicy,
-  policyAddress: ethereumPolicyAddress,
+  policies: { vaultsfyi: ethereumVaultsfyiPolicy },
 })
 ```

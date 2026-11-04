@@ -61,7 +61,7 @@ Each clone runs `initialize(...)` once. Initialization:
 
 1. Wires the Newton policy-client mixin.
 2. Sets the curator owner.
-3. Binds the initial policy address when provided.
+3. Leaves the policy set unbound: `policy` must be `address(0)`, and the owner binds the set afterwards with `setPolicies`.
 4. Stores `bypassDelaySeconds`.
 5. Enforces a minimum bypass delay of one day.
 

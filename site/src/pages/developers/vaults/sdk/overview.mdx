@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "VaultKit 2.1 declares typed policies and routes vault-manager actions through Newton attestations."
+description: "VaultKit 3.0 declares typed policies and routes vault-manager actions through Newton attestations."
 keywords:
   - vault sdk
   - newton vaultkit
@@ -12,7 +12,7 @@ showAskAi: false
 import { Card } from 'vocs'
 
 
-# Overview [VaultKit 2.1 declares typed policies and routes vault-manager actions through Newton attestations.]
+# Overview [VaultKit 3.0 declares typed policies and routes vault-manager actions through Newton attestations.]
 
 Newton VaultKit is a TypeScript SDK and companion Solidity contract system for vault curators. It routes manager actions through a Newton Policy Protocol attestation gate before the underlying vault receives the call.
 
@@ -40,8 +40,8 @@ sequenceDiagram
 ## Core Pieces
 
 - **Shield clones:** One audited implementation per chain, with deterministic per-curator clones deployed through `ShieldFactory`.
-- **Policy-first authoring:** `definePolicy().with(...)` combines published packs and custom `defineOracle(...)` outputs.
-- **Policy core:** `@newton-xyz/policy-core` owns oracle authoring, manifest encoding, schema generation, introspection, and provenance classification.
+- **Policy-first authoring:** `definePolicy().with(...)` combines published packs and custom `defineOracle(...)` outputs into a policy set, one deployed `NewtonPolicy` per module, evaluated as a fail-closed AND.
+- **Policy core:** `@newton-xyz/policy-core` owns oracle authoring, per-policy params encoding, schema generation, policy-set introspection, and provenance classification.
 - **Vendor modules:** Typed wrappers for MetaMorpho, Morpho Blue, Euler Earn, EVault, and Superform manager actions.
 - **Generic calls:** `shield.sendCall(...)` supports protocols and manager actions without a first-class vendor module.
 - **Typed errors:** SDK failures map to stable error classes such as `PolicyDeniedError`, `AttestationTimeoutError`, `ShieldExecutionError`, `ParamMismatchError`, `GatewayError`, and `UnsupportedChainError`.

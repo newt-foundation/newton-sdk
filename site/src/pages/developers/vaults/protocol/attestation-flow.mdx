@@ -37,7 +37,7 @@ sequenceDiagram
 
 ## 1. Intent Construction
 
-The vendor module or `sendCall(...)` path produces calldata for the target vault action. The policy pack prepares `wasmArgs`. The SDK assembles an `Intent` that binds:
+The vendor module or `sendCall(...)` path produces calldata for the target vault action. Each policy pack prepares its `wasmArgs`: one entry per policy in the Shield's set, in set order, with each module getting its own slice and a pure-Rego policy such as the `_policy` gate getting `0x`. The SDK assembles an `Intent` that binds:
 
 - The curator signer.
 - The target contract.
@@ -49,18 +49,18 @@ The curator signs the intent with EIP-712. That signature lets operators and the
 
 ## 2. Task Submission
 
-The SDK sends the signed intent, `wasmArgs`, and policy reference to Newton Gateway. The gateway returns a task id and coordinates policy evaluation.
+The SDK sends the signed intent and the per-policy `wasmArgs` array to Newton Gateway. The gateway freezes the task to the Shield's current policy set, returns a task id, and coordinates policy evaluation. Before submitting onchain, the SDK requires the returned task to be frozen to the same ordered set it built the args for.
 
 ## 3. Operator Evaluation
 
-Operators load the policy WASM and evaluate it against:
+Operators evaluate every policy in the frozen set. For each one, they run its WASM oracle, if it has one, on that policy's `wasmArgs` entry, then its Rego against:
 
 - The intent.
-- The Shield's current policy params.
-- The per-call `wasmArgs`.
+- That policy's own params from the Shield's set.
+- That oracle's output only.
 - Any allowed external data or encrypted secrets the pack needs.
 
-If the policy denies, the SDK raises `PolicyDeniedError`. The Shield never receives a valid approval for that action.
+The response's `allowed` is the AND of every policy's verdict. If any policy denies, the SDK raises `PolicyDeniedError`. The Shield never receives a valid approval for that action.
 
 ## 4. Attestation Commit
 
@@ -94,4 +94,4 @@ Freshness comes from the policy pack. Packs commonly include hashes or snapshots
 | BLS verification | AVS task manager | Inline in Shield |
 | Gas | Lower | Higher |
 | Latency | Higher | Lower |
-| SDK argument | `shield.sendCall(args, 'ATTESTATION')` | `shield.sendCall(args, 'DIRECT')` |
+| SDK argument | Not in VaultKit 3.0: the `'ATTESTATION'` mode throws `unimplemented, waiting for merge` | `shield.sendCall(args, 'DIRECT')` |

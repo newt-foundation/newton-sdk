@@ -41,7 +41,7 @@ function initialize(
 ) external initializer;
 ```
 
-Called once by `ShieldFactory.createShield`. Reverts if the bypass delay is below `MIN_BYPASS_DELAY`.
+Called once by `ShieldFactory.createShield`. Reverts if the bypass delay is below `MIN_BYPASS_DELAY`, and with `PolicySetRequired()` if `policy != address(0)`. A 0.7 Shield binds a policy set, so a clone is born unbound and the owner binds the set afterwards with the inherited `setPolicies`. Until then its `policyId` is `bytes32(0)`, and `execute` or `executeDirect` from an approved delegate reverts `InvalidAttestation()`.
 
 ### `execute`
 
@@ -128,23 +128,34 @@ The SDK surfaces many of these through `ShieldExecutionError.cause`.
 
 ## Inherited Policy Client Methods
 
-The following controls describe the legacy Shield interface. Verify the deployed Shield ABI before using them. A policy-set-capable Shield instead inherits `setPolicies(PolicySpec[])`, `getPolicies()`, `policyRevision()`, `getPolicyId()`, and `getPolicySetSnapshot()`; see [Smart Contract Integration](/developers/guides/smart-contract-integration#api-reference). Upgrading the protocol does not automatically upgrade an existing Shield.
-
-Legacy owner controls:
+VaultKit 3.0.0 targets a policy-set Shield built from the 0.7 contracts. Upgrading the protocol does not automatically upgrade an existing Shield; see [Smart Contract Integration](/developers/guides/smart-contract-integration#api-reference).
 
 ```solidity
-function setPolicy(INewtonPolicy.PolicyConfig memory policyConfig)
-    external onlyPolicyClientOwner returns (bytes32 policyId);
+// INewtonPolicyClient.PolicySpec / INewtonPolicy.PolicyConfig
+struct PolicySpec   { address policy; PolicyConfig config; }
+struct PolicyConfig { bytes policyParams; uint32 expireAfter; }
 
-function setPolicyAddress(address policy) public onlyPolicyClientOwner;
+// Owner-gated writers
+function setPolicies(PolicySpec[] calldata policies)
+    external onlyPolicyClientOwner returns (bytes32 policyId);
 function setPolicyClientOwner(address policyClientOwner) public onlyPolicyClientOwner;
 
-function getPolicyAddress() external view returns (address);
-function getPolicyConfig() external view returns (INewtonPolicy.PolicyConfig memory);
-function getPolicyId() external view returns (bytes32);
+// Public reads
+function getPolicies()          external view returns (PolicySpec[] memory);
+function getPolicyId()          external view returns (bytes32);
+function policyRevision()       external view returns (uint64);
+function getPolicySetSnapshot() external view
+    returns (bytes32 policyId, uint64 revision, PolicySpec[] memory policies);
+
+// Events
+event PoliciesUpdated(
+    bytes32 indexed previousPolicyId, bytes32 indexed newPolicyId, uint64 revision, PolicySpec[] policies
+);
 ```
 
-`setPolicy(...)` updates policy params and returns the new policy id. `setPolicyAddress(...)` binds a different policy contract. `setPolicyClientOwner(...)` transfers owner authority, commonly to a Safe.
+`setPolicies(...)` replaces the clone's whole policy set atomically and returns the new `policyId`. The set holds 1 to 8 entries, evaluated as a fail-closed AND. Each entry's policy must be registered by the TaskManager's policy factory, with a nonzero `expireAfter` and `policyParams` of at most 64 KiB. Every call bumps `policyRevision`, so rewriting identical entries still mints a new `policyId` and invalidates outstanding attestations. `getPolicySetSnapshot()` returns the id, revision, and set in one call; it is what the SDK and the gateway read. `setPolicyClientOwner(...)` transfers owner authority, commonly to a Safe.
+
+The pre-0.7 single-policy surface (`setPolicy`, `setPolicyAddress`, `getPolicyAddress`, `getPolicyConfig`) no longer exists on the mixin.
 
 ## `ShieldFactory`
 
@@ -167,7 +178,7 @@ function createShield(
 ) external returns (address shield);
 ```
 
-Deploys and initializes a deterministic clone. Reverts if curator or vault is zero, if the predicted clone already exists, or if initialization fails.
+Deploys and initializes a deterministic clone. Reverts if curator or vault is zero, if the predicted clone already exists, or if initialization fails. Pass `policy = address(0)`: the factory forwards it unchanged, and a 0.7 Shield rejects anything else with `PolicySetRequired()`. The curator binds the policy set afterwards with `setPolicies`, which VaultKit's `setParams(...)` calls.
 
 ### View Helpers
 

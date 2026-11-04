@@ -1,6 +1,6 @@
 ---
 title: "Reference"
-description: "API reference for @newton-xyz/vaultkit 2.1."
+description: "API reference for @newton-xyz/vaultkit 3.0."
 keywords:
   - vaultkit api
   - createShield
@@ -9,7 +9,7 @@ keywords:
 showAskAi: false
 ---
 
-# Reference [API reference for `@newton-xyz/vaultkit` 2.1.]
+# Reference [API reference for `@newton-xyz/vaultkit` 3.0.]
 
 ## Installation
 
@@ -17,7 +17,7 @@ showAskAi: false
 pnpm add @newton-xyz/vaultkit @newton-xyz/policy-core viem zod
 ```
 
-Node 22+ is required. `@newton-xyz/policy-core`, `viem`, and `zod` are peer dependencies. Morpho packages are optional peer dependencies and are only needed for the Morpho vendor modules.
+Node 22+ is required. `@newton-xyz/policy-core` (`^0.3.0`), `viem`, and `zod` are peer dependencies. Morpho packages are optional peer dependencies and are only needed for the Morpho vendor modules.
 
 ```typescript
 import { VERSION } from '@newton-xyz/vaultkit'
@@ -53,7 +53,7 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
 ```
 
 - `.with(module)` appends a published pack or custom oracle.
-- `.withPolicyParams(schema)` declares the reserved `_policy` params object.
+- `.withPolicyParams(schema)` declares the params schema of the `_policy` gate, a pure-Rego policy in the set. It requires `policies._policy` at `createShield(...)`.
 - Chain reads are deferred until `createShield(...)`.
 
 ## `policyFromAddress`
@@ -67,7 +67,7 @@ function policyFromAddress(config: {
 }): BarePolicy
 ```
 
-Use this for a deployed monolithic or calldata-only policy. `ParamCodec` can supply `encode` and `decode` to enable params methods and higher verification rungs.
+Use this for one deployed policy, such as a calldata-only Rego or one Rego with its own WASM oracle. The Shield binds it as a one-entry policy set. `ParamCodec` can supply `encode` and `decode` to enable params methods and higher verification rungs.
 
 ## `createShield`
 
@@ -81,30 +81,35 @@ function createShield(config: CreateShieldConfig): Promise<ShieldClient>
 | `walletClient` | `WalletClient` | Curator signer; its chain selects the deployment slot. |
 | `rpc` | `string` | RPC URL for reads and writes. |
 | `policy` | `PolicyDraft \| BarePolicy` | Policy declaration or bare deployed policy. |
-| `policyAddress?` | `Address` | Required for `PolicyDraft`; omit for `BarePolicy`. |
+| `policies?` | `{ <shortId>: Address, _policy?: Address }` | `PolicyDraft` only, and required there: each module's deployed `NewtonPolicy`, keyed by short pack ID, plus the optional `_policy` gate. Forbidden for a `BarePolicy`. |
+| `expectedWasmCids?` | `{ <shortId>?: string }` | `PolicyDraft` only: pin a module policy deployed against an earlier WASM of its pack. |
 | `vault` | `Address` | Managed target used in deterministic addressing. |
 | `publicClient?` | `PublicClient` | Reuse an existing client for reads. |
 | `env?` | `GatewayEnv` | Must agree with `policy.env` when provided. |
 | `gatewayUrl?` | `string` | Gateway override for testing. |
 | `version?` | `bigint` | Addressing version; defaults to `0n`. |
+| `deployment?` | `ShieldDeployment` | A Shield factory to use instead of the published `SHIELD_DEPLOYMENTS` slot. |
 | `policyClientAddress?` | `Address` | Attach to a known address instead of predicting. |
-| `expectedParams?` | `Record<string, unknown>` | Require canonical byte equality at attach time. |
+| `expectedParams?` | `Record<string, unknown>` | Require canonical byte equality for every policy at attach time. |
 | `attachWithoutVerify?` | `boolean` | Explicit recovery-only escape below verification rung 1. |
 | `mustDeploy?` | `boolean` | Fail if an existing deployment would be attached. |
 | `bypassDelaySeconds?` | `bigint` | Deployment configuration; default seven days, minimum one day. |
-| `attestationExpiration?` | `bigint` | Per-call expiration override. |
+| `attestationExpiration?` | `bigint` | The `expireAfter`, in blocks, that `setParams` binds each policy with; default 50. |
 | `wsRpcUrl?` | `string` | WebSocket RPC for subscription-based paths. |
+
+VaultKit 3.0.0 publishes no Shield factory deployment: every `SHIELD_DEPLOYMENTS` slot is `null`. `createShield(...)` throws `ShieldDeploymentNotFoundError` unless you attach to an existing clone with `policyClientAddress` or pass `deployment`.
 
 ## `ShieldClient`
 
 | Member | Purpose |
 | --- | --- |
-| `policy` | Resolved policy address, chain, environment, params codec, and modules. |
+| `policy` | Resolved policy set: `policies` (`{ id, address }[]`, in set order), `modules`, `chainId`, `env`, and a bare policy's params codec. |
 | `verification` | Attach-time `VerificationResult`. |
 | `policyClientAddress` | Onchain client address. |
-| `setParams(params)` | Encode and store policy configuration. |
-| `encodeParams(params)` | Return the exact encoded bytes without writing. |
-| `uploadSecrets(secrets)` | Validate, encrypt, and upload per-module secrets. |
+| `setParams(params)` | Bind the policy set through `setPolicies`, one entry per policy. |
+| `encodeParams(params)` | Return the `PolicySpec[]` that `setParams` would write, without writing. |
+| `setPolicies(specs)` | Replace the whole policy set with a `PolicySpec[]` you build, for sets outside the module model. |
+| `uploadSecrets(secrets)` | Validate, encrypt, and upload one envelope per module, scoped to that module's policy. A bare policy uses the `BARE_POLICY_ID` key, `'policy'`. |
 | `sendCall(args, mode?, timeoutMs?)` | Evaluate and execute a generic manager action. |
 | `assertIntentBlocked(args, timeoutMs?)` | Confirm that a denied intent is rejected, without mining a transaction. |
 | `prepareIntent(args)` | Build and sign an intent without submitting it. |
@@ -114,12 +119,24 @@ function createShield(config: CreateShieldConfig): Promise<ShieldClient>
 ## `SendCallArgs`
 
 ```typescript
-interface SendCallArgs {
+interface SendCallArgs<TModules> {
   to: Address
   data: Hex
   value?: bigint
   functionSignature: string
-  prepareQueryOptions?: Record<string, unknown>
+  prepareQueryOptions?: PrepareQueryOptions<TModules>
+}
+```
+
+`prepareQueryOptions` is keyed by short pack ID, and each value is typed to that module's own options. There is no per-call `wasmArgs` field; see [Per-Call Inputs](/developers/vaults/sdk/policies#per-call-inputs).
+
+```typescript
+interface PolicySpec {
+  policy: Address
+  config: {
+    policyParams: Hex
+    expireAfter: number
+  }
 }
 ```
 
@@ -132,6 +149,8 @@ interface SendCallResult {
   evaluationResult: boolean
 }
 ```
+
+Only `'DIRECT'` works in VaultKit 3.0. The type still lists `'ATTESTATION'`, but that path throws `unimplemented, waiting for merge`.
 
 ## `assertIntentBlocked`
 
@@ -214,12 +233,13 @@ Import these directly from `@newton-xyz/policy-core`:
 
 - `defineOracle`
 - `defineComposite`
+- `encodeCompositePolicyPack`
+- `generateCompositeParamsSchema`
 - `introspectComposite`
+- `getPolicyManifest`
 - `classifyProvenance`
-- Manifest encoders and decoders
-- Composite params-schema derivation
 
-VaultKit re-exports common policy types and `classifyProvenance`, but authoring and inspection utilities such as `defineOracle` and `defineComposite` come directly from `policy-core`.
+VaultKit re-exports common policy types, `classifyProvenance`, and the composite error classes, but authoring and inspection utilities such as `defineOracle` and `defineComposite` come directly from `policy-core`.
 
 ## Error Guard
 
@@ -227,7 +247,7 @@ VaultKit re-exports common policy types and `classifyProvenance`, but authoring 
 function isShieldError(error: unknown): error is ShieldError
 ```
 
-All SDK errors extend `ShieldError`. `NewtonShieldError` remains a deprecated compatibility alias.
+VaultKit's own errors extend `ShieldError`. `NewtonShieldError` remains a deprecated compatibility alias. The re-exported `policy-core` errors, such as `PolicyWasmCidMismatchError` and `CompositeModuleSetMismatchError`, extend plain `Error`, so code that calls both layers needs both catch arms.
 
 ## Related
 

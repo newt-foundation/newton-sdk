@@ -31,7 +31,7 @@ Xerberus recomputes the book's exposure, concentration and per-pool health facto
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
+This pack may not be published on your chain yet. Check [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) for its WASM CID on your `(chainId, env)` before deploying its policy.
 :::
 
 ### Secret
@@ -80,28 +80,7 @@ This pack ships **no `prepareQuery`**: the change being simulated comes from the
 | `chain` | Optional | `ethereum` only. Echoed in the output; Xerberus no longer takes a chain argument |
 | `window` | Optional | Xerberus data-window timestamp (ISO-8601). Pass the same value to every Xerberus pack |
 
-From the SDK:
-
-```typescript
-await shield.morpho.submitCap(vault, marketParams, newCap, {
-  wasmArgs: {
-    xerberus_what_if: {
-      wallets: [vault],
-      legs: [
-        {
-          action: 'add',
-          side: 'collateral',
-          market_uid: 'crvusd:0x100daa78fc509db39ef7d04de0c1abd299f4c6ce',
-          usd: 1_000_000,
-        },
-      ],
-      window,
-    },
-  },
-})
-```
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later. See [Policies](/developers/vaults/sdk/policies#per-call-inputs).
+VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module without a `prepareQuery` gets `{}`, which must still pass its `wasmArgsSchema`, so `sendCall` fails closed with `InvalidConfigurationError` when a required field is missing. See [Policies](/developers/vaults/sdk/policies#per-call-inputs) for the lower-level `NewtonShield.guardedCall(...)` path.
 
 ## Policy Parameters
 
@@ -262,7 +241,7 @@ allow if {
 }
 ```
 
-Composing this pack into a VaultKit composite changes only where params live: the manifest envelope puts the curator's slice at `data.params.params.xerberus_what_if`. See [Policies](/developers/vaults/sdk/policies).
+Composing this pack into a VaultKit composite does not move its params: the pack runs as its own `NewtonPolicy` in the Shield's policy set, and `setParams` writes the `xerberus_what_if` slice as that policy's own `policyParams`. See [Policies](/developers/vaults/sdk/policies).
 
 ## Notes
 

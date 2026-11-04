@@ -12,7 +12,7 @@ import { Card } from 'vocs'
 
 # Policies [Declare VaultKit policies from published packs, custom oracles, or a bare deployed policy.]
 
-Every VaultKit client resolves to one `NewtonPolicy`. That policy can contain one or more policy-data oracles, or it can be a bare monolithic policy with no composable modules.
+Every VaultKit client binds a policy set: an ordered list of 1 to 8 `NewtonPolicy` contracts, each holding one Rego program and at most one WASM oracle. Newton evaluates every policy in the set and allows the call only if every policy allows. A composite gives each oracle module its own policy, plus an optional pure-Rego `_policy` gate. A bare policy is one deployed policy bound as a one-entry set.
 
 ## Published Policy Packs
 
@@ -26,7 +26,7 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
   .with(chainalysis)
 ```
 
-`definePolicy(...)` is synchronous and chainless. `createShield(...)` performs the onchain read, matches the declared modules to `NewtonPolicy.getPolicyData()`, and exposes the resolved result on `client.policy`.
+`definePolicy(...)` is synchronous and chainless: it only declares the module set. Pass each module's deployed `NewtonPolicy` to `createShield(...)` in `policies`, keyed by short pack ID:
 
 ```typescript
 const client = await createShield({
@@ -35,9 +35,16 @@ const client = await createShield({
   rpc,
   vault,
   policy,
-  policyAddress: '0xDeployedNewtonPolicy',
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+    chainalysis: '0xChainalysisPolicy',
+  },
 })
 ```
+
+`createShield(...)` reads each policy's `getWasmCid()` and `getPolicyCodeHash()`, requires every module policy to serve its pack's WASM for `(chainId, env)`, and exposes the resolved set on `client.policy`. A module policy that serves another WASM throws `PolicyWasmCidMismatchError`. A `policies` map with a missing or unknown key fails the type check, and fails again at runtime with `CompositeModuleSetMismatchError`.
+
+Packs ship no canonical `NewtonPolicy`. You deploy one policy per module from the pack's reference Rego and the pack's published WASM; see [Pack Policy Addresses](/developers/vaults/policy-packs#pack-policy-addresses).
 
 A duplicate short ID is rejected because params and per-call inputs are namespaced by that ID.
 
@@ -51,11 +58,11 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
   .with(myOracle)
 ```
 
-There is no custom-module registry gate. The same deployment matching, WASM CID checks, schema validation, and manifest encoding apply to every module.
+A custom module also runs as its own deployed policy, under its short ID in `policies` (for example `my_oracle: '0xMyOraclePolicy'`). There is no custom-module registry gate. The short-ID collision guard and every onchain check run for custom modules too.
 
 ## Policy-Level Parameters
 
-Use `.withPolicyParams(...)` for composite-wide values that belong to the policy rather than a single oracle:
+Use `.withPolicyParams(...)` for composite-wide values that no single oracle owns, such as an action allowlist or a fee ceiling. They belong to the `_policy` gate: one more policy in the set, pure Rego with no WASM. Pass the gate's deployed address as `policies._policy`.
 
 ```typescript
 import { z } from 'zod'
@@ -69,6 +76,18 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
     }),
   )
 
+const client = await createShield({
+  apiKey,
+  walletClient,
+  rpc,
+  vault,
+  policy,
+  policies: {
+    vaultsfyi: '0xVaultsfyiPolicy',
+    _policy: '0xGatePolicy',
+  },
+})
+
 await client.setParams({
   _policy: {
     allowedYieldSources: ['0xYieldSource'],
@@ -78,11 +97,11 @@ await client.setParams({
 })
 ```
 
-The manifest stores that slice at `params._policy`; Rego reads it at `data.params.params._policy`.
+`setParams(...)` validates the `_policy` slice against the schema and writes it as the gate's own params, which the gate's Rego reads at `data.params.<field>`. A gate that takes no params needs no schema and is bound with `{}`. Supplying `_policy` params without a schema, or declaring a schema without `policies._policy`, is rejected.
 
 ## Bare Policies
 
-Use `policyFromAddress(...)` for a deployed monolithic or calldata-only policy:
+Use `policyFromAddress(...)` for one deployed policy, such as a calldata-only Rego or one Rego with its own WASM oracle:
 
 ```typescript
 import { policyFromAddress } from '@newton-xyz/vaultkit'
@@ -98,69 +117,52 @@ const policy = policyFromAddress({
 })
 ```
 
-A bare policy has `modules: []`. Its optional codec enables `setParams(...)`, decoding, and higher verification rungs. Pass this object as `policy` and omit the separate `policyAddress`.
+A bare policy has `modules: []` and binds as a one-entry policy set. Its optional codec enables `setParams(...)` (`encode`) and raises the verification rung (`decode`). Pass this object as `policy` without `policies` or `expectedWasmCids`; the config type forbids both. Upload a bare policy's oracle secrets under the `BARE_POLICY_ID` key, `'policy'`.
 
-## Manifest Shape
+## Params Shape
 
-`setParams(...)` writes a versioned UTF-8 JSON envelope:
+There is no composite manifest. `setParams(...)` binds the whole set through the Shield's `setPolicies(...)`, one `PolicySpec` per policy, in set order:
 
-```json
-{
-  "_manifest": { "magic": "NPM1", "version": 1 },
-  "modules": [
-    {
-      "id": "vaultsfyi/risk-envelope/v1",
-      "policyDataAddress": "0xPolicyData",
-      "wasmCid": "bafy..."
-    }
-  ],
-  "params": {
-    "_policy": { "maxFeeBps": 100 },
-    "vaultsfyi": { "risk_score_floor": 80 }
+```typescript
+interface PolicySpec {
+  policy: Address
+  config: {
+    policyParams: Hex // this policy's own params, canonical sorted-key JSON
+    expireAfter: number // the client's attestationExpiration, in blocks
   }
 }
 ```
 
-Generate schemas and encode this format with `@newton-xyz/policy-core`; do not hand-maintain a second manifest encoder.
+`client.encodeParams(params)` returns the same `PolicySpec[]` without submitting. `setParams(...)` replaces the whole set, so changing one module's params rewrites every policy's entry, the unchanged ones byte-identically. To bind a set outside the module model, call `client.setPolicies(specs)`; `client.setPolicies(client.encodeParams(params))` is exactly `client.setParams(params)`.
+
+Each policy validates its own `policyParams` against its own pinned params schema. For the gate or a custom module, generate that schema with `generateCompositeParamsSchema({ modules }, gateJsonSchema?)` from `@newton-xyz/policy-core`. It returns one closed schema per policy, `{ <shortId>: schema, _policy?: schema }`, so the gateway is exactly as strict as the SDK's zod. Do not hand-write one.
 
 ## Per-Call Inputs
 
-`sendCall` takes two short-ID-keyed per-module bags. Which one a pack uses depends on whether it ships a `prepareQuery`.
+`sendCall` and the vendor actions take one short-ID-keyed per-module bag, `prepareQueryOptions`:
 
 ```typescript
 await client.sendCall({
   to,
   data,
   functionSignature,
-  // INPUTS to a pack's own prepareQuery, for packs that have one.
   prepareQueryOptions: {
     vaultsfyi: { previousAllocationHash: '0x...' },
     my_oracle: { market: '0xMarket' },
   },
-  // The wasmArgs THEMSELVES, for packs that ship no prepareQuery.
-  wasmArgs: {
-    arkham_entity: { address: '0xDestination', chain: 'ethereum' },
-    pharos_treasury: { stablecoin_id: 'usdc-circle' },
-  },
 })
 ```
 
-Each module receives only its short-ID-keyed slice. Its `prepareQuery(...)` result is checked against its `wasmArgsSchema`; a failure stops intent construction.
+VaultKit passes `prepareQueryOptions[shortId]` to that module's own `prepareQuery(...)` and checks the returned `wasmArgs` slice against the module's `wasmArgsSchema` before it builds the intent. A slice the schema rejects throws `InvalidConfigurationError`; a `prepareQuery` that rejects throws `CompositePrepareQueryError`. Each module's policy then receives its own `wasm_args` entry, `{ "<shortId>": args }`, and the gate receives `0x`.
 
-A pack ships no `prepareQuery` when its `wasmArgs` name something the SDK cannot read from chain state — [`balancer`](/developers/vaults/policies/balancer)'s `poolId`, [`arkham_entity`](/developers/vaults/policies/arkham-entity)'s `address`, [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `stablecoin_id`. Those modules take their slice from `wasmArgs` instead.
-
-The two are separate fields rather than one because they are different things: `prepareQueryOptions` is input **to** a `prepareQuery`, `wasmArgs` is what one would have **returned**. A pack with no `prepareQuery` also carries `TOptions = unknown`, so routing its args through the options bag would compile while checking nothing; `wasmArgs` is typed per module, so a misspelled field is a compile error.
-
-A module that ships a `prepareQuery` owns its slice outright — there is no merge, so a stray `wasmArgs` entry cannot override what the pack derived from chain state. Either way a slice its schema rejects, including the `{}` a `prepareQuery`-less module gets when nothing is supplied, throws `InvalidConfigurationError` rather than reaching the AVS.
-
-`wasmArgs` requires `@newton-xyz/vaultkit` 2.2.0 or later.
+VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module that ships no `prepareQuery` gets `{}`, which still has to pass its `wasmArgsSchema`. Some packs take args the SDK cannot read from chain state, such as [`balancer`](/developers/vaults/policies/balancer)'s `poolId`, [`arkham_entity`](/developers/vaults/policies/arkham-entity)'s `address`, and [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `stablecoin_id`. When such a pack ships no `prepareQuery` and its schema requires those fields, `sendCall` fails closed with `InvalidConfigurationError`. To supply them yourself, call the lower-level `NewtonShield.guardedCall(...)` with per-policy `wasmArgs` (one hex entry per policy, in set order) and the `expectedPolicies` set they were built for.
 
 ## Verification and Introspection
 
 The resolved client exposes objective onchain facts:
 
 ```typescript
-client.policy.address
+client.policy.policies // the bound set, { id, address }[], in set order
 client.policy.modules
 client.verification
 await client.reverify()
@@ -169,23 +171,37 @@ await client.reverify()
 For an independent report:
 
 ```typescript
-import { introspectComposite } from '@newton-xyz/policy-core'
+import { getPolicyManifest, introspectComposite } from '@newton-xyz/policy-core'
 
 const report = await introspectComposite({
   publicClient,
   shieldAddress: client.policyClientAddress,
 })
+// report.policyId, report.revision, report.policies[]:
+//   { policy, policyParams, expireAfter, wasmCid, policyCodeHash, entrypoint }
+
+const manifest = await getPolicyManifest({
+  publicClient,
+  shieldAddress: client.policyClientAddress,
+})
+// manifest.policies[]: { policy, params, expireAfter }, params parsed as JSON
 ```
 
-`introspectComposite(...)` returns comparison booleans instead of throwing on a binding mismatch. It throws only when the stored manifest cannot be decoded.
+`introspectComposite(...)` does not judge: it returns what the Shield binds, so a depositor UI can render it. `createShield(...)` runs the same read at attach time and turns any disagreement into `PolicyMismatchError`.
 
 ## Provenance Is Consumer-Selected
 
-`ResolvedModule` reports objective values such as `id`, `policyDataAddress`, and `wasmCid`. It does not claim that a module is audited or trusted. Consumers can classify those facts with `classifyProvenance(...)` from `@newton-xyz/policy-core` and a registry they trust.
+`ResolvedModule` reports objective values: `id`, `policyAddress`, `wasmCid`, `policyCodeHash`, and the module's schemas. It does not claim that a module is audited or trusted. Consumers can classify those facts with `classifyProvenance(...)`, re-exported from VaultKit, and a registry they trust. A module reports `audited` only when its policy serves the pack's audited WASM and its `policyCodeHash` matches the pack's reference Rego; the same WASM behind an edited Rego reports `impersonating`.
+
+## Limits
+
+- A rule that reads two oracles at once cannot be written: each Rego sees only its own oracle's output and its own params. Pin each side in its own policy, or combine both sources in one custom oracle.
+- Every policy runs on every call, and the same set gates every action through the Shield.
+- A set holds at most 8 policies, modules plus gate, and one policy's params at most 64 KiB.
 
 ## Low-Level Composition
 
-VaultKit no longer re-exports `defineComposite(...)`. Most curator integrations should use `definePolicy().with(...)`. Import `defineComposite`, `defineOracle`, manifest encoders, schema generators, and introspection helpers directly from `@newton-xyz/policy-core` when building tooling outside `createShield(...)`.
+VaultKit does not re-export `defineComposite(...)`. Most curator integrations should use `definePolicy().with(...)`. Import `defineComposite`, `defineOracle`, `encodeCompositePolicyPack`, `generateCompositeParamsSchema`, `introspectComposite`, and `getPolicyManifest` directly from `@newton-xyz/policy-core` when building tooling outside `createShield(...)`.
 
 <Card title="Custom Oracles" icon="code" to="/developers/vaults/sdk/custom-oracles">
   Define schemas, query preparation, deployments, and metadata for your own oracle.
