@@ -81,7 +81,7 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 :::
 
 :::details[InvalidRequest: policy client has an empty policy set]
-**Cause:** `newt_createTask` and `newt_sendTask` read the policy set from the PolicyClient. A PolicyClient with no policies fails with HTTP 400 `{"InvalidRequest":"policy client 0x... has an empty policy set"}`. An address that is not a PolicyClient on the chain you are calling fails the read with HTTP 500 `{"Internal":"failed to read policy set from policy client 0x...: ..."}`.
+**Cause:** `newt_createTask` reads the policy set before it replies, so a PolicyClient with no policies fails with HTTP 400 `{"InvalidRequest":"policy client 0x... has an empty policy set"}`. `newt_sendTask` accepts the task first and reads the set afterwards, so the same problem arrives as a failed task on the WebSocket topic. An address that is not a PolicyClient on the chain you are calling fails the owner check first, with HTTP 500 `{"Internal":"failed to query on-chain owner for policy client 0x...: ..."}`.
 
 **Fix:** Verify:
 1. The PolicyClient address is correct and deployed on the chain you are calling

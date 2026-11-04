@@ -347,7 +347,7 @@ evaluateIntentDirect(
 A task that fails evaluation throws a plain `Error` with the gateway's reason, and a call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror). If `newt_createTask` answers without a `task_response`, the call throws an `SDKError` with code `MALFORMED_RESPONSE`.
 
 :::warning
-Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the policy client's `eip712Domain()` and load identity data only when that signer is `intent.from`. If you omit the signature or it does not recover to `intent.from`, operators skip identity data, and a policy that needs it denies. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
+Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the policy client's `eip712Domain()` and load identity data only when that signer is `intent.from`. If you omit the signature, operators skip identity data, and a policy that needs it denies. A signature that is present but does not recover to `intent.from` under the policy client's domain is rejected with HTTP 400 `{"InvalidRequest":"intent_signature does not verify: ..."}`. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
 :::
 
 Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
@@ -1368,7 +1368,7 @@ getTaskStatus(args: {
 
 #### getTaskResponseHash
 
-Retrieves the response hash for a given task from the on-chain contract.
+Reads `allTaskHashes(taskId)`, the hash the task manager stored when the task was created; an unknown task reads as the zero hash. Despite the name, this is not the response hash: read `taskResponseHash(taskId)` on the task manager for that.
 
 ```ts
 const hash = await publicClient.getTaskResponseHash({ taskId: '0x...' });
@@ -2498,7 +2498,7 @@ interface SimulatePolicyResult {
 
 :::details[GatewayCreateTaskResult & AggregationResponse]
 ```ts
-/** The `newt_createTask` result. A failed task has `status: 'failed'`, `error` set and nulls elsewhere. */
+/** The `newt_createTask` result. A failed task has `status: 'failed'` and `error`, `task_id`, `task` and `timestamp` set; the other fields are `null`. */
 interface GatewayCreateTaskResult {
   bls_aggregation_result: AggregationResponse | null
   error: string | null

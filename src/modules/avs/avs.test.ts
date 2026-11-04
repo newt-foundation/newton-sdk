@@ -218,6 +218,28 @@ describe('getTaskStatus', () => {
     )
   })
 
+  it('returns SuccessfullyChallenged for a challenged task that was never responded to', async () => {
+    const client = clientWith({
+      allTaskHashes: responded.allTaskHashes,
+      allTaskResponses: `0x${'00'.repeat(32)}`,
+      challengeVerifier,
+      taskSuccesfullyChallenged: true,
+    })
+    await expect(getTaskStatus(client, { taskId }, taskManager, attestationValidator)).resolves.toBe(
+      TaskStatus.SuccessfullyChallenged,
+    )
+  })
+
+  it('returns Created for an unchallenged task with no response', async () => {
+    const client = clientWith({
+      allTaskHashes: responded.allTaskHashes,
+      allTaskResponses: `0x${'00'.repeat(32)}`,
+      challengeVerifier,
+      taskSuccesfullyChallenged: false,
+    })
+    await expect(getTaskStatus(client, { taskId }, taskManager, attestationValidator)).resolves.toBe(TaskStatus.Created)
+  })
+
   it('falls through to the attestation checks when the task is not challenged', async () => {
     const client = clientWith({
       ...responded,

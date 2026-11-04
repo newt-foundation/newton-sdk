@@ -116,7 +116,7 @@ This tutorial focuses on the pack-specific steps. For signing in, generating an 
 
 ### Using the CLI
 
-`newton-cli` uses a pack by its published policy address. You never build or deploy the pack yourself; you add it to your PolicyClient's policy set. You need a deployed PolicyClient that you own, the CLI installed (`curl -L cli.newton.xyz | sh && newtup`), and `API_KEY`, `RPC_URL` and `PRIVATE_KEY` set. See [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
+`newton-cli` uses a pack by its published policy address. You never build or deploy the pack yourself; you add it to your PolicyClient's policy set. You need a deployed PolicyClient that you own, the CLI installed (`curl -L cli.newton.xyz | sh && newtup`), and `API_KEY`, `RPC_URL` and `PRIVATE_KEY` set. `policy-client set-policies` also loads the CLI config, so set `eth_rpc_url`, `gateway_url` and `signer` in `~/.newton/newton-cli.toml` or as `NEWTON_CLI__` variables first. See [Deploying with CLI](/developers/guides/deploying-with-cli) for the full setup.
 
 ::::steps
 ### Find the pack's policy address
