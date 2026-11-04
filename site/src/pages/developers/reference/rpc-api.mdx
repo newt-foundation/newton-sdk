@@ -116,7 +116,7 @@ As of v0.2.0, ownership is determined **on-chain** via the `INewtonPolicyClient.
 
 | Endpoint | Ownership Required |
 |-----|-----|
-| `newt_createTask` | Yes |
+| `newt_createTask` | Yes, or an approved delegator of the policy client, which must send `intent.from`'s `intent_signature` |
 | `newt_sendTask` | Yes |
 | `newt_simulateTask` | No |
 | `newt_simulatePolicyData` | No (caller provides secrets directly) |
