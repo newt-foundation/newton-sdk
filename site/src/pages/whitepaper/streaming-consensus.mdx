@@ -60,13 +60,13 @@ The protocol achieves low latency through three key properties:
 
 The gateway publishes a Prepare request to the NATS task subject for the relevant chain. All operators subscribed to that chain's task subject receive the request simultaneously. Each operator independently executes the WASM data provider (the "policy data WASM") in its own sandboxed Wasmtime environment ([WASM-Sandboxed Data Providers](/whitepaper/policy-engine#wasm-sandboxed-data-providers)), fetches external data from the configured data sources, and publishes a Prepare response to the task-specific response subject containing:
 
-- The generated policy task data with ECDSA attestation
+- The generated policy task data
 - A hash of the data for quick comparison
 - A timestamp for freshness verification
 
 This distributed WASM execution is a foundational property of Newton's decentralized architecture: every operator in the active validator set independently runs the data provider, ensuring that no single entity controls the inputs to policy evaluation. Each operator fetches data from external sources (sanctions feeds, oracle prices, risk scores) through its own network path, producing independent attestations over the data it observed. This redundancy provides both fault tolerance (no single data source failure blocks the protocol) and tamper resistance (manipulating the data input requires compromising a quorum of independent data paths).
 
-Prepare phase responses are unsigned (no BLS signature). Operators do not evaluate the Rego policy during this phase; they only fetch and attest data. Responses stream back to the gateway as each operator completes, enabling the gateway to begin consensus computation as soon as a quorum of responses has arrived.
+Prepare phase responses are unsigned (no BLS signature). Operators do not evaluate the Rego policy during this phase; they only fetch data. Responses stream back to the gateway as each operator completes, enabling the gateway to begin consensus computation as soon as a quorum of responses has arrived.
 
 ### Consensus Computation
 
@@ -94,7 +94,7 @@ The gateway publishes an Evaluate request to the NATS task subject with the cons
 2. Constructs the task response using the consensus policy task data (not their own data).
 3. Fetches the Rego policy from IPFS by CID.
 4. Evaluates the Rego policy against the canonical data.
-5. Computes the consensus digest (attestations zeroed).
+5. Computes the consensus digest over the task response.
 6. Signs the consensus digest with their BLS key.
 7. Publishes the BLS-signed response to the task-specific NATS response subject.
 

@@ -28,7 +28,7 @@ When a challenger detects a discrepancy between the onchain response and their i
 2. Re-evaluates the Rego policy against the policy task data contained in the response.
 3. Produces a proof that the correct evaluation result differs from the onchain response.
 
-The circuit does not re-verify ECDSA attestations (that is handled onchain by the TaskManager). It focuses solely on proving that the policy evaluation was incorrect given the attested inputs.
+The circuit does not re-verify how the policy data was attested: a quorum of operators signed that data as part of the response, and the TaskManager checks the signature onchain. The circuit focuses solely on proving that the policy evaluation was incorrect given the attested inputs.
 
 ### Challenge Verification Flow
 
