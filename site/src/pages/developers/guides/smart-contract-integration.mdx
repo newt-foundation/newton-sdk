@@ -24,7 +24,7 @@ This guide shows how to integrate Newton attestation validation into your smart 
 Newton provides the `NewtonPolicyClient` Solidity mixin that handles:
 - Attestation validation (standard and direct methods)
 - Policy configuration and parameter management
-- On-chain ownership and version compatibility
+- Onchain ownership and version compatibility
 
 ### When to Use
 
@@ -35,7 +35,7 @@ Newton provides the `NewtonPolicyClient` Solidity mixin that handles:
 | Allowlist/blocklist enforcement | Restricting interactions to approved addresses |
 | Time-based access control | Operations only allowed during certain hours |
 | Complex business logic | Multi-condition approval workflows |
-| Off-chain data verification | Price feeds, identity verification, compliance checks |
+| Offchain data verification | Price feeds, identity verification, compliance checks |
 
 ## Core Concepts
 
@@ -91,11 +91,11 @@ flowchart LR
     A --> B --> C --> D
 ```
 
-1. **User signs Intent** — creates and signs an Intent describing the desired transaction
-2. **Task created** — the Gateway creates a task on the TaskManager contract
-3. **Operators evaluate** — operators fetch the policy, evaluate it, and BLS-sign the result
-4. **Aggregator collects** — signatures are aggregated until quorum is reached
-5. **Contract validates** — your contract validates the attestation and executes the transaction
+1. **User signs Intent**: the user creates and signs an Intent describing the desired transaction
+2. **Task created**: the Gateway creates a task on the TaskManager contract
+3. **Operators evaluate**: operators fetch the policy, evaluate it, and BLS-sign the result
+4. **Aggregator collects**: the aggregator collects signatures until quorum is reached
+5. **Contract validates**: your contract validates the attestation and executes the transaction
 
 ## Quick Start
 
@@ -271,7 +271,7 @@ function _validateAttestation(
 ) internal returns (bool);
 ```
 
-The standard method validates against an attestation that the Newton aggregator has already submitted on-chain via `respondToTask`. It verifies:
+The standard method validates against an attestation that the Newton aggregator has already submitted onchain via `respondToTask`. It verifies:
 1. Policy ID matches your contract's configured policy
 2. `msg.sender` is the intent sender (`from`), or an approved delegator relaying an intent that `from` signed (see [Delegated Intents](/developers/guides/delegated-intents))
 3. Chain ID matches the current chain
@@ -287,7 +287,7 @@ function _validateAttestationDirect(
 ) internal returns (bool);
 ```
 
-Direct validation verifies BLS signatures on-chain without waiting for the aggregator to call `respondToTask`. It performs the same policy/sender/chain checks, plus on-chain BLS signature verification and quorum checks.
+Direct validation verifies BLS signatures onchain without waiting for the aggregator to call `respondToTask`. It performs the same policy/sender/chain checks, plus onchain BLS signature verification and quorum checks.
 
 ### Comparison
 
@@ -385,7 +385,7 @@ specs[1] = INewtonPolicyClient.PolicySpec({
 bytes32 newPolicyId = client.setPolicies(specs);
 ```
 
-Choose each expiration for your application's block-time and authorization window; 25 is illustrative. For exact `cast` configuration and readback commands, see [Deploying with CLI](/developers/guides/deploying-with-cli#step-6--bind-policy-and-parameters).
+Choose each expiration for your application's block-time and authorization window; 25 is illustrative. For exact `cast` configuration and readback commands, see [Deploying with CLI](/developers/guides/deploying-with-cli#step-6-bind-policy-and-parameters).
 
 ### Replace a set on the same client
 
@@ -397,7 +397,7 @@ The Task freezes `policies`, `policyRevision`, and `policyId` at admission. Pres
 
 ## PolicyClientRegistry
 
-The `PolicyClientRegistry` is a central on-chain directory of approved policy client contracts. Registration is required for policy clients that participate in the identity linking flow via `IdentityRegistry`.
+The `PolicyClientRegistry` is a central onchain directory of approved policy client contracts. Registration is required for policy clients that participate in the identity linking flow via `IdentityRegistry`.
 
 ### Why Register?
 
@@ -476,7 +476,7 @@ Deployment lifecycle:
 
 This guide targets the documented policy-set contracts. Use the dependency above with the deployed addresses for your target network.
 
-Check the client interface, TaskManager, configured policy factory, gateway schema, and SDK together. A CLI version or an on-chain `version()` string alone does not prove ABI compatibility.
+Check the client interface, TaskManager, configured policy factory, gateway schema, and SDK together. A CLI version or an onchain `version()` string alone does not prove ABI compatibility.
 
 The owner can replace policies only with policies registered by the TaskManager's configured factory. Verify provenance with `isPolicy(policy)`. Preserve the inherited `supportsInterface` implementation instead of hardcoding the old single-policy interface ID. Legacy clients need an implementation upgrade or replacement before they expose `setPolicies`; do not send this call to a single-policy client.
 
@@ -583,7 +583,7 @@ The `NewtonPolicyClient` mixin automatically enforces:
 ### Additional Best Practices
 
 - Always verify function selectors match expectations when decoding intent data
-- Set appropriate `expireAfter` values — too short and users cannot execute; too long and the security window increases
+- Set appropriate `expireAfter` values. Too short and users cannot execute; too long and the security window increases
 - Protect the `policyClientOwner` key with a multisig or timelock
 - Preserve the inherited `supportsInterface` implementation for the pinned interface
 - Fund the contract with ETH if it needs to execute value transfers

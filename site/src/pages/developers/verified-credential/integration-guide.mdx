@@ -26,7 +26,7 @@ This guide walks through the end-to-end integration of Newton Verifiable Credent
 | **Newton SDK** | `@newton-xyz/sdk` installed in your JavaScript/TypeScript app |
 | **Newton API key** | [Create one in the dashboard](/developers/overview/dashboard-api-keys) |
 | **Policy client contract** | Must inherit `NewtonPolicyClient` and be registered with `PolicyClientRegistry` |
-| **Identity domain** | A fixed `bytes32` hex value for your application — the output of `keccak256("kyc")` |
+| **Identity domain** | A fixed `bytes32` hex value for your application: the output of `keccak256("kyc")` |
 | **KYC vendor** | A third-party vendor to collect user identity data. The vendor's output must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields). |
 
 ## Step 1: Write and Deploy a Policy
@@ -104,7 +104,7 @@ Once you have `policy_cids.json`, run:
 newton-cli policy deploy --policy-cids policy_cids.json
 ```
 
-After deploying, note your policy contract address — you'll need it in Step 2.
+After deploying, note your policy contract address. You need it in Step 2.
 
 ## Step 2: Deploy a Policy Client Contract
 
@@ -113,11 +113,11 @@ Your policy client inherits `NewtonPolicyClient`, which implements the EIP-712 d
 Key requirements:
 - Inherit `NewtonPolicyClient`, which provides the EIP-712 domain
 - Call `_initNewtonPolicyClient(policyTaskManager, owner)` in the constructor
-- Register the contract with the `PolicyClientRegistry` — see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration)
+- Register the contract with the `PolicyClientRegistry` (see [Smart Contract Integration](/developers/guides/smart-contract-integration#identityregistry-integration))
 
 **After registering**, call the following on your deployed policy client contract:
 
-Call owner `setPolicies` with the identity policy address and its configuration. Encode the following JSON into that entry’s `policyParams`, and set a nonzero `expireAfter`. Include every other desired policy in the same ordered replacement. See the [configuration example](/developers/guides/smart-contract-integration#configure-the-policy-set):
+Call owner `setPolicies` with the identity policy address and its configuration. Encode the following JSON into that entry's `policyParams`, and set a nonzero `expireAfter`. Include every other desired policy in the same ordered replacement. See the [configuration example](/developers/guides/smart-contract-integration#configure-the-policy-set):
 
 ```json
 {
@@ -127,7 +127,7 @@ Call owner `setPolicies` with the identity policy address and its configuration.
 
 ## Step 3: Collect KYC Data
 
-Collect identity data from your users using a third-party KYC vendor. The data you receive from the vendor must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields) — fields like `status`, `birthdate`, `address_country_code`, etc.
+Collect identity data from your users using a third-party KYC vendor. The data you receive from the vendor must map to Newton's [IdentityData fields](/developers/verified-credential/identity-policy-reference#kyc-data-fields), such as `status`, `birthdate`, and `address_country_code`.
 
 ## Step 4: Register and Confirm KYC Data
 
@@ -155,7 +155,7 @@ When the Newton identity popup opens, Newton creates a new wallet for the user t
 
 ### 4b. User Confirms KYC Data
 
-The user sees a confirmation prompt in the Newton identity popup to verify the KYC data being registered. This is handled automatically by the popup opened in step 4a — no additional SDK calls are required.
+The user sees a confirmation prompt in the Newton identity popup to verify the KYC data being registered. The popup opened in step 4a handles this automatically, so no additional SDK calls are required.
 
 ## Step 5: Link Identity to Your App
 
@@ -209,7 +209,7 @@ See [SDK & Contract Reference](/developers/verified-credential/reference#linkide
 
 ## Step 6: Submit a Task
 
-Submit a task with a signed intent from the user's dapp wallet. The intent must be constructed and signed using the EIP712 domain of your policy client.
+Submit a task with a signed intent from the user's dApp wallet. The intent must be constructed and signed using the EIP712 domain of your policy client.
 
 **1. Construct the intent**
 
@@ -258,24 +258,24 @@ const intentSignature = await walletClient.signTypedData({
 **3. Submit for evaluation**
 
 ```typescript
-const { result } = await newtonWalletClient.evaluateIntentDirect({
+const { result } = await walletClient.evaluateIntentDirect({
   policyClient: yourPolicyClientAddress,
   intent,
   intentSignature,
   timeout: 60,
   wasmArgs: ['0x'], // One pure-Rego identity policy; align with your actual set
 })
-// result.allowed — true if the policy passed
-// result.task, result.taskResponse, result.blsSignature — needed for Step 7
+// result.allowed: true if the policy passed
+// result.task, result.taskResponse, result.blsSignature: needed for Step 7
 ```
 
 :::warning
 Identity policies need `intentSignature`. Operators recover the signer under your policy client's EIP-712 domain and load the identity data of every domain linked to the policy client for that signer. If the signature is missing, operators skip identity data without an error and the identity policy denies. If it is present but does not recover to `intent.from`, the gateway rejects the task and `evaluateIntentDirect` throws a `GatewayError` (`intent_signature does not verify: ...`). The task request takes no identity domain: SDK 1.3.1 and earlier send `identityDomain`, and the gateway ignores it.
 :::
 
-## Step 7: Execute On-Chain Transaction with Attestation
+## Step 7: Execute Onchain Transaction with Attestation
 
-Use the attestation returned in Step 6 to execute the transaction on-chain through your policy client.
+Use the attestation returned in Step 6 to execute the transaction onchain through your policy client.
 
 ```typescript
 if (result.allowed !== true) throw new Error("Policy set denied the intent");
@@ -306,7 +306,7 @@ await walletClient.writeContract({
 })
 ```
 
-`validateAndExecuteDirect` verifies the attestation on-chain and executes the call — only if the policy passed.
+`validateAndExecuteDirect` verifies the attestation onchain and executes the call only if the policy passed.
 
 ## Unlinking
 

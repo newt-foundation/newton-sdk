@@ -22,17 +22,17 @@ import { Card } from 'vocs'
 
 # Institutional DeFi [Enable institutional crypto adoption with programmable compliance policies. Newton Protocol provides verifiable transaction authorization for DeFi protocols, fund managers, and regulated financial products on Ethereum.]
 
-If you manage assets for an institution — fund, custodian, DAO, or regulated entity — you need compliance guardrails before deploying capital into DeFi. Newton Protocol provides programmable, verifiable policy enforcement at the transaction layer. You participate in DeFi while maintaining compliance and risk controls.
+If you manage assets for an institution (a fund, custodian, DAO, or regulated entity), you need compliance guardrails before you deploy capital into DeFi. Newton Protocol provides programmable, verifiable policy enforcement at the transaction layer, so you can participate in DeFi and keep your compliance and risk controls in place.
 
 ## The Problem
 
 Institutions face barriers that retail users do not:
 
-- **Regulatory requirements** — mandated sanctions screening, transaction monitoring, and reporting
-- **Risk controls** — exposure limits, counterparty restrictions, approved protocol lists
-- **Audit requirements** — verifiable proof that every transaction was evaluated against compliance rules
-- **Operational security** — multi-party authorization for large transactions, time-locked operations
-- **Fiduciary duty** — fund managers must demonstrate that trades comply with investment mandates
+- **Regulatory requirements**: mandated sanctions screening, transaction monitoring, and reporting
+- **Risk controls**: exposure limits, counterparty restrictions, approved protocol lists
+- **Audit requirements**: verifiable proof that every transaction was evaluated against compliance rules
+- **Operational security**: multi-party authorization for large transactions, time-locked operations
+- **Fiduciary duty**: fund managers must demonstrate that trades comply with investment mandates
 
 Most DeFi protocols offer no compliance layer. Institutions either avoid DeFi entirely or build expensive, centralized middleware that creates single points of failure.
 
@@ -120,19 +120,19 @@ sequenceDiagram
 
 ## Audit Trail
 
-Every Newton policy evaluation produces an on-chain attestation — a BLS signature proving that the transaction was evaluated by the operator network and the result. This provides:
+Every Newton policy evaluation produces an onchain attestation: a BLS signature proving that the operator network evaluated the transaction, and what the result was. This gives you:
 
 - **Verifiable compliance proof** for regulators and auditors
 - **Immutable record** of every policy decision
-- **Transparent rules** — policies are content-addressed on IPFS and can be audited independently
+- **Transparent rules**: policies are content-addressed on IPFS and can be audited independently
 
 ## Why Newton Over Centralized Compliance
 
 | | Centralized middleware | Newton Protocol |
 |---|---|---|
-| Trust model | Trust the compliance vendor | Trust the math — cryptographic attestations |
+| Trust model | Trust the compliance vendor | Trust the math: cryptographic attestations |
 | Availability | Single point of failure | Distributed EigenLayer operators |
-| Auditability | Vendor-provided logs | On-chain attestations + IPFS-stored policies |
+| Auditability | Vendor-provided logs | Onchain attestations + IPFS-stored policies |
 | Customization | Vendor-defined rules | Your own Rego policies |
 | Latency | API round-trip | Sub-second (parallel evaluation) |
 | Verifiability | "Trust us" | BLS proofs verifiable by anyone |

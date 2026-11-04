@@ -16,19 +16,19 @@ Slashing is executed through EigenLayer's instant slashing mechanism, which imme
 
 ### Challenge Window
 
-The challenge window is the period during which any party can dispute a task response. The window is governance-configurable (reference default: 100 blocks, approximately 20 minutes on Ethereum mainnet). The window begins when the task response is recorded on-chain and ends at the response block plus the configured challenge window length.
+The challenge window is the period during which any party can dispute a task response. The window is governance-configurable (reference default: 100 blocks, approximately 20 minutes on Ethereum mainnet). The window begins when the task response is recorded onchain and ends at the response block plus the configured challenge window length.
 
 Tasks can be evaluated and used as soon as the attestation is available. The challenge window provides a dispute period during which incorrect attestations can be challenged and slashed, but it does not block task consumption.
 
 ### ZK Proof Generation
 
-When a challenger detects a discrepancy between the on-chain response and their independent evaluation, they generate a zero-knowledge proof using zero-knowledge virtual machines. The proof circuit is the complete Newton Rego evaluation engine compiled to a RISC-V target — a full policy interpreter, not a bespoke per-policy circuit. This means any policy written in Rego is automatically ZK-provable without specialized circuit engineering. The compiled engine:
+When a challenger detects a discrepancy between the onchain response and their independent evaluation, they generate a zero-knowledge proof using zero-knowledge virtual machines. The proof circuit is the complete Newton Rego evaluation engine compiled to a RISC-V target: a full policy interpreter, not a bespoke per-policy circuit. This means any policy written in Rego is automatically ZK-provable without specialized circuit engineering. The compiled engine:
 
 1. Takes as public inputs: the task, the task response (including policy task data), and the expected evaluation result.
 2. Re-evaluates the Rego policy against the policy task data contained in the response.
-3. Produces a proof that the correct evaluation result differs from the on-chain response.
+3. Produces a proof that the correct evaluation result differs from the onchain response.
 
-The circuit does not re-verify ECDSA attestations (that is handled on-chain by the TaskManager). It focuses solely on proving that the policy evaluation was incorrect given the attested inputs.
+The circuit does not re-verify how the policy data was attested: a quorum of operators signed that data as part of the response, and the TaskManager checks the signature onchain. The circuit focuses solely on proving that the policy evaluation was incorrect given the attested inputs.
 
 ### Challenge Verification Flow
 
@@ -54,7 +54,7 @@ The challenge resolution function on the TaskManager:
 
 ### Direct Attestation Challenge Path
 
-Newton supports an optimistic direct attestation path where policy clients validate attestations before the regular on-chain flow completes. This introduces a separate challenge vector:
+Newton supports an optimistic direct attestation path where policy clients validate attestations before the regular onchain flow completes. This introduces a separate challenge vector:
 
 1. The client validates the attestation directly on the TaskManager, which verifies the BLS signature and stores task and response hashes.
 2. The regular path (task creation and response) completes asynchronously.

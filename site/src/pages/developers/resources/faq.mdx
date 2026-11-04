@@ -1,6 +1,6 @@
 ---
 title: "FAQ & Troubleshooting"
-description: "Frequently asked questions and solutions to common issues with Newton Protocol — API keys, policy evaluation, chain support, error codes, and debugging."
+description: "Frequently asked questions and solutions to common issues with Newton Protocol: API keys, policy evaluation, chain support, error codes, and debugging."
 keywords:
   - newton protocol faq
   - newton troubleshooting
@@ -10,12 +10,12 @@ keywords:
 showAskAi: false
 ---
 
-# FAQ & Troubleshooting [Frequently asked questions and solutions to common issues with Newton Protocol — API keys, policy evaluation, chain support, error codes, and debugging.]
+# FAQ & Troubleshooting [Frequently asked questions and solutions to common issues with Newton Protocol: API keys, policy evaluation, chain support, error codes, and debugging.]
 
 ## General FAQ
 
 :::details[What is Newton Protocol?]
-Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer Actively Validated Service (AVS). It lets you encode, verify, and enforce rules — such as spend limits, sanctions screening, or KYC gates — directly within smart contracts. See [What is Newton?](/developers/overview/about) for a full overview.
+Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer Actively Validated Service (AVS). It lets you encode, verify, and enforce rules such as spend limits, sanctions screening, or KYC gates directly within smart contracts. See [What is Newton?](/developers/overview/about) for a full overview.
 :::
 
 :::details[What chains does Newton support?]
@@ -23,7 +23,7 @@ Newton currently supports **Ethereum Sepolia** (`11155111`) as both a source and
 :::
 
 :::details[How do I get an API key?]
-Go to [dashboard.newton.xyz](https://dashboard.newton.xyz/), sign in, and click **API Keys** in the left navigation — your key is already generated. See [Getting an API Key](/developers/overview/dashboard-api-keys).
+Go to [dashboard.newton.xyz](https://dashboard.newton.xyz/), sign in, and click **API Keys** in the left navigation. Your key is already generated. See [Getting an API Key](/developers/overview/dashboard-api-keys).
 :::
 
 :::details[What programming languages can I use for data oracles?]
@@ -32,7 +32,7 @@ Newton data oracles compile to WebAssembly (WASM) components. You can write them
 - [Python](/developers/advanced/python-wasm-guide) (using componentize-py)
 - [Rust](/developers/advanced/rust-wasm-guide) (using cargo-component)
 
-Any language that compiles to WASM and supports the WIT interface can be used.
+You can use any language that compiles to WASM and supports the WIT interface.
 :::
 
 :::details[What is the difference between Standard and Direct validation?]
@@ -49,11 +49,11 @@ See [Validation Methods](/developers/overview/core-concepts#validation-methods) 
 A task typically goes from submission to attestation in under a second, around 200 ms at the median on Base Sepolia testnet. See [Consensus & Security](/developers/concepts/consensus-security) for how operators reach agreement.
 :::
 
-:::details[Can I test policies without deploying on-chain?]
-Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set’s optional WASM and Rego without an application transaction or BLS attestation. You can also test individual components:
-- `newt_simulatePolicy` — test Rego policy logic with provided inputs
-- `newt_simulatePolicyData` — test a WASM data oracle
-- `newton-cli regorus eval` — evaluate Rego locally with Newton crypto extensions
+:::details[Can I test policies without deploying onchain?]
+Yes. Use SDK `simulatePolicy` or Gateway `newt_simulatePolicy` to run the configured set's optional WASM and Rego without an application transaction or BLS attestation. You can also test individual components:
+- `newt_simulatePolicy`: test Rego policy logic with provided inputs
+- `newt_simulatePolicyData`: test a WASM data oracle
+- `newton-cli regorus eval`: evaluate Rego locally with Newton crypto extensions
 
 See [Testing & Debugging](/developers/resources/testing-debugging).
 :::
@@ -77,7 +77,7 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 - In direct mode the policy denied the intent: `_validateAttestationDirect` returns the quorum-signed `taskResponse.allowed`
 - The task was challenged, and the TaskManager returns `false` for a challenged task
 
-**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
+**Fix:** For a denial, read the per-policy results rather than retrying. A mismatched policy ID, intent sender or chain ID reverts earlier with `Unauthorized(reason)`, and signature, hash, expiry and replay failures revert inside the TaskManager with their own errors. See the [error selector table](/developers/reference/error-reference#onchain-error-selectors).
 :::
 
 :::details[InvalidRequest: policy client has an empty policy set]

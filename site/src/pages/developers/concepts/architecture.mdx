@@ -1,6 +1,6 @@
 ---
 title: "Architecture"
-description: "Newton Protocol system architecture — policy definition, AVS operator evaluation, and on-chain verification layers. How EigenLayer operators evaluate and attest to policy decisions."
+description: "Newton Protocol system architecture: policy definition, AVS operator evaluation, and onchain verification layers. How EigenLayer operators evaluate and attest to policy decisions."
 keywords:
   - newton protocol architecture
   - avs policy engine
@@ -15,7 +15,7 @@ showAskAi: false
 import { Card } from 'vocs'
 
 
-# Architecture [Newton Protocol system architecture — policy definition, AVS operator evaluation, and on-chain verification layers. How EigenLayer operators evaluate and attest to policy decisions.]
+# Architecture [Newton Protocol system architecture: policy definition, AVS operator evaluation, and onchain verification layers. How EigenLayer operators evaluate and attest to policy decisions.]
 
 Newton Protocol is a three-layer system that separates policy definition, policy evaluation, and policy enforcement. This modular architecture allows each layer to evolve independently while maintaining strong security guarantees.
 
@@ -59,7 +59,7 @@ The Policy Layer defines what rules exist and how they are configured.
 
 | Component | Purpose |
 |-----------|---------|
-| **Policy Registry** | On-chain registry of all deployed policies, referenced by CID |
+| **Policy Registry** | Onchain registry of all deployed policies, referenced by CID |
 | **Policy Library** | Reusable policy templates (spend limits, sanctions checks, KYC gates) |
 | **PolicyData Oracles** | WASM components that fetch external data at evaluation time |
 
@@ -93,7 +93,7 @@ The Verification Layer handles onchain proof verification and transaction execut
 
 | Component | Purpose |
 |-----------|---------|
-| **NewtonProverTaskManager** | Core task management — creates tasks, stores responses, manages challenge windows |
+| **NewtonProverTaskManager** | Core task management: creates tasks, stores responses, manages challenge windows |
 | **AttestationValidator** | Validates BLS aggregate signatures against the operator set |
 | **PolicyClient** | Developer's smart contract that calls validation before executing transactions |
 | **PolicyClientRegistry** | Tracks registered PolicyClient contracts |
@@ -106,7 +106,7 @@ The Verification Layer handles onchain proof verification and transaction execut
 | `NewtonPolicyFactory` | Creates and registers new policies |
 | `PolicyClientRegistry` | Tracks registered PolicyClient contracts |
 | `IdentityRegistry` | Maps identities for policy evaluation |
-| `AttestationValidator` | Validates BLS attestation proofs on-chain |
+| `AttestationValidator` | Validates BLS attestation proofs onchain |
 
 See [Contract Addresses](/developers/reference/contract-addresses) for deployed addresses on each network.
 
@@ -126,15 +126,15 @@ flowchart LR
 
 A complete evaluation cycle:
 
-1. **Intent submitted** — caller sends intent + PolicyClient address to Gateway
-2. **Task created** — Gateway creates a task pairing the intent with the policy
-3. **Data fetched** — operators execute PolicyData WASM oracles
-4. **Policy evaluated** — operators run Rego policy with intent + oracle data + params
-5. **Signatures produced** — each operator signs the result with their BLS key
-6. **Proof aggregated** — Aggregator combines signatures into consensus proof
-7. **Proof returned** — caller receives the attestation
-8. **On-chain verification** — PolicyClient validates the proof via AttestationValidator
-9. **Transaction executes** — if valid, the guarded transaction proceeds
+1. **Intent submitted**: caller sends intent + PolicyClient address to Gateway
+2. **Task created**: Gateway creates a task pairing the intent with the policy
+3. **Data fetched**: operators execute PolicyData WASM oracles
+4. **Policy evaluated**: operators run Rego policy with intent + oracle data + params
+5. **Signatures produced**: each operator signs the result with their BLS key
+6. **Proof aggregated**: Aggregator combines signatures into consensus proof
+7. **Proof returned**: caller receives the attestation
+8. **Onchain verification**: PolicyClient validates the proof via AttestationValidator
+9. **Transaction executes**: if valid, the guarded transaction proceeds
 
 ## Next Steps
 

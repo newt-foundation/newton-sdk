@@ -19,7 +19,7 @@ Use it alongside the other Newton interfaces:
 | Need | Use |
 |------|-----|
 | Submit or simulate a task, manage secrets | [RPC API](/developers/reference/rpc-api) (Newton Gateway) |
-| Check a task's on-chain status from your app | SDK [`getTaskStatus`](/developers/reference/sdk-reference#gettaskstatus) |
+| Check a task's onchain status from your app | SDK [`getTaskStatus`](/developers/reference/sdk-reference#gettaskstatus) |
 | Look up a task's evaluation result, errors, and policy data after the fact | Explorer API |
 | List tasks for a policy, browse policies, or pull protocol stats | Explorer API |
 
@@ -76,7 +76,7 @@ curl -sS https://explorer.api.newton.xyz/v1/task?size=5 \
 
 ### Pagination
 
-List endpoints accept `page` (from `1`, default `1`) and `size` (`1`–`100`, default `10`) query parameters and return:
+List endpoints accept `page` (from `1`, default `1`) and `size` (`1` to `100`, default `10`) query parameters and return:
 
 ```json
 {
@@ -93,7 +93,7 @@ Errors return a non-2xx status with a JSON body of the form `{ "detail": "<messa
 
 ### Timestamps and fields
 
-Timestamps are ISO 8601 in UTC. Fields that have not happened yet — for example `task_responded_at` before operators respond — are `null`.
+Timestamps are ISO 8601 in UTC. Fields for events that have not happened yet are `null`, for example `task_responded_at` before operators respond.
 
 ---
 
@@ -115,7 +115,7 @@ List endpoints return task summaries. [Get a task](#get-a-task) returns the full
 | `error` | `string \| null` | Task-level error, if the task failed |
 | `operator_errors` | `object \| array \| null` | Errors reported by individual operators |
 | `created_block` | `number \| null` | Block the task was created in |
-| `task_created_at` | `string \| null` | When the task was created on-chain |
+| `task_created_at` | `string \| null` | When the task was created onchain |
 | `task_responded_at` | `string \| null` | When operators responded |
 | `attestation_spent_at` | `string \| null` | When the attestation was consumed by the PolicyClient |
 | `task_challenged_at` | `string \| null` | When the task was challenged |
@@ -209,7 +209,7 @@ Returns a paginated list of [task summaries](#task-object).
 | `author` | `string \| null` | Author from the policy metadata |
 | `description` | `string \| null` | Description from the policy metadata |
 | `verified` | `boolean \| null` | Whether the policy is verified |
-| `policy_info` | `object \| null` | On-chain policy info (including the metadata reference) |
+| `policy_info` | `object \| null` | Onchain policy info (including the metadata reference) |
 | `deployed_txn_hash` | `string \| null` | Deployment transaction |
 | `policy_deployed_at` | `string \| null` | Deployment time |
 
@@ -314,7 +314,7 @@ curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
 ```
 
 - `error` or `operator_errors` set: the evaluation failed. Check the oracle with [`newt_simulatePolicyData`](/developers/reference/rpc-api#newt_simulatepolicydata) and the policy with [`newt_simulatePolicy`](/developers/reference/rpc-api#newt_simulatepolicy).
-- `policy_task_data` contains the original evaluation evidence. Preserve the task’s frozen policy set and revision for reproduction. [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask) resolves the current set and is not historical replay.
+- `policy_task_data` contains the original evaluation evidence. Preserve the task's frozen policy set and revision for reproduction. [`newt_simulateTask`](/developers/reference/rpc-api#newt_simulatetask) resolves the current set and is not historical replay.
 
 ### Recent tasks for your PolicyClient's policy
 

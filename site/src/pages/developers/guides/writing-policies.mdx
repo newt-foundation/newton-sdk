@@ -29,7 +29,7 @@ Every policy deployment requires these files:
 
 | File | Purpose |
 |------|---------|
-| `policy.rego` | Rego policy logic — the core evaluation rules |
+| `policy.rego` | Rego policy logic: the core evaluation rules |
 | `policy.wasm` | Compiled WASM data oracle (see [Writing Data Oracles](/developers/guides/writing-data-oracles)) |
 | `params_schema.json` | JSON Schema defining configurable parameters |
 | `policy_metadata.json` | Human-readable policy metadata |
@@ -43,7 +43,7 @@ Your Rego policy can access three data namespaces:
 |------|--------|-------------|
 | `input` | Intent | The transaction intent being evaluated (from, to, value, data, chain_id, function_signature) |
 | `data.params` | PolicyClient | Configuration parameters set by the contract owner (thresholds, allowlists) |
-| `data.wasm` | PolicyData WASM | Runtime data returned by your WASM oracle(s) (prices, KYC status). With multiple oracles, each is namespaced under its pack id — see [Consuming Multiple Oracles](#consuming-multiple-oracles) |
+| `data.wasm` | PolicyData WASM | Runtime data returned by your WASM oracle(s) (prices, KYC status). With multiple oracles, each is namespaced under its pack id. See [Consuming Multiple Oracles](#consuming-multiple-oracles) |
 
 ## Your First Policy
 
@@ -112,7 +112,7 @@ allow if {
 ```
 
 :::note
-A single oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). When a policy reads multiple oracles, each oracle namespaces its output under a pack id (`data.wasm.<pack-id>.price`) — see [Consuming Multiple Oracles](#consuming-multiple-oracles).
+A single oracle's fields appear directly under `data.wasm` (e.g. `data.wasm.price`). When a policy reads multiple oracles, each oracle namespaces its output under a pack id (`data.wasm.<pack-id>.price`). See [Consuming Multiple Oracles](#consuming-multiple-oracles).
 :::
 
 ## Consuming Multiple Oracles
@@ -235,7 +235,7 @@ For a full reference on supported Rego syntax, see the [Rego Syntax Guide](/deve
 
 ## Using Identity Data in Policies
 
-Newton provides built-in functions for checking user identity data (KYC status, age, location) within your policies. Identity data is injected by operators from the on-chain IdentityRegistry — you only see boolean check results, never raw personal data.
+Newton provides built-in functions for checking user identity data (KYC status, age, location) within your policies. Operators inject identity data from the onchain IdentityRegistry. You only see boolean check results, never raw personal data.
 
 ```rego
 package kyc_gated_transfer
@@ -256,7 +256,7 @@ Identity built-ins are domain-namespaced (e.g., `newton.identity.kyc.*`). A gene
 ## Next Steps
 
 <Card icon="rocket" to="/developers/guides/deploying-with-cli" title="Deploying with CLI">
-  Deploy your policy to IPFS and register it on-chain
+  Deploy your policy to IPFS and register it onchain
 </Card>
 <Card icon="shield" to="/developers/guides/smart-contract-integration" title="Smart Contract Integration">
   Integrate the policy into your smart contract

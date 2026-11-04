@@ -1,13 +1,13 @@
 ---
 title: "Integration Guide"
-description: "End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations on-chain."
+description: "End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations onchain."
 keywords: ["newton protocol integration", "add transaction policies to smart contracts", "eigenlayer avs tutorial", "onchain compliance integration", "rego policy deployment", "blockchain compliance setup", "transaction monitoring integration", "smart contract risk management"]
 showAskAi: false
 ---
 import { Card,Tabs,Tab } from 'vocs'
 
 
-# Integration Guide [End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations on-chain.]
+# Integration Guide [End-to-end guide for adding transaction policies to your smart contracts with Newton Protocol. Deploy Rego policies, build WASM data oracles, and verify attestations onchain.]
 
 This guide walks through the full Newton Protocol integration: a [WASM data oracle](/developers/guides/writing-data-oracles), a [Rego policy](/developers/guides/writing-policies), a [PolicyClient smart contract](/developers/guides/smart-contract-integration), and a [frontend](/developers/guides/frontend-sdk-integration) that submits intents and executes attested transactions. Choose your starting point based on what you need:
 
@@ -53,19 +53,19 @@ Install only what you need for the steps you plan to follow:
 | Requirement                            | Steps | Use                                                                                    |
 | -------------------------------------- | ----- | -------------------------------------------------------------------------------------- |
 | **Node.js \>= 20 + npm**               | All   | SDK, frontend, WASM tooling                                                            |
-| **Sepolia ETH**                        | 3–5   | Gas fees on testnet                                                                    |
-| **Newton API key**                     | 4–5   | Authenticate SDK requests — [create one here](/developers/overview/dashboard-api-keys) |
+| **Sepolia ETH**                        | 3-5   | Gas fees on testnet                                                                    |
+| **Newton API key**                     | 4-5   | Authenticate SDK requests ([create one here](/developers/overview/dashboard-api-keys)) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
-| **Rust + Cargo**                       | 1–3   | Building and running `newton-cli`                                                      |
+| **Rust + Cargo**                       | 1-3   | Building and running `newton-cli`                                                      |
 | **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 | **Pinata account**                     | 3     | IPFS pinning (you will need a JWT and a gateway URL)                                   |
 
-:::details[Install all tooling (Steps 1–5)]
+:::details[Install all tooling (Steps 1-5)]
   ```bash
   # Rust (includes cargo)
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-  # Node.js (macOS — or use your preferred method)
+  # Node.js (macOS, or use your preferred method)
   brew install node
 
   # Foundry
@@ -103,7 +103,7 @@ Create a [Rego policy](/developers/overview/core-concepts#policy) that evaluates
 
 ## Step 3: Deploy with CLI (~15 min)
 
-Upload each policy’s Rego, schema, metadata, and optional WASM artifacts, then deploy independent [Policy](/developers/overview/core-concepts#policy) contracts. Configure the client’s ordered set with owner `setPolicies`.
+Upload each policy's Rego, schema, metadata, and optional WASM artifacts, then deploy independent [Policy](/developers/overview/core-concepts#policy) contracts. Configure the client's ordered set with owner `setPolicies`.
 
 :::note
 Mainnet policy usage requires allowlisting by the Newton team. Before deploying or using policies on mainnet, [reach out through the intake form](https://newton.xyz/intake-form).
@@ -141,7 +141,7 @@ Once everything is deployed:
 2. The Newton [Gateway](/developers/overview/core-concepts#gateway) forwards it to AVS [operators](/developers/overview/core-concepts#operator)
 3. Operators run the WASM [data oracle](/developers/overview/core-concepts#policydata), evaluate the [Rego policy](/developers/overview/core-concepts#policy), and produce BLS-signed attestations
 4. The [attestation](/developers/overview/core-concepts#attestation) is returned to your app
-5. Your app submits the transaction + attestation to the [PolicyClient](/developers/overview/core-concepts#policyclient) on-chain
+5. Your app submits the transaction + attestation to the [PolicyClient](/developers/overview/core-concepts#policyclient) onchain
 6. The contract validates the attestation and executes the transaction
 
 For the full architecture, see [Architecture](/developers/concepts/architecture).
@@ -168,7 +168,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 :::details[InvalidAttestation error (0xbd8ba84d)]
   Newton contracts do not define `InvalidAttestation()`. Your contract does, and the examples revert with it when `_validateAttestation` or `_validateAttestationDirect` returns `false`: the task was challenged, or on the direct path the policy denied the intent.
 
-  Most other failures revert with their own errors. A wrong Task Manager address, a response that is not onchain yet, or a denial on the standard path reverts with `AttestationHashMismatch()`; the wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia, the Task Manager the gateway responds to. Policy ID, intent sender and chain ID mismatches revert with `Unauthorized(reason)`, expiry with `AttestationExpired()`, and reuse with `AttestationAlreadySpent()`. A `task`, `taskResponse` or `signatureData` changed on its way from `evaluateIntentDirect` fails validation inside the Task Manager. See the [error selector table](/developers/reference/error-reference#on-chain-error-selectors).
+  Most other failures revert with their own errors. A wrong Task Manager address, a response that is not onchain yet, or a denial on the standard path reverts with `AttestationHashMismatch()`; the wallet **must** use `0xecb741F4875770f9A5F060cb30F6c9eb5966eD13` on Sepolia, the Task Manager the gateway responds to. Policy ID, intent sender and chain ID mismatches revert with `Unauthorized(reason)`, expiry with `AttestationExpired()`, and reuse with `AttestationAlreadySpent()`. A `task`, `taskResponse` or `signatureData` changed on its way from `evaluateIntentDirect` fails validation inside the Task Manager. See the [error selector table](/developers/reference/error-reference#onchain-error-selectors).
 :::
 :::details[ExecutionFailed error (0xacfdb444)]
   The attestation passed but the inner call reverted. Common causes:
@@ -201,7 +201,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   ```
 
   - `error` or `operator_errors` set: the data oracle or evaluation failed. Test the oracle with `newton-cli policy simulate-wasm`.
-  - `policy_task_data` preserves ordered evidence. Inspect it alongside the task’s frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
+  - `policy_task_data` preserves ordered evidence. Inspect it alongside the task's frozen set and revision. `newt_simulateTask` evaluates the current set with supplied outputs, so it cannot replay a historical set after reconfiguration.
 :::
 ## Factory Pattern
 

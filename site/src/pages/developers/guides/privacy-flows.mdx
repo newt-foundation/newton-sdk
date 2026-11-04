@@ -1,20 +1,20 @@
 ---
 title: "Privacy Flows"
-description: "Three modes of privacy-preserving data in Newton Protocol — identity, confidential, and ephemeral — with end-to-end integration examples"
+description: "Three modes of privacy-preserving data in Newton Protocol (identity, confidential, and ephemeral), with end-to-end integration examples"
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Privacy Flows [Three modes of privacy-preserving data in Newton Protocol — identity, confidential, and ephemeral — with end-to-end integration examples]
+# Privacy Flows [Three modes of privacy-preserving data in Newton Protocol (identity, confidential, and ephemeral), with end-to-end integration examples]
 
 Newton supports three distinct privacy data flows, each designed for a different use case. All three use HPKE encryption (X25519 + ChaCha20-Poly1305). The gateway stores identity and confidential data in its `encrypted_data_refs` table; ephemeral data travels inline in the task and is not stored. The flows differ in who uploads data, how it's referenced, and which Rego namespace it appears in.
 
 ## At a Glance
 
-| Flow | Who Uploads | Lifecycle | On-Chain Contract | Rego Namespace | SDK Method |
+| Flow | Who Uploads | Lifecycle | Onchain Contract | Rego Namespace | SDK Method |
 |------|------------|-----------|-------------------|----------------|------------|
-| **Identity** | End user | Persistent, registered on-chain | `IdentityRegistry` | `newton.identity.*` | `registerIdentityData` |
+| **Identity** | End user | Persistent, registered onchain | `IdentityRegistry` | `newton.identity.*` | `registerIdentityData` |
 | **Confidential** | Provider | Persistent, versioned, granted per client | `ConfidentialDataRegistry` | `newton.confidential.*` | `uploadConfidentialData` |
 | **Ephemeral** | Client (per-task) | Single task only | None | `data.privacy.*` | Inline in `wasm_args` |
 
@@ -22,7 +22,7 @@ Newton supports three distinct privacy data flows, each designed for a different
 
 ## 1. Identity Data (User-Uploaded)
 
-For long-lived user data like KYC credentials, identity documents, or verifiable credentials. The user encrypts and uploads once, registers a reference on-chain, and operators decrypt it at task time for any policy that requires identity verification.
+For long-lived user data like KYC credentials, identity documents, or verifiable credentials. The user encrypts and uploads once, registers a reference onchain, and operators decrypt it at task time for any policy that requires identity verification.
 
 ### Flow
 
@@ -37,7 +37,7 @@ sequenceDiagram
     U->>G: newt_uploadIdentityEncrypted
     G->>U: data_ref_id + gateway_signature
     U->>C: registerIdentityData(domain, data_ref_id, gatewaySig)
-    Note over C: On-chain reference stored
+    Note over C: Onchain reference stored
     Note over O: At task time...
     O->>C: identityData(owner, domain) → data_ref_id
     O->>G: Fetch encrypted blob by data_ref_id
@@ -49,7 +49,7 @@ sequenceDiagram
 
 1. **Encrypt and upload** identity data to the gateway. The gateway stores the encrypted blob and returns a `data_ref_id` (content hash) plus an EIP-712 co-signature.
 
-2. **Register on-chain** by calling `IdentityRegistry.registerIdentityData(domain, data_ref_id, gatewaySig, deadline)`. The gateway signature prevents impersonation.
+2. **Register onchain** by calling `IdentityRegistry.registerIdentityData(domain, data_ref_id, gatewaySig, deadline)`. The gateway signature prevents impersonation.
 
 3. **Link to a policy client** by calling `IdentityRegistry.linkIdentityAsSignerAndUser(policyClient, identityDomains)` from the wallet that registered the data. The caller becomes both the identity owner and the client user, so the policy can look up the user's identity data at task time.
 
@@ -86,7 +86,7 @@ async function registerAndLink() {
   }))
 
   // Step 1: Upload is handled by the newton-identity popup (not the SDK)
-  // Step 2: Register on-chain
+  // Step 2: Register onchain
   await registerIdentityData(client, {
     identityDomain: identityDomainHash('kyc'),
     dataRefId: 'content-hash-from-upload',
@@ -108,7 +108,7 @@ See [Verified Credentials](/developers/verified-credential/overview) for the ful
 
 ## 2. Confidential Data (Provider-Managed)
 
-For provider-managed datasets like blacklists, allowlists, or sanctions lists. A provider encrypts and uploads the data, publishes a versioned reference on-chain, and grants access to specific policy clients. When a provider updates the data, they publish a new version — all granted clients automatically see the latest version.
+For provider-managed datasets like blacklists, allowlists, or sanctions lists. A provider encrypts and uploads the data, publishes a versioned reference onchain, and grants access to specific policy clients. When a provider updates the data, they publish a new version, and all granted clients automatically see the latest version.
 
 ### Flow
 
@@ -161,7 +161,7 @@ async function upload() {
 }
 ```
 
-3. **Publish on-chain** by calling `ConfidentialDataRegistry.publishData(domain, dataRefId)`. Each call increments the version.
+3. **Publish onchain** by calling `ConfidentialDataRegistry.publishData(domain, dataRefId)`. Each call increments the version.
 
 4. **Grant access** per policy client in two steps. The provider calls `ConfidentialDataRegistry.proposeGrant(domain, policyClient)`, which reverts unless the policy client is registered in the PolicyClientRegistry. Then the policy client's owner (its `getOwner()`) calls `acceptGrant(provider, domain, policyClient)`.
 
@@ -193,13 +193,13 @@ The provider proposes and revokes per-client access, and the policy client's own
 
 ### Versioning
 
-Each `publishData` call creates a new version. Operators always resolve the latest version via `getConfidentialData`. There is no explicit version pinning — all granted clients see the most recent data.
+Each `publishData` call creates a new version. Operators always resolve the latest version via `getConfidentialData`. There is no explicit version pinning: all granted clients see the most recent data.
 
 ---
 
 ## 3. Ephemeral Privacy Data (Per-Task Inline)
 
-For data that should only exist for a single task evaluation — no upload step, no on-chain registration. The client embeds encrypted data directly in the task request's `wasm_args`.
+For data that should only exist for a single task evaluation, with no upload step and no onchain registration. The client embeds encrypted data directly in the task request's `wasm_args`.
 
 ### How It Works
 
@@ -243,7 +243,7 @@ Operators decrypt each envelope locally and add its JSON plaintext to `data.priv
 | Aspect | Ephemeral | Persistent (Identity/Confidential) |
 |--------|-----------|-----------------------------------|
 | Storage | None (inline in request) | Gateway database |
-| On-chain | None | `IdentityRegistry` or `ConfidentialDataRegistry` |
+| Onchain | None | `IdentityRegistry` or `ConfidentialDataRegistry` |
 | Reusability | Single task only | Referenced by any future task |
 | Authorization | Part of task request | Onchain link to the policy client and an intent signed by the linked client user (identity), or a two-step grant (confidential) |
 | Rego namespace | `data.privacy.inline[i]` | `newton.identity.*` or `newton.confidential.*` |

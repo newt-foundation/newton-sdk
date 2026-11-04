@@ -1,6 +1,6 @@
 ---
 title: "Core Concepts"
-description: "Understand Newton Protocol's key concepts — policies, intents, tasks, attestations, and the evaluation lifecycle. How onchain policy authorization works end-to-end."
+description: "Understand Newton Protocol's key concepts: policies, intents, tasks, attestations, and the evaluation lifecycle. How onchain policy authorization works end-to-end."
 keywords:
   - newton protocol concepts
   - blockchain policy evaluation
@@ -15,13 +15,13 @@ showAskAi: false
 import { Card } from 'vocs'
 
 
-# Core Concepts [Understand Newton Protocol's key concepts — policies, intents, tasks, attestations, and the evaluation lifecycle. How onchain policy authorization works end-to-end.]
+# Core Concepts [Understand Newton Protocol's key concepts: policies, intents, tasks, attestations, and the evaluation lifecycle. How onchain policy authorization works end-to-end.]
 
 Newton Protocol is a policy engine for onchain transaction authorization, built as an EigenLayer Actively Validated Service (AVS). This page explains how the core pieces fit together. Refer back here as you work through the [integration guide](/developers/guides/integration-guide).
 
 ## How Newton Works
 
-You write rules (policies) that define when a transaction should be allowed. When a user submits a transaction (intent), Newton's decentralized operator network evaluates it against your policy, and returns a cryptographic proof (attestation) that your smart contract verifies before executing.
+You write rules (policies) that define when a transaction should be allowed. When a user submits a transaction (intent), Newton's decentralized operator network evaluates it against your policy and returns a cryptographic proof (attestation) that your smart contract verifies before executing.
 
 ```mermaid
 flowchart LR
@@ -39,8 +39,8 @@ flowchart LR
 A **Policy** is a Rego program that defines the conditions an Intent must meet to be approved. Policies are stored on IPFS (referenced by CID) and are reusable across multiple PolicyClients.
 
 Policies can reference two data sources:
-- **`data.params`** — configuration parameters set by the PolicyClient owner (e.g., spend limits, allowlists)
-- **`data.wasm`** — runtime data fetched by PolicyData WASM oracles (e.g., token prices, KYC status)
+- **`data.params`**: configuration parameters set by the PolicyClient owner (e.g., spend limits, allowlists)
+- **`data.wasm`**: runtime data fetched by PolicyData WASM oracles (e.g., token prices, KYC status)
 
 You write policies in [Step 2 of the integration guide](/developers/guides/writing-policies). See the [Rego syntax guide](/developers/advanced/rego-syntax-guide) for language reference.
 
@@ -63,13 +63,13 @@ An **Intent** is a proposed transaction submitted for policy evaluation. It cont
 | `value` | Wei value to transfer |
 | `data` | Transaction calldata |
 | `chain_id` | Target chain ID |
-| `function_signature` | ABI-encoded function signature |
+| `function_signature` | Hex-encoded human-readable function signature, not the 4-byte selector |
 
 You construct Intents when calling [`simulatePolicy`](/developers/reference/sdk-reference) or [`submitEvaluationRequest`](/developers/reference/sdk-reference) in the SDK.
 
 ### Task
 
-A **Task** pairs an Intent with a frozen ordered policy set, its ID, and its revision for evaluation. Tasks are the atomic unit of evaluation in Newton — each Task is either **compliant** or **non-compliant**. You can track task status via the [RPC API](/developers/reference/rpc-api), [Newton Explorer](/developers/resources/newton-explorer), or programmatically with the [Explorer API](/developers/reference/explorer-api).
+A **Task** pairs an Intent with a frozen ordered policy set, its ID, and its revision for evaluation. Tasks are the atomic unit of evaluation in Newton: each Task is either **compliant** or **non-compliant**. You can track task status via the [RPC API](/developers/reference/rpc-api), [Newton Explorer](/developers/resources/newton-explorer), or programmatically with the [Explorer API](/developers/reference/explorer-api).
 
 ### Attestation
 
@@ -115,7 +115,7 @@ flowchart TD
     AVS operators independently fetch PolicyData, evaluate the Rego policy, and produce individual BLS signatures. The Aggregator collects signatures into a single consensus proof once quorum is reached. See [Consensus & Security](/developers/concepts/consensus-security).
   
 ### Attestation returned
-    The aggregated attestation is returned to the caller, who submits it on-chain. The contract validates the proof and executes or blocks the transaction. See the [Frontend SDK Integration](/developers/guides/frontend-sdk-integration) for how to handle this in your app.
+    The aggregated attestation is returned to the caller, who submits it onchain. The contract validates the proof and executes or blocks the transaction. See the [Frontend SDK Integration](/developers/guides/frontend-sdk-integration) for how to handle this in your app.
   
 ::::
 

@@ -1,14 +1,14 @@
 ---
 title: "BLS Attestation Protocol"
-description: "BLS signature scheme on BN254, the Two-Digest System, aggregation algorithm, and ECDSA attestations in the Newton Protocol."
+description: "BLS signature scheme on BN254, the consensus digest, the aggregation algorithm, and policy data attestation in the Newton Protocol."
 showAskAi: false
 ---
 
-# BLS Attestation Protocol [BLS signature scheme on BN254, the Two-Digest System, aggregation algorithm, and ECDSA attestations in the Newton Protocol.]
+# BLS Attestation Protocol [BLS signature scheme on BN254, the consensus digest, the aggregation algorithm, and policy data attestation in the Newton Protocol.]
 
 ## BLS Attestation Protocol
 
-Newton Protocol uses two complementary signature schemes: BLS (Boneh-Lynn-Shacham) signatures for aggregatable operator consensus, and ECDSA signatures for individual data attestations. The combination provides both compact multi-party proofs and individually attributable data provenance.
+Newton Protocol uses BLS (Boneh-Lynn-Shacham) signatures for operator consensus. One aggregate signature from a quorum of operators attests both a task's verdict and the policy data it was evaluated against, as a single compact proof the TaskManager verifies onchain.
 
 ### BLS Signature Scheme
 
@@ -16,7 +16,7 @@ Newton uses BLS signatures on the BN254 (alt_bn128) elliptic curve, chosen for i
 
 The curve provides two groups: G1 (signatures, 32 bytes compressed) and G2 (public keys, 64 bytes compressed). The bilinear pairing function `e: G1 x G2 -> GT` enables signature aggregation: given individual signatures `sigma_1, ..., sigma_n` over the same message, the aggregate signature `sigma = sigma_1 + ... + sigma_n` can be verified against the aggregate public key `apk = pk_1 + ... + pk_n` with a single pairing check.
 
-The on-chain verification equation is:
+The onchain verification equation is:
 
 ```
 e(sigma, -G2) * e(H(m), apkG2) == 1
@@ -32,27 +32,11 @@ e(sigma + gamma * apk, -G2) * e(H(m) + gamma * G1, apkG2) == 1
 
 The gamma factor binds each quorum's signature to its public key, preventing an attacker from choosing a rogue public key that cancels another operator's key during aggregation.
 
-### Two-Digest System
+### Consensus Digest
 
-BLS signature aggregation requires all operators to sign the exact same message. However, operators independently generate unique ECDSA attestations over the policy data they fetched (each operator signs with their own ECDSA key, producing a different signature). This creates a fundamental conflict: the task response includes attestation fields that differ per operator, so the hash of the full response differs.
+BLS signature aggregation requires all operators to sign the exact same message. Each operator signs the consensus digest: keccak256 over the ABI-encoded task response, computed the same way in the offchain service layer and the onchain contract library. The response carries the policy task data the policy was evaluated against, so the aggregate signature covers the data as well as the verdict. [Streaming Consensus](/whitepaper/streaming-consensus) describes how operators agree on one data set when their independent fetches differ.
 
-The Two-Digest System resolves this by computing two distinct digests from the same task response:
-
-| Digest Type      | Computation           | Attestation Fields       | Used For                                  |
-|------------------|-----------------------|--------------------------|-------------------------------------------|
-| Consensus Digest | Consensus digest hash | Zeroed out (empty bytes) | BLS signing and on-chain BLS verification |
-| Full Digest      | Full digest hash      | Included                 | Contract storage, challenge verification  |
-
-**Consensus digest computation** (implemented in both the off-chain service layer and the on-chain contract library):
-
-1. Clone the task response.
-2. For each policy data entry, set the attestation field to empty bytes.
-3. ABI-encode the modified response.
-4. Compute keccak256 over the encoded bytes.
-
-Because all operators zero out attestations before hashing, they all produce the same consensus digest regardless of their individual ECDSA signatures. This enables BLS aggregation while preserving the full attestation data in the actual response for challenge verification.
-
-The verification flow on-chain proceeds through a middleware chain: the TaskManager delegates to a response handler, which computes the consensus digest and passes it to the BLS signature checker for pairing verification.
+The verification flow onchain proceeds through a middleware chain: the TaskManager delegates to a response handler, which computes the consensus digest and passes it to the BLS signature checker for pairing verification.
 
 ### BLS Aggregation Algorithm
 
@@ -76,22 +60,10 @@ flowchart TD
 
 2. **Quorum check.** The aggregator computes the total stake of signing operators and compares it against the per-task quorum threshold percentage (0-100). The quorum check is: `signed_stake >= total_stake * quorum_threshold / 100`. The aggregator returns early once quorum is met to minimize latency.
 
-3. **Signature aggregation.** Once quorum is reached, the BLS aggregation layer produces the aggregate signature along with non-signer stakes and signature data needed for on-chain verification.
+3. **Signature aggregation.** Once quorum is reached, the BLS aggregation layer produces the aggregate signature along with non-signer stakes and signature data needed for onchain verification.
 
-The protocol selects a reference block for aggregate public key lookups that ensures validity at on-chain verification time.
+The protocol selects a reference block for aggregate public key lookups that ensures validity at onchain verification time.
 
-### ECDSA Attestations
+### Policy Data Attestation
 
-Each operator produces an ECDSA attestation over the policy data it fetched, providing individually attributable proof of data provenance. The attestation message hash is:
-
-```
-message_hash = keccak256(abi.encodePacked(
-    policy_data_bytes,
-    policy_data_address,
-    expire_block,
-    wasm_cid,
-    args_cid
-))
-```
-
-The operator signs this hash with its ECDSA private key (secp256k1). The resulting signature is included in the attestation field of the policy task data. On-chain, the TaskManager validates these attestation signatures during response submission, ensuring that the policy data was genuinely fetched and attested by registered operators.
+Policy data carries the same guarantees as the verdict. No single party supplies it: operators fetch it independently, the network agrees on one canonical set, and a quorum of operators signs that set inside the task response, which is published onchain. Newton secures this path with zero-knowledge proofs, trusted execution environments, and multi-party computation, so the data behind every decision is trust-minimized, decentralized, verifiable, transparent, and credibly neutral.
