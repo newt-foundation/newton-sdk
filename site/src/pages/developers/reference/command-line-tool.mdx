@@ -446,7 +446,7 @@ The command normalizes the intent (converts `value`/`chainId` to hex) and submit
 
 ### Regorus
 
-The `regorus` command wraps Newton's fork of **Regorus 0.9.0**, configured for **Rego v1**, with Newton-specific crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`). It does not register the identity or confidential built-ins (`newton.identity.*`, `newton.confidential.*`).
+The `regorus` command wraps Newton's fork of **Regorus 0.9.0**, configured for **Rego v1**, with Newton-specific crypto extensions (`newton.crypto.ecdsa_recover_signer`, `newton.crypto.ecdsa_recover_signer_personal`). It does not register the identity, confidential or time built-ins (`newton.identity.*`, `newton.confidential.*`, `newton.time.*`).
 
 Its compatibility target is an **OPA v1.2.0-compatible subset plus Newton-specific extensions**. It does not implement every OPA built-in. See the [Rego Syntax Guide](/developers/advanced/rego-syntax-guide#unsupported-opa-built-ins) before relying on standard crypto/JWT, GraphQL, JSON Patch, network/CIDR/DNS, AWS provider, metadata, or module-parsing functions.
 

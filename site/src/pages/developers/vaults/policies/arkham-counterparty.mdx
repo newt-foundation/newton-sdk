@@ -20,11 +20,11 @@ This policy judges a payment against **the sending wallet's own history**, using
 | --- | --- |
 | Pack id | `arkham_counterparty` |
 | Rego package | `arkham_counterparty_activity` (the `--entrypoint` is `arkham_counterparty_activity.allow`) |
-| PolicyData addresses | [VaultKit address table](/developers/vaults/policy-packs#deployed-policydata-addresses) |
+| Policy address | `newton-cli --chain-id <chain-id> policy packs show --pack arkham_counterparty` ([details](/developers/vaults/policy-packs#pack-policy-addresses)) |
 | Canonical deployments | [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) |
 
 :::note
-This oracle is not deployed yet, so it has no row in the VaultKit address table. [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) is the source of truth for every pack, chain, and environment.
+This pack may not be published on your chain yet. `policy packs show` exits with `unknown pack` or `no published policy for pack` when [`deployments.json`](https://github.com/newt-foundation/newton-policy-packs/blob/main/deployments.json) has no entry for it.
 :::
 
 ### Secret

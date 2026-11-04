@@ -270,7 +270,7 @@ const { result } = await newtonWalletClient.evaluateIntentDirect({
 ```
 
 :::warning
-Identity policies need `intentSignature`. Operators recover the signer under your policy client's EIP-712 domain and load the identity data of every domain linked to the policy client for that signer. If the signature is missing or does not recover to `intent.from`, operators skip identity data without an error and the identity policy denies. The task request takes no identity domain: SDK 1.3.1 and earlier send `identityDomain`, and the gateway ignores it.
+Identity policies need `intentSignature`. Operators recover the signer under your policy client's EIP-712 domain and load the identity data of every domain linked to the policy client for that signer. If the signature is missing, operators skip identity data without an error and the identity policy denies. If it is present but does not recover to `intent.from`, the gateway rejects the task and `evaluateIntentDirect` throws a `GatewayError` (`intent_signature does not verify: ...`). The task request takes no identity domain: SDK 1.3.1 and earlier send `identityDomain`, and the gateway ignores it.
 :::
 
 ## Step 7: Execute Onchain Transaction with Attestation

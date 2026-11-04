@@ -72,6 +72,8 @@ The operator set from the source chain must be synced to each destination chain:
 3. It calls `confirmGlobalTableRoot()` and `updateOperatorTable()` on the destination chain's `ECDSAOperatorTableUpdater`
 4. The `BN254CertificateVerifier` uses this cached state for certificate verification
 
+The tables carry the same operator set registered on Ethereum, so a destination chain checks every attestation against those operators' BLS keys and stake, not a separate signer set.
+
 :::warning
 Each `updateOperatorTable()` call writes one operator set's complete table for one reference timestamp, and tables are stored by reference timestamp: repeating a timestamp is a no-op, and an older timestamp reverts. A certificate verifies only against the table stored for its own `referenceTimestamp`. It reverts with `ReferenceTimestampDoesNotExist` until that table is synced to the destination chain, with `CertificateStale` once a nonzero `maxStalenessPeriod` has passed, and with `RootDisabled` if that global table root was disabled.
 :::

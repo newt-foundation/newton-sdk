@@ -107,7 +107,7 @@ When an aggregated response is recorded for a task, the task manager stores two 
 
 | Hash | Value | Read with |
 |------|-------|-----------|
-| **Task response hash** | `keccak256(abi.encode(taskResponse, responseCertificate))` | `taskResponseHash(taskId)`, or the SDK's `getTaskResponseHash` |
+| **Task response hash** | `keccak256(abi.encode(taskResponse, responseCertificate))` | `taskResponseHash(taskId)` |
 | **Normalized task response hash** | `keccak256(abi.encode(taskResponse))` | `normalizedTaskResponseHash(taskId)` |
 
 The normalized hash leaves out the response certificate, so it can be compared with the hash `AttestationValidator` records for a directly verified response. `challengeDirectlyVerifiedMismatch` uses it as the canonical side of that comparison.

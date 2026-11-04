@@ -16,7 +16,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 ### Rego policy passes local evaluation
     ```bash
     # intent.json: {"from":"0x...","to":"0x...","value":"0x0","data":"0x","chainId":"0xaa36a7","functionSignature":"0x"}
-    # data.json: {"params":{...},"data":{...}}
+    # data.json: {"params":{...},"wasm":{...}}
     newton-cli regorus eval \
       -d policy.rego \
       -d data.json \
