@@ -1,12 +1,12 @@
 ---
 title: "Privacy Flows"
-description: "Three modes of privacy-preserving data in Newton Protocol — identity, confidential, and ephemeral — with end-to-end integration examples"
+description: "Three modes of privacy-preserving data in Newton Protocol (identity, confidential, and ephemeral), with end-to-end integration examples"
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Privacy Flows [Three modes of privacy-preserving data in Newton Protocol — identity, confidential, and ephemeral — with end-to-end integration examples]
+# Privacy Flows [Three modes of privacy-preserving data in Newton Protocol (identity, confidential, and ephemeral), with end-to-end integration examples]
 
 Newton supports three distinct privacy data flows, each designed for a different use case. All three use HPKE encryption (X25519 + ChaCha20-Poly1305). The gateway stores identity and confidential data in its `encrypted_data_refs` table; ephemeral data travels inline in the task and is not stored. The flows differ in who uploads data, how it's referenced, and which Rego namespace it appears in.
 
@@ -108,7 +108,7 @@ See [Verified Credentials](/developers/verified-credential/overview) for the ful
 
 ## 2. Confidential Data (Provider-Managed)
 
-For provider-managed datasets like blacklists, allowlists, or sanctions lists. A provider encrypts and uploads the data, publishes a versioned reference onchain, and grants access to specific policy clients. When a provider updates the data, they publish a new version — all granted clients automatically see the latest version.
+For provider-managed datasets like blacklists, allowlists, or sanctions lists. A provider encrypts and uploads the data, publishes a versioned reference onchain, and grants access to specific policy clients. When a provider updates the data, they publish a new version, and all granted clients automatically see the latest version.
 
 ### Flow
 
@@ -193,13 +193,13 @@ The provider proposes and revokes per-client access, and the policy client's own
 
 ### Versioning
 
-Each `publishData` call creates a new version. Operators always resolve the latest version via `getConfidentialData`. There is no explicit version pinning — all granted clients see the most recent data.
+Each `publishData` call creates a new version. Operators always resolve the latest version via `getConfidentialData`. There is no explicit version pinning: all granted clients see the most recent data.
 
 ---
 
 ## 3. Ephemeral Privacy Data (Per-Task Inline)
 
-For data that should only exist for a single task evaluation — no upload step, no onchain registration. The client embeds encrypted data directly in the task request's `wasm_args`.
+For data that should only exist for a single task evaluation, with no upload step and no onchain registration. The client embeds encrypted data directly in the task request's `wasm_args`.
 
 ### How It Works
 

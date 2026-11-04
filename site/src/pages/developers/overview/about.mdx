@@ -9,7 +9,7 @@ import { Card } from 'vocs'
 
 # What is Newton? [Newton Protocol is a decentralized policy engine for onchain transaction authorization, built as an EigenLayer AVS. Enforce spend limits, sanctions screening, fraud prevention, and compliance rules in smart contracts.]
 
-Newton Protocol is a [policy engine](/developers/overview/core-concepts) that lets you encode, verify, and enforce rules — spend limits, sanctions screening, fraud prevention — directly within your smart contracts.
+Newton Protocol is a [policy engine](/developers/overview/core-concepts) that lets you encode, verify, and enforce rules such as spend limits, sanctions screening, and fraud prevention directly within your smart contracts.
 
 ### The problem
 
@@ -27,7 +27,7 @@ Smart contracts are **blind to offchain context**: whether a user is sanctioned,
     alt="Solution: Newton bridges offchain data to smart contracts"
   />
 
-Newton bridges this gap with real-time offchain data — KYC status, market feeds, proof of reserves — evaluated by a [decentralized operator network](/developers/concepts/consensus-security) and enforced at the smart contract level. Your protocol stays protected regardless of where the transaction originates.
+Newton bridges this gap with real-time offchain data (KYC status, market feeds, proof of reserves), evaluated by a [decentralized operator network](/developers/concepts/consensus-security) and enforced at the smart contract level. Your protocol stays protected regardless of where the transaction originates.
 
 ### Modular and chain-agnostic
 
@@ -79,12 +79,12 @@ async function simulate() {
 
 ## Walkthrough
 
-<iframe className="w-full aspect-video rounded-xl" src="https://player.vimeo.com/video/1154806337?play_button_position=center" title="Newton Protocol walkthrough — how policy-based transaction authorization works" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+<iframe className="w-full aspect-video rounded-xl" src="https://player.vimeo.com/video/1154806337?play_button_position=center" title="Newton Protocol walkthrough: how policy-based transaction authorization works" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
 
 ## Why Newton
 
 - **Verifiable Trust:** Every compliance decision is backed by a [BLS attestation](/developers/overview/core-concepts#attestation), not reputation.
-- **Privacy-Preserving:** Only hashes and commitments are onchain — no PII or sensitive data exposure. See the [privacy layer](/developers/concepts/privacy-layer).
+- **Privacy-Preserving:** Only hashes and commitments are onchain, so no PII or sensitive data is exposed. See the [privacy layer](/developers/concepts/privacy-layer).
 - **Composable:** Works with wallets, dApps, AI agents, and DeFi protocols through a [standard SDK interface](/developers/reference/sdk-reference).
 - **Chain-Agnostic:** Newton proofs can be verified across [any supported EVM chain](/developers/concepts/multichain) via lightweight verifier contracts.
 - **Extensible:** Supports both open-source policies and enterprise modules for regulated financial institutions.

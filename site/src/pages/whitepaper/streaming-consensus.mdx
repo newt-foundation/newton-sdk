@@ -14,7 +14,7 @@ When operators independently fetch time-sensitive data from external sources (pr
 
 ### Protocol Architecture
 
-Newton solves this through a streaming two-phase consensus protocol built on NATS messaging. The protocol separates data collection (Prepare phase) from policy evaluation and BLS signing (Evaluate phase), using pipelined streaming to minimize end-to-end latency. Although the Evaluate phase performs two logical steps — policy evaluation and BLS signing — these execute atomically within a single NATS round-trip: each operator evaluates the policy, immediately signs the result, and streams the signed response back to the gateway.
+Newton solves this through a streaming two-phase consensus protocol built on NATS messaging. The protocol separates data collection (Prepare phase) from policy evaluation and BLS signing (Evaluate phase), using pipelined streaming to minimize end-to-end latency. Although the Evaluate phase performs two logical steps (policy evaluation and BLS signing), these execute atomically within a single NATS round-trip: each operator evaluates the policy, immediately signs the result, and streams the signed response back to the gateway.
 
 ```mermaid
 flowchart TB
@@ -58,7 +58,7 @@ The protocol achieves low latency through three key properties:
 
 ### Prepare Phase: Distributed WASM Data Collection
 
-The gateway publishes a Prepare request to the NATS task subject for the relevant chain. All operators subscribed to that chain's task subject receive the request simultaneously. Each operator independently executes the WASM data provider — the "policy data WASM" — in its own sandboxed Wasmtime environment ([WASM-Sandboxed Data Providers](/whitepaper/policy-engine#wasm-sandboxed-data-providers)), fetches external data from the configured data sources, and publishes a Prepare response to the task-specific response subject containing:
+The gateway publishes a Prepare request to the NATS task subject for the relevant chain. All operators subscribed to that chain's task subject receive the request simultaneously. Each operator independently executes the WASM data provider (the "policy data WASM") in its own sandboxed Wasmtime environment ([WASM-Sandboxed Data Providers](/whitepaper/policy-engine#wasm-sandboxed-data-providers)), fetches external data from the configured data sources, and publishes a Prepare response to the task-specific response subject containing:
 
 - The generated policy task data with ECDSA attestation
 - A hash of the data for quick comparison
@@ -88,7 +88,7 @@ The gateway applies median-based normalization to produce a single canonical dat
 
 ### Evaluate Phase: Policy Evaluation and BLS Signing
 
-The gateway publishes an Evaluate request to the NATS task subject with the consensus policy task data, the policy configuration fetched from on-chain, the original intent, and the task's reference block. Each operator:
+The gateway publishes an Evaluate request to the NATS task subject with the consensus policy task data, the policy configuration fetched onchain, the original intent, and the task's reference block. Each operator:
 
 1. Receives the Evaluate request via its NATS subscription.
 2. Constructs the task response using the consensus policy task data (not their own data).
@@ -98,9 +98,9 @@ The gateway publishes an Evaluate request to the NATS task subject with the cons
 6. Signs the consensus digest with their BLS key.
 7. Publishes the BLS-signed response to the task-specific NATS response subject.
 
-Because all operators evaluate with identical data and the same deterministic Rego policy, they produce identical evaluation results and identical consensus digests, enabling BLS aggregation. Policy evaluation and BLS signing execute atomically within a single operator step — there is no separate signing phase, because the deterministic evaluation guarantees that all honest operators arrive at the same result without requiring an intermediate consistency check.
+Because all operators evaluate with identical data and the same deterministic Rego policy, they produce identical evaluation results and identical consensus digests, enabling BLS aggregation. Policy evaluation and BLS signing execute atomically within a single operator step. There is no separate signing phase, because the deterministic evaluation guarantees that all honest operators arrive at the same result without requiring an intermediate consistency check.
 
-The gateway checks quorum on every incoming Evaluate response. As soon as the stake-weighted quorum threshold is met, the aggregation completes and the aggregate BLS signature is submitted on-chain. Remaining operator responses are discarded. This early quorum exit means that in a network of N operators where quorum requires K, the protocol completes as soon as the K-th fastest operator responds — regardless of how slow the remaining N-K operators may be.
+The gateway checks quorum on every incoming Evaluate response. As soon as the stake-weighted quorum threshold is met, the aggregation completes and the aggregate BLS signature is submitted onchain. Remaining operator responses are discarded. This early quorum exit means that in a network of N operators where quorum requires K, the protocol completes as soon as the K-th fastest operator responds, regardless of how slow the remaining N-K operators may be.
 
 **Pipelining detail.** Because NATS delivers the Evaluate request to all operators simultaneously, operators that completed the Prepare phase earliest begin evaluation immediately. In practice, the fastest operators may complete Prepare and Evaluate before the slowest operators finish Prepare, collapsing two-phase latency toward a single-phase equivalent for the quorum-critical subset of operators.
 
@@ -121,8 +121,8 @@ newton.
 
   responses.
     {task_id}.
-      prepare                  # Prepare responses — unsigned (Operators → Gateway)
-      evaluate                 # Evaluate responses — BLS-signed (Operators → Gateway)
+      prepare                  # Prepare responses, unsigned (Operators → Gateway)
+      evaluate                 # Evaluate responses, BLS-signed (Operators → Gateway)
     errors                     # Error responses
 
   operators.
@@ -155,4 +155,4 @@ The embedded mode requires zero additional infrastructure, enabling developers t
 
 ### Centralized Single-Phase Mode
 
-For tasks where policy data is deterministic or pre-cached (no operator-independent data fetching needed), the protocol supports a simplified single-phase mode. The gateway generates the policy task data centrally and publishes a single Evaluate request — skipping the Prepare phase entirely. Operators evaluate the policy, BLS-sign, and stream responses. This mode reduces latency to a single NATS round-trip and is appropriate for policies that do not depend on external data sources.
+For tasks where policy data is deterministic or pre-cached (no operator-independent data fetching needed), the protocol supports a simplified single-phase mode. The gateway generates the policy task data centrally and publishes a single Evaluate request, skipping the Prepare phase entirely. Operators evaluate the policy, BLS-sign, and stream responses. This mode reduces latency to a single NATS round-trip and is appropriate for policies that do not depend on external data sources.

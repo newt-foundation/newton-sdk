@@ -4,7 +4,7 @@ import { defineConfig } from 'vocs/config'
 import regoGrammar from './syntaxes/rego.tmLanguage.json' with { type: 'json' }
 
 /**
- * Canonical origin — set on production ONLY, deliberately.
+ * Canonical origin: set on production ONLY, deliberately.
  *
  * Vocs renders `baseUrl` into a `<base>` tag on every page
  * (`vocs/dist/react/Head.js`: `base = tag(head.base, baseUrl)`), and a `<base>`
@@ -14,14 +14,14 @@ import regoGrammar from './syntaxes/rego.tmLanguage.json' with { type: 'json' }
  * hash-only anchors.
  *
  * That made previews unusable: a hardcoded production domain sent every link on
- * a preview to docs.newton.xyz. Pointing it at `VERCEL_URL` instead is no fix —
+ * a preview to docs.newton.xyz. Pointing it at `VERCEL_URL` instead is no fix:
  * that is the per-DEPLOYMENT host, so browsing the branch alias
  * (`<project>-git-<branch>-<team>.vercel.app`) and clicking any link threw you
  * onto the immutable per-deployment URL. Same class of bug, different
  * destination. `VERCEL_BRANCH_URL` merely moves the bounce the other way.
  *
  * Omitting `baseUrl` emits no `<base>` tag, so relative hrefs resolve against
- * whatever origin is serving the page — the branch alias, a deployment URL, or
+ * whatever origin is serving the page, so the branch alias, a deployment URL, or
  * localhost all just work. Production still needs it, for `sitemap.xml` and
  * `<link rel="canonical">`; a preview wants neither (Vercel sends
  * `X-Robots-Tag: noindex` there, and a preview should not advertise canonicals).

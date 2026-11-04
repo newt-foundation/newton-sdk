@@ -93,7 +93,7 @@ interface tlsn {
     /// Download a TLSNotary Presentation from IPFS by CID, verify it, and return authenticated data.
     ///
     /// The host implementation:
-    ///   1. Downloads from IPFS (5 MiB cap — returns error if exceeded)
+    ///   1. Downloads from IPFS (5 MiB cap; returns error if exceeded)
     ///   2. Re-verifies the CID multihash against the downloaded bytes (defends against malicious IPFS gateways)
     ///   3. BCS-deserializes the bytes into a Presentation
     ///   4. Calls verify_presentation() from newton-tls-notary
@@ -130,7 +130,7 @@ import { fetch as httpFetch } from "newton:provider/http@0.2.0";
 
 // WIT: export run: func(input: string) -> result<string, string>
 // We return a JSON string on success AND on "errors"
-// (i.e., we don't surface WIT Err<string> — we encode error info in JSON)
+// (i.e., we don't surface WIT Err<string>; we encode error info in JSON)
 export function run(input) {
   const req = JSON.parse(input);
 
@@ -166,7 +166,7 @@ export function run(input) {
 componentize-js --wit newton-provider.wit -o policy.wasm app.js -d stdio random clocks http fetch-event
 ```
 
-This produces `policy.wasm` in the project root — a component that:
+This produces `policy.wasm` in the project root, a component that:
 
 - **Imports** `newton:provider/http.fetch` from the host
 - **Exports** `run(input: string) -> result<string, string>`

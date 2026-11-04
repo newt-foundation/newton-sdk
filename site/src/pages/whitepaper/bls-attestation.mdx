@@ -16,7 +16,7 @@ Newton uses BLS signatures on the BN254 (alt_bn128) elliptic curve, chosen for i
 
 The curve provides two groups: G1 (signatures, 32 bytes compressed) and G2 (public keys, 64 bytes compressed). The bilinear pairing function `e: G1 x G2 -> GT` enables signature aggregation: given individual signatures `sigma_1, ..., sigma_n` over the same message, the aggregate signature `sigma = sigma_1 + ... + sigma_n` can be verified against the aggregate public key `apk = pk_1 + ... + pk_n` with a single pairing check.
 
-The on-chain verification equation is:
+The onchain verification equation is:
 
 ```
 e(sigma, -G2) * e(H(m), apkG2) == 1
@@ -40,10 +40,10 @@ The Two-Digest System resolves this by computing two distinct digests from the s
 
 | Digest Type      | Computation           | Attestation Fields       | Used For                                  |
 |------------------|-----------------------|--------------------------|-------------------------------------------|
-| Consensus Digest | Consensus digest hash | Zeroed out (empty bytes) | BLS signing and on-chain BLS verification |
+| Consensus Digest | Consensus digest hash | Zeroed out (empty bytes) | BLS signing and onchain BLS verification  |
 | Full Digest      | Full digest hash      | Included                 | Contract storage, challenge verification  |
 
-**Consensus digest computation** (implemented in both the off-chain service layer and the on-chain contract library):
+**Consensus digest computation** (implemented in both the offchain service layer and the onchain contract library):
 
 1. Clone the task response.
 2. For each policy data entry, set the attestation field to empty bytes.
@@ -52,7 +52,7 @@ The Two-Digest System resolves this by computing two distinct digests from the s
 
 Because all operators zero out attestations before hashing, they all produce the same consensus digest regardless of their individual ECDSA signatures. This enables BLS aggregation while preserving the full attestation data in the actual response for challenge verification.
 
-The verification flow on-chain proceeds through a middleware chain: the TaskManager delegates to a response handler, which computes the consensus digest and passes it to the BLS signature checker for pairing verification.
+The verification flow onchain proceeds through a middleware chain: the TaskManager delegates to a response handler, which computes the consensus digest and passes it to the BLS signature checker for pairing verification.
 
 ### BLS Aggregation Algorithm
 
@@ -76,9 +76,9 @@ flowchart TD
 
 2. **Quorum check.** The aggregator computes the total stake of signing operators and compares it against the per-task quorum threshold percentage (0-100). The quorum check is: `signed_stake >= total_stake * quorum_threshold / 100`. The aggregator returns early once quorum is met to minimize latency.
 
-3. **Signature aggregation.** Once quorum is reached, the BLS aggregation layer produces the aggregate signature along with non-signer stakes and signature data needed for on-chain verification.
+3. **Signature aggregation.** Once quorum is reached, the BLS aggregation layer produces the aggregate signature along with non-signer stakes and signature data needed for onchain verification.
 
-The protocol selects a reference block for aggregate public key lookups that ensures validity at on-chain verification time.
+The protocol selects a reference block for aggregate public key lookups that ensures validity at onchain verification time.
 
 ### ECDSA Attestations
 
@@ -94,4 +94,4 @@ message_hash = keccak256(abi.encodePacked(
 ))
 ```
 
-The operator signs this hash with its ECDSA private key (secp256k1). The resulting signature is included in the attestation field of the policy task data. On-chain, the TaskManager validates these attestation signatures during response submission, ensuring that the policy data was genuinely fetched and attested by registered operators.
+The operator signs this hash with its ECDSA private key (secp256k1). The resulting signature is included in the attestation field of the policy task data. Onchain, the TaskManager validates these attestation signatures during response submission, ensuring that the policy data was genuinely fetched and attested by registered operators.

@@ -20,7 +20,7 @@ Newton's security analysis is grounded in a formal threat model that defines the
 | Operator                    | Evaluates policies, signs responses with BLS keys, participates in MPC evaluation                                            | Honest-majority: fewer than 1/3 of staked operators are adversarial                                                                                              |
 | Gateway (rotating)          | Orchestrates task distribution via NATS, coordinates BLS aggregation; role rotates among operators each epoch via VRF ([Rotating Gateway](/whitepaper/decentralization#rotating-gateway-via-vrfvdf-leader-selection)) | Trusted for liveness and routing during its epoch; not trusted with data confidentiality (threshold decryption ensures no single party holds the decryption key) |
 
-Additional actors include credential issuers (trusted for attribute correctness), the EigenLayer protocol (trusted for stake accounting and slashing execution), and end users (untrusted — all user inputs are validated).
+Additional actors include credential issuers (trusted for attribute correctness), the EigenLayer protocol (trusted for stake accounting and slashing execution), and end users (untrusted; all user inputs are validated).
 
 **Adversary capabilities.** The threat model considers an adversary with the following capabilities:
 
@@ -110,4 +110,4 @@ HPKE's modular KEM/KDF/AEAD composition means that replacing X25519 with ML-KEM 
 
 ### Performance Characteristics
 
-The cryptographic operations underlying Newton's protocol have been benchmarked to validate that sub-second consensus is achievable under production workloads. Detailed benchmark data — including per-operation latencies for HPKE encrypt/decrypt, Ed25519 sign/verify, BLS sign/verify/aggregate, and end-to-end task flow timing — is maintained in a companion performance report. The protocol's latency budget is dominated by network round-trips and policy evaluation rather than cryptographic operations, which complete in microsecond-to-low-millisecond ranges on commodity hardware.
+The cryptographic operations underlying Newton's protocol have been benchmarked to validate that sub-second consensus is achievable under production workloads. Detailed benchmark data, including per-operation latencies for HPKE encrypt/decrypt, Ed25519 sign/verify, BLS sign/verify/aggregate, and end-to-end task flow timing, is maintained in a companion performance report. The protocol's latency budget is dominated by network round-trips and policy evaluation rather than cryptographic operations, which complete in microsecond-to-low-millisecond ranges on commodity hardware.
