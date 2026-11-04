@@ -258,7 +258,7 @@ const intentSignature = await walletClient.signTypedData({
 **3. Submit for evaluation**
 
 ```typescript
-const { result } = await newtonWalletClient.evaluateIntentDirect({
+const { result } = await walletClient.evaluateIntentDirect({
   policyClient: yourPolicyClientAddress,
   intent,
   intentSignature,

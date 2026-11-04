@@ -63,7 +63,7 @@ An **Intent** is a proposed transaction submitted for policy evaluation. It cont
 | `value` | Wei value to transfer |
 | `data` | Transaction calldata |
 | `chain_id` | Target chain ID |
-| `function_signature` | ABI-encoded function signature |
+| `function_signature` | Hex-encoded human-readable function signature, not the 4-byte selector |
 
 You construct Intents when calling [`simulatePolicy`](/developers/reference/sdk-reference) or [`submitEvaluationRequest`](/developers/reference/sdk-reference) in the SDK.
 

@@ -18,7 +18,7 @@ showAskAi: false
 
 ## Introduction
 
-This document is a technical specification of the Newton Protocol, an Autonomous Verifiable Service (AVS) built on EigenLayer for policy-based authorization of blockchain transactions. The intended audience is protocol engineers, security auditors, and system integrators who need a precise understanding of Newton's cryptographic primitives, consensus mechanisms, cross-chain architecture, and security model.
+This document is a technical specification of the Newton Protocol, an Actively Validated Service (AVS) built on EigenLayer for policy-based authorization of blockchain transactions. The intended audience is protocol engineers, security auditors, and system integrators who need a precise understanding of Newton's cryptographic primitives, consensus mechanisms, cross-chain architecture, and security model.
 
 Newton Protocol operates as an authorization layer between transaction intent and onchain execution. Applications submit transaction intents to a decentralized operator network. Operators independently evaluate those intents against Rego policies, fetch external data through sandboxed WASM plugins, and produce BLS signatures over the evaluation result. The protocol uses NATS streaming messaging for non-blocking, pipelined communication between the gateway and operators, enabling sub-second consensus with early quorum exit. An aggregation layer collects these signatures, verifies stake-weighted quorum, and produces a compact aggregate BLS signature that smart contracts can verify onchain. A challenge mechanism backed by zero-knowledge proofs provides cryptographic dispute resolution, and a slashing mechanism enforces economic accountability.
 

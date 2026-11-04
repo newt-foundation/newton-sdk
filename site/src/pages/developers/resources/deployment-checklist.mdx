@@ -75,7 +75,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
 
 ::::steps
 ### API key created with correct permissions
-    Verify your key has `rpc_read` for task submission and simulation, `rpc_write` if you need to manage secrets. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
+    Verify your key has `rpc_write` to submit tasks and store secrets, and `rpc_read` to simulate, or `rpc` for both. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
   
 ### Encrypted secrets stored (if applicable)
     If your oracle requires API keys, store them via `newt_storeEncryptedSecrets`. Verify with `newt_simulatePolicyDataWithClient`. See [Encrypting Secrets](/developers/advanced/encrypting-secrets).
@@ -106,7 +106,7 @@ Use this checklist to verify your Newton Protocol integration before going to pr
     4. Verify the transaction succeeds
   
 ### Error handling implemented
-    Handle all SDK error codes: `TASK_TIMEOUT`, `POLICY_NOT_FOUND`, `ATTESTATION_EXPIRED`, `UNAUTHORIZED`. See [Error Reference](/developers/reference/error-reference).
+    Handle `SDKError` codes (for example `INVALID_ARGUMENT` and `MALFORMED_RESPONSE`) and the gateway JSON-RPC errors your calls can return. See [Error Reference](/developers/reference/error-reference).
   
 ::::
 

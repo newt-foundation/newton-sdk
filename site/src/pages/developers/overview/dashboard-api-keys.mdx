@@ -125,12 +125,12 @@ All management endpoints require an authenticated session (access token in `Auth
 | Permission | Description |
 |------------|-------------|
 | `admin` | Full access: manage projects, keys, and settings |
-| `rpc_write` | Write operations: secrets management via `newt_storeEncryptedSecrets` |
-| `rpc_read` | Read operations: task submission and simulation |
+| `rpc_write` | Write operations: task submission (`newt_createTask`, `newt_sendTask`), encrypted secrets (`newt_storeEncryptedSecrets`), data uploads and webhooks |
+| `rpc_read` | Read operations: simulations and data reads |
 | `rpc` | Combined `rpc_read` + `rpc_write` |
 
 :::note
-Most integrations need `rpc` permission (combined read + write). Use `rpc_read` for frontend-only applications that submit tasks but do not manage secrets.
+Most integrations need `rpc` (combined read and write). A key with only `rpc_read` can simulate but cannot submit tasks.
 :::
 
 ## Policy Client Ownership
