@@ -85,28 +85,18 @@ const intent = {
 
 ## Step 4: Sign in the browser
 
-Read the EIP-712 domain from the PolicyClient when it exposes EIP-5267 `eip712Domain()`. Otherwise use only the fallback domain documented by that PolicyClient, with `verifyingContract` set to the PolicyClient address.
+`signIntent` reads the EIP-712 domain from the PolicyClient's EIP-5267 `eip712Domain()` and signs the intent under it. The domain is the PolicyClient's even though `intent.to` is the token.
 
 ```typescript
-const INTENT_TYPES = {
-  Intent: [
-    { name: "from", type: "address" },
-    { name: "to", type: "address" },
-    { name: "value", type: "uint256" },
-    { name: "data", type: "bytes" },
-    { name: "chainId", type: "uint256" },
-    { name: "functionSignature", type: "bytes" },
-  ],
-} as const;
+import { signIntent } from "@newton-xyz/sdk";
 
-const intentSignature = await walletClient.signTypedData({
-  account: connectedAddress,
-  domain,
-  types: INTENT_TYPES,
-  primaryType: "Intent",
-  message: intent,
+const intentSignature = await signIntent(walletClient, {
+  policyClient,
+  intent,
 });
 ```
+
+If the PolicyClient does not expose `eip712Domain()`, build the typed data with `intentTypedData(intent, domain)` from the SDK, using only the fallback domain documented by that PolicyClient with `verifyingContract` set to the PolicyClient address, and sign it with `walletClient.signTypedData`.
 
 The signature must cover the exact intent submitted to the server. Do not sign with an application-owned private key or replace `intent.from` with a server account.
 
