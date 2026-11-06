@@ -72,6 +72,12 @@ describe('newtonWalletClientActions type tests', () => {
   })
 })
 
+describe('intent type tests', () => {
+  it('signIntent returns a signature', () => {
+    expectTypeOf<WalletActions['signIntent']>().returns.resolves.toEqualTypeOf<Hex>()
+  })
+})
+
 describe('delegator type tests', () => {
   it('signDelegatedIntent returns a signature', () => {
     expectTypeOf<WalletActions['signDelegatedIntent']>().returns.resolves.toEqualTypeOf<Hex>()
