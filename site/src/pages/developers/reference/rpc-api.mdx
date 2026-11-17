@@ -276,53 +276,15 @@ Creates a task and waits synchronously for the BLS aggregation result. Use this 
 Some policy clients and identity-backed flows require `intent_signature` even though the RPC schema marks it optional. Passing an empty signature such as `"0x"` can fail before policy evaluation with an error like `Failed to encode intent signature: 0x reason: expected exactly 65 bytes`.
 :::
 
-Sign the exact intent with EIP-712 before calling `newt_createTask`. For PolicyClients that expose EIP-5267, read the signing domain from the contract's `eip712Domain()` method so the signature is bound to the deployed client:
+Sign the exact intent with EIP-712 before calling `newt_createTask`. The gateway verifies every intent signature under one fixed domain, bound to the policy client by `verifyingContract`:
 
 ```ts
-const EIP712_DOMAIN_ABI = [
-  {
-    type: "function",
-    name: "eip712Domain",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [
-      { name: "fields", type: "bytes1" },
-      { name: "name", type: "string" },
-      { name: "version", type: "string" },
-      { name: "chainId", type: "uint256" },
-      { name: "verifyingContract", type: "address" },
-      { name: "salt", type: "bytes32" },
-      { name: "extensions", type: "uint256[]" },
-    ],
-  },
-] as const;
-
-async function readEip712Domain(policyClient, publicClient) {
-  try {
-    const [, name, version, chainId, verifyingContract] =
-      await publicClient.readContract({
-        address: policyClient,
-        abi: EIP712_DOMAIN_ABI,
-        functionName: "eip712Domain",
-      });
-
-    return {
-      name,
-      version,
-      chainId: Number(chainId),
-      verifyingContract,
-    };
-  } catch {
-    return null;
-  }
-}
-
-const domain = await readEip712Domain(policyClient, publicClient);
-if (!domain) {
-  throw new Error(
-    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
-  );
-}
+const domain = {
+  name: "NewtonPolicyClient",
+  version: "1",
+  chainId: Number(intent.chainId),
+  verifyingContract: policyClient,
+} as const;
 
 const intentSignature = await walletClient.signTypedData({
   account,
@@ -346,14 +308,14 @@ const intentSignature = await walletClient.signTypedData({
 });
 ```
 
-For a manual fallback, build the domain from the values the `NewtonPolicyClient` mixin fixes and the deployed address:
-
-| Source | EIP-712 domain field |
+| EIP-712 domain field | Value |
 |---|---|
-| `NewtonPolicyClient` mixin | `name: "NewtonPolicyClient"` |
-| `NewtonPolicyClient` mixin | `version: "1"` |
-| Target chain | `chainId` |
-| Deployed PolicyClient address (the proxy, for an upgradeable client) | `verifyingContract` |
+| `name` | `"NewtonPolicyClient"` (fixed) |
+| `version` | `"1"` (fixed) |
+| `chainId` | The intent's chain |
+| `verifyingContract` | Deployed PolicyClient address (the proxy, for an upgradeable client) |
+
+The `NewtonPolicyClient` mixin uses the same domain, so its `eip712Domain()` returns these values. A custom policy client with its own EIP-712 name or version does not change what the gateway expects: sign with the fixed domain above, and if the client also verifies intent signatures onchain, give it the same name and version.
 
 #### Returns
 

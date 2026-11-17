@@ -262,13 +262,6 @@ A task that fails evaluation throws a plain `Error` with the gateway's reason. A
 Evaluates an intent directly through the gateway without waiting for onchain task response confirmation. Pass the results to your policy client's `_validateAttestationDirect`, which calls the Task Manager's `validateAttestationDirect` (`NewtonProverTaskManagerShared`).
 
 ```ts
-const domain = await readEip712Domain(policyClient, publicClient);
-if (!domain) {
-  throw new Error(
-    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
-  );
-}
-
 const intent = {
   from: account.address,
   to: '0x...',
@@ -276,6 +269,13 @@ const intent = {
   data: '0x',
   chainId: 11155111,
   functionSignature: '0x',
+} as const;
+
+const domain = {
+  name: 'NewtonPolicyClient',
+  version: '1',
+  chainId: intent.chainId,
+  verifyingContract: policyClient,
 } as const;
 
 const intentSignature = await walletClient.signTypedData({
@@ -347,57 +347,19 @@ evaluateIntentDirect(
 A task that fails evaluation throws a plain `Error` with the gateway's reason, and a call the gateway rejects throws a [`GatewayError`](/developers/reference/error-reference#gatewayerror). If `newt_createTask` answers without a `task_response`, the call throws an `SDKError` with code `MALFORMED_RESPONSE`.
 
 :::warning
-Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the policy client's `eip712Domain()` and load identity data only when that signer is `intent.from`. If you omit the signature, operators skip identity data, and a policy that needs it denies. A signature that is present but does not recover to `intent.from` under the policy client's domain is rejected with HTTP 400 `{"InvalidRequest":"intent_signature does not verify: ..."}`. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
+Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the fixed intent domain (below) and load identity data only when that signer is `intent.from`. If you omit the signature, operators skip identity data, and a policy that needs it denies. A signature that is present but does not recover to `intent.from` under that domain is rejected with HTTP 400 `{"InvalidRequest":"intent_signature does not verify: ..."}`. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
 :::
 
-Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
+Sign intents under one fixed EIP-712 domain. The gateway and operators verify every intent signature with it:
 
-```ts
-import type { Address } from 'viem';
+| Field | Value |
+|---|---|
+| `name` | `"NewtonPolicyClient"` |
+| `version` | `"1"` |
+| `chainId` | The intent's chain |
+| `verifyingContract` | The policy client address |
 
-const EIP712_DOMAIN_ABI = [
-  {
-    type: 'function',
-    name: 'eip712Domain',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [
-      { name: 'fields', type: 'bytes1' },
-      { name: 'name', type: 'string' },
-      { name: 'version', type: 'string' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'verifyingContract', type: 'address' },
-      { name: 'salt', type: 'bytes32' },
-      { name: 'extensions', type: 'uint256[]' },
-    ],
-  },
-] as const;
-
-export async function readEip712Domain(
-  policyClient: Address,
-  publicClient,
-) {
-  try {
-    const [, name, version, chainId, verifyingContract] =
-      await publicClient.readContract({
-        address: policyClient,
-        abi: EIP712_DOMAIN_ABI,
-        functionName: 'eip712Domain',
-      });
-
-    return {
-      name,
-      version,
-      chainId: Number(chainId),
-      verifyingContract,
-    };
-  } catch {
-    return null;
-  }
-}
-```
-
-If you deploy a custom policy client that does not implement EIP-5267, hardcoded signing domains must match the contract's `EIP712(name, version)` constructor values and the deployed policy client address.
+Clients built on the `NewtonPolicyClient` mixin return the same values from EIP-5267 `eip712Domain()`. Do not use `eip712Domain()` from a custom policy client that declares a different name or version; the gateway rejects signatures made under it. A custom client that verifies intent signatures onchain must use `"NewtonPolicyClient"` and `"1"` as well.
 
 ---
 

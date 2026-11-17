@@ -131,7 +131,7 @@ Key generation is a one-time ceremony, not a per-task step. Shares can later be 
 
 Operators decrypt only data authorized for the task's policy client:
 
-- **Identity data**: the IdentityRegistry must link the policy client to the intent signer, which operators recover from `intent_signature` under the policy client's EIP-712 domain. Without a signature that recovers to `intent.from`, operators skip identity data.
+- **Identity data**: the IdentityRegistry must link the policy client to the intent signer, which operators recover from `intent_signature` under the fixed `NewtonPolicyClient` EIP-712 domain, bound to the policy client address. Without a signature that recovers to `intent.from`, operators skip identity data.
 - **Confidential data**: the provider must grant the policy client access in the ConfidentialDataRegistry. The provider calls `proposeGrant`, then the policy client's owner calls `acceptGrant`.
 - **Ephemeral data**: each envelope's `policy_client` and `chain_id` must match the task, or the gateway rejects the task.
 

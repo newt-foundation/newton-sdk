@@ -227,11 +227,11 @@ const intent = {
 **2. Sign the intent using your policy client's EIP712 domain**
 
 ```typescript
-// NewtonPolicyClient fixes the domain name and version; eip712Domain() on your policy client returns them
+// The gateway verifies intent signatures under this fixed name and version
 const intentSignature = await walletClient.signTypedData({
   account: userAddress,
   domain: {
-    name: 'NewtonPolicyClient',  // fixed by the NewtonPolicyClient mixin
+    name: 'NewtonPolicyClient',  // fixed; do not use a client-specific name
     version: '1',
     chainId: 11155111,
     verifyingContract: yourPolicyClientAddress,
