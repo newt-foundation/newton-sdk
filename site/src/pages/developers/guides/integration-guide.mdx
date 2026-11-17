@@ -56,14 +56,10 @@ Install only what you need for the steps you plan to follow:
 | **Sepolia ETH**                        | 3-5   | Gas fees on testnet                                                                    |
 | **Newton API key**                     | 3-5   | Upload policy files (CLI) and authenticate SDK requests ([create one here](/developers/overview/dashboard-api-keys)) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
-| **Rust + Cargo**                       | 1-3   | Building and running `newton-cli`                                                      |
 | **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 
 :::details[Install all tooling (Steps 1-5)]
   ```bash
-  # Rust (includes cargo)
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
   # Node.js (macOS, or use your preferred method)
   brew install node
 
@@ -80,7 +76,7 @@ Install only what you need for the steps you plan to follow:
   ```
 
 :::warning
-After installing Rust, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
+After installing newton-cli, Foundry, or Node via Homebrew, **restart your terminal** (or run `source ~/.zshrc`) so the new binaries are on your `PATH`.
 :::
 :::
 
@@ -148,7 +144,7 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
 ## Troubleshooting
 
 :::details['command not found' after installing tools]
-    Restart your shell after installing Rust, Node via Homebrew, or Foundry:
+    Restart your shell after installing newton-cli, Node via Homebrew, or Foundry:
 
     ```bash
     source ~/.zshrc  # or source ~/.bashrc
