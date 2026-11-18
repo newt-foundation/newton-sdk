@@ -85,9 +85,16 @@ const intent = {
 
 ## Step 4: Sign in the browser
 
-Read the EIP-712 domain from the PolicyClient when it exposes EIP-5267 `eip712Domain()`. Otherwise use only the fallback domain documented by that PolicyClient, with `verifyingContract` set to the PolicyClient address.
+The gateway verifies every intent signature under one fixed EIP-712 domain: name `"NewtonPolicyClient"`, version `"1"`, the intent's chain ID, and the PolicyClient address as `verifyingContract`. Sign with exactly that domain. Do not substitute a domain from the PolicyClient's own `eip712Domain()`; for a client with its own EIP-712 name, the gateway rejects that signature.
 
 ```typescript
+const domain = {
+  name: "NewtonPolicyClient",
+  version: "1",
+  chainId: Number(intent.chainId),
+  verifyingContract: policyClient,
+} as const;
+
 const INTENT_TYPES = {
   Intent: [
     { name: "from", type: "address" },
@@ -259,7 +266,7 @@ The SDK normalizes the response used above. If you call the JSON-RPC gateway dir
 | Issue | Likely cause | Fix |
 |---|---|---|
 | `401` or gateway error | Missing, invalid, or server-inaccessible API key | Verify `NEWTON_API_KEY` is present without printing it |
-| EIP-712 signature rejected | Wrong domain or changed intent fields | Read `eip712Domain()` and submit the exact signed intent |
+| EIP-712 signature rejected (`intent_signature does not verify`) | Wrong domain or changed intent fields | Sign under the fixed `NewtonPolicyClient` / `1` domain with the PolicyClient as `verifyingContract`, and submit the exact signed intent |
 | Policy unexpectedly denies | Incorrect `functionSignature`, calldata, params, or WASM args | Compare with the policy's local allow fixture |
 | `InvalidAttestation` | Your contract's validation call returned `false`: the task was challenged, or the policy denied the intent | For a denial, read the per-policy results. Policy ID, intent sender, and chain ID mismatches revert with `Unauthorized(reason)` instead; decode other selectors with the [error reference](/developers/reference/error-reference#onchain-error-selectors) |
 | Attested call reverts | Downstream call failed or approval is missing | Inspect the PolicyClient and target revert reason |
