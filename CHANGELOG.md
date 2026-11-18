@@ -1,3 +1,24 @@
+# v1.4.1 (Wed Nov 18 2026)
+
+#### 🐛 Bug Fix
+
+- Merge pull request #213 from newt-foundation/dh/intent-domain-fixed [#213](https://github.com/newt-foundation/newton-sdk/pull/213) ([@Dizigen](https://github.com/Dizigen))
+- docs: align the CLI guide with newton-cli 0.7.6 [#212](https://github.com/newt-foundation/newton-sdk/pull/212) ([@Dizigen](https://github.com/Dizigen))
+- docs: align VaultKit pages with vaultkit 3.0.0 [#208](https://github.com/newt-foundation/newton-sdk/pull/208) ([@denniswon](https://github.com/denniswon))
+- docs: drop em dashes and tighten prose across the site [#209](https://github.com/newt-foundation/newton-sdk/pull/209) ([@denniswon](https://github.com/denniswon))
+
+#### 📝 Documentation
+
+- docs: name Newton Labs and Newton Foundation [#210](https://github.com/newt-foundation/newton-sdk/pull/210) ([@denniswon](https://github.com/denniswon))
+- docs: spell onchain and offchain as one word [#207](https://github.com/newt-foundation/newton-sdk/pull/207) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 2
+
+- David He ([@Dizigen](https://github.com/Dizigen))
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v1.4.0 (Wed Nov 04 2026)
 
 #### 🚀 Enhancement
