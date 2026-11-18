@@ -42,9 +42,15 @@ export RPC_URL=https://your-sepolia-rpc.example
 export PRIVATE_KEY=0xYourDeploymentKey
 ```
 
-Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent.
+Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent. `policy scaffold` writes a `.env.example` listing the variables; copy the values into your shell or `~/.newton/.env`, not into a project `.env`.
 
-Provide any CLI upload credentials through your secret manager or protected shell environment. Gateway SDK examples use `NEWTON_API_KEY`, a separate application environment-variable name.
+`policy deploy` and `secrets upload` send artifacts through the Newton gateway and need a gateway API key with `RpcWrite` access. Either log in, and the CLI uses your first active `RpcWrite` key:
+
+```bash
+newton-cli login
+```
+
+or provide a key explicitly through `API_KEY` (or `--api-key`). The gateway is inferred from `CHAIN_ID`; set `GATEWAY_URL` only to override it. Gateway SDK examples use `NEWTON_API_KEY`, an application environment-variable name the CLI does not read.
 
 ## Step 1: Build the policy
 
@@ -77,7 +83,9 @@ Do not deploy until both cases match the intended policy.
 
 ## Step 3: Review deployment configuration
 
-`policy scaffold` creates the non-secret file `configs/deployment.toml`. Review its chain and expiration settings before deployment. Environment variables and explicit CLI flags override the file.
+`policy scaffold` creates the non-secret file `configs/deployment.toml`. It holds `chain_id` and an optional commented-out `gateway_url`. Environment variables and explicit CLI flags override the file, and the CLI warns when `--chain-id` or `CHAIN_ID` differs from it. `policy deploy` also refuses to run when the chain ID does not match the chain behind `RPC_URL`.
+
+Attestation expiry is not set in `deployment.toml`. It is set per policy as `expire_after` (in blocks) when you bind policies to a client in Step 6.
 
 The policy directory should now include:
 
@@ -86,6 +94,10 @@ policies/transfer-limit/
   policy.js
   policy.rego
   params_schema.json
+  policy_metadata.json
+  newton-provider.wit
+  README.md
+  .env.example
   configs/
     deployment.toml
     intent.json
@@ -94,7 +106,11 @@ policies/transfer-limit/
   dist/
     policy.wasm
     policy.rego
+    params_schema.json
+    policy_metadata.json
 ```
+
+`dist/` also gets `secrets_schema.json` when the policy has one, and `policy_cids.json` after Step 4.
 
 ## Step 4: Deploy each policy
 
@@ -103,6 +119,8 @@ Deploy each independent policy and record its artifact CIDs, code hash, address,
 ```bash
 newton-cli policy deploy -p policies/transfer-limit
 ```
+
+The command uploads the files in `dist/` through the Newton gateway, writes their CIDs and the policy code hash to `dist/policy_cids.json`, then calls the policy factory and prints the new policy address. To retry the onchain step without uploading again, add `--skip-cids` to reuse the existing `policy_cids.json`. A `secrets_schema.json` in the policy directory (or in `dist/`) is uploaded and recorded automatically; pass `--secrets-schema-file` to use a different path.
 
 ### Pure-Rego artifacts
 
@@ -145,19 +163,31 @@ newton-cli --chain-id "$CHAIN_ID" deployments show
 
 ## Step 6: Bind policy and parameters
 
-While the local deployer owns the client, replace its complete policy set with one call. Set `POLICY_0`, `POLICY_1`, and the client address to reviewed deployments. Each params file must match its policy schema.
+While the local deployer owns the client, replace its complete policy set with one call. Write a `policies.json` with one entry per policy, in evaluation order. Order is part of the policy-set ID. Each `params` object must match its policy's schema.
+
+```json
+[
+  {
+    "policy": "0xFIRST_POLICY",
+    "params": { "max_amount": "10000000000" },
+    "expire_after": 25
+  },
+  {
+    "policy": "0xSECOND_POLICY",
+    "params": {},
+    "expire_after": 25
+  }
+]
+```
 
 ```bash
-PARAMS_0=$(cast from-utf8 "$(cat policies/first/configs/params.json)")
-PARAMS_1=$(cast from-utf8 "$(cat policies/second/configs/params.json)")
-cast send "$POLICY_CLIENT" \
-  'setPolicies((address,(bytes,uint32))[])' \
-  "[($POLICY_0,($PARAMS_0,25)),($POLICY_1,($PARAMS_1,25))]" \
-  --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
-cast call "$POLICY_CLIENT" \
-  'getPolicySetSnapshot()(bytes32,uint64,(address,(bytes,uint32))[])' \
-  --rpc-url "$RPC_URL"
+newton-cli policy-client set-policies \
+  --client "$POLICY_CLIENT" \
+  --policies policies.json
+newton-cli policy-client show --client "$POLICY_CLIENT"
 ```
+
+`set-policies` signs with `PRIVATE_KEY`, which must be the client owner. It accepts 1 to 8 policies and prints the transaction hash and the new policy-set ID. `show` reads `getPolicySetSnapshot()` and prints the ID, revision, and ordered specs. Add `--format json` for a machine-readable record.
 
 The expiry of 25 blocks is illustrative. Choose an application-appropriate window. Record the returned ID, revision, and ordered specs together. Every replacement, including an identical one, advances the revision and invalidates old attestations.
 
@@ -193,7 +223,18 @@ The command opens the Newton dashboard in a browser, where the logged-in wallet 
 
 ## Step 9: Upload secrets when used
 
-For oracle-backed policies, verify the Policy contract's `secretsSchemaCid`, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client. Use [the gateway secrets API](/developers/reference/rpc-api#newt_storeencryptedsecrets) for the selected policy-set release.
+For oracle-backed policies, verify the Policy contract's secrets schema, client ownership, and schema-valid secrets before upload. Secrets are scoped to the policy address and client.
+
+```bash
+newton-cli --chain-id "$CHAIN_ID" secrets get-schema \
+  --policy-address 0xPOLICY
+newton-cli --chain-id "$CHAIN_ID" secrets upload \
+  --secrets-file /secure/path/transfer-limit-secrets.json \
+  --policy-client 0xPOLICY_CLIENT \
+  --policy-address 0xPOLICY
+```
+
+`secrets upload` encrypts the file locally with the gateway's HPKE public key and stores it through [`newt_storeEncryptedSecrets`](/developers/reference/rpc-api#newt_storeencryptedsecrets). It uses the same `API_KEY` or login as `policy deploy`. Upload once per policy that needs secrets.
 
 Pure-Rego policies skip this step. Keep secrets outside tracked source and never print them while diagnosing uploads.
 
@@ -202,7 +243,7 @@ Pure-Rego policies skip this step. Keep secrets outside tracked source and never
 Check these values onchain:
 
 - PolicyClient TaskManager matches the target Newton deployment
-- `getPolicySetSnapshot()` returns the expected nonzero ID, revision, and ordered policies
+- `newton-cli policy-client show` returns the expected nonzero ID, revision, and ordered policies
 - Each policy has the intended params and nonzero `expireAfter`
 - `getOwner()` is the expected wallet
 - `PolicyClientRegistry.isRegisteredClient` returns true and the registry record matches the dashboard user
