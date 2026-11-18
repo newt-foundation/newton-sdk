@@ -29,26 +29,15 @@ import {
   type WalletClient,
   bytesToHex,
   hashTypedData,
-  isAddressEqual,
   publicActions,
   toHex,
 } from 'viem'
+import { intentTypedData, resolveAccount, resolveIntentSigner } from '../intent'
 import { NEWTON_AUTH_HEADER, audienceFromUrl, signNewtonRequest } from './auth'
 
 // EIP-712, as NewtonPolicyClient defines it: one domain per client proxy.
 const POLICY_CLIENT_DOMAIN_NAME = 'NewtonPolicyClient'
 const POLICY_CLIENT_DOMAIN_VERSION = '1'
-
-const INTENT_TYPES = {
-  Intent: [
-    { name: 'from', type: 'address' },
-    { name: 'to', type: 'address' },
-    { name: 'value', type: 'uint256' },
-    { name: 'data', type: 'bytes' },
-    { name: 'chainId', type: 'uint256' },
-    { name: 'functionSignature', type: 'bytes' },
-  ],
-} as const
 
 const DELEGATOR_APPROVAL_TYPES = {
   DelegatorApproval: [
@@ -66,23 +55,13 @@ const policyClientDomain = (policyClient: Address, chainId: bigint) => ({
 
 /**
  * EIP-712 typed data `intent.from` signs for a delegator: the `Intent` struct under the domain of
- * the policy client at `intent.to`, on `intent.chainId`.
+ * the policy client at `intent.to`, on `intent.chainId`. A delegated intent calls the policy client
+ * itself, so `intent.to` is the policy client. For a gateway task whose `intent.to` is another
+ * contract, use `signIntent`.
  */
 const delegatedIntentTypedData = (intent: IntentFromParams) => {
   const normalized = normalizeIntent(intent)
-  return {
-    domain: policyClientDomain(normalized.to, normalized.chainId),
-    types: INTENT_TYPES,
-    primaryType: 'Intent' as const,
-    message: {
-      from: normalized.from,
-      to: normalized.to,
-      value: normalized.value,
-      data: normalized.data,
-      chainId: normalized.chainId,
-      functionSignature: normalized.functionSignature,
-    },
-  }
+  return intentTypedData(intent, policyClientDomain(normalized.to, normalized.chainId))
 }
 
 /**
@@ -91,24 +70,14 @@ const delegatedIntentTypedData = (intent: IntentFromParams) => {
  */
 const getDelegatedIntentDigest = (intent: IntentFromParams): Hex => hashTypedData(delegatedIntentTypedData(intent))
 
-const resolveAccount = async (walletClient: WalletClient) => {
-  const account = walletClient.account ?? (await walletClient.getAddresses())[0]
-  if (!account) {
-    throw new Error('Newton SDK: walletClient has no account to sign with')
-  }
-  return account
-}
-
 /**
- * Sign `intent` as `intent.from` for submission through a delegator. Works with local and
- * JSON-RPC (browser wallet) accounts.
+ * Sign `intent` as `intent.from` for submission through a delegator, where `intent.to` is the policy
+ * client. Works with local and JSON-RPC (browser wallet) accounts. For a gateway task
+ * (`intentSignature`), use `signIntent`: it signs under the request's policy client, which need not
+ * be `intent.to`.
  */
 async function signDelegatedIntent(walletClient: WalletClient, args: { intent: IntentFromParams }): Promise<Hex> {
-  const account = await resolveAccount(walletClient)
-  const signer = typeof account === 'string' ? account : account.address
-  if (!isAddressEqual(signer, args.intent.from)) {
-    throw new Error(`Newton SDK: intent.from ${args.intent.from} does not match the signing account ${signer}`)
-  }
+  const account = await resolveIntentSigner(walletClient, args.intent)
   return walletClient.signTypedData({ account, ...delegatedIntentTypedData(args.intent) })
 }
 

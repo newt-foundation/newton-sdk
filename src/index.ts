@@ -38,6 +38,7 @@ import {
   unlinkIdentityAsSigner,
   unlinkIdentityAsUser,
 } from './modules/identity'
+import { type PolicyClientDomain, getPolicyClientDomain, intentTypedData, signIntent } from './modules/intent'
 import { type InitializePolicyArgs, policyReadFunctions, policyWriteFunctions } from './modules/policy'
 import {
   createSecureEnvelope,
@@ -157,6 +158,10 @@ const newtonWalletClientActions =
     const identityRegistryOverride = overrides?.identityRegistry ?? undefined
 
     return {
+      // Sign an intent for a gateway task, under the policy client's own EIP-712 domain
+      signIntent: (args: { policyClient: Address; intent: IntentFromParams }): Promise<Hex> =>
+        signIntent(walletClient, args),
+
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> =>
@@ -654,6 +659,8 @@ export {
   verifyDelegatorWebhook,
 }
 export type { DelegatorClient }
+export { getPolicyClientDomain, intentTypedData, signIntent }
+export type { PolicyClientDomain }
 export {
   identityDomainHash,
   linkIdentity,

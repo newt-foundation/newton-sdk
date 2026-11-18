@@ -262,13 +262,6 @@ A task that fails evaluation throws a plain `Error` with the gateway's reason. A
 Evaluates an intent directly through the gateway without waiting for onchain task response confirmation. Pass the results to your policy client's `_validateAttestationDirect`, which calls the Task Manager's `validateAttestationDirect` (`NewtonProverTaskManagerShared`).
 
 ```ts
-const domain = await readEip712Domain(policyClient, publicClient);
-if (!domain) {
-  throw new Error(
-    "This policy client does not expose an EIP-712 domain, so the app cannot sign an intent for it.",
-  );
-}
-
 const intent = {
   from: account.address,
   to: '0x...',
@@ -278,26 +271,8 @@ const intent = {
   functionSignature: '0x',
 } as const;
 
-const intentSignature = await walletClient.signTypedData({
-  account,
-  domain,
-  types: {
-    Intent: [
-      { name: 'from', type: 'address' },
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' },
-      { name: 'data', type: 'bytes' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'functionSignature', type: 'bytes' },
-    ],
-  },
-  primaryType: 'Intent',
-  message: {
-    ...intent,
-    value: BigInt(intent.value),
-    chainId: BigInt(intent.chainId),
-  },
-});
+// Signs under policyClient's eip712Domain(), the domain the gateway verifies against
+const intentSignature = await walletClient.signIntent({ policyClient, intent });
 
 const { result } = await walletClient.evaluateIntentDirect({
   policyClient,
@@ -350,54 +325,19 @@ A task that fails evaluation throws a plain `Error` with the gateway's reason, a
 Identity-backed policies need `intentSignature` even though it is optional in the base request type. Operators recover the signer under the policy client's `eip712Domain()` and load identity data only when that signer is `intent.from`. If you omit the signature, operators skip identity data, and a policy that needs it denies. A signature that is present but does not recover to `intent.from` under the policy client's domain is rejected with HTTP 400 `{"InvalidRequest":"intent_signature does not verify: ..."}`. The gateway rejects a signature that is not hex with `{"InvalidRequest":"intent_signature is not valid hex: <details>"}`.
 :::
 
-Read the EIP-712 domain from the policy client whenever possible. Dashboard-deployed clients expose EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`.
+Sign with [`signIntent`](#signintent). It reads the domain from the policy client's EIP-5267 `eip712Domain()`, which binds the signature to the correct `name`, `version`, `chainId`, and `verifyingContract`. The domain belongs to the policy client in the request, not to `intent.to`, so do not sign gateway tasks with `signDelegatedIntent` when `intent.to` is another contract.
+
+If you deploy a custom policy client that does not implement EIP-5267, build the typed data with `intentTypedData(intent, domain)`, using the contract's `EIP712(name, version)` values and the deployed policy client address, and sign it with `walletClient.signTypedData`.
+
+### signIntent
+
+Sign `intent` as `intent.from` for a gateway task. Reads `policyClient`'s `eip712Domain()` on the wallet client's chain and signs the EIP-712 `Intent(address from,address to,uint256 value,bytes data,uint256 chainId,bytes functionSignature)` struct under it. Throws if the wallet account is not `intent.from`. Works with local and browser wallet accounts, and needs no API key. Also a standalone export taking the `walletClient` first.
 
 ```ts
-import type { Address } from 'viem';
-
-const EIP712_DOMAIN_ABI = [
-  {
-    type: 'function',
-    name: 'eip712Domain',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [
-      { name: 'fields', type: 'bytes1' },
-      { name: 'name', type: 'string' },
-      { name: 'version', type: 'string' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'verifyingContract', type: 'address' },
-      { name: 'salt', type: 'bytes32' },
-      { name: 'extensions', type: 'uint256[]' },
-    ],
-  },
-] as const;
-
-export async function readEip712Domain(
-  policyClient: Address,
-  publicClient,
-) {
-  try {
-    const [, name, version, chainId, verifyingContract] =
-      await publicClient.readContract({
-        address: policyClient,
-        abi: EIP712_DOMAIN_ABI,
-        functionName: 'eip712Domain',
-      });
-
-    return {
-      name,
-      version,
-      chainId: Number(chainId),
-      verifyingContract,
-    };
-  } catch {
-    return null;
-  }
-}
+walletClient.signIntent(args: { policyClient: Address; intent: IntentFromParams }): Promise<Hex>
 ```
 
-If you deploy a custom policy client that does not implement EIP-5267, hardcoded signing domains must match the contract's `EIP712(name, version)` constructor values and the deployed policy client address.
+Related standalone exports: `getPolicyClientDomain(walletClient, policyClient)` returns the domain `signIntent` signs under, and `intentTypedData(intent, domain)` returns the typed data (`domain`, `types`, `primaryType`, `message`) for signing it some other way.
 
 ---
 
@@ -2045,6 +1985,8 @@ Sign `intent` as `intent.from`: the EIP-712 `Intent(address from,address to,uint
 ```ts
 signDelegatedIntent(walletClient: WalletClient, args: { intent: IntentFromParams }): Promise<Hex>
 ```
+
+This domain assumes `intent.to` is the PolicyClient, as it is for a delegated intent. For a gateway task's `intentSignature`, use [`signIntent`](#signintent), which signs under the request's `policyClient`.
 
 ### `submitDelegatedIntent`
 
