@@ -1,6 +1,7 @@
 import { SDKError } from '@core/sdk-exceptions'
 import { type IntentFromParams, TaskStatus } from '@core/types/task'
 import { http, type PublicClient, createWalletClient, zeroAddress } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -189,6 +190,52 @@ describe('avs gateway calls', () => {
       'timeout',
       'wasm_args',
     ])
+  })
+})
+
+describe('submitIntentAndSubscribe tickets', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const subscribe = async (results: unknown[], auth: Parameters<typeof submitIntentAndSubscribe>[2]) => {
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      const result = results.shift()
+      return result instanceof Error
+        ? new Response(JSON.stringify({ jsonrpc: '2.0', error: 'MethodNotFound' }), { status: 404 })
+        : new Response(JSON.stringify({ jsonrpc: '2.0', result }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const protocols: string[][] = []
+    vi.stubGlobal(
+      'WebSocket',
+      class {
+        constructor(_url: string, p: string[]) {
+          protocols.push(p)
+        }
+      },
+    )
+    await submitIntentAndSubscribe(
+      wallet,
+      { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10 },
+      auth,
+      GATEWAY,
+    )
+    const methods = fetchMock.mock.calls.map(([, init]) => JSON.parse(init?.body as string).method)
+    return { methods, protocols: protocols[0] }
+  }
+  const signer = privateKeyToAccount(`0x${'01'.repeat(32)}`)
+  const task = { message: 'ok', subscription_topic: 'ef'.repeat(32), task_id: `0x${'ef'.repeat(32)}`, timestamp: 0 }
+
+  it('mints a ticket before sending the task and connects with it', async () => {
+    const sent = await subscribe([{ ticket: 'tkt', expires_at: 0 }, task], { signer })
+    expect(sent.methods).toEqual(['newt_createWsTicket', 'newt_sendTask'])
+    expect(sent.protocols).toEqual(['newton.v1', 'newton.ticket.tkt'])
+  })
+
+  it('falls back to the API key on a gateway without tickets', async () => {
+    const sent = await subscribe([new Error(), task], { signer, apiKey: 'gw_key' })
+    expect(sent.protocols).toEqual(['newton.v1', 'newton.bearer.gw_key'])
   })
 })
 

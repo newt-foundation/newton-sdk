@@ -43,7 +43,7 @@ describe('getTaskEventsWebSocket', () => {
     vi.stubGlobal('WebSocket', FakeWebSocket)
     const key = `gw_${'ab'.repeat(32)}`
 
-    getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', key)
+    getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', { apiKey: key })
 
     const [ws] = FakeWebSocket.instances
     expect(ws.url).toBe('wss://gateway.example.com/ws')
@@ -52,13 +52,21 @@ describe('getTaskEventsWebSocket', () => {
     expect(JSON.parse(ws.sent[0])).toEqual({ type: 'subscribe', id: 'sub-1', method: 'deadbeef', params: null })
   })
 
+  it('offers a ticket instead of the key when it has one', () => {
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+
+    getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', { ticket: 'tkt', apiKey: 'gw_key' })
+
+    expect(FakeWebSocket.instances[0].protocols).toEqual(['newton.v1', 'newton.ticket.tkt'])
+  })
+
   it('rejects a key a subprotocol cannot carry without echoing the key', () => {
     vi.stubGlobal('WebSocket', FakeWebSocket)
     const key = 'secret key/with=chars'
 
     let thrown: unknown
     try {
-      getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', key)
+      getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', { apiKey: key })
     } catch (error) {
       thrown = error
     }
@@ -72,6 +80,8 @@ describe('getTaskEventsWebSocket', () => {
   it('says so when the key is empty', () => {
     vi.stubGlobal('WebSocket', FakeWebSocket)
 
-    expect(() => getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', '')).toThrow('the API key is empty')
+    expect(() => getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', { apiKey: '' })).toThrow(
+      'the API key is empty',
+    )
   })
 })

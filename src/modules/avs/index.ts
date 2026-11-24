@@ -370,9 +370,19 @@ async function submitIntentAndSubscribe(
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const wsUrl = getTaskEventsUrl(avsHttpService.baseUrl)
-  const apiKey = (typeof auth === 'string' ? auth : auth.apiKey) ?? ''
-  // before newt_sendTask, so an unusable key cannot leave a task created with no subscription
-  assertWebSocketApiKey(apiKey, wsUrl)
+  const apiKey = typeof auth === 'string' ? auth : auth.apiKey
+  // before newt_sendTask, so an unusable credential cannot leave a task created with no subscription; a gateway
+  // without tickets still takes the key
+  const ticket: string | undefined =
+    typeof auth === 'object' && auth.signer
+      ? await avsHttpService.Post(GATEWAY_METHODS.createWsTicket, {}, auth).then(
+          res => res.result.ticket,
+          error => {
+            if (!apiKey) throw error
+          },
+        )
+      : undefined
+  if (!ticket) assertWebSocketApiKey(apiKey ?? '', wsUrl)
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent)
   const requestBody = {
@@ -391,7 +401,7 @@ async function submitIntentAndSubscribe(
 
   const submitIntentResult = res.result as SubmitIntentResult
 
-  const ws = getTaskEventsWebSocket(wsUrl, submitIntentResult.subscription_topic, apiKey)
+  const ws = getTaskEventsWebSocket(wsUrl, submitIntentResult.subscription_topic, { ticket, apiKey })
 
   return { result: submitIntentResult, ws }
 }

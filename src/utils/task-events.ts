@@ -3,7 +3,9 @@ import { SDKErrorCode } from '@core/types/core/exception-types'
 
 /** Offered on every connection; the gateway accepts the upgrade by echoing it. */
 const WS_SUBPROTOCOL = 'newton.v1'
-/** Browsers cannot set headers on a WebSocket, so the API key travels as a `newton.bearer.<key>` subprotocol. */
+/** Browsers cannot set headers on a WebSocket, so a `newt_createWsTicket` ticket travels as a subprotocol. */
+const WS_TICKET_SUBPROTOCOL_PREFIX = 'newton.ticket.'
+/** Deprecated: the API key as a subprotocol, for gateways without tickets. */
 const WS_BEARER_SUBPROTOCOL_PREFIX = 'newton.bearer.'
 /** RFC 7230 token characters, the only ones a subprotocol may hold. */
 const SUBPROTOCOL_TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/
@@ -37,11 +39,16 @@ export function assertWebSocketApiKey(apiKey: string, target: string): void {
  *
  * @param {string} wsUrl - e.g. "wss://gateway.testnet.newton.xyz/ws"
  * @param {string} subscriptionTopic - From the newt_sendTask result: the task id as bare lowercase hex, no `0x`
- * @param {string} apiKey - Gateway API key, sent as a subprotocol and never in the URL
+ * @param auth - A ticket from `newt_createWsTicket`, else the gateway API key; sent as a subprotocol, never in the URL
  */
-export function getTaskEventsWebSocket(wsUrl: string, subscriptionTopic: string, apiKey: string) {
-  assertWebSocketApiKey(apiKey, `task ${subscriptionTopic} at ${wsUrl}`)
-  const ws = new WebSocket(wsUrl, [WS_SUBPROTOCOL, `${WS_BEARER_SUBPROTOCOL_PREFIX}${apiKey}`])
+export function getTaskEventsWebSocket(
+  wsUrl: string,
+  subscriptionTopic: string,
+  { ticket, apiKey = '' }: { ticket?: string; apiKey?: string },
+) {
+  if (!ticket) assertWebSocketApiKey(apiKey, `task ${subscriptionTopic} at ${wsUrl}`)
+  const credential = ticket ? `${WS_TICKET_SUBPROTOCOL_PREFIX}${ticket}` : `${WS_BEARER_SUBPROTOCOL_PREFIX}${apiKey}`
+  const ws = new WebSocket(wsUrl, [WS_SUBPROTOCOL, credential])
 
   ws.onopen = () => {
     // Subscribe to the task topic
