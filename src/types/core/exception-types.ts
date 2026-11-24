@@ -15,6 +15,8 @@ export enum SDKErrorCode {
   MissingChain = 'MISSING_CHAIN',
   MissingAccount = 'MISSING_ACCOUNT',
   InvalidAddress = 'INVALID_ADDRESS',
+  /** The signer could not sign a gateway request: no account, a session key mismatch, or a rejected prompt. */
+  SigningFailed = 'SIGNING_FAILED',
 }
 
 export enum SDKWarningCode {

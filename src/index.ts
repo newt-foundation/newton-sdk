@@ -126,10 +126,10 @@ interface SdkOverrides {
 const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id, 46630, 5042002]
 
 const newtonWalletClientActions =
-  (config: { apiKey?: string; session?: NewtonSession; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (config: { session?: NewtonSession; policyContractAddress?: Address } = {}, overrides?: SdkOverrides) =>
   (walletClient: WalletClient) => {
-    const { apiKey, session, policyContractAddress } = config
-    const auth = { apiKey, signer: session?.account ?? walletClient, session: session?.grant }
+    const { session, policyContractAddress } = config
+    const auth = { signer: session?.account ?? walletClient, session: session?.grant }
 
     const validatePolicyContractAddress = () => {
       if (!policyContractAddress) {
@@ -245,7 +245,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               chainId: walletClient.chain?.id,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
@@ -266,7 +265,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               userData: args.userData,
               gatewayApiUrlOverride,
               chainId: walletClient.chain?.id,
@@ -290,7 +288,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
               appIdentityDomain: args.appIdentityDomain,
@@ -313,7 +310,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
               chainId: walletClient.chain?.id,

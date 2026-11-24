@@ -181,10 +181,10 @@ export interface WaitForDelegatedIntentParams {
 export type NewtonAuthSigner = LocalAccount | WalletClient
 
 /**
- * How a gateway call authenticates: an API key alone, or a signer whose `X-Newton-Auth` signature goes with the
- * key, if any, until every gateway reads only the signature. Pass a session's `account` with its `grant` as `session`.
+ * How a gateway call authenticates: the signer of its `X-Newton-Auth` signature. Pass a session's `account` with its
+ * `grant` as `session`.
  */
-export type GatewayAuth = string | { apiKey?: string; signer?: NewtonAuthSigner; session?: SignedSessionGrant }
+export type GatewayAuth = { signer: NewtonAuthSigner; session?: SignedSessionGrant }
 
 /** The EIP-712 `NewtonRequest` carried in `X-Newton-Auth`. */
 export interface NewtonRequest {

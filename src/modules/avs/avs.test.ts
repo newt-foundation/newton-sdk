@@ -17,6 +17,7 @@ const GATEWAY = 'https://gateway.example.com/rpc'
 const POLICY_CLIENT = '0x1234567890abcdef1234567890abcdef12345678'
 const POLICY = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
 const wallet = createWalletClient({ chain: sepolia, transport: http('http://127.0.0.1:1') })
+const auth = { signer: privateKeyToAccount(`0x${'01'.repeat(32)}`) }
 const intent: IntentFromParams = {
   from: '0x1111111111111111111111111111111111111111',
   to: '0x2222222222222222222222222222222222222222',
@@ -50,7 +51,7 @@ describe('avs gateway calls', () => {
     await simulateTask(
       wallet,
       { policyClient: POLICY_CLIENT, chainId: sepolia.id, intent, wasmArgs: ['0x', '0x0102'] },
-      'k',
+      auth,
       GATEWAY,
     )
 
@@ -64,7 +65,7 @@ describe('avs gateway calls', () => {
     const result = await simulatePolicyDataWithClient(
       wallet,
       { policyAddress: POLICY, policyClient: POLICY_CLIENT, chainId: sepolia.id },
-      'k',
+      auth,
       GATEWAY,
     )
 
@@ -79,7 +80,7 @@ describe('avs gateway calls', () => {
     await simulatePolicyData(
       wallet,
       { policyAddress: POLICY, chainId: sepolia.id, secrets: JSON.stringify(envelope) },
-      'k',
+      auth,
       GATEWAY,
     )
 
@@ -91,7 +92,7 @@ describe('avs gateway calls', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
-      simulatePolicyData(wallet, { policyAddress: POLICY, chainId: sepolia.id, secrets: 'not json' }, 'k', GATEWAY),
+      simulatePolicyData(wallet, { policyAddress: POLICY, chainId: sepolia.id, secrets: 'not json' }, auth, GATEWAY),
     ).rejects.toBeInstanceOf(SDKError)
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -101,23 +102,8 @@ describe('avs gateway calls', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
-      simulatePolicyData(wallet, { policyAddress: POLICY, chainId: sepolia.id, secrets: '"envelope"' }, 'k', GATEWAY),
+      simulatePolicyData(wallet, { policyAddress: POLICY, chainId: sepolia.id, secrets: '"envelope"' }, auth, GATEWAY),
     ).rejects.toThrow('it parses to envelope')
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('submitIntentAndSubscribe rejects a key a subprotocol cannot carry before sending the task', async () => {
-    const fetchMock = vi.fn<typeof fetch>()
-    vi.stubGlobal('fetch', fetchMock)
-
-    await expect(
-      submitIntentAndSubscribe(
-        wallet,
-        { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10 },
-        'secret key/with=chars',
-        GATEWAY,
-      ),
-    ).rejects.toThrow('cannot subscribe to wss://gateway.example.com/ws')
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -129,7 +115,7 @@ describe('avs gateway calls', () => {
       evaluateIntentDirect(
         wallet,
         { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10, identityDomain: '0x01', userSignature: 's' },
-        'k',
+        auth,
         GATEWAY,
       ),
     ).rejects.toThrow(`newt_createTask returned status success without task_response for task ${taskId}`)
@@ -151,36 +137,73 @@ describe('avs gateway calls', () => {
     answer({ status: 'failed', task_id: taskId, task_response: null, error: 'quorum not reached' })
 
     await expect(
-      evaluateIntentDirect(wallet, { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10 }, 'k', GATEWAY),
+      evaluateIntentDirect(wallet, { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10 }, auth, GATEWAY),
     ).rejects.toThrow(`newt_createTask failed for task ${taskId}: quorum not reached`)
   })
+})
 
-  it('submitIntentAndSubscribe sends only the gateway SendTaskRequest fields', async () => {
-    const taskId = `0x${'ef'.repeat(32)}`
-    const sent = answer({ message: 'ok', subscription_topic: 'ef'.repeat(32), task_id: taskId, timestamp: 0 })
-    vi.stubGlobal(
-      'WebSocket',
-      class {
-        send() {}
-      },
-    )
+describe('submitIntentAndSubscribe', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
-    const { result } = await submitIntentAndSubscribe(
+  const log: string[] = []
+  class FakeWebSocket {
+    static upgrades = true
+    closed = false
+    constructor(
+      public url: string,
+      public protocols: string[],
+    ) {
+      log.push(`open ${protocols[1]}`)
+    }
+    addEventListener(type: string, listener: () => void) {
+      if (type === (FakeWebSocket.upgrades ? 'open' : 'error')) queueMicrotask(listener)
+    }
+    send(data: string) {
+      log.push(`send ${JSON.parse(data).method}`)
+    }
+    close() {
+      log.push('close')
+    }
+  }
+
+  // each gateway answer in turn: a result, or an `Error` for a refusal
+  const submit = (answers: unknown[], upgrades = true) => {
+    log.length = 0
+    FakeWebSocket.upgrades = upgrades
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      log.push(`post ${JSON.parse(init?.body as string).method}`)
+      const result = answers.shift()
+      return result instanceof Error
+        ? new Response(JSON.stringify({ jsonrpc: '2.0', error: { AuthorizationFailed: 'no' } }), { status: 403 })
+        : new Response(JSON.stringify({ jsonrpc: '2.0', result }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+    const sendTaskParams = () => JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string).params
+    const run = submitIntentAndSubscribe(
       wallet,
-      {
-        policyClient: POLICY_CLIENT,
-        intent,
-        wasmArgs: [],
-        timeout: 10,
-        includeValidateCalldata: true,
-        identityDomain: '0x01',
-      },
-      'k',
+      { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10, includeValidateCalldata: true },
+      auth,
       GATEWAY,
     )
+    return { run, sendTaskParams }
+  }
+  const ticket = { ticket: 'tkt', expires_at: 0 }
+  const task = { message: 'ok', subscription_topic: 'ef'.repeat(32), task_id: `0x${'ef'.repeat(32)}`, timestamp: 0 }
 
-    expect(result.task_id).toBe(taskId)
-    expect(Object.keys(sent()).sort()).toEqual([
+  it('opens the stream with a fresh ticket before sending the task, then subscribes', async () => {
+    const { run, sendTaskParams } = submit([ticket, task])
+
+    expect((await run).result.task_id).toBe(task.task_id)
+    expect(log).toEqual([
+      'post newt_createWsTicket',
+      'open newton.ticket.tkt',
+      'post newt_sendTask',
+      `send ${task.subscription_topic}`,
+    ])
+    expect(Object.keys(sendTaskParams()).sort()).toEqual([
       'intent',
       'intent_signature',
       'policy_client',
@@ -191,51 +214,28 @@ describe('avs gateway calls', () => {
       'wasm_args',
     ])
   })
-})
 
-describe('submitIntentAndSubscribe tickets', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
+  it('sends no task when the ticket is refused', async () => {
+    await expect(submit([new Error()]).run).rejects.toMatchObject({ code: 'AuthorizationFailed' })
+    expect(log).toEqual(['post newt_createWsTicket'])
   })
 
-  const subscribe = async (results: unknown[], auth: Parameters<typeof submitIntentAndSubscribe>[2]) => {
-    const fetchMock = vi.fn<typeof fetch>(async () => {
-      const result = results.shift()
-      return result instanceof Error
-        ? new Response(JSON.stringify({ jsonrpc: '2.0', error: 'MethodNotFound' }), { status: 404 })
-        : new Response(JSON.stringify({ jsonrpc: '2.0', result }))
-    })
-    vi.stubGlobal('fetch', fetchMock)
-    const protocols: string[][] = []
-    vi.stubGlobal(
-      'WebSocket',
-      class {
-        constructor(_url: string, p: string[]) {
-          protocols.push(p)
-        }
-      },
-    )
-    await submitIntentAndSubscribe(
-      wallet,
-      { policyClient: POLICY_CLIENT, intent, wasmArgs: [], timeout: 10 },
-      auth,
-      GATEWAY,
-    )
-    const methods = fetchMock.mock.calls.map(([, init]) => JSON.parse(init?.body as string).method)
-    return { methods, protocols: protocols[0] }
-  }
-  const signer = privateKeyToAccount(`0x${'01'.repeat(32)}`)
-  const task = { message: 'ok', subscription_topic: 'ef'.repeat(32), task_id: `0x${'ef'.repeat(32)}`, timestamp: 0 }
-
-  it('mints a ticket before sending the task and connects with it', async () => {
-    const sent = await subscribe([{ ticket: 'tkt', expires_at: 0 }, task], { signer })
-    expect(sent.methods).toEqual(['newt_createWsTicket', 'newt_sendTask'])
-    expect(sent.protocols).toEqual(['newton.v1', 'newton.ticket.tkt'])
+  it('sends no task when the upgrade fails', async () => {
+    await expect(submit([ticket], false).run).rejects.toMatchObject({ code: 'ws_upgrade_failed' })
+    expect(log).toEqual(['post newt_createWsTicket', 'open newton.ticket.tkt'])
   })
 
-  it('falls back to the API key on a gateway without tickets', async () => {
-    const sent = await subscribe([new Error(), task], { signer, apiKey: 'gw_key' })
-    expect(sent.protocols).toEqual(['newton.v1', 'newton.bearer.gw_key'])
+  it('closes the stream when the task is refused', async () => {
+    await expect(submit([ticket, new Error()]).run).rejects.toMatchObject({ code: 'AuthorizationFailed' })
+    expect(log).toEqual(['post newt_createWsTicket', 'open newton.ticket.tkt', 'post newt_sendTask', 'close'])
+  })
+
+  it('rejects a ticket a subprotocol cannot carry without echoing it', async () => {
+    const secret = 'tkt with/chars'
+    const error = await submit([{ ticket: secret }]).run.catch(e => e)
+    expect(error).toBeInstanceOf(SDKError)
+    expect(error.message).not.toContain(secret)
+    expect(log).toEqual(['post newt_createWsTicket'])
   })
 })
 

@@ -28,7 +28,7 @@ import {
 import { AvsHttpService } from '@core/utils/https'
 import { removeHexPrefix, sanitizeIntentForRequest } from '@core/utils/intent'
 import { convertLogToTaskResponse } from '@core/utils/task'
-import { assertWebSocketApiKey, getTaskEventsUrl, getTaskEventsWebSocket } from '@core/utils/task-events'
+import { getTaskEventsUrl, openTaskEventsWebSocket, subscribeToTask } from '@core/utils/task-events'
 import {
   type Address,
   type PublicClient as Client,
@@ -284,7 +284,7 @@ async function submitEvaluationRequest(
  *
  * @param walletClient - Wallet client
  * @param args - Evaluation request parameters
- * @param auth - API key and/or signer
+ * @param auth - Signer, and its session grant if it is a session key
  * @param gatewayApiUrlOverride - Gateway API URL override
  * @returns Evaluation result
  */
@@ -370,19 +370,10 @@ async function submitIntentAndSubscribe(
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const wsUrl = getTaskEventsUrl(avsHttpService.baseUrl)
-  const apiKey = typeof auth === 'string' ? auth : auth.apiKey
-  // before newt_sendTask, so an unusable credential cannot leave a task created with no subscription; a gateway
-  // without tickets still takes the key
-  const ticket: string | undefined =
-    typeof auth === 'object' && auth.signer
-      ? await avsHttpService.Post(GATEWAY_METHODS.createWsTicket, {}, auth).then(
-          res => res.result.ticket,
-          error => {
-            if (!apiKey) throw error
-          },
-        )
-      : undefined
-  if (!ticket) assertWebSocketApiKey(apiKey ?? '', wsUrl)
+  // the stream opens before newt_sendTask, so a refused ticket cannot leave a task with no subscription, and no
+  // wallet prompt falls between minting the ticket and spending it
+  const { result } = await avsHttpService.Post(GATEWAY_METHODS.createWsTicket, {}, auth)
+  const ws = await openTaskEventsWebSocket(wsUrl, result?.ticket ?? '')
 
   const sanitiziedIntent = sanitizeIntentForRequest(args.intent)
   const requestBody = {
@@ -396,12 +387,17 @@ async function submitIntentAndSubscribe(
     proof_cid: args.proofCid ?? null,
   }
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, auth)
-  if (res.result.error) throw new Error(`newt_sendTask failed for task ${res.result.task_id}: ${res.result.error}`)
-
-  const submitIntentResult = res.result as SubmitIntentResult
-
-  const ws = getTaskEventsWebSocket(wsUrl, submitIntentResult.subscription_topic, { ticket, apiKey })
+  const submitIntentResult: SubmitIntentResult = await avsHttpService
+    .Post(GATEWAY_METHODS.sendTask, requestBody, auth)
+    .then(({ result }) => {
+      if (result.error) throw new Error(`newt_sendTask failed for task ${result.task_id}: ${result.error}`)
+      return result
+    })
+    .catch(error => {
+      ws.close()
+      throw error
+    })
+  subscribeToTask(ws, submitIntentResult.subscription_topic)
 
   return { result: submitIntentResult, ws }
 }
@@ -535,7 +531,7 @@ async function registerWebhook(
 }
 
 /**
- * Unregister the webhook for the API key (newt_unregisterWebhook).
+ * Unregister the signer's webhook (newt_unregisterWebhook).
  */
 async function unregisterWebhook(
   chainId: number,

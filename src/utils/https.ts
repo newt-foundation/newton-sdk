@@ -30,13 +30,28 @@ const SOURCE_CHAIN: Record<number, number> = {
   31338: 31337,
 }
 
-/** The chain the params name, read as the gateway's `auth_chain_id` does, else the source chain of `chainId`. */
+const U64_MAX = 2n ** 64n - 1n
+
+/** A u64 as serde reads one: a non-negative integer, or a decimal or `0x` hex string. */
+function parseChainId(value: unknown): number | undefined {
+  const big =
+    typeof value === 'number' && Number.isInteger(value)
+      ? BigInt(value)
+      : typeof value === 'string' && /^(0x[0-9a-fA-F]+|[0-9]+)$/.test(value)
+        ? BigInt(value)
+        : undefined
+  return big !== undefined && big >= 0n && big <= U64_MAX ? Number(big) : undefined
+}
+
+/**
+ * The chain the params name, read as the gateway's `auth_chain_id` does, else the source chain of `chainId`. The
+ * first key present decides, even when its value does not parse; a key holding `undefined` is absent on the wire.
+ */
 function authChainId(params: unknown, chainId: number): number {
   // biome-ignore lint/suspicious/noExplicitAny: arbitrary JSON-RPC params
   const p: any = Array.isArray(params) ? params[0] : params
-  const named = p?.chain_id ?? p?.chainId ?? p?.intent?.chainId ?? p?.intent?.chain_id
-  const id = typeof named === 'number' || typeof named === 'string' ? Number(named) : 0
-  return Number.isSafeInteger(id) && id > 0 ? id : (SOURCE_CHAIN[chainId] ?? chainId)
+  const named = [p?.chain_id, p?.chainId, p?.intent?.chainId, p?.intent?.chain_id].find(v => v !== undefined)
+  return parseChainId(named) ?? SOURCE_CHAIN[chainId] ?? chainId
 }
 
 function parseJson(text: string) {
@@ -59,26 +74,25 @@ export class AvsHttpService {
   }
 
   /**
-   * Sends one JSON-RPC request, signed when `auth` holds a signer; throws `GatewayError` unless the gateway
-   * answers with a `result`.
+   * Sends one signed JSON-RPC request; throws `SDKError` when it cannot be signed and `GatewayError` unless the
+   * gateway answers with a `result`.
    */
-  async Post(method: string, args: unknown, auth: GatewayAuth) {
-    const { apiKey, signer, session }: Exclude<GatewayAuth, string> = typeof auth === 'string' ? { apiKey: auth } : auth
-    if (!apiKey && !signer) {
-      throw new SDKError(SDKErrorCode.InvalidArgument, `Newton SDK: ${method} needs a signer or an API key`)
-    }
+  async Post(method: string, args: unknown, { signer, session }: GatewayAuth) {
     const body = JSON.stringify(createJsonRpcRequestPayload(method, args))
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-    if (signer) {
-      headers[NEWTON_AUTH_HEADER] = await signNewtonRequest(signer, {
-        method,
-        body,
-        chainId: authChainId(args, this.chainId),
-        session,
-      })
-    }
-    const response = await fetch(this.baseUrl, { method: 'POST', headers, body })
+    const signature = await signNewtonRequest(signer, {
+      method,
+      body,
+      chainId: authChainId(args, this.chainId),
+      session,
+    }).catch(error => {
+      if (error instanceof SDKError) throw error
+      throw new SDKError(SDKErrorCode.SigningFailed, `cannot sign ${method}: ${error?.message ?? error}`)
+    })
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', [NEWTON_AUTH_HEADER]: signature },
+      body,
+    })
     const text = await response.text()
     const payload = parseJson(text)
     // shortcut: delta-seconds only, which is what the gateway sends; an HTTP-date from a proxy is dropped

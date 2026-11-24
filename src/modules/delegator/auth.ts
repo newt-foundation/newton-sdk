@@ -47,9 +47,9 @@ const SESSION_KEY_TYPES = {
 
 /** Grants carry no chain; requests always do. */
 const authDomain = (chainId?: number) =>
-  chainId
-    ? { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION, chainId }
-    : { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION }
+  chainId === undefined
+    ? { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION }
+    : { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION, chainId }
 
 const isLocalAccount = (signer: NewtonAuthSigner): signer is LocalAccount => 'type' in signer && signer.type === 'local'
 
