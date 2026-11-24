@@ -280,7 +280,7 @@ Delegator calls throw `DelegatorError` with the HTTP `status` and the delegator'
 | 422 | `invalid_intent` | Wrong chain, unknown PolicyClient, wrong selector, or the signature does not recover to `intent.from` |
 | 400 | `invalid_query` | Bad list or event filter |
 | 409 | `idempotency_conflict` | The same signed intent was resubmitted with different `wasmArgs` |
-| 401 | `unauthorized` | The request was not signed, or its signature did not verify; `error.reason` says why (`missing_header`, `wrong_audience`, `stale_timestamp`, `body_hash_mismatch`, `session_expired`, ...) |
+| 401 | `unauthorized` | The request was not signed, or its signature did not verify; `error.reason` says why (`missing_header`, `signature_invalid`, `stale_timestamp`, `body_hash_mismatch`, `session_expired`, ...) |
 | 403 | `forbidden` | The signer may not submit this intent |
 | 404 | `not_found` | No such intent, or one outside the caller's scope |
 | 410 | `resource_gone` | The intent was pruned after its retention window |
