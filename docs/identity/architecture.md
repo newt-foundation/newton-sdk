@@ -57,7 +57,6 @@ Message Types:
 **Parameter passing:** The `/handle` route parses `postMessage` params and stores them in `sessionStorage` (scoped to popup origin + tab lifetime). Parameters include:
 - `dappUserAddress` — App's EOA address (the client user)
 - `dappClientAddress` — PolicyClient contract address
-- `apiKey` — Newton Gateway API key
 - `chainId` — Target chain
 - `appIdentityDomain` — bytes32 domain hash
 - `userData` — KYC data blob (for register flow only)

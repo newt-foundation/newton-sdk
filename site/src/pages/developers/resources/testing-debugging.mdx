@@ -70,11 +70,10 @@ The [Newton Explorer](/developers/resources/newton-explorer) provides a visual i
 
 ### From the terminal
 
-The same data is available from the [Explorer API](/developers/reference/explorer-api) with your `NEWTON_API_KEY`. Fetch a live task by the `task_id` from `newt_createTask` and pull out the fields that explain its result:
+The same data is available from the [Explorer API](/developers/reference/explorer-api). Fetch a live task by the `task_id` from `newt_createTask` and pull out the fields that explain its result:
 
 ```bash
 curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   -H "X-Protocol-Network: testnet" \
   | jq '{evaluation_result, error, operator_errors, policy_task_data}'
 ```
@@ -118,7 +117,7 @@ const client = createWalletClient({
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
   chain: sepolia,
   transport: http(),
-}).extend(newtonWalletClientActions({ apiKey: process.env.NEWTON_API_KEY! }));
+}).extend(newtonWalletClientActions());
 
 // Simulate first to debug
 const simulation = await client.simulatePolicy({

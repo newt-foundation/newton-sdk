@@ -44,13 +44,7 @@ export PRIVATE_KEY=0xYourDeploymentKey
 
 Do not commit populated credentials or source a project-local `.env`. Never paste private keys, JWTs, API keys, or credential-bearing RPC URLs into chat with a coding agent. `policy scaffold` writes a `.env.example` listing the variables; copy the values into your shell or `~/.newton/.env`, not into a project `.env`.
 
-`policy deploy` and `secrets upload` send artifacts through the Newton gateway and need a gateway API key with `RpcWrite` access. Either log in, and the CLI uses your first active `RpcWrite` key:
-
-```bash
-newton-cli login
-```
-
-or provide a key explicitly through `API_KEY` (or `--api-key`). The gateway is inferred from `CHAIN_ID`; set `GATEWAY_URL` only to override it. Gateway SDK examples use `NEWTON_API_KEY`, an application environment-variable name the CLI does not read.
+`policy deploy` and `secrets upload` send artifacts through the Newton gateway, signed by `PRIVATE_KEY` (or a `--session` file from `newton-cli session create`). `secrets upload` must be signed by the PolicyClient owner. The gateway is inferred from `CHAIN_ID`; set `GATEWAY_URL` only to override it. See [Authentication](/developers/overview/authentication).
 
 ## Step 1: Build the policy
 
@@ -249,13 +243,12 @@ Check these values onchain:
 - `PolicyClientRegistry.isRegisteredClient` returns true and the registry record matches the dashboard user
 - Client-scoped secrets exist when the WASM provider requires them
 
-Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler supplies `NEWTON_API_KEY`. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
+Use `@newton-xyz/sdk` `evaluateIntentDirect` for a live direct-attestation flow. The browser wallet signs the exact EIP-712 intent; a server Route Handler signs the gateway call with `NEWTON_SIGNER_KEY`, an approved delegator of the PolicyClient. See [Frontend SDK Integration](/developers/guides/frontend-sdk-integration).
 
-After the first live evaluation, confirm the task was recorded against the right PolicyClient with the [Explorer API](/developers/reference/explorer-api), using the same `NEWTON_API_KEY`:
+After the first live evaluation, confirm the task was recorded against the right PolicyClient with the [Explorer API](/developers/reference/explorer-api):
 
 ```bash
 curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   -H "X-Protocol-Network: testnet" \
   | jq '{policy_client_address, policy_id, evaluation_result, error}'
 ```

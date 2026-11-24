@@ -1,6 +1,6 @@
 ---
 title: "Using the Dashboard"
-description: "Build, simulate, and deploy Newton policies from the browser, no CLI required. Sign in, generate an API key, add data oracles, configure secrets and params, simulate, and deploy a policy bound to your PolicyClient."
+description: "Build Newton policies in the browser with no CLI. Sign in, add data oracles and their secrets, then simulate the policy and deploy it to your PolicyClient."
 keywords:
   - newton dashboard
   - policy editor
@@ -12,17 +12,15 @@ showAskAi: false
 import { Card,Cards } from 'vocs'
 
 
-# Using the Dashboard [Build, simulate, and deploy Newton policies from the browser, no CLI required. Sign in, generate an API key, add data oracles, configure secrets and params, simulate, and deploy a policy bound to your PolicyClient.]
+# Using the Dashboard [Build Newton policies in the browser with no CLI. Sign in, add data oracles and their secrets, then simulate the policy and deploy it to your PolicyClient.]
 
-The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for building on Newton. From a web UI, you generate an API key, author a Rego policy, attach one or more data oracles, configure their parameters and secrets, simulate against sample intents, and deploy the policy onchain. You can also do everything in this guide with [`newton-cli`](/developers/reference/command-line-tool) and the [SDK](/developers/reference/sdk-reference); the dashboard packages the same operations into a guided flow.
+The [Newton Dashboard](https://dashboard.newton.xyz) is the no-CLI path for building on Newton. From a web UI, you author a Rego policy, attach one or more data oracles, configure their parameters and secrets, simulate against sample intents, and deploy the policy onchain. You can also do everything in this guide with [`newton-cli`](/developers/reference/command-line-tool) and the [SDK](/developers/reference/sdk-reference); the dashboard packages the same operations into a guided flow.
 
 ## Sign in
 
 Go to [dashboard.newton.xyz](https://dashboard.newton.xyz) and sign in. You'll need an **email** (for the one-time sign-in code) and a **wallet** (to sign the onchain transactions for registering and deploying).
 
-## Generate an API key
-
-Open **API Keys** in the left navigation. Your key is generated and ready to use. Copy it for SDK or CLI integration. API keys authenticate calls to the Newton Gateway and authorize secrets management. See [Dashboard & API Keys](/developers/overview/dashboard-api-keys) for permissions, rotation, and programmatic key management.
+The dashboard issues no API keys. The SDK and CLI sign gateway calls with your wallet; see [Authentication](/developers/overview/authentication).
 
 ## Create a project
 
@@ -68,13 +66,13 @@ This is the recommended way to deploy a [multi-oracle policy](/developers/guides
 
 ## Integrate with Newton Shield
 
-For projects using the Newton Shield template, the dashboard generates a ready-to-paste integration snippet (the `NewtonShield` setup with your API key, PolicyClient address, and chain), plus the deployed contract addresses and links to inspect transactions. Copy it into your application to start submitting intents. For custom integrations, wire the deployed policy address into your smart contract per [Smart Contract Integration](/developers/guides/smart-contract-integration).
+For projects using the Newton Shield template, the dashboard generates a ready-to-paste integration snippet (the `NewtonShield` setup with your PolicyClient address and chain), plus the deployed contract addresses and links to inspect transactions. Copy it into your application to start submitting intents. For custom integrations, wire the deployed policy address into your smart contract per [Smart Contract Integration](/developers/guides/smart-contract-integration).
 
 ## Next Steps
 
 <Cards>
-<Card icon="key" to="/developers/overview/dashboard-api-keys" title="Dashboard & API Keys">
-  Permissions, rotation, and programmatic key management
+<Card icon="key" to="/developers/overview/authentication" title="Authentication">
+  How gateway calls are signed
 </Card>
 <Card icon="cubes" to="/developers/guides/policy-packs" title="Policy Packs">
   The oracles available in the editor

@@ -24,7 +24,7 @@ const client = createWalletClient({
   chain: sepolia,
   transport: http('https://rpc.sepolia.org'),
   account: signer,
-}).extend(newtonWalletClientActions({ apiKey: 'your-api-key' }))
+}).extend(newtonWalletClientActions())
 
 // 1. Get the gateway's encryption key
 const { public_key } = await client.getPrivacyPublicKey()

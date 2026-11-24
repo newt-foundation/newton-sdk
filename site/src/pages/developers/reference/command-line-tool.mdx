@@ -56,7 +56,7 @@ Windows does not have prebuilt binaries. Use WSL and follow the Linux install ab
 `newton-cli` loads configuration in the following priority order (highest wins):
 
 1. Command-line flags (`--chain-id`, `--rpc-url`, etc.)
-2. Environment variables: the variables some flags read (such as `CHAIN_ID`, `RPC_URL`, `PRIVATE_KEY`, `API_KEY` or `GATEWAY_URL`), and `NEWTON_CLI__`-prefixed variables for config file keys (for example `NEWTON_CLI__GATEWAY_URL`)
+2. Environment variables: the variables some flags read (such as `CHAIN_ID`, `RPC_URL`, `PRIVATE_KEY`, `NEWTON_SESSION` or `GATEWAY_URL`), and `NEWTON_CLI__`-prefixed variables for config file keys (for example `NEWTON_CLI__GATEWAY_URL`)
 3. Config file at `--config-path`, else `~/.newton/newton-cli.toml` (if it exists), else every `newton-cli.toml` found in the current directory, `./config` and `./crates/newton-cli` (merged)
 
 The config file and `NEWTON_CLI__` variables apply only to `task`, `privacy` and the `policy-client` subcommands other than `register` and `show`. Other commands read at most `chain_id` from `--config-path` or `~/.newton/newton-cli.toml`.
@@ -117,7 +117,8 @@ Generates CIDs for policy files and uploads them to the Gateway object store via
 | `--entrypoint` | Yes | Policy entrypoint (e.g. `max_gas_price.allow`) |
 | `--secrets-schema-file` | No | Path to a secrets schema JSON file (if omitted, `secrets_schema.json` in `--directory` is uploaded when present) |
 | `--gateway-url` | No | Gateway URL override (falls back to `GATEWAY_URL`, then the chain's gateway) |
-| `--api-key` | No | API key with `RpcWrite` permission (falls back to `API_KEY`, then the first active `RpcWrite` key of the logged-in dashboard user) |
+| `--private-key` | Unless `--session` | Key that signs gateway requests (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 
 **Usage**
 
@@ -298,7 +299,8 @@ Encrypts secrets client-side via HPKE and uploads the sealed envelope to the gat
 | `--secrets-file` | Yes | Path to JSON file containing key-value secrets |
 | `--policy-client` | Yes | PolicyClient contract address |
 | `--policy-address` | Yes | NewtonPolicy contract address; the secrets must match the schema its `secretsSchemaCid` points to |
-| `--api-key` | No | Newton API key with `RpcWrite` (falls back to `API_KEY`, then to an `RpcWrite` key of the logged-in dashboard user) |
+| `--private-key` | Unless `--session` | Key that signs gateway requests: the PolicyClient owner's (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 | `--chain-id` | Yes | Chain ID |
 | `--gateway-url` | No | Gateway RPC URL (auto-resolved from chain ID if omitted) |
 
@@ -318,7 +320,7 @@ newton-cli --chain-id 84532 secrets upload \
   --secrets-file secrets.json \
   --policy-client 0x... \
   --policy-address 0x... \
-  --api-key $NEWTON_API_KEY
+  --session session.json
 ```
 
 :::note
@@ -338,7 +340,7 @@ Fetch the gateway's HPKE public key for client-side encryption.
 ```bash
 newton-cli --chain-id 84532 privacy get-public-key \
   --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
+  --session session.json
 ```
 
 #### `identity upload`
@@ -353,7 +355,8 @@ Upload persistent identity data (KYC, credentials). After upload, register the r
 | `--identity-domain` | Yes | Identity domain hash as 0x-prefixed bytes32 (e.g. `keccak256("kyc")`) |
 | `--policy-client` | Yes | PolicyClient contract address |
 | `--gateway-url` | No | Gateway RPC URL |
-| `--api-key` | Yes | Newton API key |
+| `--private-key` | Unless `--session` | Key that signs gateway requests (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 
 ```bash
 newton-cli --chain-id 84532 privacy identity upload \
@@ -363,7 +366,7 @@ newton-cli --chain-id 84532 privacy identity upload \
   --identity-domain 0x... \
   --policy-client 0x... \
   --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
+  --session session.json
 ```
 
 #### `confidential upload`
@@ -377,7 +380,8 @@ Upload provider-managed confidential data (blacklists, allowlists).
 | `--domain` | Yes | Data domain hash as 0x-prefixed bytes32 (e.g. `keccak256("newton.confidential.blacklist")`) |
 | `--policy-client` | Yes | PolicyClient contract address |
 | `--gateway-url` | No | Gateway RPC URL |
-| `--api-key` | Yes | Newton API key |
+| `--private-key` | Unless `--session` | Key that signs gateway requests (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 
 ```bash
 newton-cli --chain-id 84532 privacy confidential upload \
@@ -386,7 +390,7 @@ newton-cli --chain-id 84532 privacy confidential upload \
   --domain 0x... \
   --policy-client 0x... \
   --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
+  --session session.json
 ```
 
 #### `ephemeral encrypt`
@@ -398,7 +402,8 @@ Encrypt ephemeral data for inline use in task requests. Ephemeral data exists on
 | `--data-file` | Yes | Path to the data JSON file to encrypt |
 | `--policy-client` | Yes | PolicyClient contract address |
 | `--gateway-url` | No | Gateway RPC URL |
-| `--api-key` | Yes | Newton API key |
+| `--private-key` | Unless `--session` | Key that signs gateway requests (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 
 ```bash
 # data.json contains {"credit_score": 750}
@@ -406,10 +411,35 @@ newton-cli --chain-id 84532 privacy ephemeral encrypt \
   --data-file data.json \
   --policy-client 0x... \
   --gateway-url https://gateway.testnet.newton.xyz/rpc \
-  --api-key $NEWTON_API_KEY
+  --session session.json
 ```
 
 See [Privacy Flows](/developers/guides/privacy-flows) for the full architecture and [Writing Policies: Identity Built-ins](/developers/guides/writing-policies) for Rego integration.
+
+---
+
+### Session
+
+Every gateway request is signed, by `--private-key` or by a session key under that key's grant. A session lets the owner key stay offline after one use. See [Authentication](/developers/overview/authentication).
+
+#### `session create`
+
+Writes a fresh session key and `--private-key`'s grant for it to a file, readable only by you.
+
+**Parameters**
+
+| Flag | Required | Description |
+| --- | --- | --- |
+| `--private-key` | Yes | Key that grants the session (falls back to `PRIVATE_KEY`) |
+| `--hours` | No | Grant lifetime in hours, 1 to 168 (default: 24); the gateway accepts at most a week |
+| `--out` | Yes | Session file to write; the command refuses to overwrite one |
+
+**Usage**
+
+```bash
+newton-cli session create --private-key "$PRIVATE_KEY" --hours 24 --out session.json
+newton-cli --chain-id 84532 secrets upload --session session.json ...
+```
 
 ---
 
@@ -424,7 +454,8 @@ Submits a policy evaluation task to the Newton network via the gateway.
 | Flag | Required | Description |
 | --- | --- | --- |
 | `--task-json` | Yes | Path to the task JSON file: `intent` and `policyClient` (required), plus optional `intentSignature`, `quorumNumber`, `quorumThresholdPercentage`, `wasmArgs` (array of hex strings, one per policy in the client's set) and `timeout` |
-| `--api-key` | Yes | API key for gateway authentication |
+| `--private-key` | Unless `--session` | Key that signs gateway requests: the PolicyClient owner's or an approved delegator's (falls back to `PRIVATE_KEY`) |
+| `--session` | No | Session file from [`session create`](#session-create), signing in place of `--private-key` (falls back to `NEWTON_SESSION`) |
 | `--gateway-url` | No | Gateway RPC URL (falls back to `GATEWAY_URL`, then the config's `gateway_url`, then the chain's gateway) |
 
 **Usage**
@@ -432,7 +463,7 @@ Submits a policy evaluation task to the Newton network via the gateway.
 ```bash
 newton-cli --chain-id 84532 task submit-evaluation-request \
   --task-json task.json \
-  --api-key $NEWTON_API_KEY \
+  --session session.json \
   --gateway-url https://gateway.testnet.newton.xyz/rpc
 ```
 

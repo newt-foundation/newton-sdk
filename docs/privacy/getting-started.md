@@ -5,7 +5,7 @@ This guide walks you through encrypting sensitive data and submitting a privacy-
 ## Prerequisites
 
 - Node.js >= 20
-- A Newton API key (contact the Newton team)
+- The private key or wallet of the policy client owner: SDK 1.5 signs each gateway call with it (use 1.4 until your gateway accepts signatures)
 - A deployed policy client contract on Sepolia (or your target chain)
 
 ## Installation
@@ -33,7 +33,7 @@ const newton = createWalletClient({
   transport: http('https://rpc.sepolia.org'),
   account,
 }).extend(
-  newtonWalletClientActions({ apiKey: 'your-newton-api-key' })
+  newtonWalletClientActions()
 )
 ```
 

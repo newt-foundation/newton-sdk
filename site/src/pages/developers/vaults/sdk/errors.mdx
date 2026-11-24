@@ -1,6 +1,6 @@
 ---
 title: "Errors"
-description: "VaultKit 3.0 error classes, stable codes, diagnostics, and retry guidance."
+description: "VaultKit 3.1 error classes and their stable codes, with retry guidance for each."
 keywords:
   - vaultkit errors
   - rpc read error
@@ -8,7 +8,7 @@ keywords:
 showAskAi: false
 ---
 
-# Errors [VaultKit 3.0 error classes, stable codes, diagnostics, and retry guidance.]
+# Errors [VaultKit 3.1 error classes and their stable codes, with retry guidance for each.]
 
 Every VaultKit error extends `ShieldError` and carries a stable `code`. `NewtonShieldError` is retained as a deprecated alias. The policy-set errors VaultKit re-exports from `@newton-xyz/policy-core` extend plain `Error`; see [Policy-Set Errors](#policy-set-errors).
 
@@ -34,7 +34,8 @@ try {
 | `NewtonTaskEvaluationError` | `newton_task_evaluation_failed` | Inspect `operator_errors[]`; retry only transient operator failures. |
 | `AttestationTimeoutError` | `attestation_timeout` | Retry with a fresh task after backoff. |
 | `GatewayError` | `gateway_error` | Transport umbrella; inspect the subtype and status. |
-| `GatewayHttpError` | `gateway_http_error` | Retry 5xx; fix authentication or request errors for 4xx. |
+| `GatewayHttpError` | `gateway_http_error` | Retry 5xx. A 401 is a refused signature; `body` names the reason, such as `stale_timestamp`. Fix the request for other 4xx. |
+| `GatewaySigningError` | `gateway_signing_failed` | The signer could not sign the request, so nothing was sent. Fix the signer, or retry once the user approves the prompt. |
 | `GatewayRpcError` | `gateway_rpc_error` | Depends on the JSON-RPC code. |
 | `GatewayTimeoutError` | `gateway_timeout` | Retry with backoff. |
 | `RpcReadError` | `rpc_read_error` | Retry against a healthier RPC endpoint. This class is emitted only for reads proven to have failed for a transport reason. |
@@ -42,7 +43,7 @@ try {
 | `ParamMismatchError` | `param_mismatch` | Reconcile the expected and stored params. |
 | `InvalidConfigurationError` | `invalid_configuration` | Fix the caller configuration. |
 | `ExistingCloneVersionError` | `existing_clone_version` | Choose the intended existing version or a genuinely new version. |
-| `ShieldDeploymentNotFoundError` | `shield_deployment_not_found` | No Shield factory is recorded for that chain and environment. VaultKit 3.0.0 records none yet, so pass `deployment` or attach with `policyClientAddress`. |
+| `ShieldDeploymentNotFoundError` | `shield_deployment_not_found` | No Shield factory is recorded for that chain and environment. VaultKit 3.1.0 records none yet, so pass `deployment` or attach with `policyClientAddress`. |
 | `UnsupportedChainError` | `unsupported_chain` | Select a supported chain. |
 | `ConcurrentIntentError` | `concurrent_intent` | Wait for the in-flight call; serialize calls per client. |
 | `ExtendCollisionError` | `extend_collision` | Remove or rename the colliding extension. |

@@ -15,7 +15,7 @@ This page is for teams operating Shield deployments or reviewing how a VaultKit 
 
 ## Per-Chain Artifacts
 
-The SDK registry, `SHIELD_DEPLOYMENTS`, maps `(chainId, env)` to a Shield implementation and `ShieldFactory` deployment so `createShield(...)` can predict, attach, or deploy curator clones. VaultKit 3.0.0 records no slot yet: the factories recorded before protocol 0.7 deploy an implementation without `setPolicies`, so every slot is `null` until a policy-set Shield factory is recorded. Pass `createShield({ deployment })` to target a factory you deployed yourself, or attach to an existing clone with `policyClientAddress`.
+The SDK registry, `SHIELD_DEPLOYMENTS`, maps `(chainId, env)` to a Shield implementation and `ShieldFactory` deployment so `createShield(...)` can predict, attach, or deploy curator clones. VaultKit 3.1.0 records no slot yet: the factories recorded before protocol 0.7 deploy an implementation without `setPolicies`, so every slot is `null` until a policy-set Shield factory is recorded. Pass `createShield({ deployment })` to target a factory you deployed yourself, or attach to an existing clone with `policyClientAddress`.
 
 Runtime registry entries and deployment artifact JSON should be updated together when a new deployment lands.
 

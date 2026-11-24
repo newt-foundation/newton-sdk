@@ -89,7 +89,6 @@ import { createShield } from '@newton-xyz/vaultkit'
 import { morphoActions } from '@newton-xyz/vaultkit/vendors/morpho'
 
 const shield = (await createShield({
-  apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.BASE_SEPOLIA_RPC_URL!,
   publicClient,
@@ -209,7 +208,7 @@ For demos, point the Vaults.fyi lookup at a real mainnet vault through the polic
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| `401` from Newton Gateway | API key was minted for a different Newton environment. | Create a key for the same stack as `env`, usually `prod` for Base Sepolia testnet production. |
+| `GatewayHttpError` with status `401` | The gateway refused the signature; `body` names the reason, such as `stale_timestamp`. | Check the curator signer and the machine clock. |
 | `UnsupportedChainError` | Wallet client is not on a VaultKit-supported chain. | Use a supported chain such as Base Sepolia (`84532`) for testnet Morpho flows. |
 | `ShieldDeploymentNotFoundError` | No Shield factory is recorded for the selected chain and environment. VaultKit 3.0.0 records none yet. | Pass your own factory as `deployment`, or attach to an existing clone with `policyClientAddress`. |
 | `CompositeModuleSetMismatchError` or `PolicyWasmCidMismatchError` | `policies` is missing a declared module or has an unknown key, or a module policy serves a different WASM. | Pass one deployed policy per module, each running its pack's WASM. |

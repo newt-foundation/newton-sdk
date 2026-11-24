@@ -81,7 +81,6 @@ async function registerAndLink() {
     chain: sepolia,
     transport: http(),
   }).extend(newtonWalletClientActions({
-    apiKey: 'test-api-key',
     policyContractAddress: '0x1234567890123456789012345678901234567890',
   }))
 
@@ -143,11 +142,13 @@ sequenceDiagram
 
 ```ts twoslash
 import { uploadConfidentialData } from '@newton-xyz/sdk'
+import { privateKeyToAccount } from 'viem/accounts'
+const provider = privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`)
 // ---cut---
 async function upload() {
   const result = await uploadConfidentialData(
     11155111, // chainId
-    'your-api-key',
+    { signer: provider },
     {
       provider: '0x1234567890123456789012345678901234567890' as `0x${string}`,
       domain: '0xdcd1e65cf8c4991fe5ed1f5f784041f7f8d1093fa81d48c3bf286ea0c78f49be' as `0x${string}`, // keccak256("newton.confidential.blacklist")
@@ -264,9 +265,11 @@ The gateway's HPKE public key is available via `newt_getPrivacyPublicKey` or thr
 
 ```ts twoslash
 import { getPrivacyPublicKey } from '@newton-xyz/sdk'
+import { privateKeyToAccount } from 'viem/accounts'
+const account = privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`)
 // ---cut---
 async function getKey() {
-  const { public_key } = await getPrivacyPublicKey(11155111, 'your-api-key')
+  const { public_key } = await getPrivacyPublicKey(11155111, { signer: account })
 }
 ```
 

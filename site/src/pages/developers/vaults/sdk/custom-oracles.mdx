@@ -74,7 +74,6 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
   .with(maxLtvOracle)
 
 const client = await createShield({
-  apiKey,
   walletClient,
   rpc,
   vault,

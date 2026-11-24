@@ -17,11 +17,11 @@ import {
 
 ## Wallet Client Methods
 
-When using `newtonWalletClientActions`, the same functions are available as methods on the extended client. The client automatically provides `chainId` and `apiKey` from its configuration.
+When using `newtonWalletClientActions`, the same functions are available as methods on the extended client. The client provides `chainId` from its chain and signs each gateway call with its account.
 
 ```typescript
 const newton = createWalletClient({ ... }).extend(
-  newtonWalletClientActions({ apiKey: 'your-key' })
+  newtonWalletClientActions()
 )
 
 newton.getPrivacyPublicKey()
@@ -109,7 +109,7 @@ Fetches the gateway's X25519 HPKE public key. Clients call this once to discover
 ```typescript
 async function getPrivacyPublicKey(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth, // { signer, session? }
   gatewayApiUrlOverride?: string
 ): Promise<PrivacyPublicKeyResponse>
 ```
@@ -138,7 +138,7 @@ Encrypts data and uploads to the gateway in a single call. Combines `createSecur
 ```typescript
 async function uploadEncryptedData(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth, // { signer, session? }
   params: UploadEncryptedDataParams,
   gatewayApiUrlOverride?: string
 ): Promise<UploadEncryptedDataResponse>
@@ -173,7 +173,7 @@ async function uploadEncryptedData(
 ```typescript
 const { data_ref_id } = await uploadEncryptedData(
   11155111,
-  'your-api-key',
+  { signer: account },
   {
     senderAddress: '0xYourAddress',
     policyClient: '0xPolicyClient',
@@ -232,7 +232,7 @@ Encrypts plaintext secrets client-side with HPKE and uploads the envelope to the
 ```typescript
 async function storeEncryptedSecrets(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth, // { signer, session? }
   params: StoreEncryptedSecretsParams,
   gatewayApiUrlOverride?: string
 ): Promise<StoreEncryptedSecretsResponse>

@@ -30,7 +30,6 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
 
 ```typescript
 const client = await createShield({
-  apiKey,
   walletClient,
   rpc,
   vault,
@@ -77,7 +76,6 @@ const policy = definePolicy({ chainId: '8453', env: 'prod' })
   )
 
 const client = await createShield({
-  apiKey,
   walletClient,
   rpc,
   vault,
@@ -155,7 +153,7 @@ await client.sendCall({
 
 VaultKit passes `prepareQueryOptions[shortId]` to that module's own `prepareQuery(...)` and checks the returned `wasmArgs` slice against the module's `wasmArgsSchema` before it builds the intent. A slice the schema rejects throws `InvalidConfigurationError`; a `prepareQuery` that rejects throws `CompositePrepareQueryError`. Each module's policy then receives its own `wasm_args` entry, `{ "<shortId>": args }`, and the gate receives `0x`.
 
-VaultKit 3.0.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module that ships no `prepareQuery` gets `{}`, which still has to pass its `wasmArgsSchema`. Some packs take args the SDK cannot read from chain state, such as [`balancer`](/developers/vaults/policies/balancer)'s `poolId`, [`arkham_entity`](/developers/vaults/policies/arkham-entity)'s `address`, and [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `stablecoin_id`. When such a pack ships no `prepareQuery` and its schema requires those fields, `sendCall` fails closed with `InvalidConfigurationError`. To supply them yourself, call the lower-level `NewtonShield.guardedCall(...)` with per-policy `wasmArgs` (one hex entry per policy, in set order) and the `expectedPolicies` set they were built for.
+VaultKit 3.1.0 has no per-call `wasmArgs` field on `sendCall` or the vendor actions. A module that ships no `prepareQuery` gets `{}`, which still has to pass its `wasmArgsSchema`. Some packs take args the SDK cannot read from chain state, such as [`balancer`](/developers/vaults/policies/balancer)'s `poolId`, [`arkham_entity`](/developers/vaults/policies/arkham-entity)'s `address`, and [`pharos_treasury`](/developers/vaults/policies/pharos-treasury)'s `stablecoin_id`. When such a pack ships no `prepareQuery` and its schema requires those fields, `sendCall` fails closed with `InvalidConfigurationError`. To supply them yourself, call the lower-level `NewtonShield.guardedCall(...)` with per-policy `wasmArgs` (one hex entry per policy, in set order) and the `expectedPolicies` set they were built for.
 
 ## Verification and Introspection
 

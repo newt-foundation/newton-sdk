@@ -1,6 +1,6 @@
 ---
 title: "Examples"
-description: "VaultKit 3.0 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions."
+description: "Worked VaultKit 3.1 recipes, from declaring a policy to asserting that an intent is blocked."
 keywords:
   - vaultkit examples
   - definePolicy
@@ -8,7 +8,7 @@ keywords:
 showAskAi: false
 ---
 
-# Examples [VaultKit 3.0 recipes for policies, typed vendor calls, generic calls, verification, and blocked-intent assertions.]
+# Examples [Worked VaultKit 3.1 recipes, from declaring a policy to asserting that an intent is blocked.]
 
 ## Declare a Published Policy
 
@@ -31,7 +31,6 @@ const policy = definePolicy({
 import { createShield } from '@newton-xyz/vaultkit'
 
 const client = await createShield({
-  apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   publicClient,
   rpc: process.env.RPC_URL!,
@@ -66,7 +65,6 @@ const policy = policyFromAddress({
 })
 
 const client = await createShield({
-  apiKey,
   walletClient,
   rpc,
   vault,
@@ -191,7 +189,6 @@ const basePolicy = definePolicy({ chainId: '8453', env: 'prod' }).with(vaultsfyi
 const ethereumPolicy = definePolicy({ chainId: '1', env: 'prod' }).with(vaultsfyi)
 
 const baseClient = await createShield({
-  apiKey,
   walletClient: baseWalletClient,
   rpc: baseRpc,
   vault: baseVault,
@@ -200,7 +197,6 @@ const baseClient = await createShield({
 })
 
 const ethereumClient = await createShield({
-  apiKey,
   walletClient: ethereumWalletClient,
   rpc: ethereumRpc,
   vault: ethereumVault,

@@ -9,11 +9,11 @@ import { Card } from 'vocs'
 
 # Quickstart [Simulate a configured Newton policy set with the TypeScript SDK.]
 
-Evaluate a configured policy set and inspect the aggregate decision and each policy result. This example uses two pure-Rego policies; no funded signer is needed for simulation.
+Evaluate a configured policy set and inspect the aggregate decision and each policy result. This example uses two pure-Rego policies; simulation sends no transaction, so the signer needs no funds.
 
 ## Prerequisites
 
-- Node.js 20 or later and a Newton API key associated with the configured client's owner (or explicitly authorized for the gateway's read-only admin bypass).
+- Node.js 20 or later and the private key of the configured client's owner. The gateway checks that the owner signs; see [Authentication](/developers/overview/authentication). Use `@newton-xyz/sdk` 1.5 or later once your environment's gateway accepts signatures, and 1.4 until then.
 - A policy-set-capable client configured with two pure-Rego policies on Sepolia. Obtain a test client from your team or follow [Smart Contract Integration](/developers/guides/smart-contract-integration).
 - An intent fixture accepted by those policies. The sample below is a zero-value, empty-calldata intent; use the exact function encoding for your application.
 
@@ -26,24 +26,24 @@ npm install --save-dev tsx
 
 ## Simulate
 
-Save as `quickstart.ts`. Supply `NEWTON_API_KEY` and `POLICY_CLIENT` in your process environment; keep the API key on the server or in this local script.
+Save as `quickstart.ts`. Supply `PRIVATE_KEY` (the client owner's) and `POLICY_CLIENT` in your process environment; keep the key in this local script, never in a browser bundle.
 
 ```typescript
 import { createWalletClient, http, isAddress } from 'viem';
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { newtonWalletClientActions } from '@newton-xyz/sdk';
 
-const apiKey = process.env.NEWTON_API_KEY;
+const privateKey = process.env.PRIVATE_KEY as `0x${string}` | undefined;
 const policyClient = process.env.POLICY_CLIENT;
-if (!apiKey || !policyClient || !isAddress(policyClient)) {
-  throw new Error('Set NEWTON_API_KEY and a valid POLICY_CLIENT');
+if (!privateKey || !policyClient || !isAddress(policyClient)) {
+  throw new Error('Set PRIVATE_KEY and a valid POLICY_CLIENT');
 }
 
-// Simulation only: this account is never funded and sends no transaction.
-const account = privateKeyToAccount(generatePrivateKey());
+// Signs the gateway call as the client owner; simulation sends no transaction.
+const account = privateKeyToAccount(privateKey);
 const client = createWalletClient({ account, chain: sepolia, transport: http() })
-  .extend(newtonWalletClientActions({ apiKey }));
+  .extend(newtonWalletClientActions());
 
 async function main() {
   const result = await client.simulatePolicy({

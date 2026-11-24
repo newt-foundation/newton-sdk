@@ -19,7 +19,6 @@ import {
 
 // -- Setup --
 
-const API_KEY = process.env.NEWTON_API_KEY!
 const POLICY_CLIENT = '0xYourPolicyClientAddress' as const
 
 const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY!}`)
@@ -27,7 +26,7 @@ const newton = createWalletClient({
   chain: sepolia,
   transport: http(process.env.RPC_URL ?? 'https://rpc.sepolia.org'),
   account,
-}).extend(newtonWalletClientActions({ apiKey: API_KEY }))
+}).extend(newtonWalletClientActions())
 
 // -- Privacy Flow --
 
@@ -121,6 +120,7 @@ A more realistic example where a DApp collects KYC data, encrypts it, and submit
 
 ```typescript
 import type { Address } from 'viem'
+import type { GatewayAuth } from '@newton-xyz/sdk/types'
 import {
   generateSigningKeyPair,
   uploadEncryptedData,
@@ -148,7 +148,7 @@ class KycPrivacyManager {
 
   constructor(
     private readonly chainId: number,
-    private readonly apiKey: string,
+    private readonly auth: GatewayAuth, // { signer: account } signs each gateway call
     private readonly policyClient: Address,
     private readonly userKeys = generateSigningKeyPair(),
     private readonly appKeys = generateSigningKeyPair(),
@@ -157,7 +157,7 @@ class KycPrivacyManager {
   /** Fetch and cache the gateway's encryption key. */
   async ensureGatewayKey(): Promise<string> {
     if (!this.gatewayPubKey) {
-      const res = await getPrivacyPublicKey(this.chainId, this.apiKey)
+      const res = await getPrivacyPublicKey(this.chainId, this.auth)
       this.gatewayPubKey = res.public_key
     }
     return this.gatewayPubKey
@@ -175,7 +175,7 @@ class KycPrivacyManager {
 
     const result = await uploadEncryptedData(
       this.chainId,
-      this.apiKey,
+      this.auth,
       {
         senderAddress,
         policyClient: this.policyClient,
@@ -217,7 +217,7 @@ class KycPrivacyManager {
 
 const kycManager = new KycPrivacyManager(
   11155111,             // Sepolia
-  'your-api-key',
+  { signer: account }, // signs each gateway call
   '0xPolicyClient' as Address,
 )
 

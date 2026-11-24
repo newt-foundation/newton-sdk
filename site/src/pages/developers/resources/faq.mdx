@@ -1,6 +1,6 @@
 ---
 title: "FAQ & Troubleshooting"
-description: "Frequently asked questions and solutions to common issues with Newton Protocol: API keys, policy evaluation, chain support, error codes, and debugging."
+description: "Frequently asked questions and solutions to common issues with Newton Protocol: authentication, policy evaluation, chain support, error codes, and debugging."
 keywords:
   - newton protocol faq
   - newton troubleshooting
@@ -10,7 +10,7 @@ keywords:
 showAskAi: false
 ---
 
-# FAQ & Troubleshooting [Frequently asked questions and solutions to common issues with Newton Protocol: API keys, policy evaluation, chain support, error codes, and debugging.]
+# FAQ & Troubleshooting [Frequently asked questions and solutions to common issues with Newton Protocol: authentication, policy evaluation, chain support, error codes, and debugging.]
 
 ## General FAQ
 
@@ -22,8 +22,8 @@ Newton Protocol is a decentralized policy engine for onchain transaction authori
 Newton currently supports **Ethereum Sepolia** (`11155111`) as both a source and destination chain and **Ethereum mainnet** (`1`) as a source chain, plus policy execution on **Base** (`8453`), **Base Sepolia** (`84532`), **Robinhood Chain testnet** (`46630`) and **Arc testnet** (`5042002`). See [Supported Networks](/developers/concepts/multichain#supported-networks).
 :::
 
-:::details[How do I get an API key?]
-Go to [dashboard.newton.xyz](https://dashboard.newton.xyz/), sign in, and click **API Keys** in the left navigation. Your key is already generated. See [Getting an API Key](/developers/overview/dashboard-api-keys).
+:::details[Do I need an API key?]
+Not for the gateway. `@newton-xyz/sdk` 1.5 and `newton-cli` sign every gateway call with your wallet, and the gateway checks the signing address; see [Authentication](/developers/overview/authentication). Stay on SDK 1.4 until the gateway for your environment accepts signatures. The [Explorer API](/developers/reference/explorer-api) still takes a key from the [dashboard](https://dashboard.newton.xyz/).
 :::
 
 :::details[What programming languages can I use for data oracles?]
@@ -88,13 +88,15 @@ A **Policy** is a reusable Rego program that defines evaluation logic (e.g., "bl
 2. The PolicyClient has a policy set (use `newton-cli policy-client show`)
 :::
 
-:::details[AuthenticationFailed or AuthorizationFailed: API key rejected]
-**Cause:** A request without an API key gets HTTP 401 `{"AuthenticationFailed":"missing or invalid API key"}`. An unknown or revoked key gets HTTP 401 with an empty body. A key without the method's permission gets HTTP 403, for example `{"AuthorizationFailed":"RpcWrite permission required"}`.
+:::details[AuthenticationFailed or AuthorizationFailed]
+**Cause:** `AuthenticationFailed` (HTTP 401) means the signature did not verify. Its message starts with a code, for example `{"AuthenticationFailed":"stale_timestamp: request timestamp too old"}`. `AuthorizationFailed` (HTTP 403) means it verified but the signer may not call the method, for example `{"AuthorizationFailed":"policy client is not owned by the caller"}`.
 
 **Fix:**
-- Send the key in an `Authorization: Bearer <key>` or `X-API-Key` header
-- Check that your key has the permission the method needs (`rpc_read` for simulations and reads, `rpc_write` for task submission and writes, `rpc` for both)
-- Verify the key has not been revoked
+- `missing_header`: sign the request; SDK 1.4 and earlier send only an API key
+- `stale_timestamp` or `future_timestamp`: sign just before sending and keep the clock in sync
+- `session_expired`: create a new session
+- `AuthorizationFailed`: sign with the PolicyClient owner's key (`getOwner()`), or for `newt_createTask` an approved delegator's
+- See [Authentication](/developers/reference/rpc-api#authentication) for every code
 :::
 
 :::details[WASM oracle returns empty or unexpected data]
