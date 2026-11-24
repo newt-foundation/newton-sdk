@@ -1,4 +1,6 @@
-import { GatewayError } from '@core/sdk-exceptions'
+import { GatewayError, SDKError } from '@core/sdk-exceptions'
+import { keccak256, stringToBytes } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AvsHttpService } from './https'
 
@@ -59,6 +61,37 @@ describe('AvsHttpService', () => {
     expect(url).toBe(GATEWAY)
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer gw_key')
     expect(JSON.parse(init.body as string)).toMatchObject({ method: 'newt_simulateTask', params: { a: 1 } })
+  })
+
+  it.each([
+    [{}, 84532, 11155111],
+    [{}, 8453, 1],
+    [{}, 31338, 31337],
+    [{ chain_id: 84532 }, 1, 84532],
+    [[{ intent: { chainId: '0x2105' } }], 11155111, 8453],
+  ])('signs the exact body of %j from chain %i under chain %i', async (params, chainId, signedChain) => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ jsonrpc: '2.0', result: 1 })))
+    vi.stubGlobal('fetch', fetchMock)
+    const signer = privateKeyToAccount(`0x${'01'.repeat(32)}`)
+    const signTypedData = vi.spyOn(signer, 'signTypedData')
+
+    await new AvsHttpService(chainId, GATEWAY).Post('newt_getPrivacyPublicKey', params, { apiKey: 'gw_key', signer })
+
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer gw_key')
+    expect(headers['X-Newton-Auth']).toBeTruthy()
+    expect(signTypedData.mock.calls[0]?.[0]).toMatchObject({
+      domain: { chainId: signedChain },
+      message: { method: 'newt_getPrivacyPublicKey', bodyHash: keccak256(stringToBytes(init.body as string)) },
+    })
+  })
+
+  it('refuses a call with neither a signer nor an API key', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(new AvsHttpService(11155111, GATEWAY).Post('newt_createTask', {}, {})).rejects.toBeInstanceOf(SDKError)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('passes a null result through', async () => {

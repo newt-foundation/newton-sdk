@@ -2,6 +2,7 @@ import { AttestationValidatorAbi, NewtonProverTaskManagerAbi } from '@core/abis/
 import { GATEWAY_METHODS } from '@core/const'
 import { SDKError } from '@core/sdk-exceptions'
 import { SDKErrorCode } from '@core/types/core/exception-types'
+import type { GatewayAuth } from '@core/types/delegator'
 import type { SecureEnvelope } from '@core/types/privacy'
 import {
   type GatewayCreateTaskResult,
@@ -224,7 +225,7 @@ async function submitEvaluationRequest(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
   taskManagerAddress: Address,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> {
   const walletWithPublic = walletClient.extend(publicActions)
@@ -248,7 +249,7 @@ async function submitEvaluationRequest(
     include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, auth)
   if (res.result.error) throw new Error(`newt_createTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
   const createTaskResult = res.result as GatewayCreateTaskResult
@@ -283,14 +284,14 @@ async function submitEvaluationRequest(
  *
  * @param walletClient - Wallet client
  * @param args - Evaluation request parameters
- * @param apiKey - API key
+ * @param auth - API key and/or signer
  * @param gatewayApiUrlOverride - Gateway API URL override
  * @returns Evaluation result
  */
 async function evaluateIntentDirect(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<{
   result: {
@@ -316,7 +317,7 @@ async function evaluateIntentDirect(
     include_validate_calldata: args.includeValidateCalldata ?? null,
   }
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.createTask, requestBody, auth)
   if (res.result.error) throw new Error(`newt_createTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
   const createTaskResult = res.result as GatewayCreateTaskResult
@@ -355,20 +356,21 @@ async function evaluateIntentDirect(
  *
  * @param walletClient - Wallet client
  * @param args
- * @param apiKey
+ * @param auth
  * @param gatewayApiUrlOverride
  * @returns
  */
 async function submitIntentAndSubscribe(
   walletClient: WalletClient,
   args: SubmitEvaluationRequestParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> {
   const walletWithPublic = walletClient.extend(publicActions)
 
   const avsHttpService = new AvsHttpService(walletWithPublic?.chain?.id ?? sepolia.id, gatewayApiUrlOverride)
   const wsUrl = getTaskEventsUrl(avsHttpService.baseUrl)
+  const apiKey = (typeof auth === 'string' ? auth : auth.apiKey) ?? ''
   // before newt_sendTask, so an unusable key cannot leave a task created with no subscription
   assertWebSocketApiKey(apiKey, wsUrl)
 
@@ -384,7 +386,7 @@ async function submitIntentAndSubscribe(
     proof_cid: args.proofCid ?? null,
   }
 
-  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.sendTask, requestBody, auth)
   if (res.result.error) throw new Error(`newt_sendTask failed for task ${res.result.task_id}: ${res.result.error}`)
 
   const submitIntentResult = res.result as SubmitIntentResult
@@ -402,7 +404,7 @@ async function submitIntentAndSubscribe(
 async function simulateTask(
   walletClient: WalletClient,
   args: SimulateTaskParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<SimulateTaskResult> {
   const walletWithPublic = walletClient.extend(publicActions)
@@ -413,7 +415,7 @@ async function simulateTask(
     intent: sanitizeIntentForRequest(args.intent),
     wasm_args: args.wasmArgs.map(removeHexPrefix),
   }
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulateTask, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulateTask, requestBody, auth)
   return res.result as SimulateTaskResult
 }
 
@@ -423,7 +425,7 @@ async function simulateTask(
 async function simulatePolicy(
   walletClient: WalletClient,
   args: SimulatePolicyParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyResult> {
   const walletWithPublic = walletClient.extend(publicActions)
@@ -435,7 +437,7 @@ async function simulatePolicy(
     wasm_args: args.wasmArgs.map(removeHexPrefix),
     intent_signature: args.intentSignature ? removeHexPrefix(args.intentSignature) : undefined,
   }
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicy, requestBody, auth)
   return res.result as SimulatePolicyResult
 }
 
@@ -465,7 +467,7 @@ function parseSecureEnvelope(secrets: string): SecureEnvelope {
 async function simulatePolicyData(
   walletClient: WalletClient,
   args: SimulatePolicyDataParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyDataResult> {
   const walletWithPublic = walletClient.extend(publicActions)
@@ -476,7 +478,7 @@ async function simulatePolicyData(
     wasm_args: args.wasmArgs,
     chain_id: args.chainId,
   }
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyData, requestBody, auth)
   return res.result as SimulatePolicyDataResult
 }
 
@@ -486,7 +488,7 @@ async function simulatePolicyData(
 async function simulatePolicyDataWithClient(
   walletClient: WalletClient,
   args: SimulatePolicyDataWithClientParams,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<SimulatePolicyDataWithClientResult> {
   const walletWithPublic = walletClient.extend(publicActions)
@@ -497,7 +499,7 @@ async function simulatePolicyDataWithClient(
     policy_client: args.policyClient,
     wasm_args: args.wasmArgs,
   }
-  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyDataWithClient, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.simulatePolicyDataWithClient, requestBody, auth)
   return res.result as SimulatePolicyDataWithClientResult
 }
 
@@ -506,7 +508,7 @@ async function simulatePolicyDataWithClient(
  */
 async function registerWebhook(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: RegisterWebhookParams,
   gatewayApiUrlOverride?: string,
 ): Promise<RegisterWebhookResult> {
@@ -518,7 +520,7 @@ async function registerWebhook(
     max_retries: params.maxRetries ?? 3,
     failure_types: params.failureTypes ?? undefined,
   }
-  const res = await avsHttpService.Post(GATEWAY_METHODS.registerWebhook, requestBody, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.registerWebhook, requestBody, auth)
   return res.result as RegisterWebhookResult
 }
 
@@ -527,11 +529,11 @@ async function registerWebhook(
  */
 async function unregisterWebhook(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<UnregisterWebhookResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.unregisterWebhook, {}, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.unregisterWebhook, {}, auth)
   return res.result as UnregisterWebhookResult
 }
 

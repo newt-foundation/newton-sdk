@@ -34,6 +34,7 @@ export const GATEWAY_METHODS = {
   getConfidentialData: 'newt_getConfidentialData',
   registerWebhook: 'newt_registerWebhook',
   unregisterWebhook: 'newt_unregisterWebhook',
+  createWsTicket: 'newt_createWsTicket',
 }
 
 /** NewtonProverTaskManager contracts — synced from newton-contracts deployments. */
