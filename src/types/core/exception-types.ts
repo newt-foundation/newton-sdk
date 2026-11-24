@@ -1,6 +1,4 @@
 export enum SDKErrorCode {
-  /** @deprecated The SDK never throws this code. */
-  MissingApiKey = 'MISSING_API_KEY',
   PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
   MalformedResponse = 'MALFORMED_RESPONSE',
   InvalidArgument = 'INVALID_ARGUMENT',
@@ -15,6 +13,8 @@ export enum SDKErrorCode {
   MissingChain = 'MISSING_CHAIN',
   MissingAccount = 'MISSING_ACCOUNT',
   InvalidAddress = 'INVALID_ADDRESS',
+  /** The signer could not sign a gateway request: no account, a session key mismatch, or a rejected prompt. */
+  SigningFailed = 'SIGNING_FAILED',
 }
 
 export enum SDKWarningCode {

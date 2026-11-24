@@ -89,7 +89,7 @@ The gateway never decrypts envelopes. What authorizes data for an evaluation dep
 
 - **Identity data.** The identity owner authorizes the upload with an EIP-712 signature, and the gateway countersigns the data reference that the owner then registers in the IdentityRegistry contract. Linking that data to a policy client names a client user and takes the consent of both the identity owner and the client user, each given by sending the transaction or by an EIP-712 signature with a nonce and a deadline. Operators load only the identity data linked to the policy client for the address that signed the task's intent.
 - **Confidential data.** A registered provider publishes a data reference to the ConfidentialDataRegistry contract and proposes a grant to a policy client. The grant takes effect only when the policy client's owner accepts it, and the provider can revoke it. Operators load the data under the grants active for the policy client.
-- **Ephemeral data.** An envelope sent inline with a task needs no signature. The gateway accepts a task for a policy client only from an API key whose wallet address owns that policy client, and it rejects an inline envelope that names a different policy client or chain than the task. The envelope is not bound to a sender, a task, or an intent.
+- **Ephemeral data.** An envelope sent inline with a task needs no signature. The gateway accepts a task for a policy client only from a caller that signs as its owner or an approved delegator, and it rejects an inline envelope that names a different policy client or chain than the task. The envelope is not bound to a sender, a task, or an intent.
 
 ### Privacy Data Flow
 

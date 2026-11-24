@@ -46,7 +46,6 @@ const policy = definePolicy({
 }).with(vaultsfyi)
 
 const shield = (await createShield({
-  apiKey: process.env.NEWTON_API_KEY!,
   walletClient,
   rpc: process.env.RPC_URL!,
   publicClient,

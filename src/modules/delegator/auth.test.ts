@@ -2,11 +2,11 @@ import { DelegatorError } from '@core/sdk-exceptions'
 import { type Hex, hashTypedData, keccak256, recoverTypedDataAddress, stringToBytes, zeroHash } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { describe, expect, it, vi } from 'vitest'
-import { audienceFromUrl, createNewtonSession, signNewtonRequest, signSessionGrant } from './auth'
+import { createNewtonSession, signNewtonRequest, signSessionGrant } from './auth'
 import { createDelegatorClient } from './index'
 
-// Fixed vectors from newton-prover-avs crates/chainio/src/gateway_auth/sign.rs, produced there
-// independently with `cast wallet sign`; RFC 6979 makes a matching signature prove matching digests.
+// Fixed vectors shared with newton-prover-avs crates/chainio/src/gateway_auth/sign.rs, which asserts the
+// same values; RFC 6979 makes a matching signature prove matching digests.
 const key = (n: number) => privateKeyToAccount(`0x${n.toString(16).padStart(2, '0').repeat(32)}` as Hex)
 const NOW_MS = 1_800_000_000_000
 const NOW_S = NOW_MS / 1000
@@ -18,11 +18,10 @@ const decode = (header: string) => {
   return JSON.parse(new TextDecoder().decode(bytes))
 }
 
-const requestTypedData = (request: Record<string, unknown>, chainId?: number) => ({
-  domain: chainId ? { name: 'Newton Gateway', version: '1', chainId } : { name: 'Newton Gateway', version: '1' },
+const requestTypedData = (request: Record<string, unknown>, chainId: number) => ({
+  domain: { name: 'Newton Gateway', version: '1', chainId },
   types: {
     NewtonRequest: [
-      { name: 'audience', type: 'string' },
       { name: 'method', type: 'string' },
       { name: 'bodyHash', type: 'bytes32' },
       { name: 'signer', type: 'address' },
@@ -37,7 +36,6 @@ const requestTypedData = (request: Record<string, unknown>, chainId?: number) =>
 describe('signNewtonRequest', () => {
   it('matches the gateway_auth request vector', async () => {
     const header = await signNewtonRequest(key(1), {
-      audience: 'gateway.testnet.newton.xyz',
       method: 'newt_createTask',
       body: BODY,
       chainId: 1,
@@ -45,7 +43,6 @@ describe('signNewtonRequest', () => {
     })
     const envelope = decode(header)
     expect(envelope.request).toEqual({
-      audience: 'gateway.testnet.newton.xyz',
       method: 'newt_createTask',
       bodyHash: keccak256(stringToBytes(BODY)),
       signer: key(1).address,
@@ -54,19 +51,38 @@ describe('signNewtonRequest', () => {
     })
     // biome-ignore lint/suspicious/noExplicitAny: typed data built for the test
     expect(hashTypedData(requestTypedData(envelope.request, 1) as any)).toBe(
-      '0x423f82818651ad6ea17cc765faf0b1ed540fac545f88d5fcf6737b5876ddc9b5',
+      '0x96f89bee2f94a81251a4c08c74a8d2fa0596e83634b4ad6eaf90dee41329f38f',
     )
     expect(envelope.signature).toBe(
-      '0xba4e5dfcd894254424030bf9afd5e4b33f1d5d0b908a3c6813ee94fb9bec71a772947dc010bd9068a8f31c73c039734c815fb94cd1388fc7b441c3d357f9e1f11c',
+      '0xb048e5707f8c865b05ee4fca4c73017d53d55a99bfe83673a798bc5bccf190335eb852442f3d1b7e2c027a7c78fd8cf66768d021bf9ed8f0cad660f057e9bea61b',
     )
     expect(envelope.session).toBeUndefined()
     expect(header).not.toMatch(/[=+/]/)
   })
 
+  it('matches the gateway_auth chainless testnet vector', async () => {
+    const body = '{"jsonrpc":"2.0","id":1,"method":"newt_getPrivacyPublicKey","params":{}}'
+    const signer = privateKeyToAccount('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
+    const header = await signNewtonRequest(signer, {
+      method: 'newt_getPrivacyPublicKey',
+      body,
+      chainId: 11155111,
+      timestamp: 1_795_100_000_000,
+    })
+    const envelope = decode(header)
+    // biome-ignore lint/suspicious/noExplicitAny: typed data built for the test
+    expect(hashTypedData(requestTypedData(envelope.request, 11155111) as any)).toBe(
+      '0x2c8f84f81dd001a17e6c3da6f5b7c4505079ff3ec6eac4342de62882c461f6b0',
+    )
+    expect(envelope.signature).toBe(
+      '0x0975727e4d8dba7cc8b0571741af0fdbb97e3860fd9fc92f44249f0fe1380f114ba6f0efa6d8b233fb1f7fd17ae88d1166f55665f82321d2f366673f1183134c1c',
+    )
+  })
+
   it('refuses a session request not signed by the session key', async () => {
     const grant = await signSessionGrant(key(1), { sessionKey: key(2).address, expiresAt: NOW_S + 3600 })
     await expect(
-      signNewtonRequest(key(3), { audience: 'a', method: 'GET /v1/events', body: '', session: grant }),
+      signNewtonRequest(key(3), { method: 'GET /v1/events', body: '', chainId: 84532, session: grant }),
     ).rejects.toThrow(/session key/)
   })
 })
@@ -86,7 +102,6 @@ describe('signSessionGrant', () => {
     expect(session.grant.grant.sessionKey).toBe(session.account.address)
     const envelope = decode(
       await signNewtonRequest(session.account, {
-        audience: 'a',
         method: 'GET /v1/events',
         body: '',
         chainId: 84532,
@@ -96,13 +111,6 @@ describe('signSessionGrant', () => {
     expect(envelope.session).toEqual(session.grant)
     expect(envelope.request.signer).toBe(session.account.address)
     expect(envelope.request.sessionHash).not.toBe(zeroHash)
-  })
-})
-
-describe('audienceFromUrl', () => {
-  it('is the bare lowercase host', () => {
-    expect(audienceFromUrl('https://Delegator.Example.com:8443/base')).toBe('delegator.example.com')
-    expect(audienceFromUrl('http://[::1]:8095')).toBe('::1')
   })
 })
 
@@ -136,7 +144,6 @@ describe('createDelegatorClient auth', () => {
     const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>
     const envelope = decode(headers['X-Newton-Auth'] as string)
     expect(envelope.request).toMatchObject({
-      audience: 'delegator.example.com',
       method: 'GET /v1/intents',
       bodyHash: keccak256(new Uint8Array()),
       signer: key(1).address,
@@ -175,7 +182,7 @@ describe('createDelegatorClient auth', () => {
     const fetchMock = vi.fn<typeof fetch>(async () => ok(view, 202))
     const client = createDelegatorClient({
       url: 'https://d.example.com',
-      auth: { signer: key(1), chainId: 84532, audience: 'acme.example.com' },
+      auth: { signer: key(1), chainId: 84532 },
       fetch: fetchMock,
     })
     await client.submitIntent({
@@ -192,7 +199,6 @@ describe('createDelegatorClient auth', () => {
     const init = fetchMock.mock.calls[0]?.[1] as RequestInit
     const envelope = decode((init.headers as Record<string, string>)['X-Newton-Auth'] as string)
     expect(envelope.request.method).toBe('POST /v1/intents')
-    expect(envelope.request.audience).toBe('acme.example.com')
     expect(envelope.request.bodyHash).toBe(keccak256(stringToBytes(init.body as string)))
   })
 

@@ -11,6 +11,7 @@
  */
 
 import { GATEWAY_METHODS } from '@core/const'
+import type { GatewayAuth } from '@core/types/delegator'
 import type {
   CreateSecureEnvelopeParams,
   Ed25519KeyPair,
@@ -181,11 +182,11 @@ export async function createSecureEnvelope(
  */
 export async function getPrivacyPublicKey(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<PrivacyPublicKeyResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.getPrivacyPublicKey, {}, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getPrivacyPublicKey, {}, auth)
   return res.result as PrivacyPublicKeyResponse
 }
 
@@ -199,7 +200,7 @@ export async function getPrivacyPublicKey(
  */
 export async function uploadIdentityEncrypted(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: UploadIdentityEncryptedParams,
   gatewayApiUrlOverride?: string,
 ): Promise<UploadIdentityEncryptedResponse> {
@@ -212,7 +213,7 @@ export async function uploadIdentityEncrypted(
   }
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadIdentityEncrypted, rpcRequest, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadIdentityEncrypted, rpcRequest, auth)
   return res.result as UploadIdentityEncryptedResponse
 }
 
@@ -224,12 +225,12 @@ export async function uploadIdentityEncrypted(
  */
 export async function getIdentityEncrypted(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   dataRefId: string,
   gatewayApiUrlOverride?: string,
 ): Promise<GetIdentityEncryptedResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.getIdentityEncrypted, { data_ref_id: dataRefId }, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getIdentityEncrypted, { data_ref_id: dataRefId }, auth)
   return res.result as GetIdentityEncryptedResult
 }
 
@@ -241,11 +242,11 @@ export async function getIdentityEncrypted(
  */
 export async function getSecretsPublicKey(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string,
 ): Promise<SecretsPublicKeyResponse> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.getSecretsPublicKey, {}, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getSecretsPublicKey, {}, auth)
   return res.result as SecretsPublicKeyResponse
 }
 
@@ -276,14 +277,14 @@ export function generateSigningKeyPair(): Ed25519KeyPair {
  */
 export async function storeEncryptedSecrets(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: StoreEncryptedSecretsParams,
   gatewayApiUrlOverride?: string,
 ): Promise<StoreEncryptedSecretsResponse> {
   // Secrets use a different HPKE key than privacy data (may differ in threshold DKG mode)
   let recipientPublicKey = params.recipientPublicKey
   if (!recipientPublicKey) {
-    const keyResponse = await getSecretsPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    const keyResponse = await getSecretsPublicKey(chainId, auth, gatewayApiUrlOverride)
     recipientPublicKey = keyResponse.public_key
   }
 
@@ -310,7 +311,7 @@ export async function storeEncryptedSecrets(
   }
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.storeEncryptedSecrets, rpcRequest, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.storeEncryptedSecrets, rpcRequest, auth)
   return res.result as StoreEncryptedSecretsResponse
 }
 
@@ -378,14 +379,14 @@ export function signPrivacyAuthorization(params: SignPrivacyAuthorizationParams)
  */
 export async function uploadConfidentialData(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: UploadConfidentialDataParams,
   gatewayApiUrlOverride?: string,
 ): Promise<UploadConfidentialDataResult> {
   // Resolve the gateway's HPKE public key if not provided
   let recipientPublicKey = params.recipientPublicKey
   if (!recipientPublicKey) {
-    const keyResponse = await getPrivacyPublicKey(chainId, apiKey, gatewayApiUrlOverride)
+    const keyResponse = await getPrivacyPublicKey(chainId, auth, gatewayApiUrlOverride)
     recipientPublicKey = keyResponse.public_key
   }
 
@@ -416,7 +417,7 @@ export async function uploadConfidentialData(
   }
 
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadConfidentialData, rpcRequest, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.uploadConfidentialData, rpcRequest, auth)
   return res.result as UploadConfidentialDataResult
 }
 
@@ -428,12 +429,12 @@ export async function uploadConfidentialData(
  */
 export async function getConfidentialData(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   dataRefId: string,
   gatewayApiUrlOverride?: string,
 ): Promise<GetConfidentialDataResult> {
   const avsHttpService = new AvsHttpService(chainId, gatewayApiUrlOverride)
-  const res = await avsHttpService.Post(GATEWAY_METHODS.getConfidentialData, { data_ref_id: dataRefId }, apiKey)
+  const res = await avsHttpService.Post(GATEWAY_METHODS.getConfidentialData, { data_ref_id: dataRefId }, auth)
   return res.result as GetConfidentialDataResult
 }
 

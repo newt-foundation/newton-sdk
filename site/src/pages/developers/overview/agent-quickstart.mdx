@@ -147,10 +147,10 @@ The agent must stop before each operation that changes external state:
 6. Sending the first attested application transaction
 7. Hosting the generated application
 
-Provide credentials outside chat through the process environment or `~/.newton/.env`. The generated Next.js app is the exception: it reads `NEWTON_API_KEY` from its gitignored `.env.local` on the server. Never use `NEXT_PUBLIC_NEWTON_API_KEY`.
+Provide credentials outside chat through the process environment or `~/.newton/.env`. The generated Next.js app is the exception: it reads `NEWTON_SIGNER_KEY`, the server key that signs its gateway calls, from its gitignored `.env.local` on the server. Never use `NEXT_PUBLIC_NEWTON_SIGNER_KEY`.
 
 :::note
-The user's browser wallet signs the EIP-712 intent. The generated server Route Handler calls `evaluateIntentDirect` with `NEWTON_API_KEY`; it does not need the user's private key.
+The user's browser wallet signs the EIP-712 intent. The generated server Route Handler calls `evaluateIntentDirect` signed by `NEWTON_SIGNER_KEY`; it does not need the user's private key.
 :::
 
 ## Step 5: Resume instead of starting over

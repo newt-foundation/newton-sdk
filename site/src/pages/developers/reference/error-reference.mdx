@@ -16,7 +16,7 @@ The gateway does not return numeric JSON-RPC error codes. A failed call returns 
 {
   "jsonrpc": "2.0",
   "result": null,
-  "error": { "AuthorizationFailed": "RpcWrite permission required" },
+  "error": { "AuthorizationFailed": "policy client is not owned by the caller" },
   "id": null
 }
 ```
@@ -31,16 +31,14 @@ A task that fails evaluation is not a gateway error. `newt_createTask` returns H
 |---|---|---|
 | `{"InvalidRequest":"Unknown Newton RPC method: <method>"}` | Typo in method name | Verify method spelling against [RPC API](/developers/reference/rpc-api) |
 | `{"InvalidRequest":"Invalid request format: <details>"}` | Malformed request parameters | Review parameter types and required fields |
-| `{"AuthenticationFailed":"missing or invalid API key"}` | The request has no API key | Send the key in an `Authorization: Bearer` or `X-API-Key` header |
-| HTTP 401 with an empty body | The API key does not match any key | Verify the key or create a new one in the [Dashboard](/developers/overview/dashboard-api-keys) |
-| `{"AuthorizationFailed":"RpcRead permission required"}` | API key lacks read permission | Use key with `rpc_read` or `rpc` permission |
-| `{"AuthorizationFailed":"RpcWrite permission required"}` | API key lacks write permission | Use key with `rpc_write` or `rpc` permission |
-| `{"AuthorizationFailed":"policy client <client> is owned by <owner>, not by caller <caller>"}` | The wallet address on your API key is not the policy client's onchain `getOwner()` | Use the API key whose wallet address owns the policy client |
-| `{"AuthorizationFailed":"API key has no configured wallet address; cannot verify policy client ownership"}` | The key has no wallet address, so the gateway cannot check ownership | Use a key with a configured wallet address |
+| `{"AuthenticationFailed":"missing_header: missing X-Newton-Auth header"}` | The request is not signed | Sign it; see [Authentication](/developers/overview/authentication) |
+| `{"AuthenticationFailed":"stale_timestamp: request timestamp too old"}` | The signature is more than 120 seconds old, or the clock is off | Sign each request just before sending it |
+| `{"AuthenticationFailed":"signature_invalid: request signature invalid"}` | The signature does not verify for the body, method and chain | Sign the exact body you send. [Authentication](/developers/reference/rpc-api#authentication) lists every code |
+| `{"AuthorizationFailed":"policy client is not owned by the caller"}` | The signing address is not the policy client's onchain `getOwner()` | Sign with the owner's wallet |
 | `{"InvalidRequest":"wasm_args count (<n>) must match the policy set (<m>); one entry per policy, empty for pure-Rego"}` | `wasm_args` length differs from the policy client's policy set | Send one entry per policy, in set order |
 | `{"InvalidRequest":"proof_cid is unsupported; zkTLS proof verification is unavailable"}` | The request has a `proof_cid` | Remove `proof_cid` |
 | `{"Timeout":<seconds>}` | The gateway stopped waiting for the operation | Retry the request |
-| `"RateLimitExceeded"` | Too many requests for this API key | Back off and retry |
+| `"RateLimitExceeded"` | Too many requests from this caller | Back off and retry |
 
 ## Onchain Errors
 
@@ -100,7 +98,7 @@ Other failures, such as an unsupported chain, a missing contract address or a ta
 |---|---|---|
 | `method` | `string` | The JSON-RPC method, for example `newt_createTask` |
 | `status` | `number` | HTTP status of the response |
-| `code` | `string` | The gateway's error variant, for example `AuthorizationFailed` or `RateLimitExceeded`. `http_error` for an error status without a JSON-RPC body, such as the empty-body 401 for an unknown API key. `malformed_response` for a success status whose body has no `result` |
+| `code` | `string` | The gateway's error variant, for example `AuthorizationFailed` or `RateLimitExceeded`. `http_error` for an error status without a JSON-RPC body, such as a 413 for an oversized body. `ws_upgrade_failed`, with `method` `ws` and `status` 0, when `submitIntentAndSubscribe` cannot open the task-event WebSocket; browsers hide why. `malformed_response` for a success status whose body has no `result` |
 | `rawMessage` | `string` | The variant's message. For `http_error`, the first 4,096 characters of the response body, else the status text, else `empty body` |
 | `data` | `unknown` | The variant's value, for example the seconds waited for `Timeout`. For `malformed_response`, the response body |
 | `retryAfter` | `number \| undefined` | The `Retry-After` header in seconds. The gateway sends it with `ServiceOverloaded` |
@@ -109,14 +107,15 @@ Other failures, such as an unsupported chain, a missing contract address or a ta
 
 | Code | Thrown when |
 |---|---|
-| `MALFORMED_RESPONSE` | `evaluateIntentDirect` gets a `newt_createTask` result without a `task_response` |
-| `INVALID_ARGUMENT` | `simulatePolicyData` gets a `secrets` string that is not JSON, or `submitIntentAndSubscribe` gets an API key that a WebSocket subprotocol cannot carry |
+| `MALFORMED_RESPONSE` | `evaluateIntentDirect` gets a `newt_createTask` result without a `task_response`, or `newt_createWsTicket` returns a ticket a WebSocket subprotocol cannot carry |
+| `INVALID_ARGUMENT` | `simulatePolicyData` gets a `secrets` string that is not JSON |
+| `SIGNING_FAILED` | The signer cannot sign a gateway call: no account, a session key mismatch, or a rejected wallet prompt. The SDK sends nothing |
 | `POPUP_ALREADY_EXISTS` | A Newton identity popup is already open |
 | `MISSING_CHAIN` | An identity link or unlink function gets a wallet client without a chain |
 | `MISSING_ACCOUNT` | An identity link or unlink function gets a wallet client without an account |
 | `INVALID_ADDRESS` | The SDK has no IdentityRegistry address for the wallet client's chain |
 
-`SDKErrorCode` also defines `MISSING_API_KEY`, `EXTENSION_NOT_INITIALIZED`, `INCOMPATIBLE_EXTENSIONS`, `FAILED_TO_OPEN_POPUP` and `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE`. The SDK does not throw them, and they are deprecated.
+`SDKErrorCode` also defines `EXTENSION_NOT_INITIALIZED`, `INCOMPATIBLE_EXTENSIONS`, `FAILED_TO_OPEN_POPUP` and `FAILED_TO_RETRIEVE_NATIVE_TOKEN_BALANCE`. The SDK does not throw them, and they are deprecated.
 
 ```ts twoslash
 import { createWalletClient, http } from 'viem';
@@ -133,7 +132,7 @@ const walletClient = createWalletClient({
   account: privateKeyToAccount('0x' + '1'.repeat(64) as `0x${string}`),
   chain: sepolia,
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
-}).extend(newtonWalletClientActions({ apiKey: 'test-api-key' }));
+}).extend(newtonWalletClientActions());
 
 const request = {
   policyClient: '0x1234567890123456789012345678901234567890',
@@ -171,8 +170,8 @@ try {
 |--------|-------------|
 | 200 | Success. A method can still report a failed evaluation in its result, for example `status: "failed"` from `newt_createTask` or `success: false` from the simulate methods |
 | 400 | `InvalidRequest`, or a body that is not valid JSON |
-| 401 | `AuthenticationFailed`, for example when the request has no API key; an empty body when the key does not match any key |
-| 403 | `AuthorizationFailed`: the key lacks a permission or does not own the policy client |
+| 401 | `AuthenticationFailed`: the request is unsigned or its signature does not verify |
+| 403 | `AuthorizationFailed`: the caller does not own the policy client |
 | 408 | The request ran past the server request timeout (30 seconds in the default configuration) |
 | 413 | The request body is larger than the gateway's body limit |
 | 415 | The request has no `Content-Type: application/json` header |
@@ -180,7 +179,7 @@ try {
 | 429 | `RateLimitExceeded` |
 | 500 | `Internal`, `DatabaseError` and the other server-side variants |
 | 502 | `BadGateway` or `AllOperatorsFailed` |
-| 503 | `ServiceUnavailable`, `ServiceOverloaded` (with a `retry-after` header) or `CircuitBreakerOpen`; an empty body when the gateway could not look up the API key |
+| 503 | `ServiceUnavailable`, `ServiceOverloaded` (with a `retry-after` header), `CircuitBreakerOpen`, or `AuthenticationFailed` `verifier_unavailable` (retry) |
 | 504 | `Timeout` |
 
 ## Diagnostic Tools
@@ -191,4 +190,4 @@ try {
 - **`newt_simulatePolicy`** - test policy evaluation via the Gateway
 - **`newt_simulatePolicyData`** - test WASM execution via the Gateway
 - **[Newton Explorer](https://explorer.newton.xyz)** - view task status and evaluation results
-- **[Explorer API](/developers/reference/explorer-api)** - script task and policy lookups with your API key
+- **[Explorer API](/developers/reference/explorer-api)** - script task and policy lookups

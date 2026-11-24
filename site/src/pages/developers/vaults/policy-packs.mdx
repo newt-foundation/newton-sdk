@@ -89,7 +89,7 @@ With `newton-cli` 0.7.0 or later, deploy each module's policy. Build the CLI fro
 #    to this environment's gateway object store.
 newton-cli policy-files upload-cids -d policies/vaultsfyi --entrypoint vault_risk_rating.allow \
   --secrets-schema-file policies/vaultsfyi/secrets_schema.json \
-  --gateway-url "$GATEWAY_URL" --api-key "$NEWTON_API_KEY" -o policies/vaultsfyi/policy_cids.json
+  --gateway-url "$GATEWAY_URL" --private-key "$PRIVATE_KEY" -o policies/vaultsfyi/policy_cids.json
 
 # 2. Set "wasmCid" in policy_cids.json to the pack's deployments[chainId][env].wasmCid.
 

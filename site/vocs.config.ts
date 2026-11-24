@@ -112,6 +112,7 @@ export default defineConfig({
     { source: '/transparency-reports/transparency-reports', destination: '/protocol/transparency-reports/reports' },
     { source: '/governance/governance-model', destination: '/protocol/governance/governance-model' },
     { source: '/developers/overview/integration-guide', destination: '/developers/guides/integration-guide' },
+    { source: '/developers/overview/dashboard-api-keys', destination: '/developers/overview/authentication' },
     { source: '/developers/advanced/policy-client-guide', destination: '/developers/guides/smart-contract-integration' },
     { source: '/developers/guides/chaining-data-oracles', destination: '/developers/guides/composing-policy-sets' },
     { source: '/developers/advanced/building-policies', destination: '/developers/guides/writing-policies' },
@@ -195,7 +196,7 @@ export default defineConfig({
           { text: 'Core Concepts', link: '/developers/overview/core-concepts' },
           { text: 'Quickstart', link: '/developers/overview/quickstart' },
           { text: 'Build with an Agent', link: '/developers/overview/agent-quickstart' },
-          { text: 'Dashboard & API Keys', link: '/developers/overview/dashboard-api-keys' },
+          { text: 'Authentication', link: '/developers/overview/authentication' },
         ],
       },
       {

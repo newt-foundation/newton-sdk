@@ -1,5 +1,8 @@
 import { GATEWAY_API_URLS } from '@core/const'
-import { GatewayError } from '@core/sdk-exceptions'
+import { NEWTON_AUTH_HEADER, signNewtonRequest } from '@core/modules/delegator/auth'
+import { GatewayError, SDKError } from '@core/sdk-exceptions'
+import { SDKErrorCode } from '@core/types/core/exception-types'
+import type { GatewayAuth } from '@core/types/delegator'
 import { createJsonRpcRequestPayload } from './json-rpc'
 
 /** A proxy or captive portal can answer with a whole HTML page; errors carry only its start. */
@@ -16,6 +19,41 @@ function parseGatewayError(error: unknown): { code: string; message: string; dat
   return { code: 'unknown_error', message: JSON.stringify(error), data: error }
 }
 
+// Destination chains sign under their network's source chain; a source chain under itself.
+const SOURCE_CHAIN: Record<number, number> = {
+  8453: 1,
+  4663: 1,
+  5042: 1,
+  84532: 11155111,
+  46630: 11155111,
+  5042002: 11155111,
+  31338: 31337,
+}
+
+const U64_MAX = 2n ** 64n - 1n
+
+/** A u64 as serde reads one: a non-negative integer, or a decimal or `0x` hex string. */
+function parseChainId(value: unknown): number | undefined {
+  const big =
+    typeof value === 'number' && Number.isInteger(value)
+      ? BigInt(value)
+      : typeof value === 'string' && /^(0x[0-9a-fA-F]+|[0-9]+)$/.test(value)
+        ? BigInt(value)
+        : undefined
+  return big !== undefined && big >= 0n && big <= U64_MAX ? Number(big) : undefined
+}
+
+/**
+ * The chain the params name, read as the gateway's `auth_chain_id` does, else the source chain of `chainId`. The
+ * first key present decides, even when its value does not parse; a key holding `undefined` is absent on the wire.
+ */
+function authChainId(params: unknown, chainId: number): number {
+  // biome-ignore lint/suspicious/noExplicitAny: arbitrary JSON-RPC params
+  const p: any = Array.isArray(params) ? params[0] : params
+  const named = [p?.chain_id, p?.chainId, p?.intent?.chainId, p?.intent?.chain_id].find(v => v !== undefined)
+  return parseChainId(named) ?? SOURCE_CHAIN[chainId] ?? chainId
+}
+
 function parseJson(text: string) {
   try {
     return JSON.parse(text)
@@ -28,17 +66,32 @@ function parseJson(text: string) {
 export class AvsHttpService {
   public baseUrl
 
-  constructor(chainId: number, urlOverride?: string) {
+  constructor(
+    private chainId: number,
+    urlOverride?: string,
+  ) {
     this.baseUrl = urlOverride || GATEWAY_API_URLS[chainId]
   }
 
-  /** Sends one JSON-RPC request; throws `GatewayError` unless the gateway answers with a `result`. */
-  async Post(method: string, args: unknown, apiKey: string) {
-    const body = createJsonRpcRequestPayload(method, args)
+  /**
+   * Sends one signed JSON-RPC request; throws `SDKError` when it cannot be signed and `GatewayError` unless the
+   * gateway answers with a `result`.
+   */
+  async Post(method: string, args: unknown, { signer, session }: GatewayAuth) {
+    const body = JSON.stringify(createJsonRpcRequestPayload(method, args))
+    const signature = await signNewtonRequest(signer, {
+      method,
+      body,
+      chainId: authChainId(args, this.chainId),
+      session,
+    }).catch(error => {
+      if (error instanceof SDKError) throw error
+      throw new SDKError(SDKErrorCode.SigningFailed, `cannot sign ${method}: ${error?.message ?? error}`)
+    })
     const response = await fetch(this.baseUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', [NEWTON_AUTH_HEADER]: signature },
+      body,
     })
     const text = await response.text()
     const payload = parseJson(text)

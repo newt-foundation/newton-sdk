@@ -11,13 +11,13 @@ import { Card } from 'vocs'
 This guide uses a split architecture:
 
 - The connected browser wallet signs the EIP-712 intent and submits the allowed transaction.
-- A Next.js Route Handler calls `evaluateIntentDirect` with `NEWTON_API_KEY` on the server.
-- The user's private key and the Newton API key never enter browser JavaScript.
+- A Next.js Route Handler calls `evaluateIntentDirect` on the server, signed by a server key the PolicyClient approved as a delegator.
+- The user's private key and the server key never enter browser JavaScript.
 
 ## Prerequisites
 
 - A deployed and configured PolicyClient (see [Smart Contract Integration](/developers/guides/smart-contract-integration))
-- A Newton API key (see [Dashboard & API Keys](/developers/overview/dashboard-api-keys))
+- A server key approved as a delegator of the PolicyClient (see [Delegated Intents](/developers/guides/delegated-intents)). The gateway authenticates every call by the key that signs it; see [Authentication](/developers/overview/authentication)
 - The exact intent encoding expected by the policy and PolicyClient
 - Node.js >= 20
 
@@ -36,7 +36,8 @@ Create a gitignored `.env.local`:
 
 ```bash
 # Server only. Never prefix this with NEXT_PUBLIC_.
-NEWTON_API_KEY=your_newton_api_key
+# Signs gateway calls; an approved delegator of the PolicyClient, never the user.
+NEWTON_SIGNER_KEY=0xYourServerKey
 
 # Server RPC used by the Route Handler.
 RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
@@ -48,10 +49,10 @@ NEXT_PUBLIC_CHAIN_ID=11155111
 ```
 
 :::warning
-`NEWTON_API_KEY` can authorize gateway evaluation and client-scoped secrets operations. Exposing it through a `NEXT_PUBLIC_*` variable, Client Component, or browser-side SDK client compromises more than a demo request. Keep it on the server.
+`NEWTON_SIGNER_KEY` can submit evaluations for your PolicyClient. Exposing it through a `NEXT_PUBLIC_*` variable, Client Component, or browser-side SDK client compromises more than a demo request. Keep it on the server.
 :::
 
-Do not add `SIGNER_PRIVATE_KEY` to the application. The connected wallet signs the intent and later sends the PolicyClient transaction.
+The server key only authenticates gateway calls. The connected wallet signs the intent and later sends the PolicyClient transaction. Use a delegator key rather than the owner's, so the owner key stays offline.
 
 ## Step 3: Keep one intent encoding
 
@@ -125,7 +126,7 @@ Create `src/app/api/evaluate/route.ts`:
 import { newtonWalletClientActions } from "@newton-xyz/sdk";
 import { NextResponse } from "next/server";
 import { createWalletClient, http, type Address, type Hex } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 
 export const runtime = "nodejs";
@@ -145,11 +146,11 @@ type EvaluateBody = {
 };
 
 export async function POST(request: Request) {
-  const apiKey = process.env.NEWTON_API_KEY?.trim();
+  const signerKey = process.env.NEWTON_SIGNER_KEY?.trim() as Hex | undefined;
   const rpcUrl = process.env.RPC_URL?.trim();
-  if (!apiKey || !rpcUrl) {
+  if (!signerKey || !rpcUrl) {
     return NextResponse.json(
-      { error: "NEWTON_API_KEY and RPC_URL must be set on the server" },
+      { error: "NEWTON_SIGNER_KEY and RPC_URL must be set on the server" },
       { status: 500 },
     );
   }
@@ -167,14 +168,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid evaluation request" }, { status: 400 });
   }
 
-  // The SDK attaches actions to a WalletClient. This throwaway account never
-  // signs, never holds funds, and is not used as intent.from.
-  const account = privateKeyToAccount(generatePrivateKey());
+  // Signs the gateway call as an approved delegator. It holds no funds and is
+  // not intent.from: the user's intentSignature proves the intent.
+  const account = privateKeyToAccount(signerKey);
   const newtonClient = createWalletClient({
     account,
     chain: sepolia,
     transport: http(rpcUrl),
-  }).extend(newtonWalletClientActions({ apiKey }));
+  }).extend(newtonWalletClientActions());
 
   try {
     const { result } = await newtonClient.evaluateIntentDirect({
@@ -254,8 +255,8 @@ The SDK normalizes the response used above. If you call the JSON-RPC gateway dir
 
 ## Security checklist
 
-- `NEWTON_API_KEY` is server-only and absent from browser bundles.
-- The connected wallet signs the EIP-712 intent; there is no app signer private key.
+- `NEWTON_SIGNER_KEY` is server-only, absent from browser bundles, and belongs to an approved delegator so the owner key stays offline.
+- The connected wallet signs the EIP-712 intent.
 - The server validates the PolicyClient, target, chain, and request shape.
 - `functionSignature` matches the policy and Solidity client byte-for-byte.
 - The client submits no transaction on deny.
@@ -265,7 +266,8 @@ The SDK normalizes the response used above. If you call the JSON-RPC gateway dir
 
 | Issue | Likely cause | Fix |
 |---|---|---|
-| `401` or gateway error | Missing, invalid, or server-inaccessible API key | Verify `NEWTON_API_KEY` is present without printing it |
+| `401` `AuthenticationFailed` | Missing `NEWTON_SIGNER_KEY`, or the server clock is off by more than the gateway allows | Verify the key is present without printing it, and sync the clock |
+| `403` `AuthorizationFailed` | The server key is not an approved delegator of the PolicyClient | Approve it with `approveDelegator`, or check `isDelegator(serverAddress)` |
 | EIP-712 signature rejected (`intent_signature does not verify`) | Wrong domain or changed intent fields | Sign under the fixed `NewtonPolicyClient` / `1` domain with the PolicyClient as `verifyingContract`, and submit the exact signed intent |
 | Policy unexpectedly denies | Incorrect `functionSignature`, calldata, params, or WASM args | Compare with the policy's local allow fixture |
 | `InvalidAttestation` | Your contract's validation call returned `false`: the task was challenged, or the policy denied the intent | For a denial, read the per-policy results. Policy ID, intent sender, and chain ID mismatches revert with `Unauthorized(reason)` instead; decode other selectors with the [error reference](/developers/reference/error-reference#onchain-error-selectors) |

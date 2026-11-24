@@ -54,7 +54,7 @@ Install only what you need for the steps you plan to follow:
 | -------------------------------------- | ----- | -------------------------------------------------------------------------------------- |
 | **Node.js \>= 20 + npm**               | All   | SDK, frontend, WASM tooling                                                            |
 | **Sepolia ETH**                        | 3-5   | Gas fees on testnet                                                                    |
-| **Newton API key**                     | 3-5   | Upload policy files (CLI) and authenticate SDK requests ([create one here](/developers/overview/dashboard-api-keys)) |
+| **PolicyClient owner key**             | 3-5   | Signs gateway calls from the CLI and SDK ([Authentication](/developers/overview/authentication)) |
 | **Foundry** (`forge`, `cast`, `anvil`) | 4     | Compiling and deploying Solidity contracts                                             |
 | **newton-cli**                         | 3     | Uploading policy files, generating CIDs, deploying policies                            |
 
@@ -186,11 +186,10 @@ For the full architecture, see [Architecture](/developers/concepts/architecture)
   - Check external APIs your WASM calls are responding
 :::
 :::details[Find out why a live task was non-compliant]
-  Fetch the task from the [Explorer API](/developers/reference/explorer-api) with your Newton API key, using the `task_id` returned by the Gateway:
+  Fetch the task from the [Explorer API](/developers/reference/explorer-api) using the `task_id` returned by the Gateway:
 
   ```bash
   curl -sS https://explorer.api.newton.xyz/v1/task/$TASK_ID \
-    -H "Authorization: Bearer $NEWTON_API_KEY" \
     -H "X-Protocol-Network: testnet" \
     | jq '{evaluation_result, error, operator_errors, policy_task_data}'
   ```

@@ -53,7 +53,7 @@ export function createRpcError(code: RPCErrorCode, message: string, data?: unkno
  * `DelegatorErrorCode`), or a 2xx body that is not a JSON object, with code `malformed_response`.
  */
 export class DelegatorError extends Error {
-  /** For `unauthorized`, why the request did not authenticate, e.g. `stale_timestamp` or `wrong_audience`. */
+  /** For `unauthorized`, why the request did not authenticate, e.g. `stale_timestamp` or `signature_invalid`. */
   public reason?: string
 
   constructor(
@@ -73,7 +73,7 @@ export class DelegatorError extends Error {
 /**
  * A failed Newton Gateway JSON-RPC call. `code` is the gateway's error variant, e.g. `RateLimitExceeded`,
  * `InvalidRequest` or `AuthorizationFailed`, with the variant's payload in `data`; `http_error` for a non-2xx answer
- * without a JSON-RPC body, such as the 401 for an invalid API key; or `malformed_response` for a 2xx body that is not a
+ * without a JSON-RPC body, such as a proxy's 502; or `malformed_response` for a 2xx body that is not a
  * JSON-RPC result. `retryAfter` is the `Retry-After` header in seconds, sent with `ServiceOverloaded`.
  */
 export class GatewayError extends Error {

@@ -1,18 +1,19 @@
-import { SDKError } from '@core/sdk-exceptions'
+import { GatewayError, SDKError } from '@core/sdk-exceptions'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getTaskEventsUrl, getTaskEventsWebSocket } from './task-events'
+import { getTaskEventsUrl, openTaskEventsWebSocket, subscribeToTask } from './task-events'
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = []
+  static upgrades = true
   sent: string[] = []
-  onopen: (() => void) | null = null
-  onerror: (() => void) | null = null
-  onclose: (() => void) | null = null
   constructor(
     public url: string,
     public protocols: string[],
   ) {
     FakeWebSocket.instances.push(this)
+  }
+  addEventListener(type: string, listener: () => void) {
+    if (type === (FakeWebSocket.upgrades ? 'open' : 'error')) queueMicrotask(listener)
   }
   send(data: string) {
     this.sent.push(data)
@@ -33,45 +34,54 @@ describe('getTaskEventsUrl', () => {
   })
 })
 
-describe('getTaskEventsWebSocket', () => {
+describe('openTaskEventsWebSocket', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     FakeWebSocket.instances = []
+    FakeWebSocket.upgrades = true
   })
 
-  it('offers the API key as a subprotocol, keeps it out of the URL and subscribes on open', () => {
+  it('offers the ticket as a subprotocol, keeps it out of the URL and resolves once open', async () => {
     vi.stubGlobal('WebSocket', FakeWebSocket)
-    const key = `gw_${'ab'.repeat(32)}`
 
-    getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', key)
+    const ws = await openTaskEventsWebSocket('wss://gateway.example.com/ws', 'tkt')
 
-    const [ws] = FakeWebSocket.instances
-    expect(ws.url).toBe('wss://gateway.example.com/ws')
-    expect(ws.protocols).toEqual(['newton.v1', `newton.bearer.${key}`])
-    ws.onopen?.()
+    const [fake] = FakeWebSocket.instances
+    expect(ws).toBe(fake)
+    expect(fake.url).toBe('wss://gateway.example.com/ws')
+    expect(fake.protocols).toEqual(['newton.v1', 'newton.ticket.tkt'])
+  })
+
+  it('rejects with GatewayError when the upgrade fails', async () => {
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+    FakeWebSocket.upgrades = false
+
+    const error = await openTaskEventsWebSocket('wss://gateway.example.com/ws', 'tkt').catch(e => e)
+
+    expect(error).toBeInstanceOf(GatewayError)
+    expect(error).toMatchObject({ code: 'ws_upgrade_failed' })
+  })
+
+  it.each(['', 'secret ticket/with=chars'])(
+    'rejects the ticket %j a subprotocol cannot carry without echoing it',
+    async ticket => {
+      vi.stubGlobal('WebSocket', FakeWebSocket)
+
+      const error = await openTaskEventsWebSocket('wss://gateway.example.com/ws', ticket).catch(e => e)
+
+      expect(error).toBeInstanceOf(SDKError)
+      if (ticket) expect(error.message).not.toContain(ticket)
+      expect(FakeWebSocket.instances).toHaveLength(0)
+    },
+  )
+})
+
+describe('subscribeToTask', () => {
+  it('subscribes to the topic', () => {
+    const ws = new FakeWebSocket('wss://gateway.example.com/ws', [])
+
+    subscribeToTask(ws as unknown as WebSocket, 'deadbeef')
+
     expect(JSON.parse(ws.sent[0])).toEqual({ type: 'subscribe', id: 'sub-1', method: 'deadbeef', params: null })
-  })
-
-  it('rejects a key a subprotocol cannot carry without echoing the key', () => {
-    vi.stubGlobal('WebSocket', FakeWebSocket)
-    const key = 'secret key/with=chars'
-
-    let thrown: unknown
-    try {
-      getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', key)
-    } catch (error) {
-      thrown = error
-    }
-
-    expect(thrown).toBeInstanceOf(SDKError)
-    expect((thrown as Error).message).toContain('deadbeef')
-    expect((thrown as Error).message).not.toContain(key)
-    expect(FakeWebSocket.instances).toHaveLength(0)
-  })
-
-  it('says so when the key is empty', () => {
-    vi.stubGlobal('WebSocket', FakeWebSocket)
-
-    expect(() => getTaskEventsWebSocket('wss://gateway.example.com/ws', 'deadbeef', '')).toThrow('the API key is empty')
   })
 })

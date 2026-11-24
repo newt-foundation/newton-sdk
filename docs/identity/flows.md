@@ -80,7 +80,7 @@ Parent App                    Identity Popup                 Turnkey          Id
 
 **Purpose:** Encrypt and submit identity data to the Newton gateway, then register the data reference on-chain.
 
-**Trigger:** Parent app calls `popupRequest({ method: 'newton_vc_user_register_user_data', params: { userData, appIdentityDomain, policyClient, apiKey, chainId } })`
+**Trigger:** Parent app calls `popupRequest({ method: 'newton_vc_user_register_user_data', params: { userData, appIdentityDomain, policyClient, chainId } })`
 
 ```
 Parent App                    Identity Popup                 Turnkey          Gateway

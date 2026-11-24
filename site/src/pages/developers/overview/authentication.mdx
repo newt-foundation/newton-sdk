@@ -1,0 +1,82 @@
+---
+title: "Authentication"
+description: "Newton Gateway calls are signed by your wallet. How the SDK, the CLI, smart accounts and session keys authenticate."
+keywords:
+  - newton authentication
+  - wallet signature
+  - session key
+  - gateway authentication
+showAskAi: false
+---
+import { Card } from 'vocs'
+
+
+# Authentication [Newton Gateway calls are signed by your wallet. How the SDK, the CLI, smart accounts and session keys authenticate.]
+
+Every Newton Gateway call carries an `X-Newton-Auth` header: an EIP-712 signature over that exact request, made by your wallet. The address it proves is the caller. Newton issues no API keys.
+
+Most methods check that the caller owns the policy client they name, so sign with the client owner's wallet (the address `getOwner()` returns). See [Policy Client Ownership](/developers/reference/rpc-api#policy-client-ownership) for which methods check.
+
+:::note
+`@newton-xyz/sdk` 1.5 signs every call and sends no API key. Stay on 1.4 until the gateway for your environment accepts signatures.
+:::
+
+## SDK
+
+The wallet client you extend signs each call:
+
+```ts
+import { newtonWalletClientActions } from '@newton-xyz/sdk'
+
+const newton = walletClient.extend(newtonWalletClientActions())
+```
+
+A browser wallet prompts once per call. To sign without prompts, create a session: the wallet signs one grant for an ephemeral key, which then signs the calls.
+
+```ts
+import { createNewtonSession, newtonWalletClientActions } from '@newton-xyz/sdk'
+
+const session = await createNewtonSession(walletClient, { expiresInSecs: 24 * 3600 })
+const newton = walletClient.extend(newtonWalletClientActions({ session }))
+```
+
+A grant lasts at most 7 days. If the signer cannot sign (no account, or the user rejects the prompt), the SDK throws an `SDKError` with code `SIGNING_FAILED` and calls nothing.
+
+## CLI
+
+`newton-cli` signs with `--private-key` (or `PRIVATE_KEY`). To keep that key offline after one use, mint a session file and pass it instead:
+
+```bash
+newton-cli session create --private-key "$PRIVATE_KEY" --hours 24 --out session.json
+newton-cli secrets upload --session session.json ...
+```
+
+`--hours` is at most 168. `NEWTON_SESSION` works in place of `--session`.
+
+## Smart accounts
+
+A smart account signs with whatever bytes its `isValidSignature` accepts, and the gateway verifies them through ERC-1271 on the chain the call names. The smart account is the caller.
+
+## WebSockets
+
+Browsers cannot set headers on a WebSocket, so a signed `newt_createWsTicket` call returns a one-time ticket, offered as the `newton.ticket.<ticket>` subprotocol. A ticket lasts 60 seconds. `submitIntentAndSubscribe` does this for you.
+
+## Raw requests
+
+The header format, the signing domain, freshness limits and every refusal code are in the [RPC API reference](/developers/reference/rpc-api#authentication).
+
+## Dashboard
+
+The [Newton Dashboard](https://dashboard.newton.xyz/) is where you build and deploy policies from the browser. Sign in with your wallet (SIWE) or email. It issues no keys: the gateway knows you by your signature, and the [Explorer API](/developers/reference/explorer-api) is public.
+
+## Next Steps
+
+<Card icon="rocket" to="/developers/overview/quickstart" title="Quickstart">
+  Simulate a policy evaluation
+</Card>
+<Card icon="plug" to="/developers/reference/rpc-api" title="RPC API">
+  Full Gateway API reference
+</Card>
+<Card icon="activity" to="/developers/reference/explorer-api" title="Explorer API">
+  Query tasks and policies
+</Card>

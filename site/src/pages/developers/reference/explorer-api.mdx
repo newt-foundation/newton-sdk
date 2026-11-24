@@ -1,16 +1,15 @@
 ---
 title: "Explorer API"
-description: "Read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats with your Newton API key."
+description: "Public read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats."
 keywords:
   - newton explorer api
   - newton task status
-  - newton api key
 showAskAi: false
 ---
 import { Card } from 'vocs'
 
 
-# Explorer API [Read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats with your Newton API key.]
+# Explorer API [Public read-only REST API for Newton tasks and policies. Query task results, policy metadata, and protocol stats.]
 
 The Explorer API is the read-only REST API behind [Newton Explorer](/developers/resources/newton-explorer). It serves the indexed history of every task and policy on the protocol, so scripts, CLIs, and backends can look up the same data the Explorer UI shows.
 
@@ -44,29 +43,12 @@ Requests without the header read testnet.
 
 ## Authentication
 
-:::info
-Every `/v1` request requires your Newton API key, the same `gw_…` key you use with the Newton Gateway. Send it in the `Authorization` header:
-
-```
-Authorization: Bearer <your_api_key>
-```
-
-`X-API-Key: <your_api_key>` is also accepted. Get a key from [Dashboard & API Keys](/developers/overview/dashboard-api-keys).
-:::
-
-The key needs the `rpc_read` permission. Keys created in the dashboard carry `rpc`, which includes it. Rotating or deleting a key in the dashboard takes effect on the next request.
-
-:::warning
-Keep the API key server-side. Read it from `NEWTON_API_KEY` in scripts and Route Handlers; never embed it in browser bundles or commit it to source.
-:::
+The Explorer API is public and needs no authentication. Send no `Authorization` or `X-API-Key` header: Newton no longer issues API keys, and a request that carries a key is refused once its key is gone.
 
 ### Example
 
 ```bash
-export NEWTON_API_KEY="gw_..."
-
 curl -sS https://explorer.api.newton.xyz/v1/task?size=5 \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   -H "X-Protocol-Network: testnet"
 ```
 
@@ -146,7 +128,6 @@ Task detail adds:
 :::code-group
 ```bash [Request]
 curl -sS https://explorer.api.newton.xyz/v1/task/0x1234...abcd \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   -H "X-Protocol-Network: testnet"
 ```
 
@@ -188,8 +169,7 @@ Returns `404` with `{"detail": "Task not found."}` if the indexer has not seen t
 Lists tasks on the selected network. Supports [pagination](#pagination).
 
 ```bash
-curl -sS "https://explorer.api.newton.xyz/v1/task?page=1&size=20" \
-  -H "Authorization: Bearer $NEWTON_API_KEY"
+curl -sS "https://explorer.api.newton.xyz/v1/task?page=1&size=20"
 ```
 
 Returns a paginated list of [task summaries](#task-object).
@@ -219,8 +199,7 @@ Returns a paginated list of [task summaries](#task-object).
 
 :::code-group
 ```bash [Request]
-curl -sS https://explorer.api.newton.xyz/v1/policy/0xPolicy... \
-  -H "Authorization: Bearer $NEWTON_API_KEY"
+curl -sS https://explorer.api.newton.xyz/v1/policy/0xPolicy...
 ```
 
 ```json [Response]
@@ -248,8 +227,7 @@ Returns `404` if no policy exists at that address on the selected network.
 Lists policies on the selected network. Supports [pagination](#pagination).
 
 ```bash
-curl -sS "https://explorer.api.newton.xyz/v1/policy?size=50" \
-  -H "Authorization: Bearer $NEWTON_API_KEY"
+curl -sS "https://explorer.api.newton.xyz/v1/policy?size=50"
 ```
 
 ### List tasks for a policy
@@ -261,8 +239,7 @@ curl -sS "https://explorer.api.newton.xyz/v1/policy?size=50" \
 Lists tasks evaluated against a policy, by policy ID or by policy contract address. Supports [pagination](#pagination) and returns [task summaries](#task-object).
 
 ```bash
-curl -sS "https://explorer.api.newton.xyz/v1/policy/address/0xPolicy.../task?size=20" \
-  -H "Authorization: Bearer $NEWTON_API_KEY"
+curl -sS "https://explorer.api.newton.xyz/v1/policy/address/0xPolicy.../task?size=20"
 ```
 
 ---
@@ -284,8 +261,7 @@ Counts tasks and policies within a time window.
 
 :::code-group
 ```bash [Request]
-curl -sS "https://explorer.api.newton.xyz/v1/stats?task_window_start=2026-09-01T00:00:00Z" \
-  -H "Authorization: Bearer $NEWTON_API_KEY"
+curl -sS "https://explorer.api.newton.xyz/v1/stats?task_window_start=2026-09-01T00:00:00Z"
 ```
 
 ```json [Response]
@@ -308,7 +284,6 @@ Take the `task_id` returned by [`newt_createTask`](/developers/reference/rpc-api
 TASK_ID="0x..."
 
 curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   -H "X-Protocol-Network: testnet" \
   | jq '{evaluation_result, error, operator_errors, policy_task_data}'
 ```
@@ -322,7 +297,6 @@ curl -sS "https://explorer.api.newton.xyz/v1/task/$TASK_ID" \
 POLICY_ADDRESS="0x..."
 
 curl -sS "https://explorer.api.newton.xyz/v1/policy/address/$POLICY_ADDRESS/task?size=20" \
-  -H "Authorization: Bearer $NEWTON_API_KEY" \
   | jq -r '.results[] | [.id, .task_created_at, .evaluation_result, (.error // "")] | @tsv'
 ```
 
@@ -331,8 +305,7 @@ curl -sS "https://explorer.api.newton.xyz/v1/policy/address/$POLICY_ADDRESS/task
 ```bash
 page=1
 while :; do
-  resp=$(curl -sS "https://explorer.api.newton.xyz/v1/task?page=$page&size=100" \
-    -H "Authorization: Bearer $NEWTON_API_KEY")
+  resp=$(curl -sS "https://explorer.api.newton.xyz/v1/task?page=$page&size=100")
   echo "$resp" | jq -c '.results[]'
   [ "$(echo "$resp" | jq '.page * .size < .total')" = "true" ] || break
   page=$((page + 1))
@@ -341,7 +314,7 @@ done
 
 ### Server-side TypeScript helper
 
-Call the Explorer API from a server Route Handler or backend job so the key never reaches the browser:
+Call it from a Route Handler or backend job. The API allows browser requests only from Newton's own sites (CORS), so a browser on any other origin is blocked:
 
 ```typescript
 const EXPLORER_API_URL = 'https://explorer.api.newton.xyz/v1'
@@ -351,7 +324,6 @@ type Network = 'testnet' | 'base-sepolia' | 'mainnet' | 'base'
 export async function getTask(taskId: `0x${string}`, network: Network = 'testnet') {
   const res = await fetch(`${EXPLORER_API_URL}/task/${taskId}`, {
     headers: {
-      Authorization: `Bearer ${process.env.NEWTON_API_KEY}`,
       'X-Protocol-Network': network,
     },
   })
@@ -371,12 +343,9 @@ export async function getTask(taskId: `0x${string}`, network: Network = 'testnet
 | Status | `detail` | Fix |
 |--------|----------|-----|
 | `400` | `Invalid protocol network header` | Use `testnet`, `base-sepolia`, `mainnet`, or `base` for `X-Protocol-Network` |
-| `401` | `API key required (Authorization: Bearer or X-API-Key)` | Send your API key in one of the two headers |
-| `401` | `invalid or expired API key` | Check for typos and whitespace; the key may have been rotated or deleted in the [dashboard](https://dashboard.newton.xyz/) |
-| `403` | `API key missing required permission: rpc_read` | Use a key with `rpc_read` or `rpc` permission |
+| `401` | `invalid or expired API key` | Drop the `Authorization` or `X-API-Key` header; the API needs none |
 | `404` | `Task not found.` / `Policy Template not found.` | Confirm the ID or address and that `X-Protocol-Network` matches its network |
 | `422` | Validation error | Check query parameters, e.g. `size` must be between 1 and 100 |
-| `503` | `API key validation unavailable` | Temporary; retry with backoff |
 
 ## Next Steps
 

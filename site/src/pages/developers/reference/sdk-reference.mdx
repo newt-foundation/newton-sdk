@@ -138,7 +138,6 @@ const walletClient = createWalletClient({
   transport: http('https://eth-sepolia.g.alchemy.com/v2/demo'),
 }).extend(
   newtonWalletClientActions({
-    apiKey: 'test-api-key',
     policyContractAddress: '0x1234567890123456789012345678901234567890', // optional
   })
 );
@@ -148,8 +147,8 @@ const walletClient = createWalletClient({
 
 ```ts
 function newtonWalletClientActions(
-  config: {
-    apiKey: string;
+  config?: {
+    session?: NewtonSession;
     policyContractAddress?: Address;
   },
   overrides?: SdkOverrides
@@ -160,12 +159,12 @@ function newtonWalletClientActions(
 
 | Parameter                      | Type           | Required | Description                                          |
 | ------------------------------ | -------------- | -------- | ---------------------------------------------------- |
-| `config.apiKey`                | `string`       | Yes      | Newton Protocol API key for gateway authentication   |
+| `config.session`               | `NewtonSession` | No      | A session from `createNewtonSession`, to sign gateway calls without a wallet prompt each |
 | `config.policyContractAddress` | `Address`      | No       | Default policy contract address for write operations |
 | `overrides`                    | `SdkOverrides` | No       | Override default SDK configuration                   |
 
 :::note
-Your API key authenticates requests to the Newton Gateway. Keep it secret and never expose it in client-side code.
+Every gateway call is signed with an `X-Newton-Auth` header over its exact body, by the wallet client or by `config.session`. There is no API key; see [Authentication](/developers/overview/authentication). The signature is under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`, where `chainId` is the chain the call's params name, or else the source chain of the wallet's network (11155111 for testnets, 1 for mainnets). Standalone gateway functions take `auth: GatewayAuth`, which is `{ signer, session? }`. A signer that cannot sign makes the call throw an `SDKError` with code `SIGNING_FAILED` before anything is sent. SDK 1.5 sends no API key, so stay on 1.4 until the gateway for your environment accepts signatures.
 :::
 
 ---
@@ -398,7 +397,7 @@ ws.onmessage = (event) => {
 };
 ```
 
-The SDK opens the socket on the `/ws` path beside the gateway URL, for example `wss://gateway.testnet.newton.xyz/ws`, and subscribes to `result.subscription_topic` once it opens. It sends the API key as a `newton.bearer.<key>` subprotocol beside `newton.v1`, never in the URL. An API key that a subprotocol cannot carry makes the call throw an `SDKError` with code `INVALID_ARGUMENT`. SDK 1.3.1 and earlier send the key in an `api_key` query parameter, which the gateway ignores, so their upgrade fails with HTTP 401.
+Before sending the task, the SDK mints a single-use ticket with a signed `newt_createWsTicket` call and opens the socket on the `/ws` path beside the gateway URL, for example `wss://gateway.testnet.newton.xyz/ws`, offering the ticket as a `newton.ticket.<ticket>` subprotocol beside `newton.v1`, never in the URL. It sends `newt_sendTask` only once the socket is open, then subscribes to `result.subscription_topic`. A refused ticket or a failed upgrade throws before any task exists: the upgrade failure is a `GatewayError` with code `ws_upgrade_failed`. If `newt_sendTask` fails, the SDK closes the socket. `ws` is already open when the call returns, so an `onopen` handler you set never runs; set `onmessage`.
 
 See [WebSocket Updates](/developers/reference/rpc-api#websocket-updates) for every frame the gateway sends.
 
@@ -1018,7 +1017,7 @@ This is a **synchronous** method. Signatures are computed locally.
 
 #### registerWebhook
 
-Registers a webhook URL to receive task failure notifications. The gateway sends HMAC-SHA256 signed payloads to the registered URL when tasks fail.
+Registers a webhook URL to receive failure notifications for tasks the signing address submitted. One webhook per address; registering again replaces it. The gateway sends HMAC-SHA256 signed payloads to the registered URL when tasks fail.
 
 ```ts
 const { success, message } = await walletClient.registerWebhook({
@@ -1050,7 +1049,7 @@ registerWebhook(args: RegisterWebhookParams): Promise<RegisterWebhookResult>
 
 #### unregisterWebhook
 
-Removes the registered webhook for the current API key.
+Removes the webhook registered by the signing address.
 
 ```ts
 const { success, message } = await walletClient.unregisterWebhook();
@@ -1607,7 +1606,7 @@ Fetch the gateway's X25519 HPKE public key. Call this once and cache the result;
 ```ts
 getPrivacyPublicKey(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string
 ): Promise<PrivacyPublicKeyResponse>
 ```
@@ -1637,7 +1636,7 @@ Fetch the gateway's X25519 HPKE public key for WASM secrets encryption. In thres
 ```ts
 getSecretsPublicKey(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   gatewayApiUrlOverride?: string
 ): Promise<SecretsPublicKeyResponse>
 ```
@@ -1667,7 +1666,7 @@ Upload HPKE-encrypted identity data to the gateway. The caller must provide a pr
 ```ts
 uploadIdentityEncrypted(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: UploadIdentityEncryptedParams,
   gatewayApiUrlOverride?: string
 ): Promise<UploadIdentityEncryptedResponse>
@@ -1708,7 +1707,7 @@ Fetch encrypted identity data by its content-hash reference ID. Used to resolve 
 ```ts
 getIdentityEncrypted(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   dataRefId: string,
   gatewayApiUrlOverride?: string
 ): Promise<GetIdentityEncryptedResult>
@@ -1749,7 +1748,7 @@ Operators recognize two domains: `keccak256("newton.confidential.blacklist")` (o
 ```ts
 uploadConfidentialData(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   params: UploadConfidentialDataParams,
   gatewayApiUrlOverride?: string
 ): Promise<UploadConfidentialDataResult>
@@ -1788,7 +1787,7 @@ Retrieve an HPKE-encrypted confidential data envelope by its data reference ID. 
 ```ts
 getConfidentialData(
   chainId: number,
-  apiKey: string,
+  auth: GatewayAuth,
   dataRefId: string,
   gatewayApiUrlOverride?: string
 ): Promise<GetConfidentialDataResult>
@@ -1998,7 +1997,7 @@ unlinkIdentityAsUser(
 
 Submit intents through a `newton-delegator`, which gets them attested and sends the PolicyClient call from its own key, and manage a PolicyClient's delegator set. See the [Delegated Intents guide](/developers/guides/delegated-intents) for the end-to-end flow.
 
-The signing helpers take a plain viem `WalletClient` and need no API key. They are standalone exports and also `newtonWalletClientActions` methods (without the `walletClient` argument).
+The signing helpers take a plain viem `WalletClient` and make no gateway call. They are standalone exports and also `newtonWalletClientActions` methods (without the `walletClient` argument).
 
 ### `signDelegatedIntent`
 
@@ -2069,7 +2068,6 @@ const delegator = createDelegatorClient({
     signer: account,          // LocalAccount | WalletClient; a session's account for no wallet prompts
     chainId: 84532,           // the delegator's chain
     session: grant,           // optional: the SignedSessionGrant when signer is a session key
-    audience: 'acme.example', // optional: defaults to the URL's hostname
   },
 })
 ```
@@ -2115,12 +2113,12 @@ signSessionGrant(grantor: LocalAccount | WalletClient, args: { sessionKey: Addre
 
 ### `signNewtonRequest`
 
-Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` with the path as the delegator receives it (percent-encoded, without the query string or a prefix that a proxy strips), and `body` is the exact bytes sent (`''` for a GET).
+Sign a `NewtonRequest` and return the `X-Newton-Auth` header value, for calling the delegator without `createDelegatorClient`. It is signed under the EIP-712 domain `{ name: 'Newton Gateway', version: '1', chainId }`. For the delegator, `method` is `"<VERB> <path>"` with the path as the delegator receives it (percent-encoded, without the query string or a prefix that a proxy strips), and `body` is the exact bytes sent (`''` for a GET); `chainId` is the delegator's chain.
 
 ```ts
 signNewtonRequest(
   signer: LocalAccount | WalletClient,
-  params: { audience: string; method: string; body: string; chainId?: number; session?: SignedSessionGrant; timestamp?: number },
+  params: { method: string; body: string; chainId: number; session?: SignedSessionGrant; timestamp?: number },
 ): Promise<string>
 ```
 
@@ -2921,8 +2919,6 @@ class DelegatorError extends Error {
 :::details[SDKErrorCode enum values]
   ```ts
   enum SDKErrorCode {
-    /** @deprecated The SDK never throws this code. */
-    MissingApiKey = 'MISSING_API_KEY',
     PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
     MalformedResponse = 'MALFORMED_RESPONSE',
     InvalidArgument = 'INVALID_ARGUMENT',
@@ -2937,6 +2933,7 @@ class DelegatorError extends Error {
     MissingChain = 'MISSING_CHAIN',
     MissingAccount = 'MISSING_ACCOUNT',
     InvalidAddress = 'INVALID_ADDRESS',
+    SigningFailed = 'SIGNING_FAILED',
   }
   ```
 :::

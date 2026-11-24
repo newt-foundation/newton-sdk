@@ -53,6 +53,7 @@ import {
 } from './modules/privacy'
 import type {
   DelegatorApprovalSignature,
+  NewtonSession,
   PendingDelegatedIntent,
   SignAndSubmitDelegatedIntentParams,
   SignDelegatorApprovalParams,
@@ -125,9 +126,10 @@ interface SdkOverrides {
 const supportedChains: number[] = [mainnet.id, sepolia.id, baseSepolia.id, base.id, 46630, 5042002]
 
 const newtonWalletClientActions =
-  (config: { apiKey: string; policyContractAddress?: Address }, overrides?: SdkOverrides) =>
+  (config: { session?: NewtonSession; policyContractAddress?: Address } = {}, overrides?: SdkOverrides) =>
   (walletClient: WalletClient) => {
-    const { apiKey, policyContractAddress } = config
+    const { session, policyContractAddress } = config
+    const auth = { signer: session?.account ?? walletClient, session: session?.grant }
 
     const validatePolicyContractAddress = () => {
       if (!policyContractAddress) {
@@ -160,7 +162,7 @@ const newtonWalletClientActions =
       submitEvaluationRequest: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: { taskId: Hex; txHash?: Hex } } & PendingTaskBuilder> =>
-        submitEvaluationRequest(walletClient, args, taskManagerAddress, apiKey, gatewayApiUrlOverride),
+        submitEvaluationRequest(walletClient, args, taskManagerAddress, auth, gatewayApiUrlOverride),
 
       evaluateIntentDirect: (
         args: SubmitEvaluationRequestParams,
@@ -171,25 +173,25 @@ const newtonWalletClientActions =
           taskResponse: TaskResponse
           blsSignature: unknown
         }
-      }> => evaluateIntentDirect(walletClient, args, apiKey, gatewayApiUrlOverride),
+      }> => evaluateIntentDirect(walletClient, args, auth, gatewayApiUrlOverride),
 
       submitIntentAndSubscribe: (
         args: SubmitEvaluationRequestParams,
       ): Promise<{ result: SubmitIntentResult; ws: WebSocket }> =>
-        submitIntentAndSubscribe(walletClient, args, apiKey, gatewayApiUrlOverride),
+        submitIntentAndSubscribe(walletClient, args, auth, gatewayApiUrlOverride),
       simulateTask: (args: SimulateTaskParams): Promise<SimulateTaskResult> =>
-        simulateTask(walletClient, args, apiKey, gatewayApiUrlOverride),
+        simulateTask(walletClient, args, auth, gatewayApiUrlOverride),
 
       simulatePolicy: (args: SimulatePolicyParams): Promise<SimulatePolicyResult> =>
-        simulatePolicy(walletClient, args, apiKey, gatewayApiUrlOverride),
+        simulatePolicy(walletClient, args, auth, gatewayApiUrlOverride),
 
       simulatePolicyData: (args: SimulatePolicyDataParams): Promise<SimulatePolicyDataResult> =>
-        simulatePolicyData(walletClient, args, apiKey, gatewayApiUrlOverride),
+        simulatePolicyData(walletClient, args, auth, gatewayApiUrlOverride),
 
       simulatePolicyDataWithClient: (
         args: SimulatePolicyDataWithClientParams,
       ): Promise<SimulatePolicyDataWithClientResult> =>
-        simulatePolicyDataWithClient(walletClient, args, apiKey, gatewayApiUrlOverride),
+        simulatePolicyDataWithClient(walletClient, args, auth, gatewayApiUrlOverride),
 
       /**
        * Initialize a NewtonPolicy contract on-chain. Caller must supply either
@@ -243,7 +245,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               chainId: walletClient.chain?.id,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
@@ -264,7 +265,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               userData: args.userData,
               gatewayApiUrlOverride,
               chainId: walletClient.chain?.id,
@@ -288,7 +288,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
               appIdentityDomain: args.appIdentityDomain,
@@ -311,7 +310,6 @@ const newtonWalletClientActions =
             id: getPayloadId(),
             jsonrpc: '2.0',
             params: {
-              apiKey,
               appWalletAddress: args.appWalletAddress,
               appClientAddress: args.appClientAddress,
               chainId: walletClient.chain?.id,
@@ -324,40 +322,40 @@ const newtonWalletClientActions =
       },
       // Privacy module functions
       getPrivacyPublicKey: (): Promise<PrivacyPublicKeyResponse> =>
-        getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
+        getPrivacyPublicKey(walletClient?.chain?.id ?? sepolia.id, auth, gatewayApiUrlOverride),
 
       getSecretsPublicKey: (): Promise<SecretsPublicKeyResponse> =>
-        getSecretsPublicKey(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
+        getSecretsPublicKey(walletClient?.chain?.id ?? sepolia.id, auth, gatewayApiUrlOverride),
 
       createSecureEnvelope: (args: CreateSecureEnvelopeParams, signingKey: Uint8Array): Promise<SecureEnvelopeResult> =>
         createSecureEnvelope(args, signingKey),
 
       uploadIdentityEncrypted: (args: UploadIdentityEncryptedParams): Promise<UploadIdentityEncryptedResponse> =>
-        uploadIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+        uploadIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, auth, args, gatewayApiUrlOverride),
 
       getIdentityEncrypted: (args: { dataRefId: string }): Promise<GetIdentityEncryptedResult> =>
-        getIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, apiKey, args.dataRefId, gatewayApiUrlOverride),
+        getIdentityEncrypted(walletClient?.chain?.id ?? sepolia.id, auth, args.dataRefId, gatewayApiUrlOverride),
 
       generateSigningKeyPair: (): Ed25519KeyPair => generateSigningKeyPair(),
 
       storeEncryptedSecrets: (args: StoreEncryptedSecretsParams): Promise<StoreEncryptedSecretsResponse> =>
-        storeEncryptedSecrets(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+        storeEncryptedSecrets(walletClient?.chain?.id ?? sepolia.id, auth, args, gatewayApiUrlOverride),
 
       uploadConfidentialData: (args: UploadConfidentialDataParams): Promise<UploadConfidentialDataResult> =>
-        uploadConfidentialData(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+        uploadConfidentialData(walletClient?.chain?.id ?? sepolia.id, auth, args, gatewayApiUrlOverride),
 
       getConfidentialData: (args: { dataRefId: string }): Promise<GetConfidentialDataResult> =>
-        getConfidentialData(walletClient?.chain?.id ?? sepolia.id, apiKey, args.dataRefId, gatewayApiUrlOverride),
+        getConfidentialData(walletClient?.chain?.id ?? sepolia.id, auth, args.dataRefId, gatewayApiUrlOverride),
 
       signPrivacyAuthorization: (args: SignPrivacyAuthorizationParams): PrivacyAuthorizationResult =>
         signPrivacyAuthorization(args),
 
       // Webhook functions
       registerWebhook: (args: RegisterWebhookParams): Promise<RegisterWebhookResult> =>
-        registerWebhook(walletClient?.chain?.id ?? sepolia.id, apiKey, args, gatewayApiUrlOverride),
+        registerWebhook(walletClient?.chain?.id ?? sepolia.id, auth, args, gatewayApiUrlOverride),
 
       unregisterWebhook: (): Promise<UnregisterWebhookResult> =>
-        unregisterWebhook(walletClient?.chain?.id ?? sepolia.id, apiKey, gatewayApiUrlOverride),
+        unregisterWebhook(walletClient?.chain?.id ?? sepolia.id, auth, gatewayApiUrlOverride),
 
       // Identity data registration (on-chain with gateway co-signature)
       registerIdentityData: (args: RegisterIdentityDataParams): Promise<Hex> =>

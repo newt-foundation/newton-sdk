@@ -45,7 +45,7 @@ For Claude Code, copy the folders into `.claude/skills/` or `~/.claude/skills/`.
 - Local policy work does not require login or deploy credentials.
 - The agent must not request private keys, API keys, JWTs, or RPC credentials in chat.
 - Deployment, gateway evaluation, the first attested transaction, and hosting require separate user confirmation.
-- `NEWTON_API_KEY` belongs on the server, never in a `NEXT_PUBLIC_*` variable or browser bundle.
+- The server key that signs gateway calls (`NEWTON_SIGNER_KEY`) belongs on the server, never in a `NEXT_PUBLIC_*` variable or browser bundle.
 
 <Card title="Build with an Agent" icon="play" to="/developers/overview/agent-quickstart">
   Install the skills, write a brief, review local results, and approve live checkpoints

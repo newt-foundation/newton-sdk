@@ -52,10 +52,12 @@ const newtonWalletClient = createWalletClient({
   chain: sepolia,
   transport: webSocket('wss://alchemyWebsocketUrl'),
   account: privateKeyToAccount('0xYOUR_PRIVATE_KEY'),
-}).extend(newtonWalletClientActions({ apiKey: '<YOUR_API_KEY>' }));
+}).extend(newtonWalletClientActions()); // signs each gateway call with the account
 
 newtonWalletClient.evaluateIntentDirect({...})
 ```
+
+Gateway calls carry an `X-Newton-Auth` signature from the wallet client's account, or from a session made with `createNewtonSession`; there is no API key. See [Authentication](https://docs.newton.xyz/developers/overview/authentication).
 
 ## Development
 

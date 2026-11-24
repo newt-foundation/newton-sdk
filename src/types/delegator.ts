@@ -180,10 +180,14 @@ export interface WaitForDelegatedIntentParams {
 /** Signs Newton requests: a local account (such as a session key) or a wallet client. */
 export type NewtonAuthSigner = LocalAccount | WalletClient
 
+/**
+ * How a gateway call authenticates: the signer of its `X-Newton-Auth` signature. Pass a session's `account` with its
+ * `grant` as `session`.
+ */
+export type GatewayAuth = { signer: NewtonAuthSigner; session?: SignedSessionGrant }
+
 /** The EIP-712 `NewtonRequest` carried in `X-Newton-Auth`. */
 export interface NewtonRequest {
-  /** Lowercased hostname of the service. */
-  audience: string
   /**
    * For the delegator, `"<VERB> <path>"` with the path as the delegator receives it: percent-encoded, without
    * the query string or a prefix that a proxy strips, e.g. `GET /v1/events`.
@@ -216,12 +220,14 @@ export interface NewtonSession {
 }
 
 export interface SignNewtonRequestParams {
-  audience: string
   method: string
   /** The exact body sent; `''` for a request without one. */
   body: string
-  /** Chain in the EIP-712 domain; omit (or 0) for none. The delegator signs under its own chain. */
-  chainId?: number
+  /**
+   * Chain in the EIP-712 domain. The delegator signs under its own chain, the gateway under the chain the
+   * JSON-RPC params name, else the source chain of the caller's network.
+   */
+  chainId: number
   /** Present when the signer is a session key. */
   session?: SignedSessionGrant
   /** Unix milliseconds. Defaults to now. */
@@ -238,8 +244,6 @@ export interface DelegatorAuth {
   signer: NewtonAuthSigner
   /** The delegator's chain. */
   chainId: number
-  /** Defaults to the hostname of the delegator URL. */
-  audience?: string
   /** The grant, when `signer` is a session key. */
   session?: SignedSessionGrant
 }

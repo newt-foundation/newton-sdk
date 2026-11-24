@@ -29,7 +29,6 @@ const AUTH_DOMAIN_VERSION = '1'
 
 const NEWTON_REQUEST_TYPES = {
   NewtonRequest: [
-    { name: 'audience', type: 'string' },
     { name: 'method', type: 'string' },
     { name: 'bodyHash', type: 'bytes32' },
     { name: 'signer', type: 'address' },
@@ -46,17 +45,11 @@ const SESSION_KEY_TYPES = {
   ],
 } as const
 
-/** Chain 0 means the request names no chain, and the domain then omits it. Grants never carry one. */
+/** Grants carry no chain; requests always do. */
 const authDomain = (chainId?: number) =>
-  chainId
-    ? { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION, chainId }
-    : { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION }
-
-/** The `audience` to sign for a URL: its lowercased hostname, without scheme, port, path or IPv6 brackets. */
-const audienceFromUrl = (url: string): string => {
-  const host = new URL(url).hostname.toLowerCase()
-  return host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host
-}
+  chainId === undefined
+    ? { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION }
+    : { name: AUTH_DOMAIN_NAME, version: AUTH_DOMAIN_VERSION, chainId }
 
 const isLocalAccount = (signer: NewtonAuthSigner): signer is LocalAccount => 'type' in signer && signer.type === 'local'
 
@@ -107,7 +100,6 @@ async function signNewtonRequest(signer: NewtonAuthSigner, params: SignNewtonReq
     throw new Error("Newton SDK: a session request must be signed by the grant's session key")
   }
   const request: NewtonRequest = {
-    audience: params.audience,
     method: params.method,
     bodyHash: keccak256(stringToBytes(params.body)),
     signer: address,
@@ -152,4 +144,4 @@ async function createNewtonSession(grantor: NewtonAuthSigner, args: { expiresInS
   return { account, grant }
 }
 
-export { NEWTON_AUTH_HEADER, audienceFromUrl, createNewtonSession, signNewtonRequest, signSessionGrant }
+export { NEWTON_AUTH_HEADER, createNewtonSession, signNewtonRequest, signSessionGrant }

@@ -185,22 +185,14 @@ newton-cli policy simulate -p policies/my-oracle
 # then run the same command again.
 ```
 
-You can also test via the Gateway RPC:
+You can also test through the gateway with the SDK, which signs the call with your wallet:
 
-```bash
-curl -X POST https://gateway.testnet.newton.xyz/rpc \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your_api_key>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "newt_simulatePolicyData",
-    "params": {
-      "policy_address": "0x...",
-      "chain_id": 11155111,
-      "wasm_args": "0x7b22626173655f73796d626f6c223a22425443227d"
-    },
-    "id": "7ca6621b-7aa4-4bb7-a896-1f2b58a18c78"
-  }'
+```typescript
+const { success, policy_data, error } = await client.simulatePolicyData({
+  policyAddress: '0x...',
+  chainId: 11155111,
+  wasmArgs: '0x7b22626173655f73796d626f6c223a22425443227d', // {"base_symbol":"BTC"}
+})
 ```
 
 ## Alternative Languages
