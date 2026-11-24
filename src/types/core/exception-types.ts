@@ -1,6 +1,4 @@
 export enum SDKErrorCode {
-  /** @deprecated The SDK never throws this code. */
-  MissingApiKey = 'MISSING_API_KEY',
   PopupAlreadyExists = 'POPUP_ALREADY_EXISTS',
   MalformedResponse = 'MALFORMED_RESPONSE',
   InvalidArgument = 'INVALID_ARGUMENT',
