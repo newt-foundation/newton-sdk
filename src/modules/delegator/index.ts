@@ -33,7 +33,7 @@ import {
   publicActions,
   toHex,
 } from 'viem'
-import { NEWTON_AUTH_HEADER, audienceFromUrl, signNewtonRequest } from './auth'
+import { NEWTON_AUTH_HEADER, signNewtonRequest } from './auth'
 
 // EIP-712, as NewtonPolicyClient defines it: one domain per client proxy.
 const POLICY_CLIENT_DOMAIN_NAME = 'NewtonPolicyClient'
@@ -255,20 +255,17 @@ function createDelegatorClient(config: DelegatorClientConfig) {
   const doFetch: typeof fetch = config.fetch ?? ((input, init) => fetch(input, init))
 
   const auth = config.auth
-  const audience = auth?.audience ?? (auth ? audienceFromUrl(baseUrl) : undefined)
-
   const request = async <T>(path: string, init?: RequestInit): Promise<{ status: number; body: T }> => {
     // an already-aborted call signs nothing and sends nothing
     init?.signal?.throwIfAborted()
     const url = `${baseUrl}${path}`
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (init?.body) headers['Content-Type'] = 'application/json'
-    if (auth && audience) {
+    if (auth) {
       // the delegator checks the route path it receives: as sent, without the query, and without the
       // base URL's own path, a prefix that a proxy in front of it strips ('' for a URL without one)
       const basePath = new URL(`${baseUrl}/`).pathname.slice(0, -1)
       headers[NEWTON_AUTH_HEADER] = await signNewtonRequest(auth.signer, {
-        audience,
         method: `${init?.method ?? 'GET'} ${new URL(url).pathname.slice(basePath.length)}`,
         body: typeof init?.body === 'string' ? init.body : '',
         chainId: auth.chainId,
