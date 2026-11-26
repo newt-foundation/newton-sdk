@@ -10,7 +10,6 @@ on:
 env:
   CI: true
   GH_TOKEN: ${{ secrets.SVC_GIT_FG_TOKEN }}
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   # NPM_CONFIG_PROVENANCE: true
 
 jobs:
@@ -30,7 +29,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -53,9 +52,17 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Library Build
         run: pnpm build
+
+      - name: Use npm 11 for trusted publishing
+        run: npm install -g npm@^11.5.1
+
+      - name: Drop token auth so npm uses OIDC
+        run: sed -i '/_authToken/d' .npmrc
 
       - name: Create Canary Release
         run: pnpm auto shipit -vv --base-branch ${{ github.head_ref || github.ref_name }}
