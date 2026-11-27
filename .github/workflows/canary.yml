@@ -16,7 +16,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     name: Publish Canary
-    if: "!contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci')"
+    if: "!contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci') && github.actor != 'dependabot[bot]'"
     permissions:
       contents: write
       id-token: write
@@ -51,7 +51,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          pnpm install
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -60,9 +62,6 @@ jobs:
 
       - name: Use npm 11 for trusted publishing
         run: npm install -g npm@^11.5.1
-
-      - name: Drop token auth so npm uses OIDC
-        run: sed -i '/_authToken/d' .npmrc
 
       - name: Create Canary Release
         run: pnpm auto shipit -vv --base-branch ${{ github.head_ref || github.ref_name }}
