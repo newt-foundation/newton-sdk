@@ -31,6 +31,9 @@ jobs:
           version: 9
           run_install: false
 
+      - name: Configure npm auth for installs
+        run: npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+
       - name: Get pnpm store directory
         shell: bash
         run: |
@@ -89,6 +92,9 @@ jobs:
         with:
           version: 9
           run_install: false
+
+      - name: Configure npm auth for installs
+        run: npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
 
       - name: Install root dependencies
         run: pnpm install
