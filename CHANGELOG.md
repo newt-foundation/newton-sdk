@@ -1,3 +1,16 @@
+# v1.4.2 (Fri Nov 27 2026)
+
+#### 🐛 Bug Fix
+
+- ci: keep working tree clean for auto canary; skip secret-dependent jobs for Dependabot [#216](https://github.com/newt-foundation/newton-sdk/pull/216) ([@denniswon](https://github.com/denniswon))
+- ci: publish via npm trusted publishing (OIDC), drop NPM_TOKEN [#215](https://github.com/newt-foundation/newton-sdk/pull/215) ([@denniswon](https://github.com/denniswon))
+
+#### Authors: 1
+
+- Dennis Won ([@denniswon](https://github.com/denniswon))
+
+---
+
 # v1.4.1 (Wed Nov 18 2026)
 
 #### 🐛 Bug Fix
