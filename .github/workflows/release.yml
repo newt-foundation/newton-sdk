@@ -55,7 +55,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          pnpm install
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -67,9 +69,6 @@ jobs:
 
       - name: Use npm 11 for trusted publishing
         run: npm install -g npm@^11.5.1
-
-      - name: Drop token auth so npm uses OIDC
-        run: sed -i '/_authToken/d' .npmrc
 
       - name: Create Production Release
         run: pnpm auto shipit --base-branch ${{ github.ref_name }}
